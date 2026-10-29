@@ -1,0 +1,186 @@
+R"VG(
+# sunlost.vg (D-05): the people who lost their sun, a drifter's people (`cause=sunlost`). Their genres are the files beside this one (the root's
+# alternatives at the end of records.vg); here what they share: the lost sun's words by its way (`sunway`: the wanderer, the intruder, the dark,
+# the dance), the halls below and the warm ground they went down to, what grew in the dark, and the ordinary words of their dark years (`dark`:
+# 0 the sun as ever, 1 dimming, 2 going, 3 gone; `darkyears` the years since the last sunrise), which the `@instead` lines swap for the
+# world's own: the sun, the seasons and the weather. Every line of theirs is apart (`@apart`: their words never make another people's word
+# common, so no other people's records move); so is every line anywhere guarded by their cause.
+
+@apart
+@apart cause=sunlost
+@apart $e.omen=wanderer $e.omen=intruder $e.omen=bent $e.omen=dance
+@apart chartstyle=sunmeasure markhow=4
+@instead dark>=1 sun.first sun.lost
+@instead dark>=1 sun.second sun.lost
+@instead dark>=2 season.now season.dark
+@instead dark>=2 season.next season.dark
+@instead dark>=2 season.this season.dark.this
+@instead dark>=2 weather.now weather.dark
+@instead dark>=2 weather weather.dark
+# two of the ordinary rules a drifter's history reached where none had before (a letter's writer its own apprentice; a world of one people's
+# play about "the war with the" none): theirs written right, the others' lines as they are (their keys every people's draws read)
+@instead cause=sunlost letter.apprentice letter.apprentice.lost
+@instead cause=sunlost bc.playtopic bc.playtopic.lost
+
+# =====================================================================================================================
+# the sun as it went: dimming (dark 1), going (2), gone (3: a star among the stars)
+# =====================================================================================================================
+
+sun.lost
+  (dark=1) the pale sun
+  (dark=1) the shrinking sun
+  (dark=1) the sun grown small
+  (dark=1) the tired sun
+  (dark=2) the small cold sun
+  (dark=2) the sun that is leaving
+  (dark=2) the white coin of the sun
+  (dark=2) the going sun
+  (dark=3) the star that was the sun
+  (dark=3) the old sun
+  (dark=3) the sun's star
+  (dark=3) the bright star that was our sun
+
+# the seasons and the weather once the sun was going (2) and gone (3): a season's words bare, as the world's are ("this {season.now}", "the
+# {season.now} cough", "in {season.now}"), its weather's with their article
+season.dark
+  (dark=2) winter
+  (dark=2) deep winter
+  (dark=2) hard winter
+  (dark=3) deep winter
+  (dark=3) black winter
+  (dark=3) endless winter
+season.dark.this
+  (dark=2) this long winter
+  (dark=2) this hard winter
+  (dark=3) this long night
+  (dark=3) this black winter
+weather.dark
+  (dark=2) the frost
+  (dark=2) the snow
+  (dark=2) the black frost
+  (dark=2) the cold
+  (dark=3) the still cold
+  (dark=3) the deep frost
+  (dark=3) the black frost
+  (dark=3) the cold
+
+# =====================================================================================================================
+# the way the sun was lost (`sunway`): the thing in the sky, and what happened, as a clause (no stop)
+# =====================================================================================================================
+
+sunway.thing
+  (sunway=wanderer) the wanderer
+  (sunway=wanderer) the great wanderer
+  (sunway=wanderer) the bright wanderer
+  (sunway=intruder) the new star
+  (sunway=intruder) the stranger star
+  (sunway=intruder) the second light
+  (sunway=dark) the place where nothing shone
+  (sunway=dark) the hole in the stars
+  (sunway=dark) the bending in the sky
+  (sunway=dance) the second sun
+  (sunway=dance) the sister sun
+  (sunway=dance) the other sun
+sunway.what
+  (sunway=wanderer) {sunway.thing} came nearer every year and pulled the world out of its road
+  (sunway=wanderer) {sunway.thing} grew in the sky until it was brighter than the moons, and then the year began to stretch
+  (sunway=intruder) a star came out of the dark, brighter every year, and took the sun's hold on us with it when it went
+  (sunway=intruder) {sunway.thing} came, and for a while there were two suns, and then there was neither
+  (sunway=dark) something that gave no light passed near, the stars bent round it, and the year came apart
+  (sunway=dark) the stars bent round {sunway.thing}, and when it had gone the year would not close
+  (sunway=dance) the two suns danced further apart every year, until the one we belonged to let us go
+  (sunway=dance) {sunway.thing} drew the year out longer and longer, and one year it did not give it back
+
+# =====================================================================================================================
+# below: the halls they went down to (one name a text: kept), the warm ground, what grew there, the light they kept
+# =====================================================================================================================
+
+hall.below (keep)
+  (age=prehistoric) the deep cave
+  (age=prehistoric) the warm cave
+  (age=prehistoric) the cave under {mountain}
+  (age=medieval) the halls under {mountain}
+  (age=medieval) the deep cellars
+  (age=medieval) the old mines
+  (age=industrial) the pits
+  (age=industrial) the shelters under {city}
+  (age=industrial) the deep workings
+  (age=modern) the shelters
+  (age=modern) the deep levels
+  (age=modern) the bunkers under {city}
+  (age>=futuristic) the deep habitats
+  (age>=futuristic) the vaults
+  (age>=futuristic) the warm levels
+warm.ground
+  the hot springs
+  the warm stones
+  the vents
+  the fire under {mountain}
+  the hot rocks
+  (age>=industrial) the heat of the deep rock
+dark.food (pl)
+  pale roots
+  white mushrooms
+  cave beans
+  (age>=industrial) greens grown under lamps
+  (age>=futuristic) vat greens
+kept.light
+  (age<=medieval) the fire
+  (age<=medieval) the last lamps
+  (age=industrial) the gas lamps
+  (age>=modern) the lights
+  (age>=futuristic) the glow of the halls
+
+# =====================================================================================================================
+# the cause's rules as the lost sun says them (the alternatives guarded by `cause=sunlost` are in their rules: ending_warning.vg's `cause.what` and
+# `cause.noun`, ending_last.vg's `last.cause` and `last.cause.pic`, propaganda_emergency.vg's `mod.cause.noun` and `em.cause`); their parts here
+# =====================================================================================================================
+
+em.sun2 (people=2)
+  the sun will not come back over {$home}
+  the frost has reached the deep levels at the edges
+  every road above ground is to be closed
+  the heat of the deep rock is all the heat there is
+  {sunway.thing} has taken the sun from us
+
+# ---- the ordinary rules a drifter's history reached, theirs written right -------------------------------------------------------------------
+
+letter.apprentice.lost
+  ($e.a.person!=1 tense=past) {$e.a} has gone as apprentice to a {$e.what}. {let.app.coda}
+  ($e.a.person!=1 tense=past) We have bound {$e.a} to a {$e.what} for {n} years. {let.app.coda}
+  ($e.a.person!=1 tense=past) {$e.a} {be:$e.a} to be a {$e.what}, it is settled. {let.app.coda}
+  ($e.a.person=1 tense=past) I have gone as apprentice to a {$e.what}, for {n} years, and I am to sleep over the shop.
+  ($e.a.person=1 tense=past) I am to be a {$e.what}; it is settled, and the fee is paid.
+bc.playtopic.lost (people=4)
+  the founding of {city}
+  the old kings
+  the {crop} famine
+  the floods
+  the {craft} workers' strike
+  a family of {herd} keepers
+  (has:other) the war with the {other}
+  the first railway
+  {founder}
+  the last summer
+
+# ---- the sun's measure as a chart's caption (`chartstyle=sunmeasure`: the disc year by year from the onset, `tally` the measures drawn, `sunfrom`
+# the first in the people's parts, `sunsize` the last; the mark the star that was their sun) ----------------------------------------------------
+
+smc.open
+  (age<=medieval medium=painted|medium=stone|medium=bone) Painted in a row along the wall, each smaller than the one before:
+  (age<=medieval medium=painted|medium=stone|medium=bone) The suns of the last summers, one for each:
+  (age<=medieval medium=painted|medium=stone|medium=bone) The sun as the watchers saw it, year by year:
+  (age=medieval medium!=painted medium!=stone medium!=bone) Drawn with the compass, year after year, each ring inside the last:
+  (age=medieval medium!=painted medium!=stone medium!=bone) The measures of the sun, set down in rings by the watchers:
+  (age>=industrial) The sun's diameter against the years, as the observatory measured it:
+  (age>=industrial) The curve of the sun, plotted from the observatory's tables:
+  (age>=industrial) The fall of the sun's disc, year on year:
+smc.what
+  {#tally|ring}, from {#sunfrom|part} across to {sunsize}.
+  The first is {#sunfrom|part} across; the last is {sunsize}.
+  {#tally|measure}: {#sunfrom|part} at the start, {sunsize} at the end.
+smc.mark
+  The last of them is {chart.mark}.
+  Where it went: {chart.mark}.
+  It is {chart.mark} now.
+)VG"

@@ -84,18 +84,14 @@ void KeyMap::apply(Input& in) const {
 // ---- R-418: the controller --------------------------------------------------------------------------------------------------------------
 
 namespace {
-const char* STD_BUTTON_NAMES[PAD_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "BACK", "START", "GUIDE", "L3", "R3", "UP", "RIGHT", "DOWN", "LEFT"};
-const char* STD_BUTTON_LABELS[PAD_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "SELECT", "START", "GUIDE", "L3", "R3", "D-PAD UP", "D-PAD RIGHT", "D-PAD DOWN", "D-PAD LEFT"};
-const char* STD_AXIS_NAMES[PAD_AXES] = {"LX", "LY", "RX", "RY", "LT", "RT"};
-const char* ROLE_NAMES[PR_COUNT] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT", "WALK_X", "WALK_Y", "LOOK_X", "LOOK_Y"};
+const char* const STD_BUTTON_NAMES[PAD_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "BACK", "START", "GUIDE", "L3", "R3", "UP", "RIGHT", "DOWN", "LEFT"};
+const char* const STD_BUTTON_LABELS[PAD_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "SELECT", "START", "GUIDE", "L3", "R3", "D-PAD UP", "D-PAD RIGHT", "D-PAD DOWN", "D-PAD LEFT"};
+const char* const STD_AXIS_NAMES[PAD_AXES] = {"LX", "LY", "RX", "RY", "LT", "RT"};
+const char* const ROLE_NAMES[PR_COUNT] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT", "WALK_X", "WALK_Y", "LOOK_X", "LOOK_Y"};
 const char HAT_DIRS[4] = {'U', 'R', 'D', 'L'};
-const char* HAT_LABELS[4] = {"UP", "RIGHT", "DOWN", "LEFT"};
+const char* const HAT_LABELS[4] = {"UP", "RIGHT", "DOWN", "LEFT"};
 double clamp01(double v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 }
-
-const char* padRoleName(int r) { return r >= 0 && r < PR_COUNT ? ROLE_NAMES[r] : "?"; }
-
-bool padIsAxisHalf(int c) { return (c >= PADC_STD_AXIS && c < PADC_STD_AXIS + 2 * PAD_AXES) || (c >= PADC_RAW_AXIS && c < PADC_RAW_HAT); }
 
 double padControlValue(const PadState& p, int c) {
     if (c < 0) return 0;
@@ -297,7 +293,13 @@ int padCapture(const PadState& prev, const PadState& rest, const PadState& now, 
     }
     if (now.mapped) {   // a stick's half (the standard names first: they hold for any controller of the same layout)
         int best = -1; double bestD = 0.6;
-        for (int a = 0; a < 4; a++) { const double d = now.axes[a] - rest.axes[a]; if (std::fabs(d) > bestD && std::fabs(now.axes[a]) > 0.5) { bestD = std::fabs(d); best = PADC_STD_AXIS + 2 * a + (d > 0 ? 1 : 0); } }
+        for (int a = 0; a < 4; a++) {
+            const double d = now.axes[a] - rest.axes[a];
+            if (std::fabs(d) > bestD && std::fabs(now.axes[a]) > 0.5) {
+                bestD = std::fabs(d);
+                best = PADC_STD_AXIS + 2 * a + (d > 0 ? 1 : 0);
+            }
+        }
         if (best >= 0) return best;
     }
     if (!axes) {

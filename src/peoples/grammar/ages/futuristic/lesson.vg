@@ -1,0 +1,260 @@
+R"VG(
+# lesson.vg (H-04; the second pass 2026-10-10): the lesson (a teacher's record for children: their world, their ways and an event
+# of their own history, `@event`, vote_law.vg's), the assembly's vote, the code of law. A late people keeps many lessons and votes:
+# every part is composed of the people's own world (its sky, its land, its crops and herds, its feasts and crafts, its words).
+
+@root lesson.*
+
+# ---- the lesson ---------------------------------------------------------------------------------------------------------------
+
+genre.lesson (words=47..185)
+  {ls.head}\n{ls.world}\n{@event founding,built,invention,discovery,war,battle,siege,sack,peace,sickness,famine,flood,drought,quake,eruption,impact,flare,winter,institution,government,accession,faith,deed,unrest,migration,abandoned,contact,treaty,otherend,omen,way,fire,storm,accident,wonder,games,law,trial,embassy,show,stones,coming,first,death lesson 3000}\n{ls.ask}
+  {ls.head}\n{@event founding,built,invention,discovery,war,battle,siege,sack,peace,sickness,famine,flood,drought,quake,eruption,impact,flare,winter,institution,government,accession,faith,deed,unrest,migration,abandoned,contact,treaty,otherend,omen,way,fire,storm,accident,wonder,games,law,trial,embassy,show,stones,coming,first,death lesson 3000}\n{ls.world}\n{ls.ask}
+  {ls.head}\n{ls.world}\n{@event founding,built,invention,discovery,war,battle,siege,sack,peace,sickness,famine,flood,drought,quake,eruption,impact,flare,winter,institution,government,accession,faith,deed,unrest,migration,abandoned,contact,treaty,otherend,omen,way,fire,storm,accident,wonder,games,law,trial,embassy,show,stones,coming,first,death lesson 3000}\n{ls.moral} {ls.ask}
+
+ls.head (formula people=4)
+  A lesson for the children of {$home}, recorded by their teacher.
+  Today's lesson, for the archive.
+  (has:$f) A lesson given at {$home}; the teacher's notes.
+  The {#n:ord} lesson of {season.now}, {$home}. For the archive.
+  Lesson, {$home}, cycle {#year:digits}. {#n} children, {#n} of them listening.
+  For the archive: what I taught today at {$home}, and how it went.
+  The children of the {fut.block} at {$home}: today's lesson.
+
+ls.world
+  (2) {ls.fact} {ls.fact}
+  (2) {ls.fact} {ls.fact} {ls.fact}
+  (1) We began outside. {ls.fact} {ls.fact}
+
+ls.fact
+  (2 once) {ls.sky}
+  (2 once) {ls.land}
+  (2 once) {ls.life}
+  (2 once) {ls.ways}
+  (1 once) {ls.word}
+  (1 once) {ls.past}
+
+# what is over them
+ls.sky (share=0.7)
+  Our world turns once a day, as you know, and goes round {sun.first} once a year.
+  {sun.first} is a star like the others, only near; the others are suns too, and some of their worlds may grow {crop}, for all we know.
+  (moons>0) {moon} is our moon, older than the {tree} on {mountain}, and it will be here after us.
+  (moons>1) We have {#moons} moons. The old {people} named each of them, and argued about the names.
+  (moons=0) We have no moon. Other worlds do; we have {star} instead, which never moves.
+  (rings=1) The ring is ice and stone, very thin, and very wide. From the side it nearly disappears.
+  (aurora=1) The lights in the north come from {sun.first}, through the air, when it is restless.
+  (comet=1) The hairy star comes back. The old records counted its returns before they knew why.
+  (giant=1) The wanderer is a world much bigger than ours, made mostly of air.
+  (companion=1) The second sun is a star of its own. Our world goes round only one of them.
+  (locked=1) One side of our world always faces {sun.first}; we live where the day meets the night.
+  (tilted=1) The seasons come because our world leans. In {season.now} our half leans {ls.lean}.
+  (longnight=1) Our nights are long because our world turns slowly. The {people} learned to sleep twice.
+  The stars the old {people} called the {herd} are not near each other at all; they only look it from here.
+  The old {people} named the stars after the {herd}; we still call one of them the shepherd.
+  {sun.first} rises over {mountain} at {festival}, and the old {people} built their doors to face it and painted them {colour.holy}.
+  (moons>0) The old ones planted the {crop} by {moon}; some of the gardeners still do.
+  At night the sky over {$home} turns, slowly; the old ones said it was {god} walking the {herd} home.
+  The light from {star} left it before the first {people} drove their {herd} here.
+
+# what is under them
+ls.land (share=0.6)
+  {river} rises under {mountain} and runs a long way to the sea, and people have grown {crop} by it since there were people.
+  (desert=1) The sand was once sea. You can find shells in the dunes if you look.
+  (desert=1) There was rain here once, every year. The old records complain about it.
+  (desert=0) The {tree} on the hills are older than the oldest house in {$home}.
+  (desert=0 coast=1) The tide comes twice a day, pulled by {ls.tide}, and {fish} come with it.
+  {mountain} was a fire mountain once; it has been asleep longer than the {people} have kept {herd}.
+  {land} took a long time to make, with water and wind, before anyone was here to watch.
+  (cold=1) The ice comes down from the north every year a little less than it used to.
+  (highmountains=1) On the high mountains the air is thin; the {herd} there have bigger hearts than ours.
+  (geysers=1) The hot springs are water that went down into the world and came back warm.
+  (saltflats=1) The salt flats were a lake. When it dried, it left everything that was in it.
+  (archipelago=1) Our islands are the tops of mountains; the rest of them is under the sea.
+  (karst=1) The stone towers are what the rain left when it dissolved the rest.
+  (glowflora=1) The lamp trees glow to call the insects at night. We moved here partly for them.
+  (redsoil=1) The earth is red because of the iron in it. Our oldest pots are the same colour.
+  The {tree} on {mountain} are the same kind our ancestors cut for {material}, and they grew back.
+  The water in {river} has been the same water, going round, since before there were {people}.
+  Under the {fut.green} are the old fields; dig and you will find {crop} seeds from a thousand years ago.
+  (coast=1) The sea took the old harbour; on a calm day you can see its {walls.of} walls under the water, and {fish} in them.
+
+# what lives with them
+ls.life (share=0.6)
+  The {crop} we eat was once a wild grass. [Someone, a long time ago, saved the seeds.|The first {people} found it by the water.|It took a thousand years to make it what it is.]
+  The {herd} came here with the first {people}, long before the machines.
+  The {herd} in the pens are the same beasts our ancestors kept; only the pens have changed.
+  The {bird} on the roofs were here before the city, and they think of the {fut.green} as theirs.
+  {fish} still come up {river} in {season.now}, though nobody fishes for them now.
+  The {fruit} in the {fut.green} grew wild on {mountain} once, and one of you found one there last year.
+  {pest} have eaten our {crop} for as long as there have been records. They are very patient.
+  The oldest {tree.n} at {$home} was planted the year the {people} began counting years.
+  The {game} in the hills were hunted once. Now they come down to the {fut.gate} to be fed.
+  {crop2} came from the far side of the world, a long time ago, in somebody's pocket.
+  The {beast} that lives in your house is descended from the ones the first {people} kept.
+  The {veg} in your bowl tonight were grown from seed kept by forty generations.
+  The {bird} sing a different song here from the ones at {city2}; the old ones said they had quarrelled.
+
+# how they live
+ls.ways (share=0.5)
+  {festival} is the oldest thing we do. Nobody remembers why we started.
+  We keep {feast.custom} because our grandparents did; that is a good enough reason.
+  Our houses have {roofs} because {ls.roofwhy}.
+  We paint {motif.over} over our doors, every family's a little different; look at yours tonight.
+  {colour.holy} is our colour for {ls.colourfor}. Other peoples chose other colours.
+  The old {people} made {craft} their pride, and a few of us still do it the slow way, with {material}.
+  We count in {measure.far} when we walk, though the machines count in something finer.
+  When someone dies we say they have {death.went}. It is an old way of saying it, and a kind one.
+  The number {#number} was holy to the old {people}; you will find it everywhere in the old buildings.
+  {instrument} is the oldest instrument we have. Its sound has not changed.
+  We greet each other with the old words: {blessing}. Say it to someone today.
+  The old {people} would swear {oath}, and they kept their oaths, mostly.
+  We wear {colour.mourn} for the dead; other peoples wore other colours, and some none at all.
+  We play {fut.game} the same way the children of the first {people} played it, with the same arguments.
+  The {~word} for a guest is the same as the {~word} for a gift. Remember that.
+  Our feast of {festival} once lasted nine days; now it lasts one, and we are just as tired after, and so are the {herd}.
+ls.roofwhy
+  the old {people} built them so
+  of {weather}
+  our grandparents liked them
+  nobody has thought of a better kind
+ls.colourfor
+  the dead
+  weddings
+  the gods
+  the first day of the year
+  luck
+ls.lean
+  toward {sun.first}
+  away from {sun.first}
+ls.tide
+  {moon}
+  {sun.first}
+  the moons
+
+# their words, their past
+ls.word
+  Our old word for home was {~home}, and some of the old ones in the {fut.block} still use it.
+  The word {~river} meant both a river and a life, and we still say {~river} at funerals.
+  In the old speech, {~rain} was a kind of blessing; in a dry year the old ones still say {~rain} instead of thank you.
+  The children of the first {people} called the moon {~moon}; try it, it is a good word.
+  Our word for the {herd} is still {~herd}, though the machines have a dozen better ones.
+  The old {people} said {~goodbye} when they parted, which means something like may your {crop} stand.
+ls.past (share=0.5)
+  Our people are the {people}, who counted their years from {city} and their wealth in {herd}.
+  {city} was founded by {founder}, or so the oldest story says, with a cart of {crop} and a {beast}.
+  The {people} were few once, then many, then fewer, and the {herd} with them.
+  (has:era) We call these years {era}, a name given by people who were not there to see the {fut.green}.
+  There were {people} here before there were records; we know them by their stones and their {vessel}.
+
+# the lesson's moral
+ls.moral
+  {proverb}, as the old ones said.
+  The lesson, if there is one: {virtue} outlasts {vice}.
+  Life is {life.is}, the old ones said, and on this one I think they were right.
+  We are what is left of all of that, with the {crop} and the {herd}, and it is plenty.
+  The old {people} would have said: {proverb}.
+
+# the end of a lesson: questions, homework, what the children asked
+ls.ask
+  {ls.q}
+  For next time: {ls.homework}.
+  The children asked {ls.childq}. I said {ls.answer}
+  One of the children asked {ls.childq}. {ls.noanswer}
+  {ls.q} {ls.q2}
+ls.q
+  (1) {ls.q.plain}
+  {ls.q.own}
+  {ls.q.own}
+  {ls.q.own}
+ls.q.plain (share=0.35)
+  Questions: why do you think they did it? Would you have?
+  Questions: what would you have taken with you?
+  Questions: who do you think wrote it down, and why?
+  Questions: which of you would have stayed?
+  Questions: who was right? Were both?
+  Questions: what is one thing we do that they would not understand?
+ls.q.own (share=0.8)
+  Questions: what would you have planted: {crop}, or {crop2}?
+  Questions: what would {founder} make of our {fut.green}?
+  Questions: would they have kept the {herd}, if they had had our {fut.green}?
+  Questions: what would you have asked {founder}, if you had been there?
+  Questions: what do you think they ate, that day? Was it {food}?
+  Questions: why do you think they wore {colour.mourn} for it, and not {colour.any}?
+  Questions: what would the old {craft} workshops have made of it?
+  Questions: what did they do with the {herd} while it happened?
+  Questions: what would you have carried out of {$home}, if you could carry one thing?
+  Questions: who would you have trusted, and why?
+  Questions: what song would they have sung afterwards? Do we still sing it?
+  Questions: if you had been there, would you have kept {festival} that year?
+ls.q2 (share=0.8)
+  Think about it over {food}.
+  Ask your grandparents; they will tell you more than they should.
+  There is no right answer, only better ones.
+  We will talk about it at {festival}.
+  Write it on the wall of the {fut.common} if you like; I will read it there.
+  Ask in the {craft} workshop; they have opinions about everything there.
+  Take your time. It took them a hundred years.
+  Answer in a song if you prefer; one of you always does.
+  Do not ask the machines. They will only tell you the answer.
+  Bring your answer to the {fut.green} tomorrow, before the bell.
+ls.homework (share=0.8)
+  find one thing in the archive about it, and bring it
+  ask the oldest person you know what they were told
+  draw {motif.over} from your own door, from memory
+  learn the {festival} song, the long version
+  find out what your family's {craft} was
+  (has:$home.landmark) walk to {$home.landmark} and tell me what is there now
+  count the {bird} on your roof at dawn
+  find the oldest {tree.n} you can, and sit under it
+  learn one word of the old speech, and bring it
+  ask the keepers of the {herd} what the {herd} were for
+  find {colour.holy} anywhere in {$home}, and tell me where
+ls.noanswer (share=0.6)
+  I did not have a good answer.
+  I said I would ask in the {craft} workshop, where they know everything.
+  I told them what my teacher told me, which was nothing, kindly.
+  I said: ask me again when the {bird} come back, and I will have thought.
+  We sat with it until the bell, which is an answer of sorts.
+  I said the old saying, {proverb}, and they groaned, as I did.
+  I said it was a question for {holyplace}, not for school.
+ls.childq
+  (1) {ls.childq.plain}
+  {ls.childq.own}
+  {ls.childq.own}
+ls.childq.plain (share=0.3)
+  why we remember sad things
+  whether it could happen again
+  if it was a long time ago or a very long time ago
+  why nobody fixed it
+ls.childq.own (share=0.85)
+  whether the {bird} saw it
+  what the {herd} ate that winter
+  why it is not in the {festival} songs
+  whether they still had {fruit} then
+  what colour they wore for it, and whether it was {colour.mourn}
+  whether the {craft} workshop was there yet
+  if the {fut.green} were there, or only fields of {crop}
+  whether {god} minded
+ls.answer (share=0.8)
+  that they might know in the {craft} workshop, and to ask there.
+  that the old ones would say {proverb}, and that this was not an answer either.
+  that we would find out together, which is what teachers say.
+  that I would think about it at {festival}.
+  to ask the archive, or the {craft} workshop.
+  that I did not know, and that it was a good question.
+  that it was a very long time ago, and also last week, in a way.
+
+# ---- the assembly's vote -------------------------------------------------------------------------------------------------------
+
+genre.vote (words=28..112)
+  {vt.head}\n{vt.question}\n{vt.for}\n{vt.against}\n{vt.result}
+  {vt.head}\n{vt.question}\n{vt.debate}\n{vt.for}\n{vt.against}\n{vt.result}
+  {vt.head}\n{vt.question}\n{vt.against}\n{vt.for}\n{vt.result}
+
+vt.head (formula people=3)
+  The assembly of {$seat}, cycle {#year:digits}: the record of the vote.
+  Recorded by the archive: a vote of the people of {$home}.
+  A vote at {$home}, {season.now}, cycle {#year:digits}.
+  The people of {$home} decide. Cycle {#year:digits}.
+  Record of the {#n:ord} vote of the cycle, {$seat}.
+)VG"

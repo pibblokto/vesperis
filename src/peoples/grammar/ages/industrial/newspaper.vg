@@ -1,0 +1,155 @@
+R"VG(
+# newspaper.vg (H-04; the second pass 2026-10-10): the newspaper of the industrial and the modern ages (printed pages): its masthead (the
+# people's own: its name, its motto, its price in their coin), the news in the news's register (news*.vg), then the columns of a town's
+# paper (columns.vg: the market, the council, the courts, the letters, the hall, the sport, the shipping, the railway) and its
+# advertisements (columns_adverts.vg). The ledger, the report, the patent, the telegrams and the factory's rules are ledger_report.vg's; the
+# census, the timetable, the obituary census_obituary.vg's; the voice on a wax cylinder voice.vg's.
+
+@root patent.*
+
+# ---- the newspaper ------------------------------------------------------------------------------------------------------------
+
+genre.newspaper (words=45..235)
+  {paper.mast}\n{@digest public news 2}\n{ind.col} {ind.col}\n{ind.ads}
+  {paper.mast}\n{@digest public news 3}\n{ind.col}\n{ind.ads}
+  {paper.mast}\n{@digest public news 1}\n{ind.col} {ind.col} {ind.col}\n{ind.ads}
+  {paper.mast}\n{@digest public news 2}\n{ind.col}\n{ind.col} {ind.col}\n{ind.ads}
+  (age>=modern) {paper.mast}\n{@digest public news 2}\n{ind.col.m} {ind.col}\n{ind.ads}
+  (age>=modern) {paper.mast}\n{@digest public news 3}\n{ind.col.m}\n{ind.ads}
+
+# the masthead: the paper's name (the history's gazette where it founded one), the date, the price, now and then a motto
+paper.mast (formula)
+  (has:gazette) {gazette}. {paper.date}. Price {paper.price}.
+  (has:gazette) {gazette}, {paper.date}. {paper.motto}.
+  (!has:gazette) The {city} {ind.paper.name}. {paper.date}.
+  (!has:gazette) The {$home} {ind.paper.name}. {paper.date}. {paper.when}.
+  (!has:gazette) The {$home} {ind.paper.name}: {paper.motto}. {paper.date}. Price {paper.price}.
+  The {city} {ind.paper.name}, {paper.date}. Price {paper.price}.
+  (has:gazette) {gazette}, the {#year:ord} year of {city}, {season.now} edition.
+  (age>=modern) The {$home} {ind.paper.name}. {paper.date}. {paper.when}.
+
+paper.date
+  the {#year:ord} year of {city}, {season.now}
+  year {#year:digits}, {season.now}
+  {season.now}, the year {#year:digits}
+  the {#year:ord} year, {season.now}
+
+paper.price
+  one {smallcoin}
+  two {smallcoin}
+  {n} {smallcoin}
+  (age>=modern) {n} {coin}
+
+paper.when
+  Published every morning except the rest day
+  Every evening, and twice on market days
+  Weekly, on the eve of the rest day
+  Read in every house from {city} to the sea
+  (age>=modern) Morning and evening editions
+
+ind.paper.name (people=2)
+  Herald
+  Courier
+  Chronicle
+  Messenger
+  Post
+  Advertiser
+  Intelligencer
+  Mirror
+  Tribune
+  Lamp
+  Bell
+  Record
+  Observer
+  Bulletin
+  Citizen
+  Weekly
+  Lantern
+  Sentinel
+  Clarion
+
+paper.motto (people=1)
+  What happened, and what it cost
+  Truth, and the market prices
+  Without fear, and without much money
+  For the {crop} country
+  Founded by subscription, and still owing
+  The news before it is old
+  Read aloud in every kitchen
+  Fair to all, and kind to the dead
+  Every word paid for
+  The town's own paper
+  Plain news for plain people
+  Ink and the truth
+  Under {skyone}, the news
+  No master but the reader
+
+# ---- the modern paper's own columns ---------------------------------------------------------------------------------------
+
+ind.col.m
+  (once inv.radio=1) {ind.radio}
+  (once) {ind.traffic}
+  (once) {ind.cinema}
+  (once inv.telephone=1) {ind.phone}
+  (once) {ind.shares}
+  (once) {ind.forecast}
+
+ind.radio
+  Tonight on the wireless: {ind.radio.what}, and the late news at the [usual hour|hour after|close].
+  The wireless {ind.radio.what2}; the listeners' letters on the subject are printed on the next page.
+ind.radio.what
+  a concert of {instrument} music from the hall at {city}
+  a talk on {craft} for beginners
+  the {ind.sport} from {city2}, described by a man who has never played
+  a play about the founding of {city}
+  readings from the old songs
+  the farming hour, with the price of {crop}
+ind.radio.what2
+  will carry the {festival} service from {holyplace} this year
+  is to broadcast the council's sittings, which nobody asked for
+  has a new announcer, and everyone has an opinion about her voice
+  will be silent on the rest day by order
+
+ind.traffic
+  (age>=modern) {streets.of} of {$home} were blocked for an hour yesterday by [a broken cart and the people watching it|the {herd} going to the market|a parade nobody had been told of|the queue for the new {food} shop].
+  (age>=modern) The crossing at {town.open} is to have a policeman [at the busy hours|from first light|on market days], after a third accident {season.this}.
+
+ind.cinema
+  At the picture hall this week: {ind.film}, [twice nightly|at the late show only|with music].
+  The picture hall at {$home} will close for repairs; its seats [are older than the films|have been complained of since it opened|are to be sold].
+ind.film
+  a film about the founding of {city}
+  a comedy about an apprentice in the {craft} trade
+  the drama of the great flood
+  a film of the {festival} procession, in which many of our readers may find themselves
+  a story of the old wars, very loud
+
+ind.phone
+  The telephone exchange at {$home} will add [two hundred|five hundred|a thousand] lines by {season.next}; those waiting are asked to go on waiting.
+  Calls to {city} will be cheaper after dark from the first of the month.
+
+ind.shares
+  The exchange: {ind.share.a}, {ind.share.b}.
+  On the exchange yesterday {ind.share.a}; {ind.share.b}.
+ind.share.a
+  the {craft} companies rose
+  {crop} fell on talk of a good harvest
+  the railway shares were steady
+  shipping rose on the news from the coast
+  the mines fell again
+ind.share.b
+  and nobody could say why
+  the dealers went home early
+  {city2} followed {city}, as it always does
+  a fortune was made by someone, and lost by someone else
+
+ind.forecast
+  Tomorrow: {weather.now}, {ind.fc.tail}.
+  The forecast for {$home}: {weather.now} in the morning, {ind.fc.tail}.
+ind.fc.tail
+  clearing later
+  and more of it
+  worse in the hills
+  with the {bird} flying low, which our readers will know means rain
+  then whatever the sky decides
+)VG"

@@ -1,0 +1,41 @@
+R"VG(
+# hunt_events.vg (H-04's second pass): the hunt the wall was painted for (`@event beasts pre.huntev`, hunt.vg's genre): the
+# great one taken, the one that killed, the year of the great herds, the year they did not come, came late or came early.
+
+@root pre.huntev.*
+
+pre.huntev.beasts
+  ($e.what=great) {pre.huntev.great}
+  ($e.what=killed) {pre.huntev.killed}
+  ($e.what=many) {pre.huntev.many}
+  ($e.what=none) {pre.huntev.none2}
+  ($e.what=late) {pre.huntev.late}
+  ($e.what=early) {pre.huntev.early}
+pre.huntev.great
+  It is the great {game.one} taken at {$e.place}: it fills the {pre.bone.or}, and the hunters are small round its feet.
+  One {game.one}, the great one of {$e.place}, drawn with more care than anything else on the {pre.bone.or}.
+  The {game.one} at the centre is larger than {pre.hut.n}; the ship takes it for the great one, taken {pre.e.at}.
+  A {game.one} drawn in {colour.holy} with every hair, and round it hunters {pre.look}: the great one of {$e.place}.
+pre.huntev.killed
+  The {game.one} has a hunter on its horns, and the others are running: {#$e.value|hunter} died at {$e.place}, the ship thinks.
+  A hunter lies under the {game.one}'s feet, drawn apart from the rest: the hunt at {$e.place} that went wrong.
+  The {game.one} is drawn standing, and under it {pre.sign.dead}: the year one of ours did not come back from {$e.place}.
+pre.huntev.many
+  The {game} cover the whole {pre.bone.or}, more than anyone could count, the year they came in a flood.
+  {game} drawn over {game}, so many that they make one shape: the year of the great herds {pre.e.at}.
+  The {game} run off the edge of the {pre.bone.or} and on round the other side: the year there were too many to draw.
+pre.huntev.none2
+  There is no beast: the hunters stand facing bare {pre.bone.or}, the year the {game} did not come.
+  The beasts are drawn and then rubbed out; only the hunters are left, the year the {game} stayed away.
+  The hunters sit with their {pre.weapon} across their knees, and the place for the {game} is empty.
+pre.huntev.late
+  The {game} are drawn coming over {mountain} with snow on their backs: the year they came late.
+  The hunters are drawn thin, waiting, and the {game} only at the far end, small: they came late {pre.e.at}.
+  {pre.sign.moon} drawn {#number|time} before the {game}: the moons they waited, the year the {game} were late.
+pre.huntev.early
+  The {game} are drawn among the hunters' huts, before the hunters are ready: the year they came early.
+  The hunters run out with their {pre.weapon} half made: the {game} came before {season.next}, {pre.e.at}.
+  The {game} are drawn over the {crop2} still standing: the year they came early to {$e.place}.
+pre.huntev.none
+  {hunt.beast}
+)VG"

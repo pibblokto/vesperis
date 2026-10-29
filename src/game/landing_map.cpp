@@ -1,11 +1,11 @@
-// The landing map: site selection on the body's planet map (B-004 relief shading).
+// The landing map: site selection on the body's planet map (its pictures are built in landing_map_build.cpp).
 #include "game.h"
 #include "core/parallel.h"
-#include "galaxy/roads.h"
-#include "galaxy/plan.h"
-#include "galaxy/buildings.h"
+#include "peoples/roads.h"
+#include "peoples/plan.h"
+#include "peoples/buildings.h"
 #include <chrono>
-#include "galaxy/ruins.h"
+#include "peoples/ruins.h"
 #include "galaxy/drainage.h"
 
 namespace { const int MAP_LW = 256, MAP_LH = 128; }   // logical size of the map frame
@@ -19,7 +19,7 @@ namespace { const int MAP_LW = 256, MAP_LH = 128; }   // logical size of the map
 #include <algorithm>
 #include <ctime>
 
-void Game::beginLanding() {
+void Game::landingMapEnter() {
     landBody = ship.parkedBody;
     // default site: the sub-ship point (what you are looking at from orbit)
     Mat3 frame = sys.bodyFrame(landBody, t);
@@ -28,36 +28,30 @@ void Game::beginLanding() {
     landLat = clampd(landLat, -85 * DEG, 85 * DEG);
     spaceR.mapIfReady(sys.bodies[landBody]);   // F-02: asked, never waited for: the screen reads the world until its thread has made the map (the keys
                                                // work meanwhile as they did after the wait: Enter lands at the cursor, R waits for the map)
-    worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
-    if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // R-415: its records and their homes, for V
-    drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
-    landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // B-422: at once (the cursor has not moved)
-    landZoom = 0;   // O2: start from the whole world
-    state = GameState::LANDING_MAP;
-}
-
-bool Game::testDrainageReady() const {
-    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return true;
-    return drainageReady(BodyGen::make(sys.bodies[landBody]), StarSystem::bodyFromLatLon(landLat, landLon), 60000.0);
+    worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // (already on its way since the approach)
+    if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // its records and their homes, for V
+    drainLat = 1e9; drainLon = 1e9;   // the map's first update prefetches the drainage of the default site
+    landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // at once (the cursor has not moved)
+    landZoom = 0;   // start from the whole world
 }
 
 bool Game::landingZoomAllowed() const { return landBody >= 0 && landBody < (int)sys.bodies.size() && sys.bodies[landBody].radiusKm >= 100; }
 
-void Game::updateLandingMap(const Input& in, double dt) {
+void Game::updateLandingMap(const Input& in, double dt, double realDt) {
     // O2: zoomed in, the arrows step a hundredth of a degree (about a kilometre), the whole-world view one degree
     double step = (landZoom ? (in.shift() ? 0.05 : 0.01) : (in.shift() ? 6.0 : 1.0)) * DEG;
     if (in.wasPressed(KEY_LEFT) || (in.isDown(KEY_LEFT) && in.shift())) landLon -= step;
     if (in.wasPressed(KEY_RIGHT) || (in.isDown(KEY_RIGHT) && in.shift())) landLon += step;
     if (in.wasPressed(KEY_UP) || (in.isDown(KEY_UP) && in.shift())) landLat += step;
     if (in.wasPressed(KEY_DOWN) || (in.isDown(KEY_DOWN) && in.shift())) landLat -= step;
-    if (in.mouseDx != 0 || in.mouseDy != 0) {   // R-418: the mouse's motion moves the cursor smoothly: a controller's right stick (the mouse is not held here, so it is the stick's)
+    if (in.mouseDx != 0 || in.mouseDy != 0) {   // the mouse's motion moves the cursor smoothly: a controller's right stick (the mouse is not held here, so it is the stick's)
         const double k = (landZoom ? 0.0013 : 0.15) * settings.mouseSensitivity * DEG;   // degrees a mouse pixel: about 60 a second at the stick's full throw, half a degree zoomed in
         landLon += in.mouseDx * k / (landZoom ? std::max(0.15, std::cos(landLat)) : 1.0);   // the zoom's window is wider in longitude by the latitude
         landLat -= in.mouseDy * k;
     }
     landLat = clampd(landLat, -88 * DEG, 88 * DEG);
     landLon = wrapAngle(landLon);
-    // O6-03: the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
+    // the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
     // so the landing's first frame finds them in the cache (a tile takes 100-300 ms on a big world). B-422: once the cursor
     // rests 0.4 s: every step asked for its own tiles, and a cursor held with Shift kept every core busy (46 threads, 8 cores
     // of 10) and the Enter after it waited three seconds on the places it had passed
@@ -68,9 +62,9 @@ void Game::updateLandingMap(const Input& in, double dt) {
     }
     if (in.wasPressed(KEY_Z) && !in.ctrl()) {
         if (!landingZoomAllowed()) status("THE WHOLE WORLD ALREADY FITS THE MAP", 3);
-        else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = 4; }
+        else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = BEEP_UI; }
     }
-    const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // F-02: R once the world's map is made
+    const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // R once the world's map is made
     if (rMap) {
         // random lit land site
         Rng r((uint64_t)(realTime * 1000));
@@ -81,12 +75,12 @@ void Game::updateLandingMap(const Input& in, double dt) {
             double la = r.range(-70 * DEG, 70 * DEG), lo = r.range(-PI, PI);
             int mat = m.materialAt(lo, la);
             Vec3 u = StarSystem::bodyFromLatLon(la, lo);
-            if (mat != MAT_WATER && dot(u, sunB) > 0.2) { landLat = la; landLon = lo; break; }
+            if (mat != MAT_WATER && (sys.sunless() || dot(u, sunB) > 0.2)) { landLat = la; landLon = lo; break; }   // no side lit where there is no sun
         }
     }
     if (in.wasPressed(KEY_C)) mapClouds = !mapClouds;   // the original's cloud filter
-    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = 4; }   // R-415: the peoples over the map, off by default
-    if (in.wasPressed(KEY_J)) {   // M5-09: jump to the point where the biggest body in this world's sky stands highest
+    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = BEEP_UI; }   // the peoples over the map, off by default
+    if (in.wasPressed(KEY_J)) {   // jump to the point where the biggest body in this world's sky stands highest
         int best = -1; double bestAng = 0;
         Vec3 bp = sys.bodyPos(landBody, t);
         for (int j = 0; j < (int)sys.bodies.size(); j++) {
@@ -102,20 +96,21 @@ void Game::updateLandingMap(const Input& in, double dt) {
             status(fmt("%s AT THE ZENITH HERE (%.1f%c WIDE)", upper(bodyNameOf(best)).c_str(), 2 * bestAng / DEG, CH_DEGREE), 3);
         } else status("NOTHING BIG IN THIS SKY", 2);
     }
-    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon)) buildLandingZoom();
-    else if (landZoom && zoomDry) {   // O6-03: the window was drawn without the drainage; again with it once its tiles are built
+    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon))
+        buildLandingZoom();
+    else if (landZoom && zoomDry) {   // the window was drawn without the drainage; again with it once its tiles are built
         const Body& zb = sys.bodies[landBody];
         const Vec3 zc = StarSystem::bodyFromLatLon(zoomLat, zoomLon);
         const double zr = std::max(zoomHalfLat, zoomHalfLon * std::max(std::cos(zoomLat), 0.15)) * zb.radiusKm * 1000.0 * 1.05;
         if (drainageReady(spaceR.genFor(zb), zc, zr)) buildLandingZoom();
         else if (realTime - zoomPrefetchT > 0.5) { drainagePrefetch(spaceR.genFor(zb), zc, zr, true); zoomPrefetchT = realTime; }   // the cursor's own prefetch supersedes a worker; ask again
     }
-    if (in.wasPressed(KEY_ESCAPE)) state = GameState::SPACE;
+    if (in.wasPressed(KEY_ESCAPE)) closeScreen();
     if (enterKey(in)) {
         state = GameState::DESCENT;
         transT = 0;
         fade = 0;
-        {   // C-08 (KI-345): the capsule sets down outside a settlement's walls
+        {   // the capsule sets down outside a settlement's walls
             double la = landLat, lo = landLon;
             if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("THE CAPSULE KEEPS OUTSIDE THE RUINS", 4); }
         }
@@ -124,260 +119,33 @@ void Game::updateLandingMap(const Input& in, double dt) {
         surf.cameraOverrideAlt = 1800;
         surf.cameraOverridePitch = -60 * DEG;
         surf.player.yaw = wrap2pi(landLon + 1.0);
-        audio.beep = 2;
+        audio.beep = BEEP_ARRIVE;
         autosave();
     }
     updateShipMotion(dt);
 }
 
-
-// Base colours of the landing map (bug B-004, N1-04): the body's material palette through the shared
-// material ramp at the ground's noon stop of the texel's albedo, times the north-west hillshade from the
-// height map and the star's light; lava emissive; optional cloud overlay. Rebuilt only when the body or
-// the cloud toggle changes; the day/night term is applied per frame.
-// O2: the material ramps of a world under its star's light (the same as the globe and the ground, N1-05), and one
-// texel colour from them: the ground's exposure rule times a hillshade, lava hot
-void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
-    const BodyGen& g = spaceR.genFor(b);
-    RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
-    lf = clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);
-    atmo = PLANET_TYPES[b.type].atmosphere;
-    RGB skyL; bool hasSky = false;
-    if (atmo) {
-        RGB zen, hor;
-        typeSky(g, zen, hor);   // R-307: the one pair per type
-        skyL = lerp(zen, hor, 0.5f) * lightC; hasSky = true;
-    }
-    for (int mm = 0; mm < MAT_COUNT; mm++) ramps[mm] = materialRamp(g.matColor[mm] * lightC, hasSky ? &skyL : nullptr, 1.0);
-}
-
-uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade) {
-    RGB c = materialRampColor(ramps[mat], clampd(exposureStop(albedo, lf, atmo) * shade, 0, 63));
-    double r = c.r * 255, gg = c.g * 255, bl = c.b * 255;
-    if (mat == MAT_LAVA) { r = 255; gg = 110 + 80 * albedo; bl = 20; }
-    return rgb(clampi((int)r, 0, 255), clampi((int)gg, 0, 255), clampi((int)bl, 0, 255));
-}
-
-void Game::buildLandingMapBase() {
-    const Body& b = sys.bodies[landBody];
-    const PlanetMap& m = spaceR.mapFor(b);
-    const BodyGen& g = spaceR.genFor(b);
-    const int W = PlanetMap::W, H = PlanetMap::H;
-    mapBase.assign(W * H, 0);
-    mapEmissive.assign(W * H, 0);
-    RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
-    MatRamp ramps[MAT_COUNT];
-    double lf; bool atmo;
-    mapRampsFor(b, ramps, lf, atmo);
-    // hillshade: gradients scaled by their RMS so every body gets the same relief strength
-    auto hAt = [&](int x, int y) { x = (x + W) % W; y = clampi(y, 0, H - 1); return (double)m.height[y * W + x]; };
-    double sum2 = 0; int cnt = 0;
-    for (int y = 0; y < H; y += 2)
-        for (int x = 0; x < W; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
-    double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
-    for (int y = 0; y < H; y++)
-        for (int x = 0; x < W; x++) {
-            int i = y * W + x;
-            int mat = m.material[i];
-            double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
-            double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);   // light from the north-west
-            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade);
-            double r = base & 255, gg = (base >> 8) & 255, bl = (base >> 16) & 255;
-            if (mat == MAT_LAVA) mapEmissive[i] = 1;
-            if (mapClouds && atmo) {
-                if (hasOpaqueDeck(b.type)) {
-                    // an opaque cloud deck: the pattern only modulates its brightness; C shows the ground
-                    double cl = 0.55 + 0.45 * (m.cloud[i] / 255.0);
-                    RGB deck = g.matColor[MAT_CLOUD] * lightC;
-                    r = 255 * deck.r * cl; gg = 255 * deck.g * cl; bl = 255 * deck.b * cl;
-                    mapEmissive[i] = 0;
-                } else {
-                    double cl = m.cloud[i] / 255.0 * 0.55;
-                    r += (245 - r) * cl; gg += (245 - gg) * cl; bl += (250 - bl) * cl;
-                }
-            }
-            mapBase[i] = rgb(clampi((int)r, 0, 255), clampi((int)gg, 0, 255), clampi((int)bl, 0, 255));
-        }
-    mapBaseSeed = b.seed;
-    mapBaseClouds = mapClouds;
-}
-
-// O2 (R-301): the zoom window: one sector tall (a degree of latitude), two sectors' worth of ground wide (the frame is
-// 2:1), sampled from the planet function at the far ring's detail (64-512 m), coloured like the whole-world map. The
-// hillshade is normalised over the window, capped so a plain does not turn into a mountain range.
-void Game::buildLandingZoom() {
-    const Body& b = sys.bodies[landBody];
-    const BodyGen& g = spaceR.genFor(b);
-    zoomLat = landLat; zoomLon = landLon; zoomSeed = b.seed;
-    zoomHalfLat = 0.5 * DEG;
-    zoomHalfLon = zoomHalfLat * 2.0 / std::max(std::cos(zoomLat), 0.15);
-    double texelM = 2 * zoomHalfLat * b.radiusKm * 1000.0 / ZH;
-    double detail = clampd(0.6 * texelM, 64, 512);
-    // O6-03: the window reads the drainage (rivers as bands, lakes) from tiles already built; a window whose tiles are
-    // not built yet is drawn without the drainage at once, its tiles are asked for on the worker, and the window is
-    // drawn again when they are there (the zoom itself must not compute tiles: nine of them took two seconds)
-    const Vec3 zoomCentre = StarSystem::bodyFromLatLon(zoomLat, zoomLon);
-    const double zoomRadiusM = std::max(zoomHalfLat, zoomHalfLon * std::max(std::cos(zoomLat), 0.15)) * b.radiusKm * 1000.0 * 1.05;
-    zoomDry = !drainageReady(g, zoomCentre, zoomRadiusM);
-    if (zoomDry) { drainagePrefetch(g, zoomCentre, zoomRadiusM, true); zoomPrefetchT = realTime; }
-    const bool dry = zoomDry;
-    zoomImg.assign(ZW * ZH, 0); zoomEmissive.assign(ZW * ZH, 0); zoomUnit.assign(ZW * ZH, Vec3());
-    std::vector<float> hs(ZW * ZH), albs(ZW * ZH); std::vector<uint8_t> mats(ZW * ZH);
-    auto zt = std::chrono::steady_clock::now();   // F-01: the build's parts
-    auto zoomPart = [&](int k) { auto n = std::chrono::steady_clock::now(); zoomBuildMs[k] = std::chrono::duration<double, std::milli>(n - zt).count(); zt = n; };
-    for (double& ms : zoomBuildMs) ms = 0;
-    zoomBuilds++;
-    parallelFor(ZH, 8, [&](int y0, int y1) {
-        DrainageOff noDrain(dry);   // per worker thread
-        for (int y = y0; y < y1; y++)
-            for (int x = 0; x < ZW; x++) {
-                double lat = clampd(zoomLat + (0.5 - (y + 0.5) / ZH) * 2 * zoomHalfLat, -PI * 0.5, PI * 0.5);
-                double lon = zoomLon + ((x + 0.5) / ZW - 0.5) * 2 * zoomHalfLon;
-                Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
-                SurfaceSample s = sampleSurface(g, u, detail);
-                int i = y * ZW + x;
-                zoomUnit[i] = u; hs[i] = (float)s.height; mats[i] = (uint8_t)s.material; albs[i] = (float)s.albedo;
-            }
-    });
-    zoomPart(0);
-    MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
-    mapRampsFor(b, ramps, lf, atmo);
-    auto hAt = [&](int x, int y) { x = clampi(x, 0, ZW - 1); y = clampi(y, 0, ZH - 1); return (double)hs[y * ZW + x]; };
-    double sum2 = 0; int cnt = 0;
-    for (int y = 0; y < ZH; y += 2)
-        for (int x = 0; x < ZW; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
-    double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * texelM));   // a 3% grade at most for full shading
-    for (int y = 0; y < ZH; y++)
-        for (int x = 0; x < ZW; x++) {
-            int i = y * ZW + x;
-            double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
-            double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-            zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade);
-            zoomEmissive[i] = mats[i] == MAT_LAVA;
-        }
-    zoomPart(1);
-    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
-    zoomCivImg = zoomImg; zoomPlaces.clear();   // R-415: the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
-    if (worldHadCivilisation(g)) {
-        auto tr0 = std::chrono::steady_clock::now();
-        auto texel = [&](const Vec3& u, float& x, float& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW); y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH); };
-        auto addLine = [&](const std::vector<Vec3>& pts, int kind) {
-            std::vector<std::pair<float, float>> poly; float lx = 0, ly = 0;
-            for (size_t k = 0; k < pts.size(); k++) {
-                float x, y; texel(pts[k], x, y);
-                if (poly.empty() || k + 1 == pts.size() || std::hypot(x - lx, y - ly) >= 0.7f) { poly.push_back({x, y}); lx = x; ly = y; }
-            }
-            if (poly.size() >= 2) { zoomRoads.push_back(poly); zoomRoadKinds.push_back(kind); }
-        };
-        std::vector<Road> rs; roadsNear(g, zoomCentre, zoomRadiusM, rs, true);
-        for (const Road& r : rs) {
-            if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;   // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb over the land
-            addLine(r.pts, NK_ROAD);
-        }
-        zoomPart(2);
-        // T-01: the world plan's ways through the window (their waypoints: a leg's walk wanders less than a texel) and its places' cores,
-        // each a disc of its built ground over the map (the core's share of a texel, darkened by the years: what the ground holds)
-        std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
-        std::vector<PlanEdgeRef> es; planEdgesNear(*P, zoomCentre, zoomRadiusM, es);
-        for (const PlanEdgeRef& r : es) if (r.e->kind != NK_SEA) addLine(planEdgeWay(g, *P, r), r.e->kind);
-        zoomPart(3);
-        std::vector<const PlanPlace*> ps; planPlacesNear(*P, zoomCentre, zoomRadiusM, ps);
-        MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
-        const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
-        for (const PlanPlace* p : ps) {
-            zoomPlaces.push_back({p->people, p->rank, p->sclass, p->unit, p->radiusM / texelM});   // R-415: for the places the explorer knows
-            const Culture cu = cultureOf(g, p->people);
-            const RGB pc = cu.palette.colour[0];
-            const double rr = (rock & 255) * 0.5 + pc.r * 140, gg = ((rock >> 8) & 255) * 0.5 + pc.g * 140, bb = ((rock >> 16) & 255) * 0.5 + pc.b * 140;
-            const double standing = 0.75 - 0.45 * cu.decay;
-            float cx, cy; texel(p->unit, cx, cy);
-            const double rT = p->radiusM / texelM;
-            bool any = false;
-            for (int y = (int)std::floor(cy - rT - 1); y <= (int)std::ceil(cy + rT + 1); y++)
-                for (int x = (int)std::floor(cx - rT - 1); x <= (int)std::ceil(cx + rT + 1); x++) {
-                    if (x < 0 || x >= ZW || y < 0 || y >= ZH) continue;
-                    const double d = std::hypot(x + 0.5 - cx, y + 0.5 - cy);
-                    const double f = clampd(rT + 0.5 - d, 0, 1) * std::min(1.0, PI * rT * rT) * standing;   // the disc's share of the texel (a core under a texel its area's)
-                    if (f <= 0.01) continue;
-                    uint32_t& c = zoomCivImg[y * ZW + x];
-                    const double r0 = c & 255, g0 = (c >> 8) & 255, b0 = (c >> 16) & 255;
-                    c = rgb(clampi((int)(r0 + (rr - r0) * f), 0, 255), clampi((int)(g0 + (gg - g0) * f), 0, 255), clampi((int)(b0 + (bb - b0) * f), 0, 255));
-                    any = true;
-                }
-            if (any) zoomCores++;
-        }
-        zoomRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
-        zoomPart(4);
-    }
-}
-
-// O0-04 (B-306): the shadow on the day side of the landing map: moons and the parent between a texel and the star (as
-// the globe draws them, M1-08) and the world's own rings (the profile's density); 0..255 per texel
-void Game::buildShadowMap(const std::vector<Vec3>& units, std::vector<uint8_t>& out) {
-    const Body& b = sys.bodies[landBody];
-    Vec3 bp = sys.bodyPos(landBody, t);
-    Vec3 starDir = normalize(sys.star.pos - bp);
-    Mat3 frameT = sys.bodyFrame(landBody, t).transposed();
-    struct Occ { Vec3 pos; double r; };
-    std::vector<Occ> occ;
-    for (int j = 0; j < (int)sys.bodies.size(); j++) {
-        if (j == landBody) continue;
-        if (sys.bodies[j].parent == landBody || j == b.parent) occ.push_back({sys.bodyPos(j, t), sys.bodies[j].radiusKm});
-    }
-    const std::vector<float>* prof = b.rings ? &spaceR.ringProfile(sys, landBody) : nullptr;
-    double R = b.radiusKm, R0 = b.ringInner * R, R1 = b.ringOuter * R;
-    out.assign(units.size(), 0);
-    if (occ.empty() && !prof) return;
-    parallelFor((int)units.size(), 8192, [&](int i0, int i1) {
-        for (int i = i0; i < i1; i++) {
-            Vec3 nW = frameT * units[i];
-            if (dot(nW, starDir) <= 0) continue;   // the night side needs no shadow
-            Vec3 surfW = bp + nW * R;
-            double sh = 0;
-            for (const Occ& o : occ) {
-                Vec3 rel = o.pos - surfW;
-                double along = dot(rel, starDir);
-                if (along <= 0) continue;
-                double dp = std::sqrt(std::max(0.0, length2(rel) - along * along));
-                if (dp < o.r) sh = std::max(sh, clampd((o.r - dp) / (o.r * 0.12), 0, 1));
-            }
-            if (prof) {
-                double denom = dot(starDir, b.spinAxis);
-                if (std::fabs(denom) > 1e-6) {
-                    double tr = dot(bp - surfW, b.spinAxis) / denom;
-                    if (tr > 0) {
-                        double rr = length(surfW + starDir * tr - bp);
-                        if (rr >= R0 && rr <= R1) sh = std::max(sh, 0.75 * (*prof)[clampi((int)((rr - R0) / (R1 - R0) * 255), 0, 255)]);
-                    }
-                }
-            }
-            out[i] = (uint8_t)(sh * 255 + 0.5);
-        }
-    });
-}
-
-// rebuilt for another body, every 20 s of game time and at most twice a second of real time (a moon's shadow crawls)
-void Game::refreshMapShadows(const std::vector<Vec3>& unitLUT) {
-    if (mapShadowBody == landBody && std::fabs(t - mapShadowT) < 20 && realTime - mapShadowReal < 0.5 && mapShadow.size() == unitLUT.size() && (!landZoom || zoomShadow.size() == zoomUnit.size())) return;
-    mapShadowBody = landBody; mapShadowT = t; mapShadowReal = realTime;
-    buildShadowMap(unitLUT, mapShadow);
-    if (landZoom && !zoomUnit.empty()) buildShadowMap(zoomUnit, zoomShadow); else zoomShadow.clear();
-}
-
-double Game::testMapShadowMax() {
-    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return 0;
-    std::vector<Vec3> units(PlanetMap::W * PlanetMap::H);
-    for (int y = 0; y < PlanetMap::H; y++)
-        for (int x = 0; x < PlanetMap::W; x++) units[y * PlanetMap::W + x] = StarSystem::bodyFromLatLon((0.5 - (y + 0.5) / PlanetMap::H) * PI, ((x + 0.5) / PlanetMap::W) * TAU - PI);
-    std::vector<uint8_t> sh;
-    buildShadowMap(units, sh);
-    int mx = 0; for (uint8_t v : sh) mx = std::max(mx, (int)v);
-    return mx / 255.0;
+// U-04: the landing map's controller: its commands, and only the buttons that do something there, in their words (the cursor: the
+// d-pad and the sticks)
+void Game::landingMapPad(PadMenu& m) const {
+    m.title = "LANDING MAP";
+    m.item("LAND HERE", KEY_ENTER);
+    if (landingZoomAllowed()) m.item(landZoom ? "THE WHOLE WORLD" : "ZOOM INTO THE SECTOR", KEY_Z);
+    m.item("A RANDOM LIT SITE", KEY_R);
+    m.item(mapClouds ? "HIDE THE CLOUDS" : "SHOW THE CLOUDS", KEY_C);
+    m.item("UNDER THE SKY'S BIGGEST BODY", KEY_J);
+    m.item(landPeoples ? "HIDE THE PEOPLES" : "THE PEOPLES", KEY_V);
+    m.item("THE ALMANAC OF THE SITE", KEY_T, MOD_CTRL);
+    m.item("BACK TO THE SHIP", KEY_ESCAPE);
+    m.button(PR_A, KEY_ENTER, "LAND"); m.button(PR_B, KEY_ESCAPE, "BACK");
+    if (landZoom) m.button(PR_LT, KEY_Z, "THE WORLD"); else m.button(PR_RT, KEY_Z, "ZOOM IN");   // its zoom is Z, in and out
+    m.button(PR_L3, KEY_LEFT_SHIFT, "BIG STEPS"); m.button(PR_START, KEY_ESCAPE, "BACK");
+    m.sticks = "STICKS MOVE THE CURSOR";
 }
 
 // N1-06: the relief class at a site from the terrain itself: the steepest rise over 150 m and over 600 m
 double Game::siteSlope(const SurfaceSite& probe) {
-    // O6-02: the grade of the region: the mean of eight directional slopes (150 and 600 m in four directions at the
+    // the grade of the region: the mean of eight directional slopes (150 and 600 m in four directions at the
     // map's 64 m detail), scaled by 1 / 0.64 to the size of the gradient (a directional slope averages 2 / pi of it).
     // The steepest probe decided before, so one crack or crater wall made a flat site "MOUNTAINS"; the mean of the
     // region ignores features smaller than a few hundred metres, which is what the class is for.
@@ -390,29 +158,8 @@ double Game::siteSlope(const SurfaceSite& probe) {
     return region / 0.64;
 }
 
-// N0-02: the landing map's base colour at a texel, for the consistency diagnosis
-uint32_t Game::testLandingMapTexel(int tx, int ty, bool clouds) {
-    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return 0;
-    mapClouds = clouds;
-    const Body& b = sys.bodies[landBody];
-    if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
-    tx = ((tx % PlanetMap::W) + PlanetMap::W) % PlanetMap::W;
-    ty = clampi(ty, 0, PlanetMap::H - 1);
-    return mapBase[ty * PlanetMap::W + tx];
-}
-
-double Game::testFrontBandAt(double latDeg, double lonDeg) {   // W-03
-    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return 0;
-    const SpaceRenderer::FrontMap* fm = spaceR.frontsFor(sys.bodies[landBody], t);
-    return fm ? frontMapAt(fm->cloud, PlanetMap::W, PlanetMap::H, lonDeg * DEG, latDeg * DEG) : 0.0;
-}
-
-// N1-06: the relief class the landing map would print at a site
-const char* Game::testReliefClass(double lat, double lon) {
-    probeSite.initFrame(&sys, landBody, lat, lon, t);
-    probeBody = landBody; probeLat = lat; probeLon = lon;
-    return reliefClass(siteSlope(probeSite));
-}
+// the landing map's picture: the map, or space while auto-explore chooses its site in its head
+void Game::renderLandingScreen() { if (ax.on) renderSpace(); else renderLandingMap(); }
 
 void Game::renderLandingMap() {
     // background: keep the space view, dimmed
@@ -430,6 +177,7 @@ void Game::renderLandingMap() {
     const PlanetMap& m = *mp;
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
+    const double dayFloor = sys.sunless() ? 1.0 : 0.22;   // the survey has no night side
     const int S = FB_SCALE;
     if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
     static std::vector<Vec3> unitLUT;   // body-frame unit vector per texel
@@ -439,14 +187,18 @@ void Game::renderLandingMap() {
             for (int x = 0; x < PlanetMap::W; x++)
                 unitLUT[y * PlanetMap::W + x] = StarSystem::bodyFromLatLon((0.5 - (y + 0.5) / PlanetMap::H) * PI, ((x + 0.5) / PlanetMap::W) * TAU - PI);
     }
-    refreshMapShadows(unitLUT);   // O0-04: the moons', the parent's and the rings' shadows on the day side
+    refreshMapShadows(unitLUT);   // the moons', the parent's and the rings' shadows on the day side
     const int PW = MAP_LW * S, PH = MAP_LH * S;
-    // W-03: the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
-    const SpaceRenderer::FrontMap* fmc = mapClouds && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
+    // the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
+    const SpaceRenderer::FrontMap* fmc = mapClouds && bodyHasAir(b) && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
     const std::vector<uint8_t>* fm = fmc ? &fmc->cloud : nullptr;
     if (fm && landZoom && !zoomUnit.empty() && (zoomFront.size() != zoomUnit.size() || std::fabs(t - zoomFrontT) > 240 || zoomFrontLat != zoomLat || zoomFrontLon != zoomLon)) {
         zoomFront.resize(zoomUnit.size()); zoomFrontT = t; zoomFrontLat = zoomLat; zoomFrontLon = zoomLon;
-        for (size_t i = 0; i < zoomUnit.size(); i++) { double la, lo; StarSystem::latLonFromBody(zoomUnit[i], la, lo); zoomFront[i] = (uint8_t)(frontMapAt(*fm, PlanetMap::W, PlanetMap::H, lo, la) * 255 + 0.5); }
+        for (size_t i = 0; i < zoomUnit.size(); i++) {
+            double la, lo;
+            StarSystem::latLonFromBody(zoomUnit[i], la, lo);
+            zoomFront[i] = (uint8_t)(frontMapAt(*fm, PlanetMap::W, PlanetMap::H, lo, la) * 255 + 0.5);
+        }
     }
     auto withFront = [&](uint32_t c, double fc) {   // the band whitens the texel as the cloud filter does
         double r = c & 255, gg = (c >> 8) & 255, bl = (c >> 16) & 255;
@@ -454,7 +206,7 @@ void Game::renderLandingMap() {
         return rgb((int)r, (int)gg, (int)bl);
     };
     if (landZoom && !zoomImg.empty()) {
-        // O2: the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map. F-05: the rows on the pool, a
+        // the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map. F-05: the rows on the pool, a
         // texel's colour made once for the pixels that share it (along a row, and a row whose texels the band's row above had is copied)
         parallelFor(PH, 32, [&](int pyb, int pye) {
             int lastTy = -1;
@@ -469,9 +221,9 @@ void Game::renderLandingMap() {
                     if (i != lastI) {
                         lastI = i;
                         double lit = dot(zoomUnit[i], sunB);
-                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+                        double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
                         if (zoomEmissive[i]) l = std::max(l, 0.95);
-                        uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
+                        uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // the cores with the peoples
                         if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
                         col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
                     }
@@ -479,12 +231,12 @@ void Game::renderLandingMap() {
                 }
             }
         });
-        for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
+        for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
             const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
-            double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+            double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
             uint32_t c = zoomImg[i];
-            // T-01: by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
+            // by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
             const int kind = ri < zoomRoadKinds.size() ? zoomRoadKinds[ri] : NK_ROAD;
             static const double KL[NK_COUNT] = {0.85, 0.7, 0.5, 0.6, 1.3, 1.25, 1.0};
             l *= KL[clampi(kind, 0, NK_COUNT - 1)];
@@ -517,7 +269,7 @@ void Game::renderLandingMap() {
                         lastTx = tx;
                         int i = ty * PlanetMap::W + tx;
                         double lit = dot(unitLUT[i], sunB);
-                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
+                        double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
                         if (mapEmissive[i]) l = std::max(l, 0.95);
                         uint32_t c = mapBase[i];
                         if (fm && (*fm)[i]) c = withFront(c, (*fm)[i] / 255.0);
@@ -532,12 +284,18 @@ void Game::renderLandingMap() {
     drawRectRGB(canvas, ox - 1, oy - 1, ox + MAP_LW, oy + MAP_LH, HUD_DIM);
     int cx, cy;
     if (landZoom && !zoomImg.empty()) {
-        // O2: the sector grid (one-degree lines) with the sectors' names, a scale bar, and the cursor within the window
+        // the sector grid (one-degree lines) with the sectors' names, a scale bar, and the cursor within the window
         const uint32_t gridC = rgb(80, 80, 50);
         int k0 = (int)std::ceil((zoomLon - zoomHalfLon) / DEG), k1 = (int)std::floor((zoomLon + zoomHalfLon) / DEG);
-        for (int k = k0; k <= k1; k++) { int x = ox + (int)(((k * DEG - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW); if (x > ox && x < ox + MAP_LW - 1) drawLineRGB(canvas, x, oy, x, oy + MAP_LH - 1, gridC); }
+        for (int k = k0; k <= k1; k++) {
+            int x = ox + (int)(((k * DEG - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW);
+            if (x > ox && x < ox + MAP_LW - 1) drawLineRGB(canvas, x, oy, x, oy + MAP_LH - 1, gridC);
+        }
         int j0 = (int)std::ceil((zoomLat - zoomHalfLat) / DEG), j1 = (int)std::floor((zoomLat + zoomHalfLat) / DEG);
-        for (int j = j0; j <= j1; j++) { int y = oy + (int)((0.5 - (j * DEG - zoomLat) / (2 * zoomHalfLat)) * MAP_LH); if (y > oy && y < oy + MAP_LH - 1) drawLineRGB(canvas, ox, y, ox + MAP_LW - 1, y, gridC); }
+        for (int j = j0; j <= j1; j++) {
+            int y = oy + (int)((0.5 - (j * DEG - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
+            if (y > oy && y < oy + MAP_LH - 1) drawLineRGB(canvas, ox, y, ox + MAP_LW - 1, y, gridC);
+        }
         int cellW = (int)(DEG / (2 * zoomHalfLon) * MAP_LW), cellH = (int)(DEG / (2 * zoomHalfLat) * MAP_LH);
         if (cellW >= 44 && cellH >= 10)
             for (int k = k0 - 1; k <= k1; k++)
@@ -559,13 +317,18 @@ void Game::renderLandingMap() {
         int named = 0;
         struct LabelBox { int x0, y0, x1, y1; }; std::vector<LabelBox> labels;   // no name over another's, nor over the map's own text
         const std::string bkey = worldKeyOf(landBody);
-        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
-            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
+        for (const SurfaceMark& m : guide.marks) {   // the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // the ruins and the works with the peoples (V)
             int lx = ox + (int)((wrapAngle(m.lon - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW), ly = oy + (int)((0.5 - (m.lat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
             if (lx < ox + 1 || ly < oy + 1 || lx >= ox + MAP_LW - 1 || ly >= oy + MAP_LH - 1) continue;
             const uint32_t lc = m.lent ? HUD_CYAN : HUD_WHITE;
             if (m.kind < LM_COUNT) drawText(canvas, lx - 2, ly - 3, LANDMARK_KIND_SYMBOLS[m.kind], lc);
-            else { drawLineRGB(canvas, lx - 2, ly, lx, ly - 2, lc); drawLineRGB(canvas, lx, ly - 2, lx + 2, ly, lc); drawLineRGB(canvas, lx + 2, ly, lx, ly + 2, lc); drawLineRGB(canvas, lx, ly + 2, lx - 2, ly, lc); }
+            else {
+                drawLineRGB(canvas, lx - 2, ly, lx, ly - 2, lc);
+                drawLineRGB(canvas, lx, ly - 2, lx + 2, ly, lc);
+                drawLineRGB(canvas, lx + 2, ly, lx, ly + 2, lc);
+                drawLineRGB(canvas, lx, ly + 2, lx - 2, ly, lc);
+            }
             if (!m.name.empty() && named < 8 && lx + 60 < ox + MAP_LW && ly - 3 > oy + 8 && ly + 5 < oy + MAP_LH - 8) {
                 std::string nm = trunc(upper(m.name), 14);
                 LabelBox bx{lx + 5, ly - 3, lx + 5 + textWidth(nm.c_str()), ly + 4};
@@ -579,26 +342,26 @@ void Game::renderLandingMap() {
     } else {
         cx = ox + (int)((wrap2pi(landLon + PI) / TAU) * MAP_LW); cy = oy + (int)((0.5 - landLat / PI) * MAP_LH);
         const std::string bkey = worldKeyOf(landBody);
-        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world, a dot each (Z zooms in on them)
-            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
+        for (const SurfaceMark& m : guide.marks) {   // the explorer's marks of this world, a dot each (Z zooms in on them)
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // the ruins and the works with the peoples (V)
             int mx = ox + (int)((wrap2pi(m.lon + PI) / TAU) * MAP_LW), my = oy + (int)((0.5 - m.lat / PI) * MAP_LH);
             fillRectRGB(canvas, mx - 1, my - 1, mx + 1, my + 1, rgb(0, 0, 0)); fillRectRGB(canvas, mx, my, mx, my, m.lent ? HUD_CYAN : HUD_WHITE);
         }
     }
     cx = clampi(cx, ox, ox + MAP_LW - 1); cy = clampi(cy, oy, oy + MAP_LH - 1);
-    if (landPeoples) drawLandPeoples(ox, oy, cx, cy); else landDrawn = {};   // R-415
+    if (landPeoples) drawLandPeoples(ox, oy, cx, cy); else landDrawn = {};
     drawLineRGB(canvas, ox, cy, ox + MAP_LW - 1, cy, rgb(255, 255, 255));
     drawLineRGB(canvas, cx, oy, cx, oy + MAP_LH - 1, rgb(255, 255, 255));
     drawRectRGB(canvas, cx - 3, cy - 3, cx + 3, cy + 3, HUD_AMBER);
     // info
     if (probeBody != landBody || probeLat != landLat || probeLon != landLon) {
-        probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // F-02: sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
+        probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
         probeBody = landBody; probeLat = landLat; probeLon = landLon;
     }
     const SurfaceSite& probe = probeSite;
     SunInfo si = probe.sun(t);
-    if (sys.ofCompanion(landBody)) probe.sun2(t, si);   // B-425: a world of the companion has its day by the companion
-    // O6-03: the probe reads the drainage only once the site's tiles are built (the cursor's prefetch); a probe that
+    if (sys.ofCompanion(landBody)) probe.sun2(t, si);   // a world of the companion has its day by the companion
+    // the probe reads the drainage only once the site's tiles are built (the cursor's prefetch); a probe that
     // built them froze the map for half a second at every move of the cursor
     DrainageOff probeDry(!drainageReady(probe.gen, probe.up0, 1500.0));
     TerrainVertex tvp = probe.sampleAt(0, 0, 64);
@@ -609,22 +372,24 @@ void Game::renderLandingMap() {
                          landLat >= 0 ? "N" : "S", std::fabs(landLon / DEG), CH_DEGREE, landLon >= 0 ? "E" : "W", sectorName(landLat / DEG, landLon / DEG).c_str());
     drawText(canvas, 8, ry, l1.c_str(), HUD_GREEN);
     const char* phase = si.altitude > 0.05 ? "DAY" : (si.altitude > -0.1 ? "TWILIGHT" : "NIGHT");
+    const bool noSun = sys.sunless();   // the lines of a world with no sun: its colour as a lamp will show it, no sun, its turn
     // N1-04/06: what you will see: material, elevation, relief class, and the ground colour at noon as a swatch
     std::string l2 = fmt("%s %+.0fM  %s", MATERIAL_NAMES[mat], hgt, reliefClass(siteSlope(probe)));
     drawText(canvas, 8, ry + 8, l2.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     {
         const BodyGen& g = spaceR.genFor(b);
-        RGB gc = materialRampColor(g.matColor[mat] * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, clampd(si.lightFactor, 0, 1.15), PLANET_TYPES[b.type].atmosphere));
+        RGB gc = materialRampColor(g.matColor[mat] * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, noSun ? 1.0 : clampd(si.lightFactor, 0, 1.15), bodyHasAir(b)));
         int sx0 = 8 + textWidth(l2.c_str()) + 8;
         drawText(canvas, sx0, ry + 8, "GROUND", HUD_DIM);
         int bx = sx0 + textWidth("GROUND") + 4;
         blendRectRGB(canvas, bx, ry + 7, bx + 23, ry + 14, rgb((int)(gc.r * 255), (int)(gc.g * 255), (int)(gc.b * 255)), 255);
         drawRectRGB(canvas, bx - 1, ry + 6, bx + 24, ry + 15, HUD_DIM);
     }
-    std::string sn = tvp.biome ? seasonName(probe.season, landLat, b.axialTilt) : "";
-    std::string l3 = fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
-                         si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
-    if (b.type == PT_FELISIAN && tvp.biome) {   // N3-04: the species most likely met here
+    std::string sn = tvp.biome && !sys.sunless() ? seasonName(probe.season, landLat, b.axialTilt) : "";   // no sun, no season
+    std::string l3 = noSun ? fmt("%s%sNO SUN - THE DARK", tvp.biome ? BIOME_NAMES[tvp.biome] : "", tvp.biome ? "  " : "")
+                           : fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
+                                 si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
+    if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // the species most likely met here
         Bestiary B = Bestiary::make(b, spaceR.genFor(b));
         int spi = B.pickLand(hash2i((int64_t)(landLat * 100), (int64_t)(landLon * 100), b.seed), tvp.biome);
         if (spi >= 0 && tvp.biome != BIO_ICE && tvp.biome != BIO_OCEAN) l3 += fmt("  LIFE: %s", trunc(upper(B.species[spi].name), 10).c_str());
@@ -632,11 +397,12 @@ void Game::renderLandingMap() {
     drawText(canvas, 8, ry + 16, l3.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     double lockRatio = std::fabs(1.0 - b.rotPeriod / b.orbitPeriod);
     std::string dayLen = (b.parent < 0 && lockRatio < 0.02) ? "TIDALLY LOCKED" : fmt("DAY %.1f H", std::fabs(b.rotPeriod) / 3600.0 * (b.parent < 0 ? 1.0 / lockRatio : 1.0));
-    std::string grav = b.gravity / 9.8 < 0.01 ? fmt("GRAV %.4f G", b.gravity / 9.8) : fmt("GRAV %.2f G", b.gravity / 9.8);   // O4: a comet's microgravity
-    std::string l4 = fmt("LOCAL %02d:%02d  %s  %s  %s", (int)(si.dayFraction * 24), (int)(std::fmod(si.dayFraction * 24, 1.0) * 60),
-                         dayLen.c_str(), grav.c_str(), PLANET_TYPES[b.type].atmosphere ? "ATMOSPHERE" : "NO ATMOSPHERE");
+    std::string grav = b.gravity / 9.8 < 0.01 ? fmt("GRAV %.4f G", b.gravity / 9.8) : fmt("GRAV %.2f G", b.gravity / 9.8);   // a comet's microgravity
+    std::string l4 = noSun ? fmt("TURNS IN %.1f H  %s  %s", std::fabs(b.rotPeriod) / 3600.0, grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE")
+                           : fmt("LOCAL %02d:%02d  %s  %s  %s", (int)(si.dayFraction * 24), (int)(std::fmod(si.dayFraction * 24, 1.0) * 60),
+                                 dayLen.c_str(), grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE");
     drawText(canvas, 8, ry + 24, l4.c_str(), HUD_DIM);
-    {   // M5-09 (R-001): what hangs in the sky over this sector right now
+    {   // what hangs in the sky over this sector right now
         Mat3 L = probe.localFrame(t);
         Vec3 sitePos = probe.worldPos(t, 0, 0, 0.002);
         int best = -1; double bestAng = 0, bestAlt = 0, bestPhase = 0; int points = 0;
@@ -652,7 +418,7 @@ void Game::renderLandingMap() {
             if (ang > bestAng) { bestAng = ang; best = j; bestAlt = std::asin(dl.y); bestPhase = 0.5 * (1 + dot(normalize(sys.star.pos - bp), normalize(sitePos - bp))); }
         }
         std::string l5;
-        // O0-01: the world's own rings: how high their arc stands in this site's sky
+        // the world's own rings: how high their arc stands in this site's sky
         std::string ringNote;
         if (b.rings) {
             double bestEl = -90;
@@ -666,16 +432,18 @@ void Game::renderLandingMap() {
         }
         bool bestRinged = best >= 0 && sys.bodies[best].rings;
         if (best >= 0) {
-            const char* ph = bestPhase > 0.85 ? "FULL" : (bestPhase > 0.6 ? "GIBBOUS" : (bestPhase > 0.4 ? "HALF LIT" : (bestPhase > 0.15 ? "CRESCENT" : "NEW")));
-            l5 = fmt("SKY: %s%s %.0f%c UP, %.1f%c WIDE, %s%s", ringNote.empty() ? "" : (ringNote + "; ").c_str(), trunc(upper(bodyNameOf(best)), ringNote.empty() ? 14 : 10).c_str(), bestAlt / DEG, CH_DEGREE, 2 * bestAng / DEG, CH_DEGREE,
-                     bestRinged ? "RINGED" : ph, (points && ringNote.empty() && !bestRinged) ? fmt(" +%d PTS", points).c_str() : "");
+            const char* ph = noSun ? "UNLIT" : (bestPhase > 0.85 ? "FULL" : (bestPhase > 0.6 ? "GIBBOUS" : (bestPhase > 0.4 ? "HALF LIT" : (bestPhase > 0.15 ? "CRESCENT" : "NEW"))));
+            l5 = fmt("SKY: %s%s %.0f%c UP, %.1f%c WIDE, %s%s", ringNote.empty() ? "" : (ringNote + "; ").c_str(), trunc(upper(bodyNameOf(best)), ringNote.empty() ? 14 : 10).c_str(), bestAlt / DEG,
+                    CH_DEGREE, 2 * bestAng / DEG, CH_DEGREE, bestRinged ? "RINGED" : ph, (points && ringNote.empty() && !bestRinged) ? fmt(" +%d PTS", points).c_str() : "");
         } else l5 = (ringNote.empty() ? std::string("SKY: ") : "SKY: " + ringNote + "; ") + (points ? fmt("%d WORLDS AS POINTS OF LIGHT", points) : std::string("NOTHING BUT STARS"));
         drawText(canvas, 8, ry + 32, l5.c_str(), (best >= 0 || !ringNote.empty()) ? HUD_CYAN : HUD_DIM);
     }
-    // R-415: V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
+    // V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
     if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
-    else drawTextCentered(canvas, UW / 2, UH - 12, PLANET_TYPES[b.type].atmosphere ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
-    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str() : "SURFACE CAPSULE - SELECT LANDING SECTOR", HUD_CYAN);
+    // the survey has no clouds
+    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
+    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
+                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);
 }
 
 // ---- R-415 (2026-10-11): the peoples on the landing map --------------------------------------------------------------------------------
@@ -685,7 +453,7 @@ void Game::renderLandingMap() {
 // you find all the shards for a civilization, as if you have enough information to know where is what, where to find cities, capital, etc".
 // V shows them, off on every map: the explorer's marks of ruins and works as small points (the names of those by the cursor beside it), in the
 // zoom the old roads and the places' cores the ground holds (C-09's, T-01's); the places the held records were kept at (each record's home,
-// galaxy/records.h's `recordHomesOf`, read with the world's items as the drone bay reads them: `droneWorldAsk`), the capital named; and a
+// peoples/records.h's `recordHomesOf`, read with the world's items as the drone bay reads them: `droneWorldAsk`), the capital named; and a
 // people whose records the ship holds all, its whole plan: its land tinted to its frontier, every place and every way, coloured by kind as
 // the plan's maps (`NET_KIND_COLOURS`)
 namespace {
@@ -711,10 +479,14 @@ Game::LandKnown Game::landKnownOf(int body) {
         K.held[it.people]++;
         if (it.place >= 0 && it.place < (int)W.places.size()) K.ranks[it.people].insert(W.places[it.place].rank);
     }
-    for (int k = 0; k < K.peoples; k++) if (K.held[k] > 0 && k < (int)W.peopleNames.size()) K.name[k] = "THE " + upper(W.peopleNames[k]);   // named once a record of theirs is held (the decoder's rule)
+    // named once a record of theirs is held (the decoder's rule)
+    for (int k = 0; k < K.peoples; k++) if (K.held[k] > 0 && k < (int)W.peopleNames.size()) K.name[k] = "THE " + upper(W.peopleNames[k]);
     return K;
 }
 
+// R-415: the landing map's peoples (V, off by default): the old roads and the cores over the zoom, the explorer's marks of ruins and works,
+// the places the records held were kept at, and a people's whole land, its places and its ways once all its records are held
+// the layer over the map (the world's or the zoom's), the cursor at (cx, cy)
 void Game::drawLandPeoples(int ox, int oy, int cx, int cy) {
     landDrawn = {};
     if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
@@ -859,12 +631,4 @@ void Game::drawLandPeoples(int ox, int oy, int cx, int cy) {
         blendRectRGB(canvas, lx - 1, ly - 1, lx + textWidth(rows[i].first.c_str()), ly + 7, rgb(0, 0, 0), 160);
         drawText(canvas, lx, ly, rows[i].first.c_str(), rows[i].second);
     }
-}
-
-std::string Game::testLandPeoplesInfo() {
-    const LandKnown K = landKnownOf(landBody);
-    std::string s = fmt("the peoples %s; %s", landPeoples ? "shown" : "hidden", K.ready ? "read" : "being read");
-    for (int k = 0; k < K.peoples; k++) s += fmt("; people %d '%s' %d of %d held, %zu places known%s", k + 1, K.name[k].c_str(), K.held[k], K.total[k], K.ranks[k].size(), K.all(k) ? ", ALL" : "");
-    s += fmt("; drawn: %d places, %d ways, %d land pixels, %d marks, %d rings, %d capitals named", landDrawn.places, landDrawn.ways, landDrawn.land, landDrawn.marks, landDrawn.rings, landDrawn.capital);
-    return s;
 }

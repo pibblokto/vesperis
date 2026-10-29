@@ -2,20 +2,33 @@
 
 About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream (and auto-explore's music files beside it, R-420) and blits the buffer.
 
+<!-- contents -->
+Contents:
+- Modules and dependency rules
+- Key types
+- Per-frame data flow
+- Time
+- Persistence
+- Build
+- M6 additions (2026-09-26)
+- Threads (M7, 2026-09-26)
+<!-- /contents -->
+
 ## Modules and dependency rules
 
 ```
 src/core      <- nothing (math, hashing, noise, framebuffer, raster, font, png, input)
-src/galaxy    <- core      (starfield, system, planetmap)
-src/space     <- galaxy    (space_view: stars, suns, globes, rings, sky bodies)
-src/surface   <- space     (site, surface_view)
-src/game      <- surface   (game.cpp core loop; autopilot.cpp ship; hud.cpp; landing_map.cpp; game_states.cpp
-                            descent/surface/overlays; persistence.cpp saves; guide.* + guide_screens.cpp the GUIDE (M3);
-                            ui.* text helpers; settings.*; audio.* (audio_deck.cpp the tape's cassette deck, R-420);
-                            autoexplore.cpp auto-explore, R-419; tape.cpp its tape, R-420)
+src/galaxy    <- core      (the worlds: starfield, system, planetmap; landmarks and planet_bodygen alone read src/peoples)
+src/peoples   <- galaxy    (the peoples: history, plan, towns, works, buildings, ruins, records and the grammar, music, signals)
+src/space     <- peoples   (space_view: stars, the band, render; space_sun, space_globe, space_bodies)
+src/surface   <- space     (site, surface_view: the frame; surface_env, _places, _walk, _palette, _terrain, _sky, _effects)
+src/game      <- surface   (game.cpp the frame; a file per state, screen or device: autopilot.cpp the ship, scene_draw.cpp
+                            the scenes, hud.cpp the HUDs, surface_play.cpp the ground, menus.cpp, landing_map*.cpp, the
+                            GUIDE's names.cpp, guide_screens.cpp and star_map.cpp (M3), probe*.cpp, radar*.cpp, autoexplore*.cpp
+                            (R-419); persistence.cpp saves; ui.*, settings.*; audio*.cpp the synth; src/game/CLAUDE.md the map)
 src/platform.h + platform_raylib.cpp  <- game/audio only (never included by game code)
 src/main_raylib.cpp        entry point for the window build
-src/main_headless.cpp      tests and screenshot generation (no raylib)
+src/harness/               vesperis_test: the modes, the unit, the proofs (no raylib; src/harness/CLAUDE.md)
 ```
 
 Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines `PI` as a macro and `KEY_*` enums that collide with ours; `src/core/input.h` mirrors the GLFW key codes so the platform layer can copy them by number.
@@ -32,12 +45,21 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `RGBCanvas`, `drawText` | core/font.h | HUD drawing on the RGB output |
 | `Input`, `Key` | core/input.h | per-frame input snapshot |
 | `Star`, `StarNeighborhood`, `STAR_CLASSES` | galaxy/starfield.h | sector hashing, class table, names |
-| `Body`, `StarSystem`, `PLANET_TYPES` | galaxy/system.h | system generation, `bodyPos(i,t)`, `bodyFrame(i,t)` |
+| `Body`, `StarSystem` | galaxy/system.h | system generation, `bodyPos(i,t)`, `bodyFrame(i,t)` |
+| `placeInSector`, `driftersNear`, `DARK_KINDS` | galaxy/drifters.h | D-01: the drifters, worlds with no sun in sectors without a star; the one resolver from a key to its place (a star, else a drifter) |
+| `KINDS`, `KindDef`, `TRAITS` | galaxy/kinds.h | P-00: the kinds of body and the traits as rows; the tags the code paths read |
 | `BodyGen`, `sampleSurface`, `PlanetMap` | galaxy/planetmap.h | the planet function and its coarse map |
+| `GeyserVent`, `landformFeatures`, the finders | galaxy/planet_features.h | E-07: what stands near a point, from the features the ground builds |
 | `SpaceRenderer`, `SpaceContext`, `BodyScreenInfo` | space/space_view.h | space scene; also draws bodies into planetary skies |
 | `SurfaceSite`, `TerrainCache`, `SunInfo` | surface/site.h | landing site geometry, terrain caches, astronomy |
-| `SurfaceView`, `Player`, `SurfaceEnvironment`, `Flock`, `Critter` | surface/surface_view.h | first-person exploration |
-| `Game`, `GameState`, `ShipState` | game/game.h | orchestration, HUD, menus, save/load |
+| `SurfaceView` | surface/surface_view.h | first-person exploration: its data, then its functions by the file that defines them (E-08) |
+| `Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`, `Critter`, `TreeInst`, `Ruin` | surface/surface_types.h | the types beside `SurfaceView` (E-08) |
+| `Game` | game/game.h | orchestration, HUD, menus, save/load; an index of its sections at the top |
+| `GameState` + its traits, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game` |
+| `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02), its controller's page (`padMenu`, U-04), its `enter`, `back` and save lines (U-05; `openScreen`, `closeScreen`) |
+| `Game::escMenu`, `guideMenu`, `shipPages`, `settingRows`, `cabinDevices` | game/*.cpp, each its screen's | the ways in as rows (U-03) |
+| `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
+| `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
 | `AudioSynth`, `AudioState` | game/audio.h | procedural audio |
 | `Settings` | game/settings.h | persisted player settings |
 | `Guide`, `LogEntry` | game/guide.h | names, log, statistics, history, home, inbox (M3) |
@@ -45,10 +67,10 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 ## Per-frame data flow
 
 1. Platform polls input into `Input` and calls `Game::frame(in, realDt)`, which makes its own copy: the controller's buttons become its keys (`padFrame`, R-418), and while auto-explore plays the explorer's input replaces it (`autoInput`, R-419; any key, click, mouse motion or button ends that first).
-2. `Game::frame` advances game time `t` by `realDt * timeWarp` while in a simulating state (space, surface, descent/ascent, landing map), runs the state's update, then renders:
+2. `Game::frame` advances game time `t` by `realDt * timeWarp` while in a simulating state (space, surface, descent/ascent, landing map), runs its row (`Game::STATE_ROWS`, U-02): its update, then its picture:
    * space: `SpaceRenderer::setupPalette` + `render` into `fb`, `fb.mush(2)`, `fb.toRGB(rgbBuf)`, then the HUD is drawn in RGB.
    * surface: `SurfaceView::render` (palette, sky, terrain, objects, life, capsule, weather), `mush(2)`, `toRGB`, HUD.
-   * overlays (help, menu, list, data) render the underlying scene first, then blend a dark rectangle and text.
+   * overlays (`ST_OVERLAY`: help, menu, list, data...) draw the scene they were opened from first (`renderUnder`) unless they cover the frame, then blend a dark rectangle and text.
 3. Platform uploads `rgbBuf` (320x200 RGBA) to a texture and draws it scaled with point filtering; optional scanlines.
 4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels. R-420: the same pump hands auto-explore's tape (`AudioState::music`, `musicGo`, `musicGain`) to a thread of the platform's, which streams the file with raylib's music stream, and takes its place, length and end back into `Game::audio`.
 
@@ -88,7 +110,7 @@ Text saves in three slots plus an autosave (`vesperis_save_1..3.txt`, `vesperis_
 
 ## M6 additions (2026-09-26)
 
-* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and, since R-418, the controller's controls and bindings (`PadState`, `PadMap`, `padCapture`; `vesperis_pad.txt`), which `game/pad.cpp` turns into the frame's keys (`Game::padFrame`: the layouts by context, the command menu, the on-screen keyboard, the CONTROLS screen's controller page); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
+* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and, since R-418, the controller's controls and bindings (`PadState`, `PadMap`, `padCapture`; `vesperis_pad.txt`), which `game/pad.cpp` turns into the frame's keys (`Game::padFrame`: the layouts by context, the command menu, the on-screen keyboard, the CONTROLS screen's controller page; a screen's page and a map's buttons its row's `padMenu`, U-04); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
 * `platform.h` stays free of the core key enum (raylib defines its own `KEY_*`): the pad is passed as `PlatformPad` and copied into `Input::pad` in `main_raylib.cpp`, which also loads the key map and drives the photo tools and the recorder. R-418: the platform reads the controller through GLFW's joystick calls (declared in `platform_raylib.cpp`; raylib links statically, the dev Makefile too), raw and in its standard layout. The desktop loop body is a `step` lambda so the Emscripten build can hand it to the browser's animation loop.
 * `packaging/` (app bundle and zip scripts; since F-09 the release's six builds: `toolchains.sh`, `build-mac.sh`, `build-win.sh`, `build-linux.sh` in Docker, `build-release.sh`), `web/` (shell page, build script), `.clang-format`, CI `package` job.
 

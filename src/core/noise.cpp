@@ -67,7 +67,8 @@ double gnoise3d(double x, double y, double z, uint64_t seed, Vec3& grad) {
     double vg = dot(gg, Vec3(fx, fy - 1, fz - 1)), vh = dot(gh, Vec3(fx - 1, fy - 1, fz - 1));
     double k1 = vb - va, k2 = vc - va, k3 = ve - va, k4 = va - vb - vc + vd, k5 = va - vc - ve + vg, k6 = va - vb - ve + vf, k7 = -va + vb + vc - vd + ve - vf - vg + vh;
     double value = va + u * k1 + v * k2 + w * k3 + u * v * k4 + v * w * k5 + w * u * k6 + u * v * w * k7;
-    Vec3 gi = ga + (gb - ga) * u + (gc - ga) * v + (ge - ga) * w + (ga - gb - gc + gd) * (u * v) + (ga - gc - ge + gg) * (v * w) + (ga - gb - ge + gf) * (w * u) + (-ga + gb + gc - gd + ge - gf - gg + gh) * (u * v * w);
+    Vec3 gi = ga + (gb - ga) * u + (gc - ga) * v + (ge - ga) * w + (ga - gb - gc + gd) * (u * v) + (ga - gc - ge + gg) * (v * w) + (ga - gb - ge + gf) * (w * u) +
+            (-ga + gb + gc - gd + ge - gf - gg + gh) * (u * v * w);
     grad.x = (gi.x + du * (k1 + v * k4 + w * k6 + v * w * k7)) * 1.05;
     grad.y = (gi.y + dv * (k2 + u * k4 + w * k5 + u * w * k7)) * 1.05;
     grad.z = (gi.z + dw * (k3 + v * k5 + u * k6 + u * v * k7)) * 1.05;

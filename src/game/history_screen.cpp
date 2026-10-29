@@ -1,11 +1,11 @@
 // H-06: the decoder reads a history. A world's records on three pages (game/shards_screen.cpp switches them with Tab): the records by their
 // years and kinds, the timeline of the people's eras with the records held on it (C-12's timeline grown), and the history as the records
-// read so far tell it (galaxy/legends.h: the events told in the history's order under their eras, each person only as a record named them,
+// read so far tell it (peoples/legends.h: the events told in the history's order under their eras, each person only as a record named them,
 // the age they reached once the records told it, the last recording closing it). The history page is read through the language as the
 // records are: a word not learnt yet in their tongue, a name kept, so the explorer's legends of a people clear as its tongue is learnt.
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -45,12 +45,17 @@ void drawRecordKindGlyph(RGBCanvas& fb, int x, int y, int kind, uint32_t col) { 
            for (int d : {-1, 1}) { fillRectRGB(fb, x + 2 + d, y + 2, x + 2 + d, y + 2, col); fillRectRGB(fb, x + 2 + d, y + 4, x + 2 + d, y + 4, col); } }
 }
 
+// `told`, the history page's rows and the timeline's eras for the open world (no-op while valid)
 // what the open world's read records told, the history page's rows and the timeline's eras (again after every reading: `toldValid`)
 void Game::ensureTold() {
     if (toldValid) return;
     toldValid = true;
     const auto t0 = std::chrono::steady_clock::now();
-    struct Timed { std::chrono::steady_clock::time_point t0; double& ms; ~Timed() { ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); } } timed{t0, toldMs};
+    struct Timed {
+        std::chrono::steady_clock::time_point t0;
+        double& ms;
+        ~Timed() { ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
+    } timed{t0, toldMs};
     told = ToldHistory(); legendRows.clear(); legendFirstRow.clear(); eraX0.clear(); eraX1.clear();
     if (!shardWorld.valid || shardWorld.body < 0 || shardWorld.body >= (int)shardWorld.sys.bodies.size()) return;
     const Body& b = shardWorld.sys.bodies[shardWorld.body];
@@ -240,7 +245,7 @@ void Game::renderShardTimeline() {
         drawText(canvas, 12, 167, mediumLine(s).c_str(), HUD_DIM);
         drawText(canvas, 12, 176, recordSummary(idx, 49).c_str(), read ? HUD_GREEN : HUD_DIM);
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, "ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK", HUD_DIM);   // R-416
+    drawTextCentered(canvas, UW / 2, UH - 10, "ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK", HUD_DIM);
 }
 
 // the history as the records read so far tell it: the age once told, the events learnt under their eras (a name amber, a word read green,
@@ -304,34 +309,5 @@ void Game::renderShardHistory() {
             fillRectRGB(canvas, UW - 9, a, UW - 7, std::max(a + 2, b), HUD_DIM);
         }
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, ne > 0 ? "UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK" : "TAB PAGE  ESC BACK", HUD_DIM);   // R-416
-}
-
-std::string Game::testHistoryInfo() {
-    ensureTold();
-    int named = 0, persons = 0;
-    std::string eras;
-    if (shardWorld.history) {
-        const History& H = *shardWorld.history;
-        for (size_t k = 0; k < H.eras.size(); k++) eras += fmt("%s%s%s", k ? ", " : "", H.eras[k].name.c_str(), k < told.eraRead.size() && told.eraRead[k] > 0 ? fmt(" (%d read)", told.eraRead[k]).c_str() : " (none read)");
-        std::set<int> ps;
-        for (const ToldEvent& t : told.events) { const HistoryEvent& e = H.events[t.event]; for (int p : {e.a, e.b, e.c}) if (p >= 0) ps.insert(p); }
-        persons = (int)ps.size(); for (int p : ps) if (toldPersonNamed(H, told, p)) named++;
-    }
-    int rows = 0; for (const LegendRow& r : legendRows) if (r.kind == 1) rows++;
-    return fmt("history: page %d, %d records read (%d texts), %d events learnt in %d lines (built in %.1f ms), %d of %d persons in them named, the age %s (%s), %s; eras: %s",
-               shardsPage, told.read, told.texts, (int)told.events.size(), rows, toldMs, named, persons, told.ageTold ? "told" : "not told", AGE_TOLD_NAMES[std::max(0, std::min(AGE_COUNT - 1, told.age))],
-               told.ended ? "ended" : "not ended", eras.c_str());
-}
-std::vector<std::string> Game::testLegendLines() {
-    ensureTold();
-    std::vector<std::string> out;
-    for (const LegendRow& r : legendRows) {
-        if (r.kind == 2) { out.push_back("## " + r.text); continue; }
-        if (r.kind == 0) { std::string h = "== "; for (const DecodedWord& w : r.words) h += w.pre + (w.name ? "{" + w.ours + "}" : (w.known ? w.ours : "~" + w.theirs)) + w.post + " "; out.push_back(h + r.text); continue; }
-        std::string s = r.kind == 3 ? (r.first ? fmt("%6s  ", r.text.c_str()) : std::string(8, ' ')) : (r.first ? fmt("%6s  ", thousands(r.year).c_str()) : std::string(8, ' '));
-        for (const DecodedWord& w : r.words) s += w.pre + (w.name ? "{" + w.ours + "}" : (w.known ? w.ours : "~" + w.theirs)) + w.post + " ";
-        out.push_back(s);
-    }
-    return out;
+    drawTextCentered(canvas, UW / 2, UH - 10, ne > 0 ? "UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK" : "TAB PAGE  ESC BACK", HUD_DIM);
 }

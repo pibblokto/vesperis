@@ -6,17 +6,13 @@
 // to the guide.
 #include "surface_view.h"
 #include "core/noise.h"
+#include "core/clock.h"
 #include "core/rng.h"
 #include <cmath>
 #include <algorithm>
 #include <chrono>
 
-namespace {
-inline double h01(uint64_t h) { return unitFromHash(h); }
-inline double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-}
-
-const char* CRITTER_STATE_NAMES[8] = {"IDLE", "WALKING", "GRAZING", "DRINKING", "RESTING", "ALERT", "FLEEING", "CURIOUS"};
+const char* const CRITTER_STATE_NAMES[8] = {"IDLE", "WALKING", "GRAZING", "DRINKING", "RESTING", "ALERT", "FLEEING", "CURIOUS"};
 
 // Encounter design (N3-04): the chance of a herd at a site by its biome; nothing on ice and open sea
 static double encounterChance(int biome) {
@@ -32,7 +28,7 @@ static double encounterChance(int biome) {
 void SurfaceView::planLife(const SurfaceSite& s, const Bestiary& B, uint64_t seed, std::vector<Critter>& critters, std::vector<Flock>& flocks, std::vector<Herd>& herds) {
     critters.clear(); flocks.clear(); herds.clear();
     const Body& b = s.sys->bodies[s.body];
-    if (b.type != PT_FELISIAN && b.type != PT_OCEAN) return;
+    if (!kindHas(b.type, KT_FAUNA)) return;
     Rng r(seed);
     int biome = s.sampleAt(0, 0, 16).biome;
     // flocks of the world's flyers
@@ -142,7 +138,7 @@ bool SurfaceView::planCellHerd(const SurfaceSite& s, const Bestiary& B, int gLat
 }
 
 void SurfaceView::updateHabitat() {
-    if (site.gen.type != PT_FELISIAN || !bestiary.landCount) return;
+    if (!kindHas(site.gen.type, KT_FLORA) || !bestiary.landCount) return;
     if (lastT - habitatT < 0.5 && habitatT > -1e8) return;
     habitatT = lastT;
     double px = inBuggy ? buggy.x : player.x, pz = inBuggy ? buggy.z : player.z;
@@ -203,7 +199,7 @@ static bool waterNear(SurfaceSite& s, double x, double z, double& wx, double& wz
 void SurfaceView::updateLife(double dt, double t) {
     double t0 = nowMs();
     lastT = t;
-    updateHabitat();   // B-316
+    updateHabitat();
     double sky = env.skyBrightness;
     // ---- flocks: circle, rest on the ground or in a tree, perch through the night (day flyers) or the day (dusk flyers)
     for (Flock& f : flocks) {
@@ -215,11 +211,11 @@ void SurfaceView::updateLife(double dt, double t) {
             if (wantsRest) f.landed = std::max(f.landed, 5.0);   // stay down until the light changes
             double target = f.perched ? f.perchY - std::max(site.groundHeight(f.cx, f.cz), site.waterAt(f.cx, f.cz)) : 0.0;
             f.alt += (target - f.alt) * (1 - std::exp(-dt * 0.4));
-            if (f.landed <= 0) { f.restTimer = 60 + 80 * h01(f.seed ^ (uint64_t)t); f.perched = false; }
+            if (f.landed <= 0) { f.restTimer = 60 + 80 * hash01(f.seed ^ (uint64_t)t); f.perched = false; }
         } else {
             f.alt += (f.cruiseAlt - f.alt) * (1 - std::exp(-dt * 0.5));
             if (f.restTimer <= 0 || wantsRest) {
-                f.landed = 20 + 20 * h01(f.seed);
+                f.landed = 20 + 20 * hash01(f.seed);
                 // a perch: the tallest tree near the flock's centre
                 double a = f.phase + t * f.speed;
                 double fcx = f.cx + std::cos(a) * f.radius, fcz = f.cz + std::sin(a) * f.radius;
@@ -227,7 +223,16 @@ void SurfaceView::updateLife(double dt, double t) {
                 double bestH = 0; f.perched = false;
                 for (int cz = pcz - 2; cz <= pcz + 2; cz++)
                     for (int cx = pcx - 2; cx <= pcx + 2; cx++)
-                        forTrees(cx, cz, [&](const TreeInst& T) { if (!T.dead && T.h > bestH) { bestH = T.h; f.perched = true; f.perchX = T.x; f.perchZ = T.z; f.perchY = T.gy + T.cy + T.r * 0.4; f.perchR = T.r; } });
+                        forTrees(cx, cz, [&](const TreeInst& T) {
+                            if (!T.dead && T.h > bestH) {
+                                bestH = T.h;
+                                f.perched = true;
+                                f.perchX = T.x;
+                                f.perchZ = T.z;
+                                f.perchY = T.gy + T.cy + T.r * 0.4;
+                                f.perchR = T.r;
+                            }
+                        });
                 if (f.perched) { f.cx = f.perchX; f.cz = f.perchZ; f.radius = 0; }
             }
         }
@@ -247,8 +252,8 @@ void SurfaceView::updateLife(double dt, double t) {
         if (inBuggy && std::fabs(buggy.speed) > 3 && threatR > 0) threatR = 60;
         bool threatened = dp < threatR;
         if (threatened && c.state != CS_ALERT && c.state != CS_FLEE && !(c.state == CS_CURIOUS && dp > 8)) {
-            c.state = CS_ALERT; c.timer = 0.8 + 0.8 * h01(c.seed ^ (uint64_t)(t * 3)); c.speed = 0; c.headPitch = 0; c.lift = std::min(c.lift, 0.5);
-            if (t - c.calledT > 6) { pendingCalls.push_back({sp.call, sp.callPitch * (0.9 + 0.2 * h01(c.seed))}); c.calledT = t; callsFired++; }
+            c.state = CS_ALERT; c.timer = 0.8 + 0.8 * hash01(c.seed ^ (uint64_t)(t * 3)); c.speed = 0; c.headPitch = 0; c.lift = std::min(c.lift, 0.5);
+            if (t - c.calledT > 6) { pendingCalls.push_back({sp.call, sp.callPitch * (0.9 + 0.2 * hash01(c.seed))}); c.calledT = t; callsFired++; }
         }
         // a first sighting within 60 m
         if (dp < 60 && !seenSpecies.count(c.species)) { seenSpecies.insert(c.species); sightings.push_back(sp.name + "|" + PLAN_NAMES[sp.plan] + "|" + std::to_string((int)dp)); }
@@ -274,7 +279,8 @@ void SurfaceView::updateLife(double dt, double t) {
             } else if (c.state == CS_FLEE) {
                 c.state = CS_IDLE; c.timer = 2 + 3 * r.uni(); c.speed = 0;
             } else {
-                bool restWanted = (sp.activity == ACT_DAY && ((localTime > 0.46 && localTime < 0.54) || sky < 0.2)) || (sp.activity == ACT_NIGHT && sky > 0.45) || (sp.activity == ACT_DUSK && (sky > 0.7 || sky < 0.05));
+                bool restWanted = (sp.activity == ACT_DAY && ((localTime > 0.46 && localTime < 0.54) || sky < 0.2)) || (sp.activity == ACT_NIGHT && sky > 0.45) ||
+                        (sp.activity == ACT_DUSK && (sky > 0.7 || sky < 0.05));
                 double wx = 0, wz = 0;
                 bool thirsty = localTime > 0.55 && localTime < 0.78 && sp.diet != 1 && waterNear(site, c.x, c.z, wx, wz);
                 double dwx = wx - c.x, dwz = wz - c.z, dw = thirsty ? std::sqrt(dwx * dwx + dwz * dwz) : 1e9;
@@ -312,7 +318,7 @@ void SurfaceView::updateLife(double dt, double t) {
             double nx = c.x + std::sin(c.heading) * c.speed * dt, nz = c.z + std::cos(c.heading) * c.speed * dt;
             double gy = site.groundHeight(nx, nz);
             double slope = std::fabs(gy - site.groundHeight(c.x, c.z));
-            bool wet = gy < site.waterAt(nx, nz) + 0.3;
+            bool wet = gy < site.waterNowAt(nx, nz) + 0.3;   // Q-02: the tide's
             if (slope > 0.6 * c.speed * dt + 0.3 || wet) { c.heading += 2.2; c.timer = std::min(c.timer, 1.0); }
             else {
                 double moved = std::sqrt((nx - c.x) * (nx - c.x) + (nz - c.z) * (nz - c.z));
@@ -331,7 +337,7 @@ void SurfaceView::updateLife(double dt, double t) {
                 }
                 if (dp < 20) hoof += std::min(1.0, c.size) * (c.speed / std::max(sp.runSpeed, 0.1)) * 0.5;
             }
-            { double hx = herds[c.herd].cx - c.x, hz = herds[c.herd].cz - c.z; if (hx * hx + hz * hz > 300.0 * 300.0) c.heading = std::atan2(hx, hz); }   // B-316: a herd stays within 300 m of its spot
+            { double hx = herds[c.herd].cx - c.x, hz = herds[c.herd].cz - c.z; if (hx * hx + hz * hz > 300.0 * 300.0) c.heading = std::atan2(hx, hz); }   // a herd stays within 300 m of its spot
         }
     }
     hoofLevel = std::min(1.0, hoof);
@@ -385,15 +391,15 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         }
     }
     // ---- night eyes (M4-05): pairs of glints in the dark
-    if (env.skyBrightness < 0.3 && site.gen.type == PT_FELISIAN) {
+    if (env.skyBrightness < 0.3 && kindHas(site.gen.type, KT_FLORA)) {
         for (int i = 0; i < 8; i++) {
             uint64_t he = hash2i((int64_t)std::floor(camPos.x / 60), (int64_t)std::floor(camPos.z / 60) + i * 7, site.gen.seed ^ 0xE7E);
-            if (h01(he) < 0.5) continue;
-            double ex = std::floor(camPos.x / 60) * 60 + h01(mix64(he + 1)) * 60, ez = std::floor(camPos.z / 60) * 60 + h01(mix64(he + 2)) * 60;
-            double blink = std::sin(t * (0.6 + h01(mix64(he + 3))) + h01(mix64(he + 4)) * TAU);
+            if (hash01(he) < 0.5) continue;
+            double ex = std::floor(camPos.x / 60) * 60 + hash01(mix64(he + 1)) * 60, ez = std::floor(camPos.z / 60) * 60 + hash01(mix64(he + 2)) * 60;
+            double blink = std::sin(t * (0.6 + hash01(mix64(he + 3))) + hash01(mix64(he + 4)) * TAU);
             if (blink < -0.2) continue;
             double gy = site.groundHeight(ex, ez) + 0.5;
-            double hd = h01(mix64(he + 5)) * TAU;
+            double hd = hash01(mix64(he + 5)) * TAU;
             for (int k = -1; k <= 1; k += 2) {
                 Vec3 v = toView(ex + std::cos(hd) * 0.12 * k, gy, ez - std::sin(hd) * 0.12 * k);
                 if (v.z < NEAR_Z) continue;
@@ -403,20 +409,20 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         }
     }
     // ---- swimmers: fins, a back arc, the odd breach, in deep water within 250 m
-    if (site.hasWater && (site.gen.type == PT_FELISIAN || site.gen.type == PT_OCEAN)) {
+    if (site.hasWater && kindHas(site.gen.type, KT_FAUNA)) {
         const Species* sw = bestiary.firstSwimmer() >= 0 ? &bestiary.species[bestiary.firstSwimmer()] : nullptr;
         double ssz = sw ? sw->size : 1.5;
         int ccx = (int)std::floor(camPos.x / 100), ccz = (int)std::floor(camPos.z / 100);
         for (int dz = -2; dz <= 2; dz++)
             for (int dx = -2; dx <= 2; dx++) {
                 uint64_t hs = hash2i(ccx + dx, ccz + dz, site.gen.seed ^ 0xF1A);
-                if (h01(hs) > 0.35) continue;
-                double cx = (ccx + dx) * 100.0 + 20 + h01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + h01(mix64(hs + 2)) * 60;
-                double a = t * (0.03 + 0.03 * h01(mix64(hs + 3))) + h01(mix64(hs + 4)) * TAU;
+                if (hash01(hs) > 0.35) continue;
+                double cx = (ccx + dx) * 100.0 + 20 + hash01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + hash01(mix64(hs + 2)) * 60;
+                double a = t * (0.03 + 0.03 * hash01(mix64(hs + 3))) + hash01(mix64(hs + 4)) * TAU;
                 double sx = cx + std::cos(a) * 25, sz = cz + std::sin(a) * 25;
-                double wl = site.waterAt(sx, sz);
+                double wl = site.waterNowAt(sx, sz);
                 if (wl < -1e8 || site.groundHeight(sx, sz) > wl - 1.5) continue;
-                double surf = std::sin(t * 0.7 + h01(mix64(hs + 5)) * TAU);   // above the water only part of the time
+                double surf = std::sin(t * 0.7 + hash01(mix64(hs + 5)) * TAU);   // above the water only part of the time
                 if (surf < 0.2) continue;
                 double dist = std::sqrt((sx - camPos.x) * (sx - camPos.x) + (sz - camPos.z) * (sz - camPos.z));
                 if (dist > 250 || ssz / dist * proj.f < 1.0) continue;
@@ -424,7 +430,8 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 double fh = (0.25 + 0.45 * (surf - 0.2)) * ssz * 0.6;
                 double shade = 8 + 55 * fogOf(dist);
                 RasterParams rp; rp.bank = 3;
-                RVert p[3] = {vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade), vert(Vec3(sx, wl + fh, sz), shade), vert(Vec3(sx + hx * 0.4 * ssz, wl + 0.02, sz + hz * 0.4 * ssz), shade)};
+                RVert p[3] = {vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade), vert(Vec3(sx, wl + fh, sz), shade),
+                        vert(Vec3(sx + hx * 0.4 * ssz, wl + 0.02, sz + hz * 0.4 * ssz), shade)};
                 if (p[0].z < NEAR_Z || p[1].z < NEAR_Z || p[2].z < NEAR_Z) continue;
                 rasterPolygon(fb, p, 3, rp, proj);
                 // the back: a low arc behind the fin; a breach lifts it high for a moment
@@ -460,6 +467,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         double fog = fogOf(dist);
         auto shadeOf2 = [&](const Vec3& n, double mul) {
             double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+            if (nLamps) light += (1 - ambient) * lampAt(c0, &n);   // the explorer's lamp
             double s = 44 * std::pow(light, 0.7) * sp.tone * mul;
             return s + (63 - s) * fog;
         };
@@ -495,13 +503,15 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         if (full && sp.pattern == 2) {   // spots on the flanks
             for (int i = 0; i < 8; i++) {
                 uint64_t hs = mix64(c.seed + 300 + i);
-                Vec3 p = c0 + fwd * ((h01(hs) - 0.5) * bodyLen * 0.9) + side * ((i & 1 ? 1 : -1) * wid * 0.52) + up * ((h01(mix64(hs + 1)) - 0.5) * bodyH * 0.7);
+                Vec3 p = c0 + fwd * ((hash01(hs) - 0.5) * bodyLen * 0.9) + side * ((i & 1 ? 1 : -1) * wid * 0.52) + up * ((hash01(mix64(hs + 1)) - 0.5) * bodyH * 0.7);
                 RVert q = vert(p, shadeOf2(i & 1 ? side : -side, 0.55));
                 if (q.z >= NEAR_Z) rasterPoint3(fb, q, bank, proj, true, 1);
             }
         }
         // the neck and head: pitched by the plan, lowered to the ground when grazing or drinking
-        double neckUp = sp.plan == PLAN_LONGNECK ? 55 * DEG : (sp.plan == PLAN_BIPED ? 60 * DEG : (sp.plan == PLAN_HOPPER ? 45 * DEG : (sp.plan == PLAN_GIANT ? 35 * DEG : (sp.plan == PLAN_HEXAPOD ? 0 : 22 * DEG))));
+        double neckUp = sp.plan == PLAN_LONGNECK
+                ? 55 * DEG
+                : (sp.plan == PLAN_BIPED ? 60 * DEG : (sp.plan == PLAN_HOPPER ? 45 * DEG : (sp.plan == PLAN_GIANT ? 35 * DEG : (sp.plan == PLAN_HEXAPOD ? 0 : 22 * DEG))));
         double np = neckUp - c.headPitch * (neckUp + 42 * DEG);
         Vec3 neckDir = fwd * std::cos(np) + up * std::sin(np);
         Vec3 neck0 = c0 + fwd * (bodyLen * 0.5) + up * (bodyH * 0.3);
@@ -533,10 +543,18 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
             if (mid) {   // crests: horns, ears, a crest along the neck, antlers
                 double dark = shadeOf2(up, 0.5);
                 switch (sp.crest) {
-                    case 1: for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.9) + up * (sz * 0.3) + headDir * (sz * 0.15), dark, bank, th); break;
+                    case 1:
+                        for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.9) + up * (sz * 0.3) + headDir * (sz * 0.15), dark, bank, th);
+                        break;
                     case 2: for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.8) + up * (sz * 0.18), dark, bank, 1); break;
                     case 3: seg(neck0 + up * (bodyH * 0.35), neck1 + up * (bodyH * 0.35), dark, bank, th); break;
-                    case 4: for (int e = -1; e <= 1; e += 2) { Vec3 a0 = head0 + hup + side * (e * hw * 0.4), a1 = a0 + up * (sz * 0.35) + side * (e * sz * 0.2); seg(a0, a1, dark, bank, 1); seg(a0 + (a1 - a0) * 0.5, a0 + (a1 - a0) * 0.5 + up * (sz * 0.2) - side * (e * sz * 0.08), dark, bank, 1); } break;
+                    case 4:
+                        for (int e = -1; e <= 1; e += 2) {
+                            Vec3 a0 = head0 + hup + side * (e * hw * 0.4), a1 = a0 + up * (sz * 0.35) + side * (e * sz * 0.2);
+                            seg(a0, a1, dark, bank, 1);
+                            seg(a0 + (a1 - a0) * 0.5, a0 + (a1 - a0) * 0.5 + up * (sz * 0.2) - side * (e * sz * 0.08), dark, bank, 1);
+                        }
+                        break;
                     default: break;
                 }
             }
@@ -557,8 +575,12 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         for (int L = 0; L < nlegs; L++) {
             double fx, sx, off;
             if (nlegs == 6) { fx = bodyLen * (0.38 - 0.38 * (L / 2)); sx = (L & 1) ? 1 : -1; off = ((L / 2) & 1) ? ((L & 1) ? 0.5 : 0.0) : ((L & 1) ? 0.0 : 0.5); }
-            else if (nlegs == 2) { fx = -bodyLen * 0.1; sx = (L & 1) ? 1 : -1; off = sp.gait == GAIT_HOP ? 0.0 : (L & 1) * 0.5; }
-            else { fx = (L & 1) ? bodyLen * 0.38 : -bodyLen * 0.38; sx = (L & 2) ? 1 : -1; off = sp.runGait == GAIT_GALLOP && c.state == CS_FLEE ? ((L & 1) ? 0.0 + 0.1 * ((L & 2) ? 1 : 0) : 0.5 + 0.1 * ((L & 2) ? 1 : 0)) : (((L & 1) ^ ((L & 2) >> 1)) ? 0.0 : 0.5); }
+            else if (nlegs == 2) { fx = -bodyLen * 0.1; sx = (L & 1) ? 1 : -1; off = sp.gait == GAIT_HOP ? 0.0 : (L & 1) * 0.5;
+            } else {
+                fx = (L & 1) ? bodyLen * 0.38 : -bodyLen * 0.38;
+                sx = (L & 2) ? 1 : -1;
+                off = sp.runGait == GAIT_GALLOP && c.state == CS_FLEE ? ((L & 1) ? 0.0 + 0.1 * ((L & 2) ? 1 : 0) : 0.5 + 0.1 * ((L & 2) ? 1 : 0)) : (((L & 1) ^ ((L & 2) >> 1)) ? 0.0 : 0.5);
+            }
             Vec3 hip = c0 + fwd * fx + side * (sx * wid * 0.45) - up * (bodyH * 0.4);
             Vec3 knee, foot;
             if (c.lift > 0.5) {   // folded under the body

@@ -6,7 +6,7 @@ area: the flora (`surface/flora.cpp`), the worker pool (`core/parallel.h`)
 
 ## Report
 
-Found by the performance audit's last measurement (`docs/ideas/PLAN-performance.md`, section 1) and measured again by F-01's
+Found by the performance audit's last measurement (`docs/archive/ideas/PLAN-performance.md`, section 1) and measured again by F-01's
 `bothways`: `scene felisian_forest` drawn with `VESPERIS_THREADS=1` against the default eight workers differed by 13,921 pixels at 4x
 (1.36% of the frame), 3,419 at 2x and 506 at 1x, with channel steps up to 130: far trees shown in one run and hidden in the other, in
 the canopy rows of the middle of the frame (`shots/tests/bothways_felisian_forest_4x_diff.png`). The shore and the regress's three

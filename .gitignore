@@ -78,3 +78,6 @@ vesperis_settings.txt
 vesperis_keys.txt
 vesperis_pad.txt
 guide*.txt
+
+# Python caches (tools/)
+__pycache__/

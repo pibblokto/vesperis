@@ -1,48 +1,450 @@
 # Testing and tools
 
+The modes, one line each with its file: `harness/INDEX.md` (`vesperis_test help md` writes it). The unit's checks by group:
+`harness/unit-checks.md` (`tools/unitchecks.py` writes it). Proving a change, and the proof tools: `harness/proof.md`. This
+note keeps what those do not: what each mode does and writes, by the milestone that made it.
+
 `vesperis_test` (built by `make`) needs no window and writes PNGs into `shots/tests/` (O7-01, 2026-09-27: the harness used to write into `shots/` next to the player's own screenshots, which had grown to 300 files; `shots/` now holds only `screenshot_N.png` and their captions, the harness creates `shots/tests/` and its subfolders, and the CI artefact is `shots/tests/**/*.png`). The paths below and in older reports omit the `tests/`. Add `scale=N` (1-4) to any mode to render at that resolution scale (tests default to 1x for speed; the game defaults to 4x since B-310, 2x before).
 
-| Mode | What it does | Output |
-| --- | --- | --- |
-| `stars` | star and body statistics around the start region, prints four systems in detail | stdout |
-| `maps` | generates one planet map per type; M5-08 adds `map_LOCKED_FELISIAN.png` (one locked living world) | `shots/map_<TYPE>.png` (albedo tinted by body colour on top, height/material below) |
-| `space` | renders each sun class from its first orbit (ten since S-01: `sun_S06` the red dwarf's spotted disc, `sun_S07` the blue-white star's cross of four, `sun_S08` the orange giant's mottled amber disc, `sun_S09` the carbon star's dark disc in a wide dim glow; eleven since S-03: `sun_S10` the neutron star, a point in a halo; twelve since S-04: `sun_S11` the protostar's soft disc in its cloud with the dust disc's band along the plane and the belts' sparkle; thirteen since S-05: `sun_S12` the Wolf-Rayet star, the blue giant's glare inside the filamentary bubble of its shell; fourteen since S-06: `sun_S13` the black hole from the plane of its worlds, the shadow inside the ring of its disc, and `space_black_hole.png`, the first black hole with a companion from 20 degrees above its plane at six tenths of the first orbit: the disc arching over the shadow, the bent stars, the companion's stream) and each planet type from a parked view (plus a ringed gas giant); M5: `space_binary` (both suns from behind the primary), `space_binary_world` (a world of the companion), `space_comet` (a comet at periapsis with its tail, seen from above its orbital plane), globes of the substellar, comet and companion types; the tests wait for maps (`warmMaps`) so globes are textured. N0-01: the comet frame is rendered again 5 s later (the hashes must differ, the knot positions are printed), the comet's drift seen from the first planet over 500 s (x100) must exceed 4 px at 1x, and `space_comet_close` is rendered from the parking distance of 12 radii with the ship riding along, 3 s apart (over 500 px must change: the jets); N5: the gas giant globe is rendered again a day later (the hashes must differ: storms, `globe_GAS_GIANT_day_later.png`) and a frame from the first star-forming region found (`space_nebula.png`, the patch count printed); O3: `space_belt.png` from beside the biggest rock within two cells of the first belt's middle (the rock count, the rocks and meshes drawn, and the same rock found again an hour later along its orbit); W-06: four frames through the telescope (`renderTelescopeFrames`, each at the power of two that fits its object, the setting's focal length multiplied: `telescope_moon.png`, the biggest moon of the first ringed giant from the giant's parking, its disc measured against the plain view's `telescope_moon_plain.png` (the power must multiply it exactly, else `FAIL`); `telescope_giant.png`, the giant with its rings from the innermost planet's parking; `telescope_companion.png`, the first binary's companion from the primary's first orbit; `telescope_comet.png`, the first comet a little past periapsis from the outermost planet's parking; the power, the disc in pixels and the render's milliseconds printed). The user's review (the same day) added the plate's frames: `telescope_world.png` (a living world from its own parking at the power that fits it: Wyariothmai I at x2), `telescope_world_land.png` (its high ground within sixty degrees of the sub-ship point, `telescopeGroundPoint`, at x64: about 1 km a pixel) and `telescope_world_ground.png` (the same ground at x256: 250 m a pixel, the rivers' tiles fetched first), `telescope_moon_near.png` (the moon at four times the fitting power) and `telescope_ground.png` (its high ground at x1024: 3.7 km a pixel), each with a `_map` twin drawn from the world map alone where the difference shows, and the plate's line printed under each frame (`plateInfo`: the cells, the step, the samples, the heights' range, the mean slope, the build's time) | `shots/sun_S0N.png`, `shots/globe_<TYPE>[_rings].png`, `shots/space_comet[_close].png`, `shots/space_belt.png`; W-03: `space_fronts.png` and `space_fronts_x4.png`, the pinned plain's world from a parking over the plain an hour before a front's line reaches it (`renderFrontFrames`: the fronts alive, the bands' share of the map and the band over the plain printed) |
-| `surface [type]` | renders every landable type (or one type id 0-8) at noon, sunset, night and at 82 deg latitude; prints sun altitude, environment, render time, rock counts | `shots/surf_<TYPE>_<scene>.png` |
-| `moonsky` | lands on moons of gas giants and looks at the parent planet; also searches three orbits of the first such moon for a partial solar eclipse (coverage near 0.85) and renders it; M5: `moonsky_0_later` (the same sky 15 min later), `moonsky_rings` + `moonsky_rings_space` (a moon of a ringed world, both renderers), `moonsky_substellar` (night under a brown dwarf), `rings_surface_day/night` (the ring arc from a ringed world's surface), `binary_surface` (two suns up) | `shots/moonsky_N.png`, `shots/eclipse.png` |
-| `scene <name>` | renders one of the fixed comparison scenes (and prints, since N1, the lower half's bank histogram, mean shade, the majority bank's ramp stops and the sky/snow/dust/underwater state, to tell a dark palette from a dark scene); N2 adds `felisian_forest` (a deep forest: veg over 0.75; prints the tree tiers, the flora point count and the canopy coverage of the forest ground within 200 m, failing under 60%); N3 moves `felisian_herd` to open grassland (18 m south of herd 0) and adds `felisian_herd_near` (6 m), `felisian_herd_far` (60 m) and `creatures_lineup` (one animal of each land species 5 m ahead, side on), printing the herd's states, calls and the life update/draw milliseconds; N4 adds `buggy_seat` (in the driver's seat, steering 12 deg; since N4-06 the nose camera's picture through `cameraFeed`) and `buggy_parked` (from 5 m behind and beside it) on open grassland; N5 adds `tundra_lowsun` (a cold site with the sun at 5 deg: the pillar) and `biome_<tropical|savanna|desert|temperate|grassland|taiga|tundra|wetland>` (a land site of that biome, with the same print plus the flora families, colours, season phase, fog and wind) (`felisian_herd` (M4-05: 18 m south of the first herd), `felisian_shore`, `felisian_sunset`, `cratered_noon`, `thinatmo_sunset`, `molten_night`, `icy_noon`) at the current scale; O4 adds `comet_day` (a nucleus by day with its jets) and `comet_night` (looking away from the sun: the tail overhead); B-403/R-402 add `thinatmo_aurora` (a thin-atmosphere world round a pulsar or a blue giant, 58 deg of latitude, facing the pole: the oval ahead as a low arc), `thinatmo_aurora_zenith` (the site right under the world's auroral oval, looking straight up) and `aurora_moon` (any clear-air world round such a star a degree equatorward of its oval with a moon or the parent at least 0.6 deg across 35-65 deg up, chosen by a trial frame that counts aurora pixels within 1.6 radii of its disc, facing it); each takes the darkest hour of the night with the strongest auroral potential (over 0.45) of the next thirty, and prints the aurora's strength, the star class, the oval's latitude, the centre's distance, the field and its class, the storm, the cloud cover and the flocks in the air; S-02: the active star is `starActivity` over 0.7, so `aurora_moon` stands on Shialyioleila III (sector 179 0 80) under a blue-white star now (Hiolyas V-e under a blue giant before; the thin-air aurora scenes kept Phyaalion); S-03 adds `neutron_glass` (the first glass sheet at 16 m with glass on the eight samples 100 m round it, on a glassed world of a neutron star, the star at 25 degrees and 34 off the view); S-04 adds `protostar_night` (any world of a protostar at the type's default spot, the star 12 degrees under the horizon, facing it: the cloud's glow and the disc's band over the horizon; the scan's first is Shelfesh I, a lava world at sector 162 0 88); S-05 adds `wolf_rayet_day` (any world of a Wolf-Rayet star at the type's default spot, the star 38 degrees up and 29 off the view, looking 20 up: the shell's ring round the blinding sun; the scan's first is Shiesaimiori I, a lava world at sector 151 0 53); S-06 adds `black_hole_sky` (any world of a black hole, the hole 30 degrees up and 23 off the view, looking 17 up: the shadow, the tilted disc and the bent stars over a bare plain; the scan's first is Lyaalaphene I at sector 159 0 118); B-417 removes M4-07's `felisian_ruin` (60 m west of the nearest monolith of the old ones: there are none); C-01 adds `civilisation_town` and `civilisation_desert` (the nearest settlement of the scan's first felisian and desert world that had a people, a town before a village before a hamlet within the first five rings of cells, seen from 9 m outside its gate looking down the street, the capsule behind the camera; prints the settlement's class, buildings, plan, radius and the world's culture, and the pieces drawn with their milliseconds: Aieliaalas II's walled town of 44 at sector 151 0 25, Phiyiesh II's town of 36 at 153 0 123) and `desert_dead_sea` (the steepest old shore within 25 degrees of the asked latitude of the scan's first dead desert world, found over the whole world at 2048 m and then within 30 km at 512 m, standing on the lip of the land side facing the bed in the shore's own daylight; prints the level the sea stood at and the ground here, 600 m and 3 km out: Leileashphail III's shore at lat 29.5 lon -17.5, the sea at 94 m, the beach sand at 117 m and the bed's dark floor at 83 m three kilometres out); C-08 adds `civilisation_harbour` and `civilisation_dry_harbour` (the nearest settlement with a harbour within 30 rings of cells on the scan's first felisian and desert world that had a people and has one: standing 14 m up the beach from the quay's middle, half way toward its end away from the mole, looking along the quay at the mole's far end; the desert's harbour stands over the dry bed) and `civilisation_terraces` (the nearest terraced settlement, standing 12 m below its edge on the downhill side, looking up across the retaining walls); C-09 adds `civilisation_road` and `civilisation_road_desert` (the nearest settlement with a road, standing on its longest road about a hundred metres out from its edge, looking along it toward the other end; the print names the road's ends, length, bends, steepest step and width, the culture's paving and wear); C-12 adds `civilisation_graves` and `civilisation_graves_desert` (the nearest settlement with three graves at least, standing two metres before the first row of stones at its end, looking along the row; the print gives the stones' count and how many fell, the first stone's name and years, the calendar line and the span); C-13 adds `civilisation_second_people` (the nearest settlement of the second people of the scan's first felisian world of two whose light allows, from a land point deep on their side, standing outside the gate as `civilisation_town` does; the print gives the people and its culture); each prints the terrain read (the slope and its fall, the shore's distance and heading, the relief) and the features; C-03 adds `civilisation_shard` (the same settlement as `civilisation_town`, standing on the floor of the room that holds its first shard, 1.9 m from it toward the room's middle, looking 24 degrees down: the slab in the corner with its glint; prints the shard's index, its place and building, and with the pieces drawn the shards drawn and the one within reach: Aieliaalas II's shard 47 in house 26 of the walled town, 2 of its 2 shards drawn, 47 within reach at 1.9 m); the two town scenes print their shards drawn too (2 and 3, inside the houses, not in the picture); A-03 adds `civilisation_prehistoric`, `civilisation_medieval`, `civilisation_industrial`, `civilisation_modern`, `civilisation_futuristic` and `civilisation_far_future` (finders -70 to -75: on a people of the age that ended lately, `AGE_SCENE_WORLDS` found by `peoples fresh`, the greatest of its eight best settlements within thirty rings of cells round a land point deep on its side, from a vantage among twelve directions at three distances (inside its edge, at it, outside; a camp's from among its remains, the futuristic and far-future structures from outside) on dry ground, not against a building, with the ground clear of the line of sight, the least forest along it and the light from the side or behind; prints the settlement's kinds, radius, its tallest piece, the years since the end and the vantage's distance) | `shots/scene_<name>.png` |
-| `input` | M6-02: writes a key map file and checks the remap (Z acts as W, F7 as P), the key names, and (R-418, M6-02's fixed table gone) the controller: the bindings (a known device's standard layout with a trigger read from its rest and the round dead zone; a raw device's guess and its reading of the axes at rest; the capture by press edges, of a stick's half, a hat, a trigger at one end, the standard names first; every control's name read back; a set a device in `shots/tests/test_pad.txt`), then a `Game` driven by a controller alone (the title, the cabin's walking and look, X at the flight computer and B out, the commands' pages and a line run, a key from the keys page, the aim's light years typed, a star named through the guide and the keyboard, the console's `WHERE` from the commands over its keyboard, the controller page: A bound to Y and the two swapped, the walk stick from two pushes, the reset; the help's third page, the star map and the galaxy chart (the stick's turn, the zoom, the class filter, the chart's cursor, a place marked and removed, X back to the ship), the landing map's cursor by the stick and the d-pad and its triggers, a landing, a jump, a sprint, RB's scanner under it, the sector map (the stick's cursor, the zoom, a mark placed and removed, X home), the commands' buggy, X into it and RT driving), 24 PASS lines, and the overlays as drawn (`shots/tests/pad_*.png`: the commands in the cabin, their general and keys pages, on foot and in the buggy, over the landing map, the sector map, the star map and the galaxy chart; the keyboards of the aim, a text entry and the console; the controller page; the help's third page); N5-05: drives the key bindings screen through a `Game` (opens it from the settings, rebinds FORWARD to Z with a raw key, resets, saves and reloads `shots/test_keys2.txt`) | stdout, exit code, `shots/keys.png` |
-| `seasons` | M5-06: the day length at 82 N on a tilted felisian world at both solstices (polar day against polar night); fails when they match | stdout |
-| `audio` | M4-09: renders eight sound stages (ship, vimana, shore, desert storm, mountain rain, lava, N2-06 forest with `leaves` 0.8, N4-04 buggy with engine 0.6, rpm 0.7, skid 0.4 and a thump) through `AudioSynth` for 3 s each; fails on non-finite or clipped samples | `shots/audio_test.wav` |
-| `regress [bless]` | determinism regression (M0-03): FNV hashes of the first 5 systems, 10 planet maps and 3 site height profiles of the start region, compared with `tests/regress_baseline.txt`; exit code 1 on any change; `bless` rewrites the baseline (do it deliberately after a generation change and say so in the decision log; last blessed for generation version 6 on 2026-09-27; F-11: the forest at 4x and the cabin at 1x too, each drawn again by one thread, exit code 1 and no `bless` when one differs) | stdout |
-| `fuzz [N]` | random keys and mouse for N frames (default 10,000) across every state; fails on a crash or a non-finite number in `Game::testHealth` | stdout with frames per state |
-| `reanchor` | walks 51 km on a rocky world at 62 deg latitude and prints positions, capsule distance/bearing and heading before and after the site frame moves | stdout |
-| `compare` | B-310: renders eight scenes (felisian forest, shore and sunset, cratered noon, thin-atmosphere sunset, icy noon, the buggy's seat, the felisian globe from orbit) with six configurations of render scale and mush box (`SCALE_CFGS`: A 2x 3x3 the old default, B 3x 3x3, C 3x 4x4, D 4x 3x3 the default since B-310, E 4x 4x4, F 4x 5x5 classic) | `shots/tests/scale/<scene>_<tag>.png` (+ `.raw`) |
-| `sheet` | composes them as the 1280 x 800 window shows them (`windowImage`: nearest for integer factors, the window's bilinear pass for 3x, the scanlines every four rows) and crops the same 640 x 400 region of the window (the lower middle) into a 2 x 3 grid with labels; the whole window images go next to the tiles | `shots/tests/scale_<scene>.png`, `shots/tests/scale/<scene>_<tag>_window.png` |
-| `scene <name> [scale]` | one comparison scene at a render scale 1-4 (B-310; the default 1x); B-313: `felisian_mountains` is the pinned mountain review site of O6, standing 30 m from the capsule facing its highest ground; G-04: the scene prints its site (the body, its star's sector, latitude, longitude and the light: round a binary the two suns blended as the view lights the ground), the finder scans the year when a day misses the asked altitude by a degree, the longitudes on a world locked to its star, and skips a latitude that never sees that light; `felisian_forest` moves to the next world when its densest wood covers under three fifths of the forest ground (the check's bar) | `shots/tests/scene_<name>.png` |
-| `descent [latDeg lonDeg]` | B-307: the buggy at the pinned felisian mountain site (or at any site of that world) on the steepest straight descent of 200 m within 500 m of the capsule (grade 0.12-0.45; G-04: walked every 2 m from the start, no step up over 0.3 m or down over 1.6 m, a grade bending under 0.5 m per step, no water, no rock over 0.9 m, trunk, log or ruin within 3 m of the line), driven at full throttle: it must reach the bottom with under a tenth of the frames airborne, at most two landings and a mean speed over 8 m/s (2026-09-27: grade 0.45, 7.8 s, 25 m/s, 0% airborne, no landings; 2026-10-01 at the G-04 pin: grade 0.45, 7.2 s, 27.7 m/s, 0% airborne, no landings; 2026-10-01 at the S-01 pin on the locked world Wyariothmai I: grade 0.45, 7.1 s, 28.1 m/s, 0% airborne, no landings; a failed run prints where the buggy was every two seconds) | stdout, exit code |
-| `stability [scene] [metres per frame] [scale]` | B-309: eight frames of a scene a thirtieth of a second apart; the mean absolute change of the luminance between consecutive frames per region (a box of 40 logical pixels round the sun, the sky, the ground) and a heat map of where the picture moves next to the last frame: water, leaves, weather and creatures should move, the sun's glow should not (the sunset scene's sun box reads 0.6 out of 255 per frame, the water line accounting for it; the desert ground 5 from the blowing sand). B-313: with a step in metres the free camera walks forward 1.7 m over the ground for sixteen frames (flocks and herds cleared) and the far band (rows 42-62%) reports its mean change and the share of pixels jumping over 40 levels, with the sheet `stability_<scene>_walk.png`; in pixels a popping cell is hard to tell from parallax (KI-319), the rings' seams are accepted by `unit` | `shots/tests/stability_<scene>.png`, stdout |
-| `survey [N]` | M9-01: distributions over N bodies near the start: types, planets vs moons, systems with a felisian world, temperature and gravity histograms, moons per planet, material coverage per type; M5 adds the counts of multiple systems, substellar objects, comets, double and locked planets and the R-001 sky table (discs over 0.5/1/3/10 deg at two random sites and times per landable body, what the disc is, two suns up); B-428 the parkings (every world parked at twice from the game's parking, 3.5 radii on the sun's side: another world wider than 10 deg in the sky and wider than 6 deg in the 70-degree view of the world, at solid planets, their moons, giants, giants' moons and twins) | stdout |
-| `galaxy` | G-01: the density function in numbers: the profile along the radius (the arm crest and the gap at each radius, the scale height, the region), the star count by integration with the regions' shares, the home sectors (density, region, the new-game search's stars, the pinned home star and the search's own pick, the neighbourhood: stars in the 21-sector cube, within 10 ly, the nearest star's distance, nebula patches in the sky); G-02 adds the globulars (count, radial shares, the three nearest to home with size and star count), the open clusters within 1,500 ly of home, and the class mix of a 15-sector cube in each region (ten columns since S-01); G-03 adds the star-forming complexes within 300 ly of home (count, spacing, the nearest), the band from home (the column of starlight, the dust's optical depth and the brightness in eight directions, the map's build time, the profile along the plane and by latitude at the core and the anticentre) | stdout; `shots/tests/galaxy_faceon.png` (110,000 ly across, home ringed in green, the globulars as orange dots), `galaxy_edgeon.png` (5,500 ly tall, stretched x10), `galaxy_band.png` (the sky as the game samples the band map, 720 x 360, the core at the centre), `galaxy_sky_core/arm/anticentre.png` (the space view from above the home star) |
-| `chart` | G-05: the galaxy chart. The closed-form face-on column (`galaxyFaceOnColumn`) against the field integrated in 2 ly steps at seven places (home, the centre, 500, 1,500, 3,000, 25,000 and 45,000 ly out: the worst 0.01%, at the cap's edge) and its cost (a chart's 40,960 columns in 3 ms on one thread); then a `Game` opens the star map's galaxy page (`M`, `Tab`) and draws every level (0-8) from home, from 2,000 ly over home's plane (`testPlaceShip`) and from a star of the core (`testArriveAt`, the route's leg from home drawn), a frame a level (`shots/tests/chart_home_<level>.png`, `chart_north_<level>.png`, `chart_core_<level>.png`) with the level's height and scale, the images' build time (2-7 ms on the pool), a frame's time after it (0.75 ms at 4x) and where the ship's crosshair was drawn beside where the scale puts it. G-06: then a fresh game from home: the cursor 5,000 ly coreward in the plane at level 2 (`chart_g06_cursor.png`), `Enter` plots (`chart_g06_plotted`, the star and its distance from the point printed), `Tab` looks at the stars round the end (`chart_g06_look`, counted), `Tab` back, `Enter` flies (`chart_g06_flight_space` a second in, `chart_g06_flight` the chart in the flight), at the arrival `chart_g06_arrived` (the cursor back on the ship); `L` names a place 1,500 ly over the plane (`chart_g06_mark`), `N` four times at level 0 (`chart_g06_stops`, the statuses printed), a plot 20,000 ly north into the halo (`chart_g06_halo_cursor`, `chart_g06_halo_plotted`, how far short). |
-| `crossing` | G-07: the galaxy round the ship in two long flights from home, R-407's jump 10,000 ly coreward and 3,000 ly north (`Game::testStartJump`): through the cabin at 2, 25, 50, 75 and 98% of each flight ahead and, at 25, 50 and 98%, aside (the head turned toward the galactic centre square to the line, level at the windows: `testCabinLook`), the galaxy page halfway, a flight frame's time at 2x, the band's keyframes (how many, how far apart, built, built whole at once: the harness skips the clock with `testFlightSkip`), and the arrival (the parked band built 0 times: the flight's last keyframe handed over); then the same lines drawn bare (`BareFlight`: a `SpaceRenderer` alone, no cabin or HUD, the streaks on) ahead, back and aside at the same shares with the frame's luminance, its middle and its top and bottom fifths | stdout, `shots/tests/crossing_<core|north>_<share>_<front|aside>.png` (the cabin), `crossing_<core|north>_<share>_bare_<ahead|back|aside>.png`, `crossing_<core|north>_50_chart.png`, `crossing_<core|north>_arrived.png` |
-| `stability flight [scale]` | G-07: the band in the two flights of `crossing`, every frame a thirtieth of a second from the start to the arrival, ahead, back and aside, the stars left out: the band alone (the star-forming regions' patches out too): the mean change of the luminance between frames, the worst frame's and the worst pixel's, the share of pixels moving over 6 levels (steady: no pixel over 6; measured 1-2 in all six), the keyframes; then with the patches, the passages (runs of frames whose mean moves over a level: none since the patches fade with the flight's speed; before, 4-7 on the coreward flight, a 30-degree disc for a frame); exit code the views that flicker | stdout, `shots/tests/stability_flight_<core|north>_<ahead|back|aside>.png` (the band at the middle of the flight beside the heat map of 16 frames) |
-| `stability skyline [scale]` | A-02: the test city's skyline (`forms`) while the explorer walks toward it 1.4 m a frame for 16 frames, from a summit within 6 km: a desert world at 15 km (Phiyiesh II) and an airless one at 30 km; the mean change of a pixel's light a frame over the city's box and the share of its pixels jumping over 40 (B-309's measure), beside the same over the empty horizon (2x: 0.32 and 0.00% against 0.26 at 15 km) | `shots/tests/stability_skyline_<world>.png` (the last frame and its heat map) |
-| `forms sheet [scale]` | A-02: the forms' sheet: 34 samples (every kind and its variants: walls, a windowed block, four domes, six turned forms and an octagon, three pyramids, two vaults, three arches, two shells, a mast, a girder, cables, two rings, three sweeps, a grown form, C-17's outlined plate), each in eight cells: near whole and broken, its middle and far meshes up close (`testForceLod`), at 600 m and 2.5 km whole and broken magnified twice; on a desert world at the sun's 40 degrees, the test palette (concrete, copper, steel, a warm light, four windows); prints each sample's polygons near | `shots/tests/forms_<scale>x_<0..5>.png` |
-| `forms city [scale] [desert\|felisian]` | A-02: the test city (1,348 buildings, 1,555 forms on a grid two kilometres across: towers to 450 m with spires and domes in the middle, halls, domes and blocks round them, low blocks, tanks, chimneys, cooling towers, masts with cables and grown forms outside, a viaduct across it, a ring in its plaza, a third of it broken) from 300 m outside its edge, 12 m up, on the civilisation scene's world; the frame time, the forms' share and counts and the frame's hash (`VESPERIS_THREADS=1` gives the same) | `shots/tests/forms_city_<world>_<scale>x.png` |
-| `forms skyline [scale] [desert\|felisian\|airless] [km]` | A-02: the test city at a distance (30 km by default) from a summit within 6 km, turned until the city stands on dry land in sight of the eye (60 m up); the silhouettes drawn, the fog, the hash | `shots/tests/forms_skyline_<world>_<km>km_<scale>x.png` |
-| `forms check` | A-02: the unit's four forms checks alone | stdout |
-| `home` | G-02: the candidates of the new-game search (yellow or orange stars with a living planet in sectors 176..196 x 36..56), each parked at its first living world with the landing map open as a new game does and timed until the default site's drainage tiles are in the cache (up to 8 s); prints score, world, radius, surface temperature, rings, moons, nebula patches, tile time and sector hash, then the pick (a yellow star first, two living worlds, 275-320 K, tiles under a second, the fewest patches, then the score) and whether it is the pinned one; about two minutes | stdout |
-| `gallery <type>` | M9-01: 16 random landing sites of a type (0-12) as a 4x4 contact sheet at 1x | `shots/gallery_<TYPE>.png` |
-| `settings` | round-trips `Settings` through a file, loads it into a `Game`, opens the settings screen and changes the FOV | `shots/settings.png`, stdout |
-| `landmaps` | opens the landing map of one body per landable type through `Game::testParkAt` and prints the darkest shadow on the map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) | `shots/landmap_<TYPE>.png` |
-| `drive` | N4-02: the buggy on a desert site (else open grassland) through the surface renderer: `findOpenRun` picks the longest straight run within 800 m clear of forest, water, vegetation and hard colliders, then a test driver holds full throttle for 90 s with U-turns at the run's ends, steering round obstacles and water and backing out when stuck; prints the speed, distance and gear every 10 s and fails under 2 km or 100 km/h (2026-09-26: 2,152 m, 107 km/h; 2026-09-27 with the 180 km/h top speed of O1-05: 2,817 m, 169 km/h; the seat frames carry the nose camera's look since N4-06) | `shots/drive_seat.png`, `drive_chase.png`, `drive_night.png`, `drive_night_chase.png`, `drive_air.png` when it jumps |
-| `bestiary` | N3-01: prints the bestiary of the first six living worlds near the start (species, plan, size, gaits, bank, tone, pattern, crest, habitat, diet, activity, temperament, call, herd size) and fails when a second generation differs | stdout, exit code |
-| `encounters [N]` | N3-04: N (300) random felisian land sites near the start through `SurfaceSite::init` and `SurfaceView::planLife`; prints the share with a herd within 200 m overall and per biome (2026-09-26: tropical 86%, temperate 100%, grassland 80%, savanna 75%, taiga 56%, desert 50%, tundra 30%, alpine 15%, ice 0%; 11% overall because most random sites on the start region's cold living worlds are ice); B-316: and the habitat herds (and animals) within 900 m per site (0.7 and 3 over 300 sites, 204 of them ice) | stdout |
-| `consistency` | N0-02/N1 (B-202): for every landable type, a site within 3 deg of the sub-solar point standing on the material that covers most of the globe patch; the landing map (24 texels, no clouds, via `Game::testLandingMapTexel`), the globe patch (24 px around the site's point on the disc from 3.5 radii) and the ground there at noon (96 px crop, looking down 30 deg) side by side with their average colours as swatches; the map and globe averages take only texels/pixels of that material (by material and by bank), the ground the whole crop; prints the averages, the RGB distances map-globe, globe-ground, map-ground (0-441), the sun altitude, the relief class of the landing map against the slope measured on the real terrain (a mismatch fails), the ground crop's raw mean shade, bank and ramp stops, and how many types exceed 60 (venusian: map against ground only, its globe being the cloud deck). Before N1: 11 of 13 over, worst 230; after N1: 0 of 13, worst 57 (ocean); both tables are in `docs/iteration-2/bugs/resolved/B-202-*.md`. O6-02: the relief grade is the regional mean of `Game::siteSlope` measured on the ground's caches, a class flip counts as a mismatch only when the two grades differ by more than 30%, and the line prints the site's light factor against the globe's; the felisian site moved onto snow under a dim star (light 0.62 on the ground, 0.35 on the globe: KI-309) and reads 105, so the count is 1 of 13 | `shots/consistency_<TYPE>.png`, stdout |
-| `flow` | scripted expedition: title, list, data, help, guide menu, rename the star by typing, star map (G-05: `Tab` to the galaxy, `starmap_galaxy`, four levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the flight, `starmap_flight`: the galaxy page with the line flown; G-06, after the belt and before the probe, which parks the ship where it needs it: the chart's cursor 3,000 ly coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab` looks, `starmap_look`, `Tab` back, `Enter` flies, `starmap_jumped` a second in, and at the arrival `starmap_arrived` with the crosshair printed; the minute of flight puts the five-minute autosave in it, so slot 0 is `DEEP SPACE ... IN SPACE` at the end), arrival, approach, orbit, landing map, descent (save to slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after `surface2`, `Tab` again), sprint, jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase view), drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`, `drone_readings` a second after it with `Tab` (R-414) and `Tab` again, `drone_chase`, S brakes, Shift lands, `E` out, the line `drone: ... top 320 km/h, 160 m up, landed ok after 13 s`), waypoint, C-07: the signal radar at the start (`radar_set` the set beside the decoder faced from the cabin, `E` on it, `radar_on` with the scope and the hint, `radar_sweep` after two seconds of the arrows, `radar_hold` the view turned onto the first people's signal by `testAimAtSignal` with the cone filling and the recording heard through the static, `radar_lock` the readout naming the system only and the lock's diamond, `radar_flight` a second after Enter: the Vimana flight to the signal's star with the camera left and the synth released, then `V` aborts it for the rest of the flow; the radar's state printed at each step; C-15: `B` again and the gain up five steps, `radar_gain` at x32 when the far scan is done (the view still on the Ghutreig: overloaded, the meter pinned red), `radar_far_hold` the view turned onto the farthest people's signal x32 hears (5,524 ly) with the longer hold filling, `radar_far_lock` its readout with the thousands, `radar_far_flight` Enter's flight, aborted at once by `V` so the flow goes on from where C-07's flight left it), note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall, ascent, then reloads: newest save (with the guide), and slot 2 which resumes the descent and reaches the surface; M6: `attract` (the title tour), `credits`, `photo` and `photo_flight` (free camera), `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01: parks at the first comet near the start (`comet` with the HUD motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from the first herd (`herd_approach`), walks in for four seconds and prints the herd's states before and after (`herd_flee`: alert, calls, fleeing); N4: after `buggy_seat` the buggy is moved to open ground when there is any (`Game::testDriveOpen`) and driven 45 s (`buggy_drive`, `buggy_air` if it jumps), then the chase frame; N4-06 (B-205): after getting out, `K` must recall the capsule and `B` must unfold a new buggy ("SCRAPPED"), and after the ascent a second landing (`second_landing`) must start with no buggy; O1/O2: `landing_zoom` (the sector zoom) and the rangefinder printed after landing; O4: since comets are landable, parking at the comet opens its landing map (`comet_map`), then the comet's HUD, sheet and list as before, then a landing on it (`comet_surface`, the escape velocity, `B` refused, the walking speed against its cap, a jump after 4 s and after 3 s of `Ctrl`, `comet_jump`, `comet_sky`, `comet_sectormap`); O3: the first belt near the start through the analyzer (`belt_list`, `belt_approach`, `belt` with the debug line and parked belt, `belt_data`, `C` refused, `belt_rock` after `X`, and the rocks and bank-3 pixels drawn); O1-04/B-303: `sectormap_wide` at the widest level the world allows (the level printed), and after the second landing the waypoint must be fresh (`waypoint=0`, `second_sectormap`; R-414: M4-02's trail is gone); R-408: the scanner on (`R`, the world's first mode) until its search is in (`scan_hud`, its numbers printed), a mark at the crosshair (B-412: the look put on the ground 35 m ahead first and back after; `L`, typed `FLOW MARK`, `scan_marked`: nothing over the view; R-414: the rangefinder naming the mark is the readings'), the sector map with the mark shown by `Shift+Enter` at the cursor (boxed, `SHIFT+ENTER HIDES`) and the echoes (`scan_map`), the view with the shown mark over the ground and its hollow diamond on the compass (`mark_shown`), the mark removed from the map's cursor (Delete twice) and the scanner off again; G-04: `N` then `Enter` lock the nearest star again (the cabin view faces it), the landing map's cursor goes to a lit grassland site from the body's seed (`Game::testLandSite`; `J` had left it under the moon, in the sea at Heilya II), and when the arrival holds no living world the landing parks at the scan's first felisian world after the approach and orbit frames (Siophios, 0.97 ly from Heilya: thin atmosphere, cratered, acidic); C-06: the shard decoder on the cabin's back wall (`decoder`, facing it; `shards_none` with an empty guide; then three shards of Aieliaalas II put into the guide: `shards_worlds`, `shards_list`, `shards_decoding` a second into the recording (C-05: the words resolving as they are spoken), `shards_text` read at 46% with the speech skipped by Enter, the next shard likewise; then ten: `shards_list10` with every shard marked unread, `shards_full` the whole text, `shards_speaking` the read shard spoken again with the word being spoken underlined, then paused, and the print that the synth's speech pointer is cleared after `ESC`; the decoder's state printed at each step; C-04: the first piece of music among the ten opened by index, `shards_music` two seconds in, `shards_music_name` the entry box over it, `shards_music_named` after typing a name, and the print that the synth's piece pointer is cleared after `ESC`; C-10: the first star chart of the world added to the guide and opened by index, `shards_chart_reading` two seconds into its reading (the stars up, the figures' lines drawing, the names not yet), `shards_chart` after Enter skipped the wait (the disc with the figures named, the caption read at the share, `THEY MARKED` with the star's class, distance and sector), then `O` holds it up and `Esc` leaves: `chart_overlay` the space view turned onto the marked star (its diamond and `THEY MARKED THIS STAR`, `A CHART OF THE <PEOPLE> HELD UP` at the top right) and `chart_overlay_figure`, C-12: the world's last recording added and read with the wait skipped (`shards_last`, THE LAST RECORDING, the `SHARD` log line) and the list with its timeline closed (`shards_timeline`); H-06: `TAB` to the world's timeline of its eras (`shards_eras`), `TAB` to its history as the shards read tell it (`shards_history`, the page's state and first rows printed), `TAB` back to the records; C-11: after the lending, the decoder's worlds turned with `TAB` to the ship's player (`player`), its first piece played and left playing as the decoder closes, the player's state printed at the flight (`vimana`, its HUD line), on arrival and at the descent (stopped), the instruments' case on the cabin's left wall (`cabin_case`, `facing` 10); B-411: the hull made glass, seen from across the room with the light on (`cabin_glass_lit`: the desk, the capsule and the cage solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the room dark round the stars); H-04: the longest of the world's first sixty records put into the guide and opened, its opening spoken (`shards_long`, `PAGE 1/3`), `DOWN` to its next page (`shards_long_page2`), `ENTER` speaking that page; C-13: three shards of each people of Eleinewai I (152 0 92) added and the decoder opened again, the worlds' list with that world listed once a people, named (`shards_peoples`), and the second people's list with its own count and header (`shards_second_people`); C-14: the guide so far saved as the inbox file and imported into a fresh guide in the same game, the decoder's list with the lent rows in cyan (`shards_lent`) and the friend's piece under the friend's name (`shards_lent_piece`), the guide put back after turned onto the chart's first figure (its lines between the stars in the window band, its name), then the chart put down from the decoder; the chart's state printed at each step); C-09 ends the expedition with `roads_zoom`, the landing zoom over Aieliaalas II's land region with the old roads drawn as faint lines (R-415: with the peoples, `V`; the count and the layer's info printed), and C-18 after it with the drone bay over the same world (`drones_rack` from the cabin's middle, `facing` 11; `drones_bay` its screen; `drones_launch` a second after Enter, drone 1 through its port; `drones_search` four seconds after the first stop; `drones_back` every drone docked, the finds printed), and every frame's line carries the seconds since the start, so a slow step shows (a first C-09 run took 930 s with the same output, the next 32); W-01 (2026-10-06) adds `almanac_ship` (the list from the parking at the start, 13 events), `almanac_site` (the cursor's site on the landing map), `almanac` (under the feet: at the flow's locked world the comets alone under `THE SUN STANDS STILL HERE`), `almanac_run` (the run's first frames, the status row's `TO ... - T STOPS`) and `almanac_arrived` (the clock landed, `UNKNOWN AT PERIAPSIS - X1`), with the line `the run: 10279 s of game time in 284 frames at a peak of x10000, 0.000 s off the event`; the `timelapse` frame went with M5-06's lapse; W-06 (after `almanac_ship`): `telescope` (the parked world at x2, tracked from the start, the reticle's line under it), `telescope_moon` (the widest other body tracked at the power that fits it), `telescope_name` (the text entry `NAME THIS MOON`), `telescope_named` (the line reads the name), the photo written as the test gallery's `screenshot_1.png` with its caption (`photo: THROUGH THE TELESCOPE X2: THE NEAR MOON  ROCKY MOON  64402 KM  6.4 DEG - IN ORBIT OF UNKNOWN ...`), then stowed; the review's rework added `cabin_back` (the back wall's three sets in their colours, R-404) and `cabin_telescope` (facing the telescope's set) with `telescope_set` (the eyepiece opened from it by `E`) before the telescope block, and in it `telescope_plate` (the moon stepped deeper until the eyepiece's step is finer than the map's texel and a plate begins, then read out whole, `testTelescopeSettle`) and `telescope_plate_deep` (two steps deeper, read out whole), the plate's line printed with each; R-405 added `orbit_turn` after the telescope is stowed (a second of Shift+Right from the front window, the status `OVER ...`); W-03 prints `fronts: ...` after `surface` and `surface_data` (the data sheet's `FORECAST` line, the front's line and the numbers at the feet); X-01 adds the probe after the belt: parked at the scan's first gas giant, the telescope's reticle moved up its disc (`probe_aim`, `C SENDS A PROBE TO ...`), `C` (`probe_fall`, the aim and the clock printed), `probe_entry`, `probe_clouds`, `Space` in the haze (`probe_chute`), `Ctrl+S` to slot 3 in the descent, `Esc` to the cabin (`probe_cabin`: the space HUD's `PROBE:` line), `C` back, `Shift` held a second (R-406: `probe_fast`, the clock eight seconds on), a flash between the decks (X-02: `probe_between`, the picture's layers printed), on to the end (`probe_lost`, the log's `LOST IN` line), `Enter` (state 1, the probe let go); X-04: the guide's gallery (`probe_gallery`: the newest item the probe's recording, its final image), `Enter` plays it (`probe_recording`, state 25), `Right` held 1.4 s goes down it (`probe_recording_deep`, the clock printed), the statistics (`probe_stats`: `PROBES SENT 1   DEEPEST DESCENT ...`), the giant's data sheet and `Right` (`probe_profile`); slot 3 is then the newest save, so the load at the end resumes the probe on its screen (`the newest save is the probe's: state 24, ...`) | `shots/tests/flow_<step>.png`, stdout with state and status per step |
-| `bench` | frame times for space and surface at every scale 1x-4x (B-310: the surface rows print the render's sections: sky, the vertex warm pass, the terrain bands, objects, flora, the rest), walking and turning at 1x, the first/worst of the first 60 descent frames, and (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree tiers, hidden trees, points, the trees listed and their visits over the band threads, and the flora sections' milliseconds (`shots/tests/bench_forest.png`); `bench check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5, surface 2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13, herd draw 1x 0.6, drone 2x 3.3 (R-403: 60 frames at full thrust 200 m up with the camera tilted down 30 deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving from the seat through the game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through `Game::testParkAtBelt`, 1.9 ms), vimana 2x 2.0 (G-07: sixty frames halfway through a 10,000 ly flight coreward from home, the streaks and the band blended from its keyframes with the next one's share built, `bench_vimana.png`), descent first 26, sprint worst 10 ms (N3: the herd scene's life update and draw times per frame); `bench forest` renders the forest at 4x 150 times for a profiler (`sample vesperis_test 5` on macOS found the trunk lines: every band thread walked every line in full); `VESPERIS_THREADS=1` runs any mode serially (the baseline: surface 4x 17.9 ms, forest 4x 35 ms against 10 and 14 with eight workers); W-06: `telescope 2x`, sixty frames at x1024 on the parked world (the globe over the whole frame, `bench_telescope.png`; X-02: `probe 2x`, sixty frames of the probe's camera on Wailie VI over the ammonia deck's tops and sixty between the decks, the worse of the two against 8.9 ms, `bench_probe.png`; since the review's rework the frames build the plate within its 8000 samples a frame, so the row is the eyepiece at its dearest, the plate's line printed under it), budget 13 ms; A-02: `city 2x`, the test city (`forms city`) from 300 m outside its edge and from its plaza, the worse of the two, budgeted at 5.7 ms in `bench check`; T-01: `descent people`, the first descent frame onto the modern test world 400 m outside its capital's core (its plan built at the parking on its own thread and waited for, the drainage too; 57.4 ms of 80, 62 since F-11) and `capital 2x`, sixty frames on the ground there facing the capital (8.9 ms of 16, 5.4 since F-11, `bench_capital.png`) | stdout, `shots/tests/bench_*.png` |
-| `terrain` | O5, rebuilt in O6-01 as the acceptance harness of Terrain III: 48 hashed land sites per landable type (four bodies, twelve each, measured in parallel), each on four grids of the planet function (24 x 24 at 4 m, 48 x 48 at 16 m, 32 x 32 at 64 m, 32 x 32 at 512 m), grouped by the relief class the landing map prints (`Game::siteSlope`, `reliefClass`) and judged against the class's targets of section 2 of `PLAN-terrain-3.md`: mountains median slope 0.25-0.45 at 16 m, 500-1200 m of relief over 2 km, 1500-3500 m over 16 km (5000 on crater-field types), cliff cells (slope over 1) 3-8% (O6-04's), 90% walkable (slope under 1.35), 15% valley floors (O6-03's); hills 0.08-0.15, 120-250 m over 2 km (450 on crater-field types), 25% of the lowest quarter of the 64 m cells under a 5% slope (O6-05's on crater-field types); flat 0.01-0.04 (0.09 on crater-field types), broken by terraces and the like (p90 over 0.06 and 6 m over 770 m, O6-04's); comets only on walkability; the cost of a 16 m sample within 2x of the O5 figure. Targets owned by later items are printed as `FAIL(O6-0N)` and not counted; the exit code is the count of failing spectrum targets. Also prints the class shares per type. 2026-09-27 after O6-02: 25 of 31 class rows pass, 8 spectrum targets short by 5-15% (`shots/tests/o6/after/terrain.txt`; before in `o6/before/`) | stdout, exit code |
-| `landforms <type> [flat\|hills\|mountains]` / `landforms sites` | O6-01: the landform gallery. Twelve hashed land sites of a type (of a class) on one sheet, each a standing frame toward the highest ground within a kilometre over hillshades (a DEM-style shaded relief, north up, water blue, snow pale) of 770 m, 3 km (z-factor 2) and 24 km (z-factor 3) with the site's metrics; `sites` renders the four fixed review sites (a felisian mountain site and plain, thin-atmosphere hills, a cratered moon, pinned by latitude and longitude on 2026-09-27; G-04: the mountain site re-pinned at -41.674 / -127.807, and `landforms sites search` lists six candidates of each site's class on its world; S-01: Wyariothmai's red dwarf claimed the first felisian world and the first cratered moon, so the mountain site is at -48.030 / 152.547 on Wyariothmai I, the plain at -55.154 / -122.371 and the cratered moon's site at -13.184 / 175.712 on Wyariothmai II-a, and the search keeps to the day side of a world locked to its star) each on its own sheet at three distances (standing 14 m ahead of the capsule, 150 m up looking down 12 deg, 2 km up looking down 30 deg) over the three hillshades and the metrics, so the sheets before and after a generator change show the same ground; the O6 review copies are in `shots/tests/o6/before/` and `after/` | `shots/tests/landforms_<TYPE>[_<CLASS>].png`, `landforms_site_<name>.png` |
+* `stars`: star and body statistics around the start region, prints four systems in detail (output: stdout)
+* `maps`: generates one planet map per type; M5-08 adds `map_LOCKED_FELISIAN.png` (one locked living world) (output:
+  `shots/map_<TYPE>.png` (albedo tinted by body colour on top, height/material below))
+* `space`: renders each sun class from its first orbit (ten since S-01: `sun_S06` the red dwarf's spotted disc, `sun_S07` the
+  blue-white star's cross of four, `sun_S08` the orange giant's mottled amber disc, `sun_S09` the carbon star's dark disc in a
+  wide dim glow; eleven since S-03: `sun_S10` the neutron star, a point in a halo; twelve since S-04: `sun_S11` the protostar's
+  soft disc in its cloud with the dust disc's band along the plane and the belts' sparkle; thirteen since S-05: `sun_S12` the
+  Wolf-Rayet star, the blue giant's glare inside the filamentary bubble of its shell; fourteen since S-06: `sun_S13` the black
+  hole from the plane of its worlds, the shadow inside the ring of its disc, and `space_black_hole.png`, the first black hole with
+  a companion from 20 degrees above its plane at six tenths of the first orbit: the disc arching over the shadow, the bent stars,
+  the companion's stream) and each planet type from a parked view (plus a ringed gas giant); M5: `space_binary` (both suns from
+  behind the primary), `space_binary_world` (a world of the companion), `space_comet` (a comet at periapsis with its tail, seen
+  from above its orbital plane), globes of the substellar, comet and companion types; the tests wait for maps (`warmMaps`) so
+  globes are textured. N0-01: the comet frame is rendered again 5 s later (the hashes must differ, the knot positions are
+  printed), the comet's drift seen from the first planet over 500 s (x100) must exceed 4 px at 1x, and `space_comet_close` is
+  rendered from the parking distance of 12 radii with the ship riding along, 3 s apart (over 500 px must change: the jets); N5:
+  the gas giant globe is rendered again a day later (the hashes must differ: storms, `globe_GAS_GIANT_day_later.png`) and a frame
+  from the first star-forming region found (`space_nebula.png`, the patch count printed); O3: `space_belt.png` from beside the
+  biggest rock within two cells of the first belt's middle (the rock count, the rocks and meshes drawn, and the same rock found
+  again an hour later along its orbit); W-06: four frames through the telescope (`renderTelescopeFrames`, each at the power of two
+  that fits its object, the setting's focal length multiplied: `telescope_moon.png`, the biggest moon of the first ringed giant
+  from the giant's parking, its disc measured against the plain view's `telescope_moon_plain.png` (the power must multiply it
+  exactly, else `FAIL`); `telescope_giant.png`, the giant with its rings from the innermost planet's parking;
+  `telescope_companion.png`, the first binary's companion from the primary's first orbit; `telescope_comet.png`, the first comet a
+  little past periapsis from the outermost planet's parking; the power, the disc in pixels and the render's milliseconds printed).
+  The user's review (the same day) added the plate's frames: `telescope_world.png` (a living world from its own parking at the
+  power that fits it: Wyariothmai I at x2), `telescope_world_land.png` (its high ground within sixty degrees of the sub-ship
+  point, `telescopeGroundPoint`, at x64: about 1 km a pixel) and `telescope_world_ground.png` (the same ground at x256: 250 m a
+  pixel, the rivers' tiles fetched first), `telescope_moon_near.png` (the moon at four times the fitting power) and
+  `telescope_ground.png` (its high ground at x1024: 3.7 km a pixel), each with a `_map` twin drawn from the world map alone where
+  the difference shows, and the plate's line printed under each frame (`plateInfo`: the cells, the step, the samples, the heights'
+  range, the mean slope, the build's time) (output: `shots/sun_S0N.png`, `shots/globe_<TYPE>[_rings].png`,
+  `shots/space_comet[_close].png`, `shots/space_belt.png`; W-03: `space_fronts.png` and `space_fronts_x4.png`, the pinned plain's
+  world from a parking over the plain an hour before a front's line reaches it (`renderFrontFrames`: the fronts alive, the bands'
+  share of the map and the band over the plain printed))
+* `surface [type]`: renders every landable type (or one type id 0-8) at noon, sunset, night and at 82 deg latitude; prints sun
+  altitude, environment, render time, rock counts (output: `shots/surf_<TYPE>_<scene>.png`)
+* `moonsky`: lands on moons of gas giants and looks at the parent planet; also searches three orbits of the first such moon for a
+  partial solar eclipse (coverage near 0.85) and renders it; M5: `moonsky_0_later` (the same sky 15 min later), `moonsky_rings` +
+  `moonsky_rings_space` (a moon of a ringed world, both renderers), `moonsky_substellar` (night under a brown dwarf),
+  `rings_surface_day/night` (the ring arc from a ringed world's surface), `binary_surface` (two suns up) (output:
+  `shots/moonsky_N.png`, `shots/eclipse.png`)
+* `scene <name>`: renders one of the fixed comparison scenes (and prints, since N1, the lower half's bank histogram, mean shade,
+  the majority bank's ramp stops and the sky/snow/dust/underwater state, to tell a dark palette from a dark scene); N2 adds
+  `felisian_forest` (a deep forest: veg over 0.75; prints the tree tiers, the flora point count and the canopy coverage of the
+  forest ground within 200 m, failing under 60%); N3 moves `felisian_herd` to open grassland (18 m south of herd 0) and adds
+  `felisian_herd_near` (6 m), `felisian_herd_far` (60 m) and `creatures_lineup` (one animal of each land species 5 m ahead, side
+  on), printing the herd's states, calls and the life update/draw milliseconds; N4 adds `buggy_seat` (in the driver's seat,
+  steering 12 deg; since N4-06 the nose camera's picture through `cameraFeed`) and `buggy_parked` (from 5 m behind and beside it)
+  on open grassland; N5 adds `tundra_lowsun` (a cold site with the sun at 5 deg: the pillar) and
+  `biome_<tropical|savanna|desert|temperate|grassland|taiga|tundra|wetland>` (a land site of that biome, with the same print plus
+  the flora families, colours, season phase, fog and wind) (`felisian_herd` (M4-05: 18 m south of the first herd),
+  `felisian_shore`, `felisian_sunset`, `cratered_noon`, `thinatmo_sunset`, `molten_night`, `icy_noon`) at the current scale; O4
+  adds `comet_day` (a nucleus by day with its jets) and `comet_night` (looking away from the sun: the tail overhead); B-403/R-402
+  add `thinatmo_aurora` (a thin-atmosphere world round a pulsar or a blue giant, 58 deg of latitude, facing the pole: the oval
+  ahead as a low arc), `thinatmo_aurora_zenith` (the site right under the world's auroral oval, looking straight up) and
+  `aurora_moon` (any clear-air world round such a star a degree equatorward of its oval with a moon or the parent at least 0.6 deg
+  across 35-65 deg up, chosen by a trial frame that counts aurora pixels within 1.6 radii of its disc, facing it); each takes the
+  darkest hour of the night with the strongest auroral potential (over 0.45) of the next thirty, and prints the aurora's strength,
+  the star class, the oval's latitude, the centre's distance, the field and its class, the storm, the cloud cover and the flocks
+  in the air; S-02: the active star is `starActivity` over 0.7, so `aurora_moon` stands on Shialyioleila III (sector 179 0 80)
+  under a blue-white star now (Hiolyas V-e under a blue giant before; the thin-air aurora scenes kept Phyaalion); S-03 adds
+  `neutron_glass` (the first glass sheet at 16 m with glass on the eight samples 100 m round it, on a glassed world of a neutron
+  star, the star at 25 degrees and 34 off the view); S-04 adds `protostar_night` (any world of a protostar at the type's default
+  spot, the star 12 degrees under the horizon, facing it: the cloud's glow and the disc's band over the horizon; the scan's first
+  is Shelfesh I, a lava world at sector 162 0 88); S-05 adds `wolf_rayet_day` (any world of a Wolf-Rayet star at the type's
+  default spot, the star 38 degrees up and 29 off the view, looking 20 up: the shell's ring round the blinding sun; the scan's
+  first is Shiesaimiori I, a lava world at sector 151 0 53); S-06 adds `black_hole_sky` (any world of a black hole, the hole 30
+  degrees up and 23 off the view, looking 17 up: the shadow, the tilted disc and the bent stars over a bare plain; the scan's
+  first is Lyaalaphene I at sector 159 0 118); B-417 removes M4-07's `felisian_ruin` (60 m west of the nearest monolith of the old
+  ones: there are none); C-01 adds `civilisation_town` and `civilisation_desert` (the nearest settlement of the scan's first
+  felisian and desert world that had a people, a town before a village before a hamlet within the first five rings of cells, seen
+  from 9 m outside its gate looking down the street, the capsule behind the camera; prints the settlement's class, buildings,
+  plan, radius and the world's culture, and the pieces drawn with their milliseconds: Aieliaalas II's walled town of 44 at sector
+  151 0 25, Phiyiesh II's town of 36 at 153 0 123) and `desert_dead_sea` (the steepest old shore within 25 degrees of the asked
+  latitude of the scan's first dead desert world, found over the whole world at 2048 m and then within 30 km at 512 m, standing on
+  the lip of the land side facing the bed in the shore's own daylight; prints the level the sea stood at and the ground here, 600
+  m and 3 km out: Leileashphail III's shore at lat 29.5 lon -17.5, the sea at 94 m, the beach sand at 117 m and the bed's dark
+  floor at 83 m three kilometres out); C-08 adds `civilisation_harbour` and `civilisation_dry_harbour` (the nearest settlement
+  with a harbour within 30 rings of cells on the scan's first felisian and desert world that had a people and has one: standing 14
+  m up the beach from the quay's middle, half way toward its end away from the mole, looking along the quay at the mole's far end;
+  the desert's harbour stands over the dry bed) and `civilisation_terraces` (the nearest terraced settlement, standing 12 m below
+  its edge on the downhill side, looking up across the retaining walls); C-09 adds `civilisation_road` and
+  `civilisation_road_desert` (the nearest settlement with a road, standing on its longest road about a hundred metres out from its
+  edge, looking along it toward the other end; the print names the road's ends, length, bends, steepest step and width, the
+  culture's paving and wear); C-12 adds `civilisation_graves` and `civilisation_graves_desert` (the nearest settlement with three
+  graves at least, standing two metres before the first row of stones at its end, looking along the row; the print gives the
+  stones' count and how many fell, the first stone's name and years, the calendar line and the span); C-13 adds
+  `civilisation_second_people` (the nearest settlement of the second people of the scan's first felisian world of two whose light
+  allows, from a land point deep on their side, standing outside the gate as `civilisation_town` does; the print gives the people
+  and its culture); each prints the terrain read (the slope and its fall, the shore's distance and heading, the relief) and the
+  features; C-03 adds `civilisation_shard` (the same settlement as `civilisation_town`, standing on the floor of the room that
+  holds its first shard, 1.9 m from it toward the room's middle, looking 24 degrees down: the slab in the corner with its glint;
+  prints the shard's index, its place and building, and with the pieces drawn the shards drawn and the one within reach:
+  Aieliaalas II's shard 47 in house 26 of the walled town, 2 of its 2 shards drawn, 47 within reach at 1.9 m); the two town scenes
+  print their shards drawn too (2 and 3, inside the houses, not in the picture); A-03 adds `civilisation_prehistoric`,
+  `civilisation_medieval`, `civilisation_industrial`, `civilisation_modern`, `civilisation_futuristic` and
+  `civilisation_far_future` (finders -70 to -75: on a people of the age that ended lately, `AGE_SCENE_WORLDS` found by
+  `peoples fresh`, the greatest of its eight best settlements within thirty rings of cells round a land point deep on its side,
+  from a vantage among twelve directions at three distances (inside its edge, at it, outside; a camp's from among its remains, the
+  futuristic and far-future structures from outside) on dry ground, not against a building, with the ground clear of the line of
+  sight, the least forest along it and the light from the side or behind; prints the settlement's kinds, radius, its tallest
+  piece, the years since the end and the vantage's distance) (output: `shots/scene_<name>.png`)
+* `input`: M6-02: writes a key map file and checks the remap (Z acts as W, F7 as P), the key names, and (R-418, M6-02's fixed
+  table gone) the controller: the bindings (a known device's standard layout with a trigger read from its rest and the round dead
+  zone; a raw device's guess and its reading of the axes at rest; the capture by press edges, of a stick's half, a hat, a trigger
+  at one end, the standard names first; every control's name read back; a set a device in `shots/tests/test_pad.txt`), then a
+  `Game` driven by a controller alone (the title, the cabin's walking and look, X at the flight computer and B out, the commands'
+  pages and a line run, a key from the keys page, the aim's light years typed, a star named through the guide and the keyboard,
+  the console's `WHERE` from the commands over its keyboard, the controller page: A bound to Y and the two swapped, the walk stick
+  from two pushes, the reset; the help's third page, the star map and the galaxy chart (the stick's turn, the zoom, the class
+  filter, the chart's cursor, a place marked and removed, X back to the ship), the landing map's cursor by the stick and the d-pad
+  and its triggers, a landing, a jump, a sprint, RB's scanner under it, the sector map (the stick's cursor, the zoom, a mark
+  placed and removed, X home), the commands' buggy, X into it and RT driving), 24 PASS lines, and the overlays as drawn
+  (`shots/tests/pad_*.png`: the commands in the cabin, their general and keys pages, on foot and in the buggy, over the landing
+  map, the sector map, the star map and the galaxy chart; the keyboards of the aim, a text entry and the console; the controller
+  page; the help's third page); N5-05: drives the key bindings screen through a `Game` (opens it from the settings' CONTROLS,
+  each row found by its label since U-01, rebinds FORWARD to Z with a raw key, resets, saves and reloads
+  `shots/test_keys2.txt`) (output: stdout, exit code, `shots/keys.png`; a battery item since U-01)
+* `seasons`: M5-06: the day length at 82 N on a tilted felisian world at both solstices (polar day against polar night); fails
+  when they match (output: stdout)
+* `audio`: M4-09: renders eight sound stages (ship, vimana, shore, desert storm, mountain rain, lava, N2-06 forest with `leaves`
+  0.8, N4-04 buggy with engine 0.6, rpm 0.7, skid 0.4 and a thump) through `AudioSynth` for 3 s each; fails on non-finite or
+  clipped samples (output: `shots/audio_test.wav`)
+* `regress [bless]`: determinism regression (M0-03): FNV hashes of the first 5 systems, 10 planet maps and 3 site height profiles
+  of the start region, compared with `tests/regress_baseline.txt`; exit code 1 on any change; `bless` rewrites the baseline (do it
+  deliberately after a generation change and say so in the decision log; last blessed for generation version 6 on 2026-09-27;
+  F-11: the forest at 4x and the cabin at 1x too, each drawn again by one thread, exit code 1 and no `bless` when one differs)
+  (output: stdout)
+* `fuzz [N]`: random keys and mouse for N frames (default 10,000) across every state; fails on a crash or a non-finite number in
+  `TestGame::testHealth` (output: stdout with frames per state)
+* `reanchor`: walks 51 km on a rocky world at 62 deg latitude and prints positions, capsule distance/bearing and heading before
+  and after the site frame moves (output: stdout)
+* `compare`: B-310: renders eight scenes (felisian forest, shore and sunset, cratered noon, thin-atmosphere sunset, icy noon, the
+  buggy's seat, the felisian globe from orbit) with six configurations of render scale and mush box (`SCALE_CFGS`: A 2x 3x3 the
+  old default, B 3x 3x3, C 3x 4x4, D 4x 3x3 the default since B-310, E 4x 4x4, F 4x 5x5 classic) (output:
+  `shots/tests/scale/<scene>_<tag>.png` (+ `.raw`))
+* `sheet`: composes them as the 1280 x 800 window shows them (`windowImage`: nearest for integer factors, the window's bilinear
+  pass for 3x, the scanlines every four rows) and crops the same 640 x 400 region of the window (the lower middle) into a 2 x 3
+  grid with labels; the whole window images go next to the tiles (output: `shots/tests/scale_<scene>.png`,
+  `shots/tests/scale/<scene>_<tag>_window.png`)
+* `scene <name> [scale]`: one comparison scene at a render scale 1-4 (B-310; the default 1x); B-313: `felisian_mountains` is the
+  pinned mountain review site of O6, standing 30 m from the capsule facing its highest ground; G-04: the scene prints its site
+  (the body, its star's sector, latitude, longitude and the light: round a binary the two suns blended as the view lights the
+  ground), the finder scans the year when a day misses the asked altitude by a degree, the longitudes on a world locked to its
+  star, and skips a latitude that never sees that light; `felisian_forest` moves to the next world when its densest wood covers
+  under three fifths of the forest ground (the check's bar) (output: `shots/tests/scene_<name>.png`)
+* `descent [latDeg lonDeg]`: B-307: the buggy at the pinned felisian mountain site (or at any site of that world) on the steepest
+  straight descent of 200 m within 500 m of the capsule (grade 0.12-0.45; G-04: walked every 2 m from the start, no step up over
+  0.3 m or down over 1.6 m, a grade bending under 0.5 m per step, no water, no rock over 0.9 m, trunk, log or ruin within 3 m of
+  the line), driven at full throttle: it must reach the bottom with under a tenth of the frames airborne, at most two landings and
+  a mean speed over 8 m/s (2026-09-27: grade 0.45, 7.8 s, 25 m/s, 0% airborne, no landings; 2026-10-01 at the G-04 pin: grade
+  0.45, 7.2 s, 27.7 m/s, 0% airborne, no landings; 2026-10-01 at the S-01 pin on the locked world Wyariothmai I: grade 0.45, 7.1
+  s, 28.1 m/s, 0% airborne, no landings; a failed run prints where the buggy was every two seconds) (output: stdout, exit code)
+* `stability [scene] [metres per frame] [scale]`: B-309: eight frames of a scene a thirtieth of a second apart; the mean absolute
+  change of the luminance between consecutive frames per region (a box of 40 logical pixels round the sun, the sky, the ground)
+  and a heat map of where the picture moves next to the last frame: water, leaves, weather and creatures should move, the sun's
+  glow should not (the sunset scene's sun box reads 0.6 out of 255 per frame, the water line accounting for it; the desert ground
+  5 from the blowing sand). B-313: with a step in metres the free camera walks forward 1.7 m over the ground for sixteen frames
+  (flocks and herds cleared) and the far band (rows 42-62%) reports its mean change and the share of pixels jumping over 40
+  levels, with the sheet `stability_<scene>_walk.png`; in pixels a popping cell is hard to tell from parallax (KI-319), the rings'
+  seams are accepted by `unit` (output: `shots/tests/stability_<scene>.png`, stdout)
+* `survey [N]`: M9-01: distributions over N bodies near the start: types, planets vs moons, systems with a felisian world,
+  temperature and gravity histograms, moons per planet, material coverage per type; M5 adds the counts of multiple systems,
+  substellar objects, comets, double and locked planets and the R-001 sky table (discs over 0.5/1/3/10 deg at two random sites and
+  times per landable body, what the disc is, two suns up); B-428 the parkings (every world parked at twice from the game's
+  parking, 3.5 radii on the sun's side: another world wider than 10 deg in the sky and wider than 6 deg in the 70-degree view of
+  the world, at solid planets, their moons, giants, giants' moons and twins); P-01 the made kinds: how many bodies changed kind
+  and in how many systems, each made kind's count and what it was drawn as (P-02: the living worlds among them); P-03 the red
+  dwarfs' locked worlds by kind, the commonest first; P-04 the dead worlds: the scorched by their sun, those with a people, a
+  giant's felisian worlds left living; P-05 the wanderers over the whole start region (not the sample): how many systems caught
+  one, how many frozen felisian, with a people (none), retrograde, their mean eccentricity and their nearest against the last
+  planet's orbit; P-06 the giants' moons over the whole start region by kind, the commonest first (their captured moons apart),
+  and each strange moon kind's count among all its moons; P-07 the giants over the whole start region by class (the X-03 kinds and
+  the six made ones) against their equilibrium temperature (the least, the median, the most: the game's scale), how many giants
+  were made from a world (the warm zones'), and how many yellow stars hold a hot giant (output: stdout)
+* `galaxy`: G-01: the density function in numbers: the profile along the radius (the arm crest and the gap at each radius, the
+  scale height, the region), the star count by integration with the regions' shares, the home sectors (density, region, the
+  new-game search's stars, the pinned home star and the search's own pick, the neighbourhood: stars in the 21-sector cube, within
+  10 ly, the nearest star's distance, nebula patches in the sky); G-02 adds the globulars (count, radial shares, the three nearest
+  to home with size and star count), the open clusters within 1,500 ly of home, and the class mix of a 15-sector cube in each
+  region (ten columns since S-01); G-03 adds the star-forming complexes within 300 ly of home (count, spacing, the nearest), the
+  band from home (the column of starlight, the dust's optical depth and the brightness in eight directions, the map's build time,
+  the profile along the plane and by latitude at the core and the anticentre) (output: stdout; `shots/tests/galaxy_faceon.png`
+  (110,000 ly across, home ringed in green, the globulars as orange dots), `galaxy_edgeon.png` (5,500 ly tall, stretched x10),
+  `galaxy_band.png` (the sky as the game samples the band map, 720 x 360, the core at the centre),
+  `galaxy_sky_core/arm/anticentre.png` (the space view from above the home star))
+* `chart`: G-05: the galaxy chart. The closed-form face-on column (`galaxyFaceOnColumn`) against the field integrated in 2 ly
+  steps at seven places (home, the centre, 500, 1,500, 3,000, 25,000 and 45,000 ly out: the worst 0.01%, at the cap's edge) and
+  its cost (a chart's 40,960 columns in 3 ms on one thread); then a `Game` opens the star map's galaxy page (`M`, `Tab`) and draws
+  every level (0-8) from home, from 2,000 ly over home's plane (`testPlaceShip`) and from a star of the core (`testArriveAt`, the
+  route's leg from home drawn), a frame a level (`shots/tests/chart_home_<level>.png`, `chart_north_<level>.png`,
+  `chart_core_<level>.png`) with the level's height and scale, the images' build time (2-7 ms on the pool), a frame's time after
+  it (0.75 ms at 4x) and where the ship's crosshair was drawn beside where the scale puts it. G-06: then a fresh game from home:
+  the cursor 5,000 ly coreward in the plane at level 2 (`chart_g06_cursor.png`), `Enter` plots (`chart_g06_plotted`, the star and
+  its distance from the point printed), `Tab` looks at the stars round the end (`chart_g06_look`, counted), `Tab` back, `Enter`
+  flies (`chart_g06_flight_space` a second in, `chart_g06_flight` the chart in the flight), at the arrival `chart_g06_arrived`
+  (the cursor back on the ship); `L` names a place 1,500 ly over the plane (`chart_g06_mark`), `N` four times at level 0
+  (`chart_g06_stops`, the statuses printed), a plot 20,000 ly north into the halo (`chart_g06_halo_cursor`,
+  `chart_g06_halo_plotted`, how far short).
+* `crossing`: G-07: the galaxy round the ship in two long flights from home, R-407's jump 10,000 ly coreward and 3,000 ly north
+  (`TestGame::testStartJump`): through the cabin at 2, 25, 50, 75 and 98% of each flight ahead and, at 25, 50 and 98%, aside (the head
+  turned toward the galactic centre square to the line, level at the windows: `testCabinLook`), the galaxy page halfway, a flight
+  frame's time at 2x, the band's keyframes (how many, how far apart, built, built whole at once: the harness skips the clock with
+  `testFlightSkip`), and the arrival (the parked band built 0 times: the flight's last keyframe handed over); then the same lines
+  drawn bare (`BareFlight`: a `SpaceRenderer` alone, no cabin or HUD, the streaks on) ahead, back and aside at the same shares
+  with the frame's luminance, its middle and its top and bottom fifths (output: stdout,
+  `shots/tests/crossing_<core|north>_<share>_<front|aside>.png` (the cabin),
+  `crossing_<core|north>_<share>_bare_<ahead|back|aside>.png`, `crossing_<core|north>_50_chart.png`,
+  `crossing_<core|north>_arrived.png`)
+* `stability flight [scale]`: G-07: the band in the two flights of `crossing`, every frame a thirtieth of a second from the start
+  to the arrival, ahead, back and aside, the stars left out: the band alone (the star-forming regions' patches out too): the mean
+  change of the luminance between frames, the worst frame's and the worst pixel's, the share of pixels moving over 6 levels
+  (steady: no pixel over 6; measured 1-2 in all six), the keyframes; then with the patches, the passages (runs of frames whose
+  mean moves over a level: none since the patches fade with the flight's speed; before, 4-7 on the coreward flight, a 30-degree
+  disc for a frame); exit code the views that flicker (output: stdout,
+  `shots/tests/stability_flight_<core|north>_<ahead|back|aside>.png` (the band at the middle of the flight beside the heat map of
+  16 frames))
+* `stability skyline [scale]`: A-02: the test city's skyline (`forms`) while the explorer walks toward it 1.4 m a frame for 16
+  frames, from a summit within 6 km: a desert world at 15 km (Phiyiesh II) and an airless one at 30 km; the mean change of a
+  pixel's light a frame over the city's box and the share of its pixels jumping over 40 (B-309's measure), beside the same over
+  the empty horizon (2x: 0.32 and 0.00% against 0.26 at 15 km) (output: `shots/tests/stability_skyline_<world>.png` (the last
+  frame and its heat map))
+* `forms sheet [scale]`: A-02: the forms' sheet: 34 samples (every kind and its variants: walls, a windowed block, four domes, six
+  turned forms and an octagon, three pyramids, two vaults, three arches, two shells, a mast, a girder, cables, two rings, three
+  sweeps, a grown form, C-17's outlined plate), each in eight cells: near whole and broken, its middle and far meshes up close
+  (`testForceLod`), at 600 m and 2.5 km whole and broken magnified twice; on a desert world at the sun's 40 degrees, the test
+  palette (concrete, copper, steel, a warm light, four windows); prints each sample's polygons near (output:
+  `shots/tests/forms_<scale>x_<0..5>.png`)
+* `forms city [scale] [desert|felisian]`: A-02: the test city (1,348 buildings, 1,555 forms on a grid two kilometres across:
+  towers to 450 m with spires and domes in the middle, halls, domes and blocks round them, low blocks, tanks, chimneys, cooling
+  towers, masts with cables and grown forms outside, a viaduct across it, a ring in its plaza, a third of it broken) from 300 m
+  outside its edge, 12 m up, on the civilisation scene's world; the frame time, the forms' share and counts and the frame's hash
+  (`VESPERIS_THREADS=1` gives the same) (output: `shots/tests/forms_city_<world>_<scale>x.png`)
+* `forms skyline [scale] [desert|felisian|airless] [km]`: A-02: the test city at a distance (30 km by default) from a summit
+  within 6 km, turned until the city stands on dry land in sight of the eye (60 m up); the silhouettes drawn, the fog, the hash
+  (output: `shots/tests/forms_skyline_<world>_<km>km_<scale>x.png`)
+* `forms check`: A-02: the unit's four forms checks alone (output: stdout)
+* `home`: G-02: the candidates of the new-game search (yellow or orange stars with a living planet in sectors 176..196 x 36..56),
+  each parked at its first living world with the landing map open as a new game does and timed until the default site's drainage
+  tiles are in the cache (up to 8 s); prints score, world, radius, surface temperature, rings, moons, nebula patches, tile time
+  and sector hash, then the pick (a yellow star first, two living worlds, 275-320 K, tiles under a second, the fewest patches,
+  then the score) and whether it is the pinned one; about two minutes (output: stdout)
+* `gallery <type>`: M9-01: 16 random landing sites of a type (0-12) as a 4x4 contact sheet at 1x (output:
+  `shots/gallery_<TYPE>.png`)
+* `settings`: round-trips `Settings` through a file, loads it into a `Game`, opens the settings screen and changes the FOV,
+  each row found by its label (`selectRow`; U-01 mended KI-426: three rows down had been the load page since R-419) (output:
+  `shots/settings.png`, stdout)
+* `tour [state ...]`: U-01: every state, in `GameState`'s order, opened as the game opens it from a fresh game at the same start
+  (the home system, parked at its first world, every map waited for): its picture; the controller's command menu, each page's
+  lines and picture; then its keys one a frame, its help's and its footer's, every row of the Esc menu, the guide menu, the
+  flight computer's three pages and the settings entered by its label (`TestGame::testMenuRows`, the game's own labels), E at each
+  of the cabin's eleven devices found by the controller's "USE ..." line. After each key it prints the state, what is selected
+  (`testSelection`, no return variable) and the frame's hash, with a picture at each change of state. A key that leaves the state
+  is followed by Esc, four at most (a screen that will not let go is printed, not waited on), then by a fresh game opened again;
+  what writes a save or leaves the start (NEW EXPEDITION, QUIT, a flight, a landing, a save) runs last, and Esc after all. After
+  every frame what threads build is waited for at one instant (`testSettle`: every map of the system, the cache held large enough;
+  the scanner). Its probe falls into the first great storm the unit's probe group finds (named from the probe and from its
+  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments. U-06: then the rows, every
+  row of the table in its order: opened by its row (`openScreen`, from the ship in its parking) or, a scene or a world set up first,
+  by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording; the capsule's way down and up,
+  with no commands, are toured above), its picture, the controller's pages, then each line of the command menu's first page run
+  as the controller runs it (`testPadCommand`: its keys a frame each), each followed by Esc. A state with no stop, a new screen,
+  is toured there with no edit. About six minutes; the same twice and by one thread (output: stdout,
+  `shots/tests/tour/NN_state_*.png` and `rows_NN_state_*.png`, each state's saves, guide, settings and keys under its prefix)
+* `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
+  map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) (output:
+  `shots/landmap_<TYPE>.png`)
+* `drive`: N4-02: the buggy on a desert site (else open grassland) through the surface renderer: `findOpenRun` picks the longest
+  straight run within 800 m clear of forest, water, vegetation and hard colliders, then a test driver holds full throttle for 90 s
+  with U-turns at the run's ends, steering round obstacles and water and backing out when stuck; prints the speed, distance and
+  gear every 10 s and fails under 2 km or 100 km/h (2026-09-26: 2,152 m, 107 km/h; 2026-09-27 with the 180 km/h top speed of
+  O1-05: 2,817 m, 169 km/h; the seat frames carry the nose camera's look since N4-06) (output: `shots/drive_seat.png`,
+  `drive_chase.png`, `drive_night.png`, `drive_night_chase.png`, `drive_air.png` when it jumps)
+* `bestiary`: N3-01: prints the bestiary of the first six living worlds near the start (species, plan, size, gaits, bank, tone,
+  pattern, crest, habitat, diet, activity, temperament, call, herd size) and fails when a second generation differs (output:
+  stdout, exit code)
+* `encounters [N]`: N3-04: N (300) random felisian land sites near the start through `SurfaceSite::init` and
+  `SurfaceView::planLife`; prints the share with a herd within 200 m overall and per biome (2026-09-26: tropical 86%, temperate
+  100%, grassland 80%, savanna 75%, taiga 56%, desert 50%, tundra 30%, alpine 15%, ice 0%; 11% overall because most random sites
+  on the start region's cold living worlds are ice); B-316: and the habitat herds (and animals) within 900 m per site (0.7 and 3
+  over 300 sites, 204 of them ice) (output: stdout)
+* `consistency`: N0-02/N1 (B-202): for every landable type, a site within 3 deg of the sub-solar point standing on the material
+  that covers most of the globe patch; the landing map (24 texels, no clouds, via `TestGame::testLandingMapTexel`), the globe patch
+  (24 px around the site's point on the disc from 3.5 radii) and the ground there at noon (96 px crop, looking down 30 deg) side
+  by side with their average colours as swatches; the map and globe averages take only texels/pixels of that material (by material
+  and by bank), the ground the whole crop; prints the averages, the RGB distances map-globe, globe-ground, map-ground (0-441), the
+  sun altitude, the relief class of the landing map against the slope measured on the real terrain (a mismatch fails), the ground
+  crop's raw mean shade, bank and ramp stops, and how many types exceed 60 (venusian: map against ground only, its globe being the
+  cloud deck). Before N1: 11 of 13 over, worst 230; after N1: 0 of 13, worst 57 (ocean); both tables are in
+  `docs/iteration-2/bugs/resolved/B-202-*.md`. O6-02: the relief grade is the regional mean of `Game::siteSlope` measured on the
+  ground's caches, a class flip counts as a mismatch only when the two grades differ by more than 30%, and the line prints the
+  site's light factor against the globe's; the felisian site moved onto snow under a dim star (light 0.62 on the ground, 0.35 on
+  the globe: KI-309) and reads 105, so the count is 1 of 13 (output: `shots/consistency_<TYPE>.png`, stdout)
+* `flow`: scripted expedition: title, list, data, help, guide menu, rename the star by typing, star map (G-05: `Tab` to the
+  galaxy, `starmap_galaxy`, four levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the
+  flight, `starmap_flight`: the galaxy page with the line flown; G-06, after the belt and before the probe, which parks the ship
+  where it needs it: the chart's cursor 3,000 ly coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab`
+  looks, `starmap_look`, `Tab` back, `Enter` flies, `starmap_jumped` a second in, and at the arrival `starmap_arrived` with the
+  crosshair printed; the minute of flight puts the five-minute autosave in it, so slot 0 is `DEEP SPACE ... IN SPACE` at the end),
+  arrival, approach, orbit, landing map, descent (save to slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
+  `surface2`, `Tab` again), sprint, jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase
+  view), drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`,
+  `drone_readings` a second after it with `Tab` (R-414) and `Tab` again, `drone_chase`, S brakes, Shift lands, `E` out, the line
+  `drone: ... top 320 km/h, 160 m up, landed ok after 13 s`), waypoint, C-07: the signal radar at the start (`radar_set` the set
+  beside the decoder faced from the cabin, `E` on it, `radar_on` with the scope and the hint, `radar_sweep` after two seconds of
+  the arrows, `radar_hold` the view turned onto the first people's signal by `testAimAtSignal` with the cone filling and the
+  recording heard through the static, `radar_lock` the readout naming the system only and the lock's diamond, `radar_flight` a
+  second after Enter: the Vimana flight to the signal's star with the camera left and the synth released, then `V` aborts it for
+  the rest of the flow; the radar's state printed at each step; C-15: `B` again and the gain up five steps, `radar_gain` at x32
+  when the far scan is done (the view still on the Ghutreig: overloaded, the meter pinned red), `radar_far_hold` the view turned
+  onto the farthest people's signal x32 hears (5,524 ly) with the longer hold filling, `radar_far_lock` its readout with the
+  thousands, `radar_far_flight` Enter's flight, aborted at once by `V` so the flow goes on from where C-07's flight left it),
+  note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall, ascent, then reloads:
+  newest save (with the guide), and slot 2 which resumes the descent and reaches the surface; M6: `attract` (the title tour),
+  `credits`, `photo` and `photo_flight` (free camera), `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01:
+  parks at the first comet near the start (`comet` with the HUD motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from
+  the first herd (`herd_approach`), walks in for four seconds and prints the herd's states before and after (`herd_flee`: alert,
+  calls, fleeing); N4: after `buggy_seat` the buggy is moved to open ground when there is any (`TestGame::testDriveOpen`) and driven
+  45 s (`buggy_drive`, `buggy_air` if it jumps), then the chase frame; N4-06 (B-205): after getting out, `K` must recall the
+  capsule and `B` must unfold a new buggy ("SCRAPPED"), and after the ascent a second landing (`second_landing`) must start with
+  no buggy; O1/O2: `landing_zoom` (the sector zoom) and the rangefinder printed after landing; O4: since comets are landable,
+  parking at the comet opens its landing map (`comet_map`), then the comet's HUD, sheet and list as before, then a landing on it
+  (`comet_surface`, the escape velocity, `B` refused, the walking speed against its cap, a jump after 4 s and after 3 s of `Ctrl`,
+  `comet_jump`, `comet_sky`, `comet_sectormap`); O3: the first belt near the start through the analyzer (`belt_list`,
+  `belt_approach`, `belt` with the debug line and parked belt, `belt_data`, `C` refused, `belt_rock` after `X`, and the rocks and
+  bank-3 pixels drawn); O1-04/B-303: `sectormap_wide` at the widest level the world allows (the level printed), and after the
+  second landing the waypoint must be fresh (`waypoint=0`, `second_sectormap`; R-414: M4-02's trail is gone); R-408: the scanner
+  on (`R`, the world's first mode) until its search is in (`scan_hud`, its numbers printed), a mark at the crosshair (B-412: the
+  look put on the ground 35 m ahead first and back after; `L`, typed `FLOW MARK`, `scan_marked`: nothing over the view; R-414: the
+  rangefinder naming the mark is the readings'), the sector map with the mark shown by `Shift+Enter` at the cursor (boxed,
+  `SHIFT+ENTER HIDES`) and the echoes (`scan_map`), the view with the shown mark over the ground and its hollow diamond on the
+  compass (`mark_shown`), the mark removed from the map's cursor (Delete twice) and the scanner off again; G-04: `N` then `Enter`
+  lock the nearest star again (the cabin view faces it), the landing map's cursor goes to a lit grassland site from the body's
+  seed (`TestGame::testLandSite`; `J` had left it under the moon, in the sea at Heilya II), and when the arrival holds no living world
+  the landing parks at the scan's first felisian world after the approach and orbit frames (Siophios, 0.97 ly from Heilya: thin
+  atmosphere, cratered, acidic); C-06: the shard decoder on the cabin's back wall (`decoder`, facing it; `shards_none` with an
+  empty guide; then three shards of Aieliaalas II put into the guide: `shards_worlds`, `shards_list`, `shards_decoding` a second
+  into the recording (C-05: the words resolving as they are spoken), `shards_text` read at 46% with the speech skipped by Enter,
+  the next shard likewise; then ten: `shards_list10` with every shard marked unread, `shards_full` the whole text,
+  `shards_speaking` the read shard spoken again with the word being spoken underlined, then paused, and the print that the synth's
+  speech pointer is cleared after `ESC`; the decoder's state printed at each step; C-04: the first piece of music among the ten
+  opened by index, `shards_music` two seconds in, `shards_music_name` the entry box over it, `shards_music_named` after typing a
+  name, and the print that the synth's piece pointer is cleared after `ESC`; C-10: the first star chart of the world added to the
+  guide and opened by index, `shards_chart_reading` two seconds into its reading (the stars up, the figures' lines drawing, the
+  names not yet), `shards_chart` after Enter skipped the wait (the disc with the figures named, the caption read at the share,
+  `THEY MARKED` with the star's class, distance and sector), then `O` holds it up and `Esc` leaves: `chart_overlay` the space view
+  turned onto the marked star (its diamond and `THEY MARKED THIS STAR`, `A CHART OF THE <PEOPLE> HELD UP` at the top right) and
+  `chart_overlay_figure`, C-12: the world's last recording added and read with the wait skipped (`shards_last`, THE LAST
+  RECORDING, the `SHARD` log line) and the list with its timeline closed (`shards_timeline`); H-06: `TAB` to the world's timeline
+  of its eras (`shards_eras`), `TAB` to its history as the shards read tell it (`shards_history`, the page's state and first rows
+  printed), `TAB` back to the records; C-11: after the lending, the decoder's worlds turned with `TAB` to the ship's player
+  (`player`), its first piece played and left playing as the decoder closes, the player's state printed at the flight (`vimana`,
+  its HUD line), on arrival and at the descent (stopped), the instruments' case on the cabin's left wall (`cabin_case`, `facing`
+  10); B-411: the hull made glass, seen from across the room with the light on (`cabin_glass_lit`: the desk, the capsule and the
+  cage solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the room dark round the stars); H-04: the
+  longest of the world's first sixty records put into the guide and opened, its opening spoken (`shards_long`, `PAGE 1/3`), `DOWN`
+  to its next page (`shards_long_page2`), `ENTER` speaking that page; C-13: three shards of each people of Eleinewai I (152 0 92)
+  added and the decoder opened again, the worlds' list with that world listed once a people, named (`shards_peoples`), and the
+  second people's list with its own count and header (`shards_second_people`); C-14: the guide so far saved as the inbox file and
+  imported into a fresh guide in the same game, the decoder's list with the lent rows in cyan (`shards_lent`) and the friend's
+  piece under the friend's name (`shards_lent_piece`), the guide put back after turned onto the chart's first figure (its lines
+  between the stars in the window band, its name), then the chart put down from the decoder; the chart's state printed at each
+  step); C-09 ends the expedition with `roads_zoom`, the landing zoom over Aieliaalas II's land region with the old roads drawn as
+  faint lines (R-415: with the peoples, `V`; the count and the layer's info printed), and C-18 after it with the drone bay over
+  the same world (`drones_rack` from the cabin's middle, `facing` 11; `drones_bay` its screen; `drones_launch` a second after
+  Enter, drone 1 through its port; `drones_search` four seconds after the first stop; `drones_back` every drone docked, the finds
+  printed), and every frame's line carries the seconds since the start, so a slow step shows (a first C-09 run took 930 s with the
+  same output, the next 32); W-01 (2026-10-06) adds `almanac_ship` (the list from the parking at the start, 13 events),
+  `almanac_site` (the cursor's site on the landing map), `almanac` (under the feet: at the flow's locked world the comets alone
+  under `THE SUN STANDS STILL HERE`), `almanac_run` (the run's first frames, the status row's `TO ... - T STOPS`) and
+  `almanac_arrived` (the clock landed, `UNKNOWN AT PERIAPSIS - X1`), with the line
+  `the run: 10279 s of game time in 284 frames at a peak of x10000, 0.000 s off the event`; the `timelapse` frame went with
+  M5-06's lapse; W-06 (after `almanac_ship`): `telescope` (the parked world at x2, tracked from the start, the reticle's line
+  under it), `telescope_moon` (the widest other body tracked at the power that fits it), `telescope_name` (the text entry
+  `NAME THIS MOON`), `telescope_named` (the line reads the name), the photo written as the test gallery's `screenshot_1.png` with
+  its caption (`photo: THROUGH THE TELESCOPE X2: THE NEAR MOON  ROCKY MOON  64402 KM  6.4 DEG - IN ORBIT OF UNKNOWN ...`), then
+  stowed; the review's rework added `cabin_back` (the back wall's three sets in their colours, R-404) and `cabin_telescope`
+  (facing the telescope's set) with `telescope_set` (the eyepiece opened from it by `E`) before the telescope block, and in it
+  `telescope_plate` (the moon stepped deeper until the eyepiece's step is finer than the map's texel and a plate begins, then read
+  out whole, `testTelescopeSettle`) and `telescope_plate_deep` (two steps deeper, read out whole), the plate's line printed with
+  each; R-405 added `orbit_turn` after the telescope is stowed (a second of Shift+Right from the front window, the status
+  `OVER ...`); W-03 prints `fronts: ...` after `surface` and `surface_data` (the data sheet's `FORECAST` line, the front's line
+  and the numbers at the feet); X-01 adds the probe after the belt: parked at the scan's first gas giant, the telescope's reticle
+  moved up its disc (`probe_aim`, `C SENDS A PROBE TO ...`), `C` (`probe_fall`, the aim and the clock printed), `probe_entry`,
+  `probe_clouds`, `Space` in the haze (`probe_chute`), `Ctrl+S` to slot 3 in the descent, `Esc` to the cabin (`probe_cabin`: the
+  space HUD's `PROBE:` line), `C` back, `Shift` held a second (R-406: `probe_fast`, the clock eight seconds on), a flash between
+  the decks (X-02: `probe_between`, the picture's layers printed), on to the end (`probe_lost`, the log's `LOST IN` line), `Enter`
+  (state 1, the probe let go); X-04: the guide's gallery (`probe_gallery`: the newest item the probe's recording, its final
+  image), `Enter` plays it (`probe_recording`, state 25), `Right` held 1.4 s goes down it (`probe_recording_deep`, the clock
+  printed), the statistics (`probe_stats`: `PROBES SENT 1   DEEPEST DESCENT ...`), the giant's data sheet and `Right`
+  (`probe_profile`); slot 3 is then the newest save, so the load at the end resumes the probe on its screen
+  (`the newest save is the probe's: state 24, ...`) (output: `shots/tests/flow_<step>.png`, stdout with state and status per step)
+* `bench`: frame times for space and surface at every scale 1x-4x (B-310: the surface rows print the render's sections: sky, the
+  vertex warm pass, the terrain bands, objects, flora, the rest), walking and turning at 1x, the first/worst of the first 60
+  descent frames, and (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree
+  tiers, hidden trees, points, the trees listed and their visits over the band threads, and the flora sections' milliseconds
+  (`shots/tests/bench_forest.png`); `bench check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one
+  listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5, surface
+  2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13, herd draw 1x 0.6, drone 2x 3.3 (R-403: 60 frames at full thrust 200 m up with the
+  camera tilted down 30 deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving
+  from the seat through the game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through
+  `TestGame::testParkAtBelt`, 1.9 ms), vimana 2x 2.0 (G-07: sixty frames halfway through a 10,000 ly flight coreward from home, the
+  streaks and the band blended from its keyframes with the next one's share built, `bench_vimana.png`), descent first 26, sprint
+  worst 10 ms (N3: the herd scene's life update and draw times per frame); `bench forest` renders the forest at 4x 150 times for a
+  profiler (`sample vesperis_test 5` on macOS found the trunk lines: every band thread walked every line in full);
+  `VESPERIS_THREADS=1` runs any mode serially (the baseline: surface 4x 17.9 ms, forest 4x 35 ms against 10 and 14 with eight
+  workers); W-06: `telescope 2x`, sixty frames at x1024 on the parked world (the globe over the whole frame,
+  `bench_telescope.png`; X-02: `probe 2x`, sixty frames of the probe's camera on Wailie VI over the ammonia deck's tops and sixty
+  between the decks, the worse of the two against 8.9 ms, `bench_probe.png`; since the review's rework the frames build the plate
+  within its 8000 samples a frame, so the row is the eyepiece at its dearest, the plate's line printed under it), budget 13 ms;
+  A-02: `city 2x`, the test city (`forms city`) from 300 m outside its edge and from its plaza, the worse of the two, budgeted at
+  5.7 ms in `bench check`; T-01: `descent people`, the first descent frame onto the modern test world 400 m outside its capital's
+  core (its plan built at the parking on its own thread and waited for, the drainage too; 57.4 ms of 80, 62 since F-11) and
+  `capital 2x`, sixty frames on the ground there facing the capital (8.9 ms of 16, 5.4 since F-11, `bench_capital.png`) (output:
+  stdout, `shots/tests/bench_*.png`)
+* `terrain`: O5, rebuilt in O6-01 as the acceptance harness of Terrain III: 48 hashed land sites per landable type (four bodies,
+  twelve each, measured in parallel), each on four grids of the planet function (24 x 24 at 4 m, 48 x 48 at 16 m, 32 x 32 at 64 m,
+  32 x 32 at 512 m), grouped by the relief class the landing map prints (`Game::siteSlope`, `reliefClass`) and judged against the
+  class's targets of section 2 of `PLAN-terrain-3.md`: mountains median slope 0.25-0.45 at 16 m, 500-1200 m of relief over 2 km,
+  1500-3500 m over 16 km (5000 on crater-field types), cliff cells (slope over 1) 3-8% (O6-04's), 90% walkable (slope under 1.35),
+  15% valley floors (O6-03's); hills 0.08-0.15, 120-250 m over 2 km (450 on crater-field types), 25% of the lowest quarter of the
+  64 m cells under a 5% slope (O6-05's on crater-field types); flat 0.01-0.04 (0.09 on crater-field types), broken by terraces and
+  the like (p90 over 0.06 and 6 m over 770 m, O6-04's); comets only on walkability; the cost of a 16 m sample within 2x of the O5
+  figure. Targets owned by later items are printed as `FAIL(O6-0N)` and not counted; the exit code is the count of failing
+  spectrum targets. Also prints the class shares per type. 2026-09-27 after O6-02: 25 of 31 class rows pass, 8 spectrum targets
+  short by 5-15% (`shots/tests/o6/after/terrain.txt`; before in `o6/before/`) (output: stdout, exit code)
+* `landforms <type> [flat|hills|mountains]` / `landforms sites`: O6-01: the landform gallery. Twelve hashed land sites of a type
+  (of a class) on one sheet, each a standing frame toward the highest ground within a kilometre over hillshades (a DEM-style
+  shaded relief, north up, water blue, snow pale) of 770 m, 3 km (z-factor 2) and 24 km (z-factor 3) with the site's metrics;
+  `sites` renders the four fixed review sites (a felisian mountain site and plain, thin-atmosphere hills, a cratered moon, pinned
+  by latitude and longitude on 2026-09-27; G-04: the mountain site re-pinned at -41.674 / -127.807, and `landforms sites search`
+  lists six candidates of each site's class on its world; S-01: Wyariothmai's red dwarf claimed the first felisian world and the
+  first cratered moon, so the mountain site is at -48.030 / 152.547 on Wyariothmai I, the plain at -55.154 / -122.371 and the
+  cratered moon's site at -13.184 / 175.712 on Wyariothmai II-a, and the search keeps to the day side of a world locked to its
+  star) each on its own sheet at three distances (standing 14 m ahead of the capsule, 150 m up looking down 12 deg, 2 km up
+  looking down 30 deg) over the three hillshades and the metrics, so the sheets before and after a generator change show the same
+  ground; the O6 review copies are in `shots/tests/o6/before/` and `after/` (output: `shots/tests/landforms_<TYPE>[_<CLASS>].png`,
+  `landforms_site_<name>.png`)
 
 Reference numbers on an Apple M4 (2026-09-26, after M10): space 0.55 / 1.7 / 3.3 / 5.4 ms per frame at 1x / 2x / 3x / 4x; surface 1.4 / 3.2 / 4.2 / 6.5 ms (row bands on up to 8 threads; 3x and 4x evaluate the sky at half resolution); planet map 10-60 ms; first descent frame about 4 ms. After B-310/B-311 (2026-09-27, the default now 4x): space 1.1 / 3.2 / 6.9 / 12.6 ms (a globe filling the view is ray-traced per pixel); surface 2.7 / 5.1 / 6.0 / 10.0 ms (sections at 4x: sky 1.4, warm 0.6, terrain bands 2.9, objects 0.3, flora 0.9, rest 0.5, then the mush and the RGB pass); the dense forest 8.5 / 14.2 ms at 2x / 4x (28 ms at 4x before the band-parallel flora, the spray table and the line clip); the buggy 5.4 / 8.7 ms; descent first frame 22 ms. (Measured once at 640x400 with a temporary build variant, since removed: space 3.8 ms, surface 4.9-6.7 ms.) After O9 (2026-09-28: geomorphing, the leaf clusters, the habitat herds): surface 4x 7.6 ms, the dense forest 7.7 / 12.7 ms at 2x / 4x, the buggy 5.6 / 9.5, space 4x 12.2, the herd scene's draw 0.03 ms with 49 animals at the site.
 
@@ -52,13 +454,26 @@ The look-comparison sheets in `shots/compare_*.png` and `shots/compare2_*.png` w
 
 The window build accepts `--frames N` to run N frames and exit (it writes `shots/screenshot_0.png` on the last frame), which is how the platform layer is smoke-tested without interaction.
 
+<!-- contents -->
+Contents:
+- Reading the output
+- Adding a test
+- Debugging habits that worked
+- Builds and packages (M6-03, M6-04)
+- Unit tests, frame hashes and budgets (M7-03, M7-04)
+- O10 modes (2026-09-28)
+- O6-03..O6-07 modes and switches (2026-09-28)
+- F-01: the proof tools and what the bench did not see (2026-10-12)
+- E-03: the harness in pieces (2026-10-24)
+<!-- /contents -->
+
 ## Reading the output
 
 Look at the PNGs (they are the real 320x200 frames). Things to check when a rendering change is made: horizon line and floor plane, fog toward the sky colour, sun disc and glow, stars at night only, bodies in the sky with correct phase, HUD legibility, no stripes on the ground (perspective-correct grain), and `flow` still reaching `back_in_space` and `load: 1`.
 
 ## Adding a test
 
-Add a function in `src/main_headless.cpp` and a mode name in `main`. Reuse `saveFB(fb, path)` and `findTime(site, targetAlt, t0)` (searches one rotation for a sun altitude). Game-level tests use `Game` directly with `Input` and the hooks `testAimAtNearestStar`, `testAimAtBody`, `testLandableBody`, `testStatus`, `testDebugInfo`; set `game.savePrefix` and `game.settingsPath` to files under `shots/` (the constructor reads nothing; only `loadFromDisk()` does).
+Add a function in its area's file of `src/harness/` and a row in `MODES` (`src/harness/main.cpp`; the `harness` skill). Reuse `saveFB(fb, path)` and `findTime(site, targetAlt, t0)` (searches one rotation for a sun altitude). Game-level tests use `Game` directly with `Input` and the hooks `testAimAtNearestStar`, `testAimAtBody`, `testLandableBody`, `testStatus`, `testDebugInfo`; set `game.savePrefix` and `game.settingsPath` to files under `shots/` (the constructor reads nothing; only `loadFromDisk()` does).
 
 ## Debugging habits that worked
 
@@ -68,7 +483,7 @@ Add a function in `src/main_headless.cpp` and a mode name in `main`. Reuse `save
 
 ## Builds and packages (M6-03, M6-04)
 
-`make` is the quick path on macOS. `cmake -B build-cmake && cmake --build build-cmake` builds the core library, the harness and the game (raylib from `find_package`/pkg-config; `-DVESPERIS_FETCH_RAYLIB=ON` downloads and builds raylib 5.5, the default when nothing is installed on Linux and Windows; `-DVESPERIS_BUILD_GAME=OFF` for the harness alone). Warnings are errors in `src/core` and `src/galaxy` (`VESPERIS_WERROR`, M7-06). `ctest` runs the headless modes. `cpack -B build-cmake` makes a zip; `packaging/make_app.sh` a macOS bundle (`dist/Vesperis.app`, the raylib dylib copied in, launched from `~/Documents/vesperis` so saves have a home); `packaging/make_zip.sh` a portable zip with the docs. The web build (`web/build_web.sh`, needs emsdk) has not been run on the development machine (KI-021). A cmake binary is not installed here: the CMake tree was validated with the `cmake` wheel from PyPI unpacked in the session scratchpad.
+`make` is the quick path on macOS. `cmake -B build-cmake && cmake --build build-cmake` builds the core library, the harness and the game (raylib from `find_package`/pkg-config; `-DVESPERIS_FETCH_RAYLIB=ON` downloads and builds raylib 5.5, the default when nothing is installed on Linux and Windows; `-DVESPERIS_BUILD_GAME=OFF` for the harness alone). Warnings are errors in `src/core`, `src/galaxy` and `src/peoples` (`VESPERIS_WERROR`, M7-06). `ctest` runs the headless modes. `cpack -B build-cmake` makes a zip; `packaging/make_app.sh` a macOS bundle (`dist/Vesperis.app`, the raylib dylib copied in, launched from `~/Documents/vesperis` so saves have a home); `packaging/make_zip.sh` a portable zip with the docs. The web build (`web/build_web.sh`, needs emsdk) has not been run on the development machine (KI-021). A cmake binary is not installed here: the CMake tree was validated with the `cmake` wheel from PyPI unpacked in the session scratchpad.
 
 The release's six builds are scripts (F-09, `packaging/`): `toolchains.sh` once (raylib 5.5 and llvm-mingw 20260922 against their checksums into `build/toolchains`, raylib built static for the four Mac and Windows targets), then `VESPERIS_TC=<that dir> sh packaging/build-release.sh <version> <out dir>` from a checkout of the tagged commit: macOS arm64 and x86_64 with the Apple clang and Windows x86_64 and aarch64 with llvm-mingw at `-O2 -flto=thin`, Linux arm64 and amd64 at `-O3` in an Ubuntu 20.04 container (Docker; GCC 9.4, glibc 2.31; amd64 emulated). Each build's log in the out dir ends `exit <status>`, the summary prints each build's warnings, and no zip is made unless all six built. The Windows line compiles with `-Wshorten-64-to-32`: a narrowing only that target reports is Windows' 32-bit `long` (B-424); the tree has none. One target alone: `build-mac.sh <arm64|x86_64> <dir>`, `build-win.sh <x86_64|aarch64> <dir>`, `build-linux.sh <arm64|amd64> <dir>`. The Makefile stays at `-O2`: the bench measures the code, not the flags. A release flag is proved the way F-09 proved its own: the harness built with and without it (for Linux inside the container, `docker run --platform linux/<arch> ... vesperis-build:<arch>`), the old build's `regress bless` the reference, then the new one's `regress` with the workers and with one thread, its scenes and `screens` `pngdiff`-ed against the old one's, and the builds' `bench check` in turn, several rounds, alone on the machine.
 
@@ -76,7 +491,336 @@ The release's six builds are scripts (F-09, `packaging/`): `toolchains.sh` once 
 
 Every harness mode that builds a `Game` points it at `shots/test_save*`, `shots/test_settings.txt`, `shots/<mode>_guide.txt` and a test key map (`bench` and `fuzz` use their own prefixes), so no test run touches `vesperis_save*.txt`, `guide.txt`, `vesperis_settings.txt` or `vesperis_keys.txt` next to the game (B-207, 2026-09-27); the real game autosaves on exit and every five minutes, so a running game will still rewrite its own files while tests run.
 
-`vesperis_test unit` (exit code = failures): round trips of `bodyFromLatLon`/`latLonFromBody` and of the site frame (`unitAt`/`localAt`), the sun at the zenith over the sub-solar point and at 60 deg altitude 30 deg along the meridian (with the azimuth due south or north), local noon there, the Kepler solver residual below 1e-8 for e up to 0.95, `gnoise3` mean and bounds, hash uniformity (mean 0.5, variance 1/12), noise and name determinism, name lengths 3-16 with letters, spaces and apostrophes only, `seasonOf` bounded by the tilt, and the map cache cap. N4-06 adds the buggy's state rules (a buggy deploys at the capsule, `B` replaces one left 300 m away, `toggleBuggy` gets in, a new landing has no buggy) and the nose camera's range (after one update a yaw set 180 deg off is clamped to 70 deg and a tilt of -80 to -35); B-206 adds the storm wind: a thin-atmosphere site (the first in sectors 150-300 x 20-120) at a time with dust over 0.3, run 300 frames, must keep the wind finite and under 200 knots (46). Iteration 3 adds: the sector names of three corners (O2); a ringed landable planet near the start, its profile bounded with a dense part, and a ring shadow over 0.2 found on its ground at low latitude over a year (O0-01); the rangefinder 45 degrees down from eye height within 1-6 m (2.3) and the far ring at 53 km (O1); comets landable, an escape velocity under 30 m/s, the rings capped near the horizon on a small body, no buggy, and a sprint that stays under 0.3 of the escape velocity (O4); a belt near the start with rocks within two cells, a rock that is the same rock two hours later and stays inside the belt, and rocks still found round a rock at t = 4e6 s after the rings have sheared (O3); B-303: a re-anchor at 51 km keeps the waypoint at its place on the sphere (within 5 cm), and a new landing clears it (R-414: M4-02's trail and its two checks are gone). O0-02/03/04: 32 banks of 2048 intensities and body B's own family banks; a globe seen from 1.15 radii with its centre 92 degrees off the view axis (behind the camera plane) still draws its limb (2,884 pixels at 1x); the landing map of the first landable planet with a moon shows the moon's shadow (1.00) at some point of the moon's orbit. O6-02: `gnoise3d` returns gnoise3's value exactly and a gradient within 1e-5 of central differences over 200 points; the relief spectrum is deterministic and bounded and its analytic slope tracks the finite difference of its height within 40% on average over 24 points (the octave weights vary with position, which the gradient ignores). B-308: a companion star rendered from its parking distance (3.5 radii) ahead and 70, 95 and 150 degrees off axis covers 22.6% of the frame as a disc ahead (22.8% expected) and none with a mean shade under 1 in the other three (`shots/tests/unit_companion_swing.png`). 2026-09-28: B-312, a ringed world 3.6 radii away with its centre ten degrees outside the frame shows its limb on either side in space and in a sky (17-36 thousand pixels at 1x); B-317, the sky bodies' nearest depth lies beyond the far ring, for the ringed world and a small body close by; B-313, at the pinned mountain site the rings meet: the largest gap between a ring's morphed edge vertices (the view transform inverted) and the coarser ring's surface is 0.0000 m at all four edges, where the unmorphed vertices differed by 3.1, 16.9, 84.2 and 1015.4 m (`testRingSeams`); B-316, the grassland herd site has its landing herds and habitat herds within reach (2 and 7, 49 animals), 3 km on the herds behind are forgotten and new ones are in reach, and every animal belongs to a listed herd. 144 checks since C-14 (the signals from home the same twice, every people's signal's star in a transmitter sector with a people's world and every pulsar signal's a pulsar, within reach and sorted by distance, one to a dozen peoples' within 200 ly (three), the beam's gain falling off its axis, the broadcast's walk never repeating a recording twice running; the radar in the game: `B` at home, the view turned onto the first people's signal hears its recording through the static within a second, locks within eight, a turn of forty degrees loses the lock and the view turned back regains it, Enter starts the Vimana flight and leaves the camera with the synth released, and the flight arrives at the signal's star where a people's world is; and the receiver through the synth: the bed alone and each kind at full clarity, three seconds each, finite, under the ceiling, audible (rms 0.01-0.4), silent once off; the receiver's variety (129 checks): three seeds of each natural kind, every programme of the first people's world heard from home and the bed over forty seconds likewise in bounds, and the world's broadcast with a character: four to six of the eleven programmes over its fifty slots, the voice the commonest, the same twice; C-08 (131 checks): on the two test worlds' fixed regions and a coastal region of each, a harbour only where a shore is within 500 m of the edge, terraces only on a grade over 0.06, a cistern and a wind wall only on the desert world, cairns only in relief over 0.45, no terrace wall in a room, drifts on the desert's walls alone, the same twice; the decay rising with the years and the rain (`decayOf` at 200, 2,000 and 20,000 years), the cultures near home spanning from standing to foundations, and a landing point at a settlement's centre moved out past its edge once and not again; the town's rooms hold no rock's collider (the C-01 collider check widened); C-10 (133 checks): on the two test worlds three to five of the fifty are charts and none of them music, one mark each in the lore (a people's mark with a world and a name, one heard in a transmitter sector, never the world's own star), every chart's stars within the cube of ten sectors round the world's star, the brightest first, within the field, the mark among them, the figures sharing no star, two to six stars each joined by lines within thirty degrees, every figure and the other people named in the caption (8-70 words), the same twice; across forty civilised worlds near home the charts mark the brightest star a quarter to three quarters of the time and a people the rest, the lore under 10 ms a world (six charts of 22 figures of 4.3 stars on the test worlds; 166 charts near home: 43% a bright star, 47% a people heard, 10% a near people; the lore 1 ms); and on the decoder, in a `Game`: with three shards and the first chart of Aieliaalas II in the guide, the chart opened by index is reading a second in, Enter skips the wait and the chart is read (decoded at 4) and logged (`CHART`), Enter again sets the remote target on the marked star, O holds it up, Esc back to space keeps it up, the view turned onto its first figure draws its lines (10), parked at the people's own star every star of the chart is in the sky the game draws (52 of 52), and O on the chart again puts it down); C-14 (144 checks): lending: a friend's guide (four shards of Aieliaalas II taken, a text and the first piece among them read, the piece and the star named, a shard lent to the friend by a third explorer and read) saved beside the test guide as its inbox file; a fresh guide that took one of the friend's unread shards itself imports it: the star's and the piece's names in the inbox and none in its own names, exactly the two read shards lent (not the other unread one, not its own, not the friend's lent one), an `INBOX` log line; the decoder lists the one world, its list holds three with two lent (`shots/tests/unit_lent.png`), the friend's piece opens and is read at once (`unit_lent_piece.png`), the lent text read with the wait skipped is decoded at three; the lent shard taken afterwards is the explorer's own and one lent is left. C-13 (143 checks): cultures per world: of the civilisation worlds of the scan near home about one in five had two peoples (the share within 8-35%, three found at least); on Eleinewai I (152 0 92 body 0) the peoples' seeds (the world's and `peopleGen`'s), names (each the other's `other`), tongues, voices, traditions and cultures are their own, each fifty the same twice, clean and distinct, each naming the other in a shard at least where their histories met and neither where they never did (R-413: Eleinewai I's two prehistoric peoples never met; Leanmya V-a's met and name each other), one last recording a people of the span's end, the ages equal and the fates 0 when the coin says they ended together (else apart and opposite); the two one-people test worlds read as one people with no other, the world's own seed and none of the "other" kinds; the divide a unit pole the same twice, the settlements of 7 x 7 cells deep on each side all that people's (`peopleAt` agreeing with the cell) with shard sites from its fifty, and the roads between the peoples at the frontier walked and built as the bigger settlement's people built; in a `Game` with three shards of each people and the second's last recording in the guide the decoder lists the world twice, the second entry holds its four with the people named (`shots/tests/unit_peoples_decoder.png`), its last read at that count ends the second's record under its own key with the first's open and the log line written, and landed at the frontier the nearest shard is taken with the status counting against the hundred. C-12 (139 checks): the calendar, the last recording and the graves: on the two test worlds the last recording is a text shard (no piece, no chart) of the span's end, later than every other of the fifty and the only one with the end's tone, every shard's month and day within the calendar, the quick lore agreeing with the full one; the graves of the sited settlements over 13 x 13 cells of each region (107 sited settlements, 387 stones: hamlets 118, villages 122, towns 144, monuments 3; 143 fallen) never more than the class allows, no village or town without, every stone outside the radius and clear of every building, the names distinct within a settlement and nine letters at most, the years in the span, the ids distinct over both worlds, the same twice, under a millisecond a settlement; the C-03 town's stones among its pieces in the view and the first within reach at a metre with its name and years read (`shots/tests/unit_grave.png`); landed by Leileashphail III's road, the explorer set before the nearest stone is told once (the status, a `GRAVE` log line, the guide's `grave`) and nothing more on the second visit; C-09 (135 checks): the roads of the two test worlds' regions (Leileashphail III round its default region, Aieliaalas II round 12 N 4.22 E, 13 x 13 cells each): every sited settlement has a road, every road runs from one settlement's edge to the other's, no point of it in the sea, a lake or the old sea, no way over 1.6 times the straight line, no step steeper than a half, a road the same from either end and the same twice, the young desert world's length nearly whole after the wear and the old wet world's between 30 and 75 per cent, a road walked under 3 ms (107 settlements, 163 roads of 490 km, 9,953 points, the steepest step 0.165, 94% and 52% left, 0.14 ms a road); and on the ground and the ship: a `SurfaceView` at a road of Leileashphail III holds roads, the 4 m vertex on the bed carries the road (over 100 of 255), the paving as its material and no vegetation, the 16 m vertex the same material, the 64 m vertex the ground's own material darker, a point forty metres across the road nothing; a `Game` parked there with the cursor on the road builds the zoom with roads drawn (2,111 over the window: the villages' and the towns'), lands by the road, and the explorer set on it is told (`AN OLD ROAD RUNS HERE, NW TO SE`), a `ROAD` entry logged, one road met; since R-403 the drone's flight: lifts off, 320 km/h within 25 s, the 400 m ceiling, never under the ground, braked, landed under Shift, out, a second one scraps the first; and B-406: the jetpack from a river bank out over the river without swimming, dropped in, lifted out on Space). S-01: the class mix near home (red dwarfs the commonest class, between a quarter and a half of 4,559 stars, every class present), a red dwarf's flares (50-200 in ten days, under a fifteenth of the time over 0.3, deterministic), its near worlds locked (over 70%), a carbon star's systems with a carbon world (more than twice a yellow star's share); the aurora check counts red dwarfs and blue-white stars as active stars (S-02: `starActivity` over 0.7, the one table). S-03: the neutron stars of the scan (65) have no living, cloudy, oceanic, quartz, acidic or giant world of their own (a companion's worlds are its own class's), most systems with planets have a glassed survivor (40 of 53), and over the first five glassed worlds the glass covers 15-85% of the land on average (41%) with the 512 m share within 8 points of the 16 m one (1). S-04: protostars are a trickle in the arm (12 against 757 yellow stars near home) and over half the yellow family in the nearest star-forming complex (28 against 30), their systems have belts (11 of 12) and no evolved world, and their cloud glows over 0.4 a fifth of a radian from the star (0.52). S-05: Wolf-Rayet stars are rare in the arm (40 against 175 blue giants near home) and absent from the nearest globular (0 of 2,603 stars of its own sectors), their systems (31, with 185 worlds and 15 giants) keep no world with an atmosphere and most systems with planets have a bombarded one (21 of 24), and the sun rendered straight ahead by `drawSun` (a radius of 0.03 rad, the world's up given) reads 15.9 shades at five radii against 7.2 at 3.2 and 0.0 at 7: the shell's ring. S-06: black holes are a few near home (8 against 206 pulsars, 0.18% of 4,559 stars) and several times that share in the core cube (52 of 3,281, 1.6%); their systems (8, with 12 worlds) keep no world with an air, a giant or lava, every companion (4) is close and most have a belt (6); and a dot of two logical pixels' radius straight behind a black hole rendered by `drawSun` (a radius of 0.02 rad, the disc edge-on) comes out as an Einstein ring (10 of the 10 ring samples off the disc's line lit over 30 shades within a logical pixel), with the centre and the shadow's edge black and the sky at three Einstein angles untouched; the render takes 2 ms at 4x (9 with a tilted disc in view). C-01: one felisian or desert world in eight near home had a people (182 of 1,739 felisian and 90 of 698 desert worlds in the scan); the first dead desert world (Leileashphail III, its seas at 94 m) has the old sea on 61% of 2,592 points of a 2048 m grid with salt on 464 of them, its bed 22 m under the reference against the land's 328, and at its shore the drainage reads 5,734 sea cells and 35 channels of 6,561; the first civilisation's world (Aieliaalas II) holds 174 hamlets, 75 villages and 52 towns among 51 monoliths in 961 cells, every one of its 2,128 houses has its centre clear of standing pieces (0.9 m) and a doorway of 1.6 m in its door wall; and in the view, a town's houses are as open through `collectColliders` (the centre clear, the doorway's run of a metre free of discs), every piece's collider spans 0.85-30 m from a foot within 8 m of its ground (B-405; the tallest 11.4 m, a tower) and the town renders from outside its gate in 1.0 ms at 1x (228 pieces; Aieliaalas II's town at -35.4 / 202.6, 16 houses all clear and open). C-02: on the same two worlds, fifty shards each are the same text twice over, carry no mark of the grammar, run 19-50 words and are all distinct; the world's names occur in 96% (felisian) and 88% (desert) of them; warnings and the end are 8% of the felisian world's and 40% of the desert's, whose sea, salt or river is in 32%; and the sixteen peoples' worlds of sectors 150-160 x 20-80 give 192 clean shards. C-06: the decoder reads 37/51/65/100% of the felisian texts' words with 1/3/5/10 shards held and 35/49/64/100% of the desert's (languages of 294 and 338 words since C-04 made 13 and 12 of the fifty music), never fewer per shard with more held, the names from the start, the tongue the same twice and its forty most used words distinct. C-04: each test world's tradition is the same twice, its scale five to nine notes ascending with 70 cents at least between neighbours and under the period, its cycle's groups summing to its beats, two or three voices (both worlds: seven notes, nine beats, two voices); its pieces are the same twice, 15-90 s (31-61), notes in order, within the piece and within three periods of the tonic (2,479 notes over the 25 pieces), of three forms at least a world; the two traditions differ; and the first piece of Aieliaalas II rendered through `AudioSynth` at 22,050 Hz (51 s) is finite, under the ceiling, at an rms over 0.02 (0.056), ended when the piece is, silent two and a half seconds past its end and silent at once after the piece pointer is cleared. C-05: each test world's voice is the same twice and in bounds (80-320 Hz, 2.5-5.6 syllables a second, a tract of 0.7-1.4, the line under 52 characters), its inventory the tongue's sounds with a vowel among them (Aieliaalas II a deep breathy voice at 100 Hz and 3.2 syllables a second with 17 sounds, Leileashphail III a low nasal one at 136 Hz and 4.1 with 14); every text's speech is the same twice, 4-45 s, its segments contiguous, finite and within 0.4-2.5 of the base pitch, every sound inside its word's span and the spans in order, every word with letters spoken, and the spans the same with one shard held as with ten; the two voices differ; and the first text of Aieliaalas II rendered through `AudioSynth` is finite, under the ceiling, with a peak over 0.2 and an rms of 0.02-0.35, ended when the speech is, silent a second and a half past its end and silent at once after the speech pointer is cleared. C-03: over Aieliaalas II's 961 cells the 301 settlements hold 373 shards (112 in the hamlets, 111 in the villages, 150 in the towns; 288 in houses, 10 in halls, 13 in towers, 61 in rotundas, 1 at a stela), every count within its class's bounds, every site inside its building, 0.4 m clear of the building's ground pieces and 1.4 m from its doorway, no index repeated within a settlement, the same twice; and in the view the town of the collider check holds 4 shards, all clear of the pieces' colliders, the first within reach (`nearShard`) when the explorer stands a metre from it, all 4 drawn from inside its room (`shots/tests/unit_shard_room.png`) and none offered once its index is in `shardsFound`. W-01 (2026-10-06) adds eight checks (152): the three test places found by the scan (a landable moon of a ringed gas giant, a locked world with a moon, a tilted unlocked world with an atmosphere and a moon: Wailie VI-a, Lathyari I, Seapheeseeri I at 12 N 28.6 E, the start's clock), and on each every event of the almanac re-read with the site's own sun and frame at the time given: the sun's limb at the horizon within 2e-5 rad with the altitude rising or falling as the kind says, the transit's day fraction 0.5 with the altitude over a quarter day either side, the twilight's sine of altitude -0.12, a body's limb at the horizon by `localFrame` and `worldPos`, a phase at a local extremum of the lit share from the world's centre a hundredth of the orbit either side, an eclipse's cover equal to `SurfaceSite::sun`'s and over its neighbours' 30 s either side, the ring shadow 0 before and over 1e-4 after, a comet's mean anomaly at 0 or pi; the plain world must list every sun kind and its moon's rise, set, full and new (18, 5 and 10 events in 5, 0.6 and 0.6 ms); from the ship parked at the giant as `testParkAt` parks (the autopilot's lap followed) the moons' first contacts with the disc within 1e-5 rad and in front or behind as named, the shadows by the landing map's rule positive 30 s before and negative after, the meetings at a minimum of the separation from the body's centre within two degrees, a body's first contact with the sun (26 events in 50 ms: 4 behind, 3 shadows, 3 eclipsed, 13 meetings, 3 across the sun, no transit: a parking inside the moons' orbits sees none); and in a game landed on the plain world (the almanac opened on the landing map first, 10 events at the cursor) the run to the first event (`NOON`, 110 s ahead: 238 frames at a peak of x223, 0.000 s off, the warp back at x1), the free row's hour 0.000 s off, and `T` stopping a run (`RUN STOPPED - X1`). W-06 (2026-10-06): eight checks of the telescope in a game parked at the home world (160 in all): `Z` at x2 doubles the world's disc exactly (68.1 to 136.3 px) and tracks it from the start (`UNKNOWN  FELISIAN  18911 KM  33.2°`, 52 characters at most), one `+` reaches x4, where tracking holds the centre within 0.31 px over two seconds of orbit, two more x16 (1090 px), a hundred mouse counts at x16 turn the offset 0.0200 rad (the centre 70.5 px off, 73.1 by the focal length alone), Enter lets go (18.8 px off after two seconds), `N` names the world (`HOMEWORLD  FELISIAN ...` on the reticle and `THROUGH THE TELESCOPE X16: HOMEWORLD ...` in the caption), the sun on the reticle reads `UNKNOWN  S00 YELLOW STAR  21.07 MKM  3.4°`, `Z` stows (68.1 px again). The review's rework (the same day) added eight (168 in all, 172 with R-405, 178 with W-03): at x16 the stabiliser holds the ground under the reticle and the ship over its ground (R-405: the ground within 0.1 px and the ship within 1e-6 degrees after two seconds, no plate begun again; before it the rework's ground hold held the point while the ship passed over); at x32 (a power not used before: the step survives a stow and the plates are kept) the plate is coarse within its first frame (`blocks of 4`, a few per cent) and whole within two seconds at a step under half the world map's texel; forty of its cells sampled again through `sampleSurface` give the same albedo (within 0.0004), material and height; a step to x64 begins a finer plate with the x32 one kept as the fallback (`the previous ... 100%`); `P` reads the plate out whole in its frame; the telescope's set on the back wall is faced at (1.55, -1.2) looking back (`facing` 9) and `E` opens the eyepiece (the mouse-rate check measures the centre's move from where it stood); the eight computers' colours are pairwise at least 0.3 apart in RGB (R-404); B-411: toward the GOES console from the cage, the hull made glass with `Y` leaves its bank on under 70% of the frame it held polarised and over 8% (the console, the cage), the frame lit with `U` is over half as bright again as unlit, `U` says the hull is glass, and the cabin polarised and lit again draws as before (its bank's share within two points, its brightness within 3%). B-413: one check (293 in all), a game of its own after the cabin's: landed on the home world (`testLandSite`), five seconds of sprint, `K` and `Q`; the last frame on the ground holds the wind, the breath, the birds and the leaves (0.0135 rms over the hum through a fresh synth), and a second into the capsule's climb, a second aboard, and a second after a save of the ship is loaded on the ground (a save of the ground loaded first, its wind blowing) every level the ground sets is 0 (`AudioState::surfaceOff`) and the game's sound through a fresh synth is the ship's hum alone to the sample over two seconds (before, the ship kept the breath, the birds and the leaves: 0.0064 rms). R-405 (2026-10-06): Enter lets go and the stabiliser still holds the view (the centre within 0.5 px after two seconds untracked); stowed, the lap goes on (the parking moves in a second); a second of Shift+Right in the fixed-point chase turns the parking twenty degrees east about the spin axis with the world's centre kept within 1.5 px in the window, a second of Shift+Up raises the latitude twenty degrees; the telescope opened after the turn holds the side faced (the ship within 1e-6 degrees of its ground after a second, the centre on the reticle). W-03: six checks on the pinned plain of the first felisian world (`PIN_PLAIN_*`, `pinnedPlainFront`): a front reaches it within ten days; the forecast's arrival is the moment the ground's own rain begins (the front's rain zero twenty seconds before the time given and above zero twenty after, the line within fifty metres of the place at the time, the deck over it, the temperature down and the fog closed half an hour later) and the clearing the moment it ends; the almanac lists both moments at the forecast's times; the map's band (`buildFrontMap`) over the plain an hour before the line agrees with the ground's front cloud within 0.1; a game parked there with its clock set an hour before the line and the cursor on the plain finds the band at the cursor, lands, and reads `RAIN FROM THE W IN 59 MIN` on its data sheet with the front's line on its sector map. The almanac's own check re-reads `A FRONT` and `THE FRONT CLEARS` events of the three test places with `frontWeatherAt` twenty seconds either side. W-04: four checks (182 in all): twelve showers near home peak with the world at its crossing point (within two thousandths of its orbit), the world's distance to the comet's orbit then the orbits' least and more three widths either side, and the almanac's `METEORS PEAK` at the same second; on the shower scene's site some eleven hundred streak-frames over the peak's four minutes (ten a second) and none eight widths after it, every one running away from the radiant along a great circle through it (the radiant's place taken anew each moment: the sky turns); the zodiacal light brighter on the plane than off it, falling with the elongation, the patch opposite the sun, every protostar's and blue giant's system dusty and between a twentieth and four fifths of the systems near home; on the earthshine scene the crescent's disc drawn at 30-42 of the sky bank over a third of it at least. X-01: four checks (186 in all): on the first sixteen giants of the scan the height falls and the temperature rises with the pressure under the tropopause, the one-bar level is at height zero, the stages come in their order along the clock to the end, the end's pressure is the hull's limit or the heat's, and the chute opened at 0.4 bar takes four times as long to 1.2 bar and tears at 1.8; in a game parked at the scan's first gas giant, `C` sends the probe within a third of a degree of the telescope's reticle (and not under the ship), the screen is its camera; saved in the descent and loaded, it is on its screen at the same clock and stage; the ship parked elsewhere cuts the relay (the log's `CUT`); a second probe falls to its end (`LOST IN` in the log), `Enter` gives control back. R-406 (187): in that game a second watched plainly runs the clock 1.00 s, a second with Shift held 8.00 s, the next second 1.00 s again. X-02: two checks (189 in all): on the first six giants of the scan (brown dwarfs among them), round three aim points each, the bands sampled for the descent (`giantBandsOf`, 81 points of a 3200 km square each) are within 0.1 of the world map's albedo at the same places turned by the jets (1,458 points, the worst 0.095: the map's texels smooth the function), and the decks keep their order at 300 places round each aim (the ammonia deck's top over its base by two scale heights, its base over the water deck's towers, the water deck's top over its base; since X-03 every deck of the giant's, each top over its base by half a scale height and its base over the next deck's towers by three tenths). X-03: two checks (191 in all), and X-01's order check by the layer (a stage comes back between three decks): on the first 300 giants of the scan every giant has one to three decks, each top over its base and each band a quarter of the pressure at least, each base at its cloud's temperature for the giant's abundance (within 2%; the salts' haze over a reach with nothing in it excepted), the kinds as defined (an ice giant exactly the small blue gas giants, a brown dwarf exactly the substellar type) and all three present, every brown dwarf's glow over every gas giant's, the young giants' glow over three times the old ones' on the whole, and giants of one, two and three decks all present (300 giants: 224 gas, 40 ice, 36 brown; 30/133/137 by decks); on the first six great storms of the scan the planet function's oval differs from the bands round it by its tone (0.05 at least), a point of its rim turned by `giantJetAt` stays on its rim at the time and a day later, the descent's bands aimed at its centre see the map's albedo there (within 0.08) with the oval on and centred, and the deck stands on its dome five scale heights at least and on its wall's crest eight more. B-409: one check (192 in all): five giants launched in one game without the HUD and the static (Sashihene VIII, 139 -105 -43 body 8, an ice giant with the water deck alone; a gas giant and a brown dwarf with one deck, 153 0 32 body 0 and 150 0 73 body 1; Weesies I with two; Wailie VI with three), each deck's middle and base (at 95%) and the deep's middle rendered: every frame's mean light 8 at least (a picture gone black reads 0) and under 40% of its pixels clipped (a channel at 250 or over). B-410: one check (193 in all): parked beside a rock of Lathyari's first belt (150 0 23), the system analyzer's planet (Tab, Up to it, Enter) and the flight computer's next body and approach (`Game::testShipScreenRow`) each park the ship at Lathyari I and hold it there (within 30 radii two seconds after the parking; the approach had put it back beside the rock). X-04: four checks (197 in all): a probe into Wailie VI (150 0 106 body 5), its camera turned on the way, to its end: its record (the tracks, 20 samples or more, the layers it found) and `probe_1.png`, the guide read back and exported to a friend's (`importInbox`: the same numbers, `lent`, not lent on); the gallery's newest item plays it and its frame at 160 s against the live frame of 160 s (under 2 levels a pixel on the mean, under 1% of the pixels by 30: the descent drawn again), a second of `Right` goes 20 s deeper or more, Esc back to the gallery (`shots/tests/unit_x04_recording.png`); two more probes at 4 and 36 degrees: the wind 10 m/s apart somewhere or the first deck's top 2% apart, three sent; and the log's crossings, each once with its depth, on the scan's giants that have them (the great storm, named `RED EYE` on the probe's screen: the name in the guide and the line; its wall from outside; the aurora; a clear-air hole; diamond hail). R-407: three checks (200 in all): from home the aim (`R`), `4 0 0` typed and Enter: the remote target is the star 2 ly from the line's end along `testAimDirection`, the flight takes `vimanaSeconds` of its 402 ly (39 s), a `JUMP` line is logged and the ship comes out at that star (`shots/tests/unit_r407_aim.png`: the panel); `jumpTarget` 3,000 ly north out of the disc comes back 580 ly to a star 2,313 ly over the plane and 13,000 ly coreward reaches the core, flights of 100 and 100,000 ly last 27 and 86.8 s; the aim's labels (`testAimLabel`) of six stars of the arrival's neighbourhood carry no `UNKNOWN` and the distance, the home star's says `VISITED`. R-408: five checks (205 in all): within 40 km of 30 S 100 W on Aieliaalas II (151 0 25 body 1) the lakes are water where they are heard and the peaks stand over the ground 400 m round them (three in four at least: 17 of 21; a summit of the cell's 500 m scan on a ridge can have higher ground along it); a name given under O6-06 to the legacy landmark of a cell there (`<world>/L<id>`) is a mark with that name and kind where the landmark stands after the arrival, the name gone; landed at `testLandSite`, `R` turns the scanner to RUINS, 444 ruins are heard, the nearest 1.7 km off is heard within 8% of its distance (133 m), a mark placed on it from the sector map's cursor leaves it out (the next nearest is another, 2 km off) and Shift+R takes it in again (`unit_r408_scan.png`, `unit_r408_map.png`); the map's Enter on the mark renames it, Delete arms and a second Delete removes it, M puts the waypoint at the cursor, and `L` with the crosshair on the ground 7 m off marks that spot; the marks saved and read back the same, lent to a friend's guide (all cyan, the second import none) and not lent on. B-412: two checks (292 in all), after the works' check on the same landing: two marks placed from the sector map in a line 350 m and 1.8 km ahead (the view pitched to put the near one's diamond in the middle of the frame, `testMarkOnScreen`) leave the HUD's white in the frame (`HUD_WHITE` pixels, the sun's line left out) as it is with the marks taken away (0 px both); the near one shown with `Shift+Enter` on it adds its diamond, name and distance and its diamond on the compass (210 px); a click with `Shift` on the far one shows it alone, `Shift+Enter` on it hides it (0 px), and on no mark it does nothing; a mark placed before the near one and removed leaves the near one shown, the guide's file keeps it (`shownmark`), and removing it shows none (`unit_b412_none.png`, `unit_b412_map.png`, `unit_b412_shown.png`). G-05: three checks (208 in all): from home `M` and `Tab` turn the star map to the galaxy, and at every level the ship's crosshair, found in the frame by its four white arms, is within a pixel of where the level's scale puts it from the view's centre (the galactic centre on the whole disc, the ship from level 1); three arrivals at stars of the neighbourhood are the stars visited, and (R-414) the chart at level 8 draws no route's green between them and the guide's file keeps no `route` line; a jump of 60 ly (`R`, `6`, `0`, Enter) flies, `M` in the flight opens the galaxy page although the map was left on the neighbourhood, and `Tab` keeps it there (`shots/tests/unit_g05_flight.png`). G-06: five checks (213 in all): from home the chart's cursor 5,000 ly coreward in the plane (`testChartCursor`), `Enter` plots a star 1.1 ly from the point, `Esc` keeps the target and `M` reopens the chart still plotted; `Tab` looks at the 1,215 stars round the end (the plotted star among them, `shots/tests/unit_g06_look.png`), `Enter` there takes the star the crosshair rests on and goes back to the chart still plotted; `Enter` flies (60.9 s, `vimanaSeconds(5000)`; the `JUMP` line says `COREWARD` and `PLOTTED ON THE CHART`), the ship comes out at that star within 15 ly of the point and the chart's crosshair is on it within a pixel; a plot 20,000 ly over the plane comes back 16,790 ly to a star 3,214 ly up, the same star and shortfall as `jumpTarget`'s; `L` 1,500 ly over the plane opens `NAME THE PLACE` (`unit_g06_mark_entry.png`), the typed mark goes through the guide's file and an export lends it to a fresh guide once (the second import none); `N` steps through a signal, home, a named star, the mark and a star visited in that order, the cursor on each, and Shift+`N` back; `L` on the mark renames it, `Delete` asks and a second removes it (`unit_g06_mark.png`). G-07: one check (214 in all): a `SpaceRenderer` parked at home, then a 5,000 ly flight coreward a sixtieth of a second a frame through `flightBand` alone: the first frame's band is the parked map to the bit, no cell moves by a twentieth of its range in a frame (0.0015 at the worst), the 123 keyframes (0.36-0.5 s apart) are all built a share a frame (none at once, 1.1 s of building for the 61 s flight), the last frame is the band built at the end (0 off) and a parked frame there builds nothing (handed over); a 26,000 ly flight through the core lays 264 keyframes, the closest 0.067 s apart 52 ly from the centre. A-01: three checks (217 in all): over the peoples within 12 ly of home (about 180) the profile is the same twice to the last field, the generator's part (`peopleAgeOf`) and the culture's end agree with the whole, the eras run one per age from the prehistoric to the age reached joined year to year to the people's last year (year 1 the first towns', a prehistoric people's first village), radio exactly where the age had it with its year in the industrial era, the collapse within the last era ending with it and its stages in order (`stageAt`, `eraAt`), the end within its age's span (a second people that ended with the first takes its years) and two peoples that ended together share one cause that can end a world; over the 1,500 peoples within 25 ly (the generator's part alone) each age's share within three points of the decided one, the far future rarest, radio 22-38%, and the six pinned test worlds (`AGE_WORLDS`) still of their age; only the radio ages on the air: two to six peoples heard from home, each a world with radio, every candidate sector within 200 ly with a people's world transmitting exactly when its people had radio (some silent), every slot of the worlds of two peoples within 25 ly a people on the air (both heard where both had radio), and every chart mark "heard" on the two C-series test worlds and the six pinned ones made by a people with radio of a world on the air. C-15: two checks (219 in all): the gain from home, x1 to x32 (x1 the same list as the default call, every signal within 200 ly at a gain of 1, the loud pulsars within 25, A-01's three peoples; each step's list holding the one before; each step adding one to three peoples from home and from the three C-series worlds; the farthest people at x32 within 4,500-7,000 ly; every far signal first heard at the least step over its `needGain`, within its reach there and beyond it at the step under, its power its sector's (a pulsar's third), a people's within the light of its first broadcast (`airYears`), and the strong population's peoples within reach whose light left before their radio (some) none heard; the scan in slices of 997 cells finding what the whole scan finds; the same twice); and the gain in the game (at home `B` and `=` five times: the far scan done within ten frames and the list grown; the Ghutreig at x32 overloading, the meter pinned and no lock in three seconds, its hold over twice x1's, locked at x1; the farthest people's signal locked at x32 within sixteen seconds, lost with `-` (`TOO FAINT AT THIS GAIN`), locked again and Enter flying there). B-422: three checks (318 in all): the landing map's cursor held with Shift asks for no drainage tile of the places it passes (none built in 1.5 s), the place it rests at 0.4 s on; eight marks far across a people's world read at once without their rivers and no tile built for them, one read with its rivers two seconds after its tiles are built; a superseded prefetch's tile abandoned, a tile a thread waits for finished. B-425: four checks (336 in all): over the home cube and a cube of the core no far companion wider than 3 deg or warmer than 100 K at the primary's farthest world at its periapsis, its own worlds within a third of the gap and the primary 3 deg wide at most from them, no close one over a tenth of its primary's light (a black hole's apart); the reported Yaiphuyiabrus (-31900 3 -35668) keeps its worlds and its red giant spans 1.2 deg at its widest; the report's place and time (Yaiphuyiabrus IV at three in its night, 3.9/-99.4 at 3601000 s; B-426 found the world) reads a night under the giant (the sky under 0.2, the light and the glow under 0.3); the ocean world of a companion in 150 0 134 keeps its own night with the far primary up (the sky under 0.2, the local time near midnight). B-426: one check (337 in all): over the six age worlds' places and the report's world an archive holds its class's count (a capital's 14 at most, a prehistoric capital's 6, a city's 8, a town's 5; the far future's structures their rings), every place of the plan holds all its own records; Yaiphuyiabrus IV's prehistoric capital (-31900 3 -35668, body 3) an archive of 4 to 6, its own in 20 buildings and more, 8 at most within 6 m of one. R-419: one check (338 in all): auto-explore begun from the game menu's second row on the profile chosen last (Planetfall); twenty seconds of frames from home's parking walk to the front window and look at the world, the eye's fastest turn under 60 degrees a second; G gives the controls back and opens no guide. B-427: one check (339 in all): the gas giant of a Wolf-Rayet star (18071 1 -19950, body 1) from 2.5 radii on the sun's side, side-on and on the night side: its tail's pixels off the globe in its bank, none at shade 48 and up, a fiftieth of the frame and more at 6-48 side-on and from the night side; a second tail drawn over the frame lights a tenth of the globe and more from the night side and a twentieth of that from the sun's side. B-428: one check (340 in all) over 2,500 worlds of the survey's sectors: a solid world's first moon within 5-40 radii (its rings' floor aside) and beyond 10 in most systems, a giant's within 4.5-6, a twin within 12-20; from the game's parking another world wider than 10 deg in the sky at under 30% of the worlds, under 10% of the solid worlds and 15% of the twins; from the ground a disc wider than 2 deg at 28% of the sites and more, and one wider than 20 deg still. W-01's almanac check reads a transit's or a total phase's time as the middle (the centres nearest), its share flat but for the body's distance. R-420: auto-explore's tape played through with the platform's side stood in (`TapePump`: a file "plays" at the frames' pace, its end reported): `M`, the deck's insert and the track at its moment, the caption fading in and gone, the duck, the next cassette and round to the first, the stop key and the play key from the place kept, the controller's `SELECT`, the end with auto-explore (the music fading, the choice kept) and the tape taken up again, a file gone passed over, an empty folder said; and the deck's four sequences (their times, their onsets, the play key's knock before the tape moves and the hiss after, no clipping, alike for a seed and not for two) through the synth over the ducked hum; and where the tape is read (a macOS app's `Contents/Resources/music` from its executable and from a bare binary beside it, its playlist's track then a file it does not list; the explorer's folder instead when it holds tracks; none when neither does) (343 in all). The harness points `Game::musicDirDefault` at an empty folder and leaves `musicDirsGame` empty, so neither a player's `music` nor the game's own tape plays in another check.
+`vesperis_test unit` (exit code = failures): round trips of `bodyFromLatLon`/`latLonFromBody` and of the site frame
+(`unitAt`/`localAt`), the sun at the zenith over the sub-solar point and at 60 deg altitude 30 deg along the meridian (with the
+azimuth due south or north), local noon there, the Kepler solver residual below 1e-8 for e up to 0.95, `gnoise3` mean and bounds,
+hash uniformity (mean 0.5, variance 1/12), noise and name determinism, name lengths 3-16 with letters, spaces and apostrophes
+only, `seasonOf` bounded by the tilt, and the map cache cap. N4-06 adds the buggy's state rules (a buggy deploys at the capsule,
+`B` replaces one left 300 m away, `toggleBuggy` gets in, a new landing has no buggy) and the nose camera's range (after one update
+a yaw set 180 deg off is clamped to 70 deg and a tilt of -80 to -35); B-206 adds the storm wind: a thin-atmosphere site (the first
+in sectors 150-300 x 20-120) at a time with dust over 0.3, run 300 frames, must keep the wind finite and under 200 knots (46).
+Iteration 3 adds: the sector names of three corners (O2); a ringed landable planet near the start, its profile bounded with a
+dense part, and a ring shadow over 0.2 found on its ground at low latitude over a year (O0-01); the rangefinder 45 degrees down
+from eye height within 1-6 m (2.3) and the far ring at 53 km (O1); comets landable, an escape velocity under 30 m/s, the rings
+capped near the horizon on a small body, no buggy, and a sprint that stays under 0.3 of the escape velocity (O4); a belt near the
+start with rocks within two cells, a rock that is the same rock two hours later and stays inside the belt, and rocks still found
+round a rock at t = 4e6 s after the rings have sheared (O3); B-303: a re-anchor at 51 km keeps the waypoint at its place on the
+sphere (within 5 cm), and a new landing clears it (R-414: M4-02's trail and its two checks are gone). O0-02/03/04: 32 banks of
+2048 intensities and body B's own family banks; a globe seen from 1.15 radii with its centre 92 degrees off the view axis (behind
+the camera plane) still draws its limb (2,884 pixels at 1x); the landing map of the first landable planet with a moon shows the
+moon's shadow (1.00) at some point of the moon's orbit. O6-02: `gnoise3d` returns gnoise3's value exactly and a gradient within
+1e-5 of central differences over 200 points; the relief spectrum is deterministic and bounded and its analytic slope tracks the
+finite difference of its height within 40% on average over 24 points (the octave weights vary with position, which the gradient
+ignores). B-308: a companion star rendered from its parking distance (3.5 radii) ahead and 70, 95 and 150 degrees off axis covers
+22.6% of the frame as a disc ahead (22.8% expected) and none with a mean shade under 1 in the other three
+(`shots/tests/unit_companion_swing.png`). 2026-09-28: B-312, a ringed world 3.6 radii away with its centre ten degrees outside the
+frame shows its limb on either side in space and in a sky (17-36 thousand pixels at 1x); B-317, the sky bodies' nearest depth lies
+beyond the far ring, for the ringed world and a small body close by; B-313, at the pinned mountain site the rings meet: the
+largest gap between a ring's morphed edge vertices (the view transform inverted) and the coarser ring's surface is 0.0000 m at all
+four edges, where the unmorphed vertices differed by 3.1, 16.9, 84.2 and 1015.4 m (`testRingSeams`); B-316, the grassland herd
+site has its landing herds and habitat herds within reach (2 and 7, 49 animals), 3 km on the herds behind are forgotten and new
+ones are in reach, and every animal belongs to a listed herd. 144 checks since C-14 (the signals from home the same twice, every
+people's signal's star in a transmitter sector with a people's world and every pulsar signal's a pulsar, within reach and sorted
+by distance, one to a dozen peoples' within 200 ly (three), the beam's gain falling off its axis, the broadcast's walk never
+repeating a recording twice running; the radar in the game: `B` at home, the view turned onto the first people's signal hears its
+recording through the static within a second, locks within eight, a turn of forty degrees loses the lock and the view turned back
+regains it, Enter starts the Vimana flight and leaves the camera with the synth released, and the flight arrives at the signal's
+star where a people's world is; and the receiver through the synth: the bed alone and each kind at full clarity, three seconds
+each, finite, under the ceiling, audible (rms 0.01-0.4), silent once off; the receiver's variety (129 checks): three seeds of each
+natural kind, every programme of the first people's world heard from home and the bed over forty seconds likewise in bounds, and
+the world's broadcast with a character: four to six of the eleven programmes over its fifty slots, the voice the commonest, the
+same twice; C-08 (131 checks): on the two test worlds' fixed regions and a coastal region of each, a harbour only where a shore is
+within 500 m of the edge, terraces only on a grade over 0.06, a cistern and a wind wall only on the desert world, cairns only in
+relief over 0.45, no terrace wall in a room, drifts on the desert's walls alone, the same twice; the decay rising with the years
+and the rain (`decayOf` at 200, 2,000 and 20,000 years), the cultures near home spanning from standing to foundations, and a
+landing point at a settlement's centre moved out past its edge once and not again; the town's rooms hold no rock's collider (the
+C-01 collider check widened); C-10 (133 checks): on the two test worlds three to five of the fifty are charts and none of them
+music, one mark each in the lore (a people's mark with a world and a name, one heard in a transmitter sector, never the world's
+own star), every chart's stars within the cube of ten sectors round the world's star, the brightest first, within the field, the
+mark among them, the figures sharing no star, two to six stars each joined by lines within thirty degrees, every figure and the
+other people named in the caption (8-70 words), the same twice; across forty civilised worlds near home the charts mark the
+brightest star a quarter to three quarters of the time and a people the rest, the lore under 10 ms a world (six charts of 22
+figures of 4.3 stars on the test worlds; 166 charts near home: 43% a bright star, 47% a people heard, 10% a near people; the lore
+1 ms); and on the decoder, in a `Game`: with three shards and the first chart of Aieliaalas II in the guide, the chart opened by
+index is reading a second in, Enter skips the wait and the chart is read (decoded at 4) and logged (`CHART`), Enter again sets the
+remote target on the marked star, O holds it up, Esc back to space keeps it up, the view turned onto its first figure draws its
+lines (10), parked at the people's own star every star of the chart is in the sky the game draws (52 of 52), and O on the chart
+again puts it down); C-14 (144 checks): lending: a friend's guide (four shards of Aieliaalas II taken, a text and the first piece
+among them read, the piece and the star named, a shard lent to the friend by a third explorer and read) saved beside the test
+guide as its inbox file; a fresh guide that took one of the friend's unread shards itself imports it: the star's and the piece's
+names in the inbox and none in its own names, exactly the two read shards lent (not the other unread one, not its own, not the
+friend's lent one), an `INBOX` log line; the decoder lists the one world, its list holds three with two lent
+(`shots/tests/unit_lent.png`), the friend's piece opens and is read at once (`unit_lent_piece.png`), the lent text read with the
+wait skipped is decoded at three; the lent shard taken afterwards is the explorer's own and one lent is left. C-13 (143 checks):
+cultures per world: of the civilisation worlds of the scan near home about one in five had two peoples (the share within 8-35%,
+three found at least); on Eleinewai I (152 0 92 body 0) the peoples' seeds (the world's and `peopleGen`'s), names (each the
+other's `other`), tongues, voices, traditions and cultures are their own, each fifty the same twice, clean and distinct, each
+naming the other in a shard at least where their histories met and neither where they never did (R-413: Eleinewai I's two
+prehistoric peoples never met; Leanmya V-a's met and name each other), one last recording a people of the span's end, the ages
+equal and the fates 0 when the coin says they ended together (else apart and opposite); the two one-people test worlds read as one
+people with no other, the world's own seed and none of the "other" kinds; the divide a unit pole the same twice, the settlements
+of 7 x 7 cells deep on each side all that people's (`peopleAt` agreeing with the cell) with shard sites from its fifty, and the
+roads between the peoples at the frontier walked and built as the bigger settlement's people built; in a `Game` with three shards
+of each people and the second's last recording in the guide the decoder lists the world twice, the second entry holds its four
+with the people named (`shots/tests/unit_peoples_decoder.png`), its last read at that count ends the second's record under its own
+key with the first's open and the log line written, and landed at the frontier the nearest shard is taken with the status counting
+against the hundred. C-12 (139 checks): the calendar, the last recording and the graves: on the two test worlds the last recording
+is a text shard (no piece, no chart) of the span's end, later than every other of the fifty and the only one with the end's tone,
+every shard's month and day within the calendar, the quick lore agreeing with the full one; the graves of the sited settlements
+over 13 x 13 cells of each region (107 sited settlements, 387 stones: hamlets 118, villages 122, towns 144, monuments 3; 143
+fallen) never more than the class allows, no village or town without, every stone outside the radius and clear of every building,
+the names distinct within a settlement and nine letters at most, the years in the span, the ids distinct over both worlds, the
+same twice, under a millisecond a settlement; the C-03 town's stones among its pieces in the view and the first within reach at a
+metre with its name and years read (`shots/tests/unit_grave.png`); landed by Leileashphail III's road, the explorer set before the
+nearest stone is told once (the status, a `GRAVE` log line, the guide's `grave`) and nothing more on the second visit; C-09 (135
+checks): the roads of the two test worlds' regions (Leileashphail III round its default region, Aieliaalas II round 12 N 4.22 E,
+13 x 13 cells each): every sited settlement has a road, every road runs from one settlement's edge to the other's, no point of it
+in the sea, a lake or the old sea, no way over 1.6 times the straight line, no step steeper than a half, a road the same from
+either end and the same twice, the young desert world's length nearly whole after the wear and the old wet world's between 30 and
+75 per cent, a road walked under 3 ms (107 settlements, 163 roads of 490 km, 9,953 points, the steepest step 0.165, 94% and 52%
+left, 0.14 ms a road); and on the ground and the ship: a `SurfaceView` at a road of Leileashphail III holds roads, the 4 m vertex
+on the bed carries the road (over 100 of 255), the paving as its material and no vegetation, the 16 m vertex the same material,
+the 64 m vertex the ground's own material darker, a point forty metres across the road nothing; a `Game` parked there with the
+cursor on the road builds the zoom with roads drawn (2,111 over the window: the villages' and the towns'), lands by the road, and
+the explorer set on it is told (`AN OLD ROAD RUNS HERE, NW TO SE`), a `ROAD` entry logged, one road met; since R-403 the drone's
+flight: lifts off, 320 km/h within 25 s, the 400 m ceiling, never under the ground, braked, landed under Shift, out, a second one
+scraps the first; and B-406: the jetpack from a river bank out over the river without swimming, dropped in, lifted out on Space).
+S-01: the class mix near home (red dwarfs the commonest class, between a quarter and a half of 4,559 stars, every class present),
+a red dwarf's flares (50-200 in ten days, under a fifteenth of the time over 0.3, deterministic), its near worlds locked (over
+70%), a carbon star's systems with a carbon world (more than twice a yellow star's share); the aurora check counts red dwarfs and
+blue-white stars as active stars (S-02: `starActivity` over 0.7, the one table). S-03: the neutron stars of the scan (65) have no
+living, cloudy, oceanic, quartz, acidic or giant world of their own (a companion's worlds are its own class's), most systems with
+planets have a glassed survivor (40 of 53), and over the first five glassed worlds the glass covers 15-85% of the land on average
+(41%) with the 512 m share within 8 points of the 16 m one (1). S-04: protostars are a trickle in the arm (12 against 757 yellow
+stars near home) and over half the yellow family in the nearest star-forming complex (28 against 30), their systems have belts (11
+of 12) and no evolved world, and their cloud glows over 0.4 a fifth of a radian from the star (0.52). S-05: Wolf-Rayet stars are
+rare in the arm (40 against 175 blue giants near home) and absent from the nearest globular (0 of 2,603 stars of its own sectors),
+their systems (31, with 185 worlds and 15 giants) keep no world with an atmosphere and most systems with planets have a bombarded
+one (21 of 24), and the sun rendered straight ahead by `drawSun` (a radius of 0.03 rad, the world's up given) reads 15.9 shades at
+five radii against 7.2 at 3.2 and 0.0 at 7: the shell's ring. S-06: black holes are a few near home (8 against 206 pulsars, 0.18%
+of 4,559 stars) and several times that share in the core cube (52 of 3,281, 1.6%); their systems (8, with 12 worlds) keep no world
+with an air, a giant or lava, every companion (4) is close and most have a belt (6); and a dot of two logical pixels' radius
+straight behind a black hole rendered by `drawSun` (a radius of 0.02 rad, the disc edge-on) comes out as an Einstein ring (10 of
+the 10 ring samples off the disc's line lit over 30 shades within a logical pixel), with the centre and the shadow's edge black
+and the sky at three Einstein angles untouched; the render takes 2 ms at 4x (9 with a tilted disc in view). C-01: one felisian or
+desert world in eight near home had a people (182 of 1,739 felisian and 90 of 698 desert worlds in the scan); the first dead
+desert world (Leileashphail III, its seas at 94 m) has the old sea on 61% of 2,592 points of a 2048 m grid with salt on 464 of
+them, its bed 22 m under the reference against the land's 328, and at its shore the drainage reads 5,734 sea cells and 35 channels
+of 6,561; the first civilisation's world (Aieliaalas II) holds 174 hamlets, 75 villages and 52 towns among 51 monoliths in 961
+cells, every one of its 2,128 houses has its centre clear of standing pieces (0.9 m) and a doorway of 1.6 m in its door wall; and
+in the view, a town's houses are as open through `collectColliders` (the centre clear, the doorway's run of a metre free of
+discs), every piece's collider spans 0.85-30 m from a foot within 8 m of its ground (B-405; the tallest 11.4 m, a tower) and the
+town renders from outside its gate in 1.0 ms at 1x (228 pieces; Aieliaalas II's town at -35.4 / 202.6, 16 houses all clear and
+open). C-02: on the same two worlds, fifty shards each are the same text twice over, carry no mark of the grammar, run 19-50 words
+and are all distinct; the world's names occur in 96% (felisian) and 88% (desert) of them; warnings and the end are 8% of the
+felisian world's and 40% of the desert's, whose sea, salt or river is in 32%; and the sixteen peoples' worlds of sectors 150-160 x
+20-80 give 192 clean shards. C-06: the decoder reads 37/51/65/100% of the felisian texts' words with 1/3/5/10 shards held and
+35/49/64/100% of the desert's (languages of 294 and 338 words since C-04 made 13 and 12 of the fifty music), never fewer per shard
+with more held, the names from the start, the tongue the same twice and its forty most used words distinct. C-04: each test
+world's tradition is the same twice, its scale five to nine notes ascending with 70 cents at least between neighbours and under
+the period, its cycle's groups summing to its beats, two or three voices (both worlds: seven notes, nine beats, two voices); its
+pieces are the same twice, 15-90 s (31-61), notes in order, within the piece and within three periods of the tonic (2,479 notes
+over the 25 pieces), of three forms at least a world; the two traditions differ; and the first piece of Aieliaalas II rendered
+through `AudioSynth` at 22,050 Hz (51 s) is finite, under the ceiling, at an rms over 0.02 (0.056), ended when the piece is,
+silent two and a half seconds past its end and silent at once after the piece pointer is cleared. C-05: each test world's voice is
+the same twice and in bounds (80-320 Hz, 2.5-5.6 syllables a second, a tract of 0.7-1.4, the line under 52 characters), its
+inventory the tongue's sounds with a vowel among them (Aieliaalas II a deep breathy voice at 100 Hz and 3.2 syllables a second
+with 17 sounds, Leileashphail III a low nasal one at 136 Hz and 4.1 with 14); every text's speech is the same twice, 4-45 s, its
+segments contiguous, finite and within 0.4-2.5 of the base pitch, every sound inside its word's span and the spans in order, every
+word with letters spoken, and the spans the same with one shard held as with ten; the two voices differ; and the first text of
+Aieliaalas II rendered through `AudioSynth` is finite, under the ceiling, with a peak over 0.2 and an rms of 0.02-0.35, ended when
+the speech is, silent a second and a half past its end and silent at once after the speech pointer is cleared. C-03: over
+Aieliaalas II's 961 cells the 301 settlements hold 373 shards (112 in the hamlets, 111 in the villages, 150 in the towns; 288 in
+houses, 10 in halls, 13 in towers, 61 in rotundas, 1 at a stela), every count within its class's bounds, every site inside its
+building, 0.4 m clear of the building's ground pieces and 1.4 m from its doorway, no index repeated within a settlement, the same
+twice; and in the view the town of the collider check holds 4 shards, all clear of the pieces' colliders, the first within reach
+(`nearShard`) when the explorer stands a metre from it, all 4 drawn from inside its room (`shots/tests/unit_shard_room.png`) and
+none offered once its index is in `shardsFound`. W-01 (2026-10-06) adds eight checks (152): the three test places found by the
+scan (a landable moon of a ringed gas giant, a locked world with a moon, a tilted unlocked world with an atmosphere and a moon:
+Wailie VI-a, Lathyari I, Seapheeseeri I at 12 N 28.6 E, the start's clock), and on each every event of the almanac re-read with
+the site's own sun and frame at the time given: the sun's limb at the horizon within 2e-5 rad with the altitude rising or falling
+as the kind says, the transit's day fraction 0.5 with the altitude over a quarter day either side, the twilight's sine of altitude
+-0.12, a body's limb at the horizon by `localFrame` and `worldPos`, a phase at a local extremum of the lit share from the world's
+centre a hundredth of the orbit either side, an eclipse's cover equal to `SurfaceSite::sun`'s and over its neighbours' 30 s either
+side, the ring shadow 0 before and over 1e-4 after, a comet's mean anomaly at 0 or pi; the plain world must list every sun kind
+and its moon's rise, set, full and new (18, 5 and 10 events in 5, 0.6 and 0.6 ms); from the ship parked at the giant as
+`testParkAt` parks (the autopilot's lap followed) the moons' first contacts with the disc within 1e-5 rad and in front or behind
+as named, the shadows by the landing map's rule positive 30 s before and negative after, the meetings at a minimum of the
+separation from the body's centre within two degrees, a body's first contact with the sun (26 events in 50 ms: 4 behind, 3
+shadows, 3 eclipsed, 13 meetings, 3 across the sun, no transit: a parking inside the moons' orbits sees none); and in a game
+landed on the plain world (the almanac opened on the landing map first, 10 events at the cursor) the run to the first event
+(`NOON`, 110 s ahead: 238 frames at a peak of x223, 0.000 s off, the warp back at x1), the free row's hour 0.000 s off, and `T`
+stopping a run (`RUN STOPPED - X1`). W-06 (2026-10-06): eight checks of the telescope in a game parked at the home world (160 in
+all): `Z` at x2 doubles the world's disc exactly (68.1 to 136.3 px) and tracks it from the start
+(`UNKNOWN  FELISIAN  18911 KM  33.2°`, 52 characters at most), one `+` reaches x4, where tracking holds the centre within 0.31 px
+over two seconds of orbit, two more x16 (1090 px), a hundred mouse counts at x16 turn the offset 0.0200 rad (the centre 70.5 px
+off, 73.1 by the focal length alone), Enter lets go (18.8 px off after two seconds), `N` names the world
+(`HOMEWORLD  FELISIAN ...` on the reticle and `THROUGH THE TELESCOPE X16: HOMEWORLD ...` in the caption), the sun on the reticle
+reads `UNKNOWN  S00 YELLOW STAR  21.07 MKM  3.4°`, `Z` stows (68.1 px again). The review's rework (the same day) added eight (168
+in all, 172 with R-405, 178 with W-03): at x16 the stabiliser holds the ground under the reticle and the ship over its ground
+(R-405: the ground within 0.1 px and the ship within 1e-6 degrees after two seconds, no plate begun again; before it the rework's
+ground hold held the point while the ship passed over); at x32 (a power not used before: the step survives a stow and the plates
+are kept) the plate is coarse within its first frame (`blocks of 4`, a few per cent) and whole within two seconds at a step under
+half the world map's texel; forty of its cells sampled again through `sampleSurface` give the same albedo (within 0.0004),
+material and height; a step to x64 begins a finer plate with the x32 one kept as the fallback (`the previous ... 100%`); `P` reads
+the plate out whole in its frame; the telescope's set on the back wall is faced at (1.55, -1.2) looking back (`facing` 9) and `E`
+opens the eyepiece (the mouse-rate check measures the centre's move from where it stood); the eight computers' colours are
+pairwise at least 0.3 apart in RGB (R-404); B-411: toward the GOES console from the cage, the hull made glass with `Y` leaves its
+bank on under 70% of the frame it held polarised and over 8% (the console, the cage), the frame lit with `U` is over half as
+bright again as unlit, `U` says the hull is glass, and the cabin polarised and lit again draws as before (its bank's share within
+two points, its brightness within 3%). B-413: one check (293 in all), a game of its own after the cabin's: landed on the home
+world (`testLandSite`), five seconds of sprint, `K` and `Q`; the last frame on the ground holds the wind, the breath, the birds
+and the leaves (0.0135 rms over the hum through a fresh synth), and a second into the capsule's climb, a second aboard, and a
+second after a save of the ship is loaded on the ground (a save of the ground loaded first, its wind blowing) every level the
+ground sets is 0 (`AudioState::surfaceOff`) and the game's sound through a fresh synth is the ship's hum alone to the sample over
+two seconds (before, the ship kept the breath, the birds and the leaves: 0.0064 rms). R-405 (2026-10-06): Enter lets go and the
+stabiliser still holds the view (the centre within 0.5 px after two seconds untracked); stowed, the lap goes on (the parking moves
+in a second); a second of Shift+Right in the fixed-point chase turns the parking twenty degrees east about the spin axis with the
+world's centre kept within 1.5 px in the window, a second of Shift+Up raises the latitude twenty degrees; the telescope opened
+after the turn holds the side faced (the ship within 1e-6 degrees of its ground after a second, the centre on the reticle). W-03:
+six checks on the pinned plain of the first felisian world (`PIN_PLAIN_*`, `pinnedPlainFront`): a front reaches it within ten
+days; the forecast's arrival is the moment the ground's own rain begins (the front's rain zero twenty seconds before the time
+given and above zero twenty after, the line within fifty metres of the place at the time, the deck over it, the temperature down
+and the fog closed half an hour later) and the clearing the moment it ends; the almanac lists both moments at the forecast's
+times; the map's band (`buildFrontMap`) over the plain an hour before the line agrees with the ground's front cloud within 0.1; a
+game parked there with its clock set an hour before the line and the cursor on the plain finds the band at the cursor, lands, and
+reads `RAIN FROM THE W IN 59 MIN` on its data sheet with the front's line on its sector map. The almanac's own check re-reads
+`A FRONT` and `THE FRONT CLEARS` events of the three test places with `frontWeatherAt` twenty seconds either side. W-04: four
+checks (182 in all): twelve showers near home peak with the world at its crossing point (within two thousandths of its orbit), the
+world's distance to the comet's orbit then the orbits' least and more three widths either side, and the almanac's `METEORS PEAK`
+at the same second; on the shower scene's site some eleven hundred streak-frames over the peak's four minutes (ten a second) and
+none eight widths after it, every one running away from the radiant along a great circle through it (the radiant's place taken
+anew each moment: the sky turns); the zodiacal light brighter on the plane than off it, falling with the elongation, the patch
+opposite the sun, every protostar's and blue giant's system dusty and between a twentieth and four fifths of the systems near
+home; on the earthshine scene the crescent's disc drawn at 30-42 of the sky bank over a third of it at least. X-01: four checks
+(186 in all): on the first sixteen giants of the scan the height falls and the temperature rises with the pressure under the
+tropopause, the one-bar level is at height zero, the stages come in their order along the clock to the end, the end's pressure is
+the hull's limit or the heat's, and the chute opened at 0.4 bar takes four times as long to 1.2 bar and tears at 1.8; in a game
+parked at the scan's first gas giant, `C` sends the probe within a third of a degree of the telescope's reticle (and not under the
+ship), the screen is its camera; saved in the descent and loaded, it is on its screen at the same clock and stage; the ship parked
+elsewhere cuts the relay (the log's `CUT`); a second probe falls to its end (`LOST IN` in the log), `Enter` gives control back.
+R-406 (187): in that game a second watched plainly runs the clock 1.00 s, a second with Shift held 8.00 s, the next second 1.00 s
+again. X-02: two checks (189 in all): on the first six giants of the scan (brown dwarfs among them), round three aim points each,
+the bands sampled for the descent (`giantBandsOf`, 81 points of a 3200 km square each) are within 0.1 of the world map's albedo at
+the same places turned by the jets (1,458 points, the worst 0.095: the map's texels smooth the function), and the decks keep their
+order at 300 places round each aim (the ammonia deck's top over its base by two scale heights, its base over the water deck's
+towers, the water deck's top over its base; since X-03 every deck of the giant's, each top over its base by half a scale height
+and its base over the next deck's towers by three tenths). X-03: two checks (191 in all), and X-01's order check by the layer (a
+stage comes back between three decks): on the first 300 giants of the scan every giant has one to three decks, each top over its
+base and each band a quarter of the pressure at least, each base at its cloud's temperature for the giant's abundance (within 2%;
+the salts' haze over a reach with nothing in it excepted), the kinds as defined (an ice giant exactly the small blue gas giants, a
+brown dwarf exactly the substellar type) and all three present, every brown dwarf's glow over every gas giant's, the young giants'
+glow over three times the old ones' on the whole, and giants of one, two and three decks all present (300 giants: 224 gas, 40 ice,
+36 brown; 30/133/137 by decks); on the first six great storms of the scan the planet function's oval differs from the bands round
+it by its tone (0.05 at least), a point of its rim turned by `giantJetAt` stays on its rim at the time and a day later, the
+descent's bands aimed at its centre see the map's albedo there (within 0.08) with the oval on and centred, and the deck stands on
+its dome five scale heights at least and on its wall's crest eight more. B-409: one check (192 in all): five giants launched in
+one game without the HUD and the static (Sashihene VIII, 139 -105 -43 body 8, an ice giant with the water deck alone; a gas giant
+and a brown dwarf with one deck, 153 0 32 body 0 and 150 0 73 body 1; Weesies I with two; Wailie VI with three), each deck's
+middle and base (at 95%) and the deep's middle rendered: every frame's mean light 8 at least (a picture gone black reads 0) and
+under 40% of its pixels clipped (a channel at 250 or over). B-410: one check (193 in all): parked beside a rock of Lathyari's
+first belt (150 0 23), the system analyzer's planet (Tab, Up to it, Enter) and the flight computer's next body and approach
+(`TestGame::testShipScreenRow`) each park the ship at Lathyari I and hold it there (within 30 radii two seconds after the parking; the
+approach had put it back beside the rock). X-04: four checks (197 in all): a probe into Wailie VI (150 0 106 body 5), its camera
+turned on the way, to its end: its record (the tracks, 20 samples or more, the layers it found) and `probe_1.png`, the guide read
+back and exported to a friend's (`importInbox`: the same numbers, `lent`, not lent on); the gallery's newest item plays it and its
+frame at 160 s against the live frame of 160 s (under 2 levels a pixel on the mean, under 1% of the pixels by 30: the descent
+drawn again), a second of `Right` goes 20 s deeper or more, Esc back to the gallery (`shots/tests/unit_x04_recording.png`); two
+more probes at 4 and 36 degrees: the wind 10 m/s apart somewhere or the first deck's top 2% apart, three sent; and the log's
+crossings, each once with its depth, on the scan's giants that have them (the great storm, named `RED EYE` on the probe's screen:
+the name in the guide and the line; its wall from outside; the aurora; a clear-air hole; diamond hail). R-407: three checks (200
+in all): from home the aim (`R`), `4 0 0` typed and Enter: the remote target is the star 2 ly from the line's end along
+`testAimDirection`, the flight takes `vimanaSeconds` of its 402 ly (39 s), a `JUMP` line is logged and the ship comes out at that
+star (`shots/tests/unit_r407_aim.png`: the panel); `jumpTarget` 3,000 ly north out of the disc comes back 580 ly to a star 2,313
+ly over the plane and 13,000 ly coreward reaches the core, flights of 100 and 100,000 ly last 27 and 86.8 s; the aim's labels
+(`testAimLabel`) of six stars of the arrival's neighbourhood carry no `UNKNOWN` and the distance, the home star's says `VISITED`.
+R-408: five checks (205 in all): within 40 km of 30 S 100 W on Aieliaalas II (151 0 25 body 1) the lakes are water where they are
+heard and the peaks stand over the ground 400 m round them (three in four at least: 17 of 21; a summit of the cell's 500 m scan on
+a ridge can have higher ground along it); a name given under O6-06 to the legacy landmark of a cell there (`<world>/L<id>`) is a
+mark with that name and kind where the landmark stands after the arrival, the name gone; landed at `testLandSite`, `R` turns the
+scanner to RUINS, 444 ruins are heard, the nearest 1.7 km off is heard within 8% of its distance (133 m), a mark placed on it from
+the sector map's cursor leaves it out (the next nearest is another, 2 km off) and Shift+R takes it in again (`unit_r408_scan.png`,
+`unit_r408_map.png`); the map's Enter on the mark renames it, Delete arms and a second Delete removes it, M puts the waypoint at
+the cursor, and `L` with the crosshair on the ground 7 m off marks that spot; the marks saved and read back the same, lent to a
+friend's guide (all cyan, the second import none) and not lent on. B-412: two checks (292 in all), after the works' check on the
+same landing: two marks placed from the sector map in a line 350 m and 1.8 km ahead (the view pitched to put the near one's
+diamond in the middle of the frame, `testMarkOnScreen`) leave the HUD's white in the frame (`HUD_WHITE` pixels, the sun's line
+left out) as it is with the marks taken away (0 px both); the near one shown with `Shift+Enter` on it adds its diamond, name and
+distance and its diamond on the compass (210 px); a click with `Shift` on the far one shows it alone, `Shift+Enter` on it hides it
+(0 px), and on no mark it does nothing; a mark placed before the near one and removed leaves the near one shown, the guide's file
+keeps it (`shownmark`), and removing it shows none (`unit_b412_none.png`, `unit_b412_map.png`, `unit_b412_shown.png`). G-05: three
+checks (208 in all): from home `M` and `Tab` turn the star map to the galaxy, and at every level the ship's crosshair, found in
+the frame by its four white arms, is within a pixel of where the level's scale puts it from the view's centre (the galactic centre
+on the whole disc, the ship from level 1); three arrivals at stars of the neighbourhood are the stars visited, and (R-414) the
+chart at level 8 draws no route's green between them and the guide's file keeps no `route` line; a jump of 60 ly (`R`, `6`, `0`,
+Enter) flies, `M` in the flight opens the galaxy page although the map was left on the neighbourhood, and `Tab` keeps it there
+(`shots/tests/unit_g05_flight.png`). G-06: five checks (213 in all): from home the chart's cursor 5,000 ly coreward in the plane
+(`testChartCursor`), `Enter` plots a star 1.1 ly from the point, `Esc` keeps the target and `M` reopens the chart still plotted;
+`Tab` looks at the 1,215 stars round the end (the plotted star among them, `shots/tests/unit_g06_look.png`), `Enter` there takes
+the star the crosshair rests on and goes back to the chart still plotted; `Enter` flies (60.9 s, `vimanaSeconds(5000)`; the `JUMP`
+line says `COREWARD` and `PLOTTED ON THE CHART`), the ship comes out at that star within 15 ly of the point and the chart's
+crosshair is on it within a pixel; a plot 20,000 ly over the plane comes back 16,790 ly to a star 3,214 ly up, the same star and
+shortfall as `jumpTarget`'s; `L` 1,500 ly over the plane opens `NAME THE PLACE` (`unit_g06_mark_entry.png`), the typed mark goes
+through the guide's file and an export lends it to a fresh guide once (the second import none); `N` steps through a signal, home,
+a named star, the mark and a star visited in that order, the cursor on each, and Shift+`N` back; `L` on the mark renames it,
+`Delete` asks and a second removes it (`unit_g06_mark.png`). G-07: one check (214 in all): a `SpaceRenderer` parked at home, then
+a 5,000 ly flight coreward a sixtieth of a second a frame through `flightBand` alone: the first frame's band is the parked map to
+the bit, no cell moves by a twentieth of its range in a frame (0.0015 at the worst), the 123 keyframes (0.36-0.5 s apart) are all
+built a share a frame (none at once, 1.1 s of building for the 61 s flight), the last frame is the band built at the end (0 off)
+and a parked frame there builds nothing (handed over); a 26,000 ly flight through the core lays 264 keyframes, the closest 0.067 s
+apart 52 ly from the centre. A-01: three checks (217 in all): over the peoples within 12 ly of home (about 180) the profile is the
+same twice to the last field, the generator's part (`peopleAgeOf`) and the culture's end agree with the whole, the eras run one
+per age from the prehistoric to the age reached joined year to year to the people's last year (year 1 the first towns', a
+prehistoric people's first village), radio exactly where the age had it with its year in the industrial era, the collapse within
+the last era ending with it and its stages in order (`stageAt`, `eraAt`), the end within its age's span (a second people that
+ended with the first takes its years) and two peoples that ended together share one cause that can end a world; over the 1,500
+peoples within 25 ly (the generator's part alone) each age's share within three points of the decided one, the far future rarest,
+radio 22-38%, and the six pinned test worlds (`AGE_WORLDS`) still of their age; only the radio ages on the air: two to six peoples
+heard from home, each a world with radio, every candidate sector within 200 ly with a people's world transmitting exactly when its
+people had radio (some silent), every slot of the worlds of two peoples within 25 ly a people on the air (both heard where both
+had radio), and every chart mark "heard" on the two C-series test worlds and the six pinned ones made by a people with radio of a
+world on the air. C-15: two checks (219 in all): the gain from home, x1 to x32 (x1 the same list as the default call, every signal
+within 200 ly at a gain of 1, the loud pulsars within 25, A-01's three peoples; each step's list holding the one before; each step
+adding one to three peoples from home and from the three C-series worlds; the farthest people at x32 within 4,500-7,000 ly; every
+far signal first heard at the least step over its `needGain`, within its reach there and beyond it at the step under, its power
+its sector's (a pulsar's third), a people's within the light of its first broadcast (`airYears`), and the strong population's
+peoples within reach whose light left before their radio (some) none heard; the scan in slices of 997 cells finding what the whole
+scan finds; the same twice); and the gain in the game (at home `B` and `=` five times: the far scan done within ten frames and the
+list grown; the Ghutreig at x32 overloading, the meter pinned and no lock in three seconds, its hold over twice x1's, locked at
+x1; the farthest people's signal locked at x32 within sixteen seconds, lost with `-` (`TOO FAINT AT THIS GAIN`), locked again and
+Enter flying there). B-422: three checks (318 in all): the landing map's cursor held with Shift asks for no drainage tile of the
+places it passes (none built in 1.5 s), the place it rests at 0.4 s on; eight marks far across a people's world read at once
+without their rivers and no tile built for them, one read with its rivers two seconds after its tiles are built; a superseded
+prefetch's tile abandoned, a tile a thread waits for finished. B-425: four checks (336 in all): over the home cube and a cube of
+the core no far companion wider than 3 deg or warmer than 100 K at the primary's farthest world at its periapsis, its own worlds
+within a third of the gap and the primary 3 deg wide at most from them, no close one over a tenth of its primary's light (a black
+hole's apart); the reported Yaiphuyiabrus (-31900 3 -35668) keeps its worlds and its red giant spans 1.2 deg at its widest; the
+report's place and time (Yaiphuyiabrus IV at three in its night, 3.9/-99.4 at 3601000 s; B-426 found the world) reads a night
+under the giant (the sky under 0.2, the light and the glow under 0.3); the ocean world of a companion in 150 0 134 keeps its own
+night with the far primary up (the sky under 0.2, the local time near midnight). B-426: one check (337 in all): over the six age
+worlds' places and the report's world an archive holds its class's count (a capital's 14 at most, a prehistoric capital's 6, a
+city's 8, a town's 5; the far future's structures their rings), every place of the plan holds all its own records; Yaiphuyiabrus
+IV's prehistoric capital (-31900 3 -35668, body 3) an archive of 4 to 6, its own in 20 buildings and more, 8 at most within 6 m of
+one. R-419: one check (338 in all): auto-explore begun from the game menu's second row on the profile chosen last (Planetfall);
+twenty seconds of frames from home's parking walk to the front window and look at the world, the eye's fastest turn under 60
+degrees a second; G gives the controls back and opens no guide. B-427: one check (339 in all): the gas giant of a Wolf-Rayet star
+(18071 1 -19950, body 1) from 2.5 radii on the sun's side, side-on and on the night side: its tail's pixels off the globe in its
+bank, none at shade 48 and up, a fiftieth of the frame and more at 6-48 side-on and from the night side; a second tail drawn over
+the frame lights a tenth of the globe and more from the night side and a twentieth of that from the sun's side. B-428: one check
+(340 in all) over 2,500 worlds of the survey's sectors: a solid world's first moon within 5-40 radii (its rings' floor aside) and
+beyond 10 in most systems, a giant's within 4.5-6, a twin within 12-20; from the game's parking another world wider than 10 deg in
+the sky at under 30% of the worlds, under 10% of the solid worlds and 15% of the twins; from the ground a disc wider than 2 deg at
+28% of the sites and more, and one wider than 20 deg still. W-01's almanac check reads a transit's or a total phase's time as the
+middle (the centres nearest), its share flat but for the body's distance. R-420: auto-explore's tape played through with the
+platform's side stood in (`TapePump`: a file "plays" at the frames' pace, its end reported): `M`, the deck's insert and the track
+at its moment, the caption fading in and gone, the duck, the next cassette and round to the first, the stop key and the play key
+from the place kept, the controller's `SELECT`, the end with auto-explore (the music fading, the choice kept) and the tape taken
+up again, a file gone passed over, an empty folder said; and the deck's four sequences (their times, their onsets, the play key's
+knock before the tape moves and the hiss after, no clipping, alike for a seed and not for two) through the synth over the ducked
+hum; and where the tape is read (a macOS app's `Contents/Resources/music` from its executable and from a bare binary beside it,
+its playlist's track then a file it does not list; the explorer's folder instead when it holds tracks; none when neither does)
+(343 in all). The harness points `Game::musicDirDefault` at an empty folder and leaves `musicDirsGame` empty, so neither a
+player's `music` nor the game's own tape plays in another check.
 C-16: three checks (222 in all): what the gain lets in, the receiver (the bed at x1, x11 and x32 toward a pole, the band's plane and the core, a near voice and a far one worn at three gains, two broadcasts with the whistle and the ring, a pulsar under a voice, each age's four programmes and the phonograph's piece: finite, never clipped, the rms within C-07's 0.02-0.13; two minutes of static with at least twice x1's events at x32, two or more of the five stranger kinds there and none at x1); each age on the air (the age worlds' fifty slots by their age: the industrial Morse or a phonograph and never data, the futuristic a synthetic voice, data, a beacon or the piece, the far future the mathematics or a synthetic voice, the modern C-07's; the peoples heard from home at x32 all of radio ages, three or more of them; an industrial Morse keying of a text's words within 10-46 s); and the top step in the game (at home at x32 a signal with another under it both on the air and the synth finite with the two, none under at x1; at the sky farthest from every signal three false rises turned onto, `NOTHING THERE` at least twice, the meter over its floor, never a lock; a recording put in `Guide::heard` coming back as a word while nothing is on the air, that recording, ended, nothing logged). It writes `shots/tests/radar_nothing_there.png`.
 A-02: four checks (226 in all): every kind whole and broken (the sheet's 33 samples at the three levels, whole and broken: none empty, every corner finite and within the form's reach and top, no broken one the same as its whole, C-01's box five faces and its hemisphere forty quads); walking into each one (the explorer eight metres short of each sample, whole and broken, walks at it for twenty seconds: it touches every form and never enters a disc, and goes through a gate, a pointed arch, an arcade, a hall open at its ends, between masts and a lattice's legs and under a saddle); the peoples' banks (the first people's structure in bank 18 is its ground's bank's ramp, the light's ramp set); and the test city's frame at 2x drawn by the workers equal to the serial loop's (`parallelThreadsOverride`).
 A-03: four checks (230 in all): the decay by material (every material's decay grows with the years, the rain takes it sooner, masonry is C-08's `decayOf` to 1e-9 inside its clamp, timber under 0.3 at 30 years and gone at 1,000, earth kept by a desert, dry stone under 0.15 at 1,000 and over 0.5 at 50,000, iron over 0.5 at 1,000, concrete spalling at 100 and over 0.65 at 3,000 while mass concrete is under 0.4, glass gone at 30, composites whole at 1,000 and over 0.85 at 100,000, the far future's 0 at a million years, wet or dry); what each age builds (six cells of each class of every age on the medieval test world at 300 years: no kind of a later age, three or more kinds of its own, the tallest piece within the age's heights: 2-25 m prehistoric, 25-120 medieval, 40-130 industrial, 100-800 modern (A-04: a lofty, ambitious people's towers to 650 m and their masts), 300-2,500 futuristic, 150-4,000 far future); its pieces resting and its rooms open (every piece over the ground has one of its building under it that reaches it, every room's doorway leaves a metre along its wall's line clear of the building's colliders and the explorer's radius, and a spot of every room is clear); and the decay's examples (a wattle village after 1,000 years: every hut in a ring of eight post holes or more, no timber standing over a step; a modern town after 3,000: every tower's standing concrete under a fifth of its height; a far-future spike after 100,000 years: its pieces those of its first year, none broken). The C-01 checks of the houses' rooms and doorways, C-03's of the shards and C-08's of the doorways read every building's room (`buildingRoom`), not C-01's houses alone; the dead desert's and the town's scans of the globe run without the rivers' tiles (a tile a sample with the drainage on took minutes).
@@ -167,111 +911,684 @@ anachronism, no unknown place or figure); the genres of every age told, one even
 and the history's names recur; the register: the collapse's witnesses only in its years, the ordinary genres over 90% of the texts);
 the decoding by roots (a third of the words with one shard, all at the people's full count, never fewer with more); the voice speaks
 every text's opening (5-75 s); C-13's two peoples name each other (the contact's lines); the radar's sweep waits in real time for the
-texts built on their thread. The grammar check covers the 28 files (each under 16 KB). H-04's second pass (266 checks): the grammar's 94 files each under 16 KB and every `.vg` in the tree compiled in, the engine's cases for their own words (`{~coin}`), a people's own few (`people=K`) and a sentence said once (the frame memory), each people's names in its own tongue (a held-out name told its people over 24 peoples, every name readable), the everyday and the families' kinds at places standing with their persons alive.
+texts built on their thread. The grammar check covers the 28 files (each under 16 KB). H-04's second pass (266 checks): the grammar's 94 files each under 16 KB and every `.vg` in the tree compiled in, the engine's cases for their own words (`{~coin}`), a people's own few (`people=K`) and a sentence said once (the frame memory), each people's names in its own tongue (a held-out name told its people over 24 peoples, every name readable), the everyday and the families' kinds at places standing with their persons alive. D-05: six checks (403 in all): the drifters' peoples
+(one frozen felisian or desert drifter in four within 3,000 ly, each its former star found, the loss of the sun its cause in its order,
+two on one drifter ending together, all four ways), a drifter's people's history the same from the decoder and from the ground, the works
+of the end on Vreikheid (the last recording in the last shelters alone, the domes', glasshouses' and graves' counts, the other shelters'
+records of their own years), the beacon (none on Balyaphebist; Vreikheid's last broadcast under its voice within C-07's levels, the cabin's
+radio carrying its machine, the radar camera speaking it and, locked, hearing it), the test drifters' records (every check at zero, every
+name the history's, the eight genres of the lost sun told) and no other people's records moved (the age and scene worlds' peoples' histories,
+catalogues, homes, texts and charts' marks pinned as D-04 left them).
 
-`regress` holds 24 hashes: five systems, ten maps, three site profiles (generation) and four frames at 1x (`scene_felisian_shore`, `scene_cratered_noon`, `scene_molten_night`, `space_S00`), hashed from the framebuffer indices after the mush with every map warmed, and since F-11 two more: the forest at 4x (`scene_felisian_forest_4x`, from its indices: B-423's frame) and the cabin at 1x through the game (`cabin_1x`: the start's parking with the light on and the hull polarised, every map of the system made, the game's RGB picture with its HUD drawn at one instant once it holds still), each drawn again by one thread in the same run: the regress fails when one thread draws one differently, and `bless` refuses then. They are written to `shots/tests/regress_forest_4x.png` and `regress_cabin_1x.png` for a look when their hash moves. Re-blessed 2026-09-27 (O1: the curvature applied to objects and the opened haze changed the three surface frames; the generation hashes did not move with generation version 5), and again the same day for the 32-bank pixel format (O0-02: every frame hash changes when the intensity units change; the pictures do not), and for generation version 6 (O6-02: every site profile, the thin-atmosphere maps and the three surface frames changed; the icy, rocky and cratered maps did not), and twice on 2026-09-27 for B-308/309/311 (the sun drawn by angle with a brightness floor, the veiling glare, smooth terrain shading, the two-material contours, bilinear texels, the tone tile and the tile variants changed all four frames; the band-parallel drawing of B-310 then reproduced them bit for bit, which is its test; the generation hashes did not move), and on 2026-09-28 for O9 (generation version 7 moved every system hash, the maps and the site profiles stayed; the sky depth, the seams and the vegetation changed the four frames; serial and parallel runs agree), and on 2026-10-01 for G-01 (generation 11: the five systems' names and two of the systems moved, the maps and the site profiles stayed), G-03 (the band in the three frames with a sky) and G-04 (`cratered_noon` at noon and `molten_night` at night once the finders got their light; `felisian_shore` and `space_S00` unchanged; the notes name the scene's body). A frame hash changes whenever a pixel changes, which is the point: run `./vesperis_test regress`, look at the frames in `shots/`, and `./vesperis_test regress bless` only when the change is intended; note the reason in `10-decisions.md` when it is a look change. `bench check` prints the timings and fails when a budget is exceeded. Since F-11 a budget is about 1.5 times its row's median on the development Mac after F-10 and at least the median + 0.5 ms, so a change that gives a gain back fails: space 2x 3.1 ms and 4x 9.5, surface 2x 2.8 and 4x 4.5, forest 2x 8.2, 4x 13 and 12 at the game's 3x3, city 2x 5.7 and 4x 8.3, capital 2x 5.4 and 4x 8.3, the herd's draw 0.6, buggy 2x 6.1 and 4x 6.1, drone 2x 3.3, the belt 1.1, Vimana 2.0, the telescope 2x 13 and 4x 28, probe 2x 8.9 and 4x 13, the descent's first frame 26 and beside the capital 62, the sector map 8.2, the landing map 3.5, its zoom 3.9 and the zoom's build frame 22, the radar camera 3.8, a photo's PNG 11, the decoder 6.4, sunward 8.5 and sunaway 6.2, the sprint 5.7 and its worst frame at 1x 10 (a stall detector: one frame), an arrival's frames 6.6, the guide's save 1.5 and load 23 (37 rows; a recorded frame and an arrival's first frame have none: the writer's pace, the maps' threads). They are this Mac's with the workers: `bench check <factor>` multiplies every limit for another machine or one thread, and a failure on a busy Mac is worth a second run (one run on battery with the Mac swapping read a stretch of rows 20-45% over their medians). The space and surface rows draw five frames at one instant after a scale's change before their timed frames (the new scale's buffers and tables). `bench` also prints the landing (first surface frames after the descent), the prefetch worker's delivered cells and the map cache counters. S-01 (2026-10-01) re-blessed seven: the red dwarfs claimed Wyariothmai (16 bodies to 10; its first world felisian, `map_9`) and Feeyeithis (25 to 11), `felisian_shore` moved to Feeyeithis II and `cratered_noon` to Wyariothmai IV, `molten_night` kept its moon under a companion of another class, `space_S00` comes from Salyiesesh (the scan's first yellow star now). S-03 (2026-10-02) re-blessed `space_S00` alone: 264 pixels of the dim glow of the pulsars round Salyiesesh moved by one unit where a pulsar is a neutron star now (the nearest 2.7 ly away); the five systems, the ten maps, the site profiles and the three surface frames held (`pngdiff` of the `space` mode's `sun_S00.png` against the previous build's). S-05 (2026-10-02) re-blessed `scene_molten_night` alone: the scan's first molten world is Shiesaimiori I now (sector 151 0 53), the first world of a blue giant the Wolf-Rayet claim turned molten, where it was Henaliolyen III-a (the previous build's render of the scene stands there still, `maps` moved its molten map the same way); the other 21 hashes held. S-06 (2026-10-02) re-blessed `space_S00` alone: four pixels of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer and warmer; `pngdiff` against the S-05 build's `sun_S00.png`); the other 21 hashes held. F-11 (2026-10-15) added the forest at 4x and the cabin at 1x and blessed them alone (the 22 lines byte for byte).
+`regress` holds 24 hashes: five systems, ten maps, three site profiles (generation) and four frames at 1x (`scene_felisian_shore`,
+`scene_cratered_noon`, `scene_molten_night`, `space_S00`), hashed from the framebuffer indices after the mush with every map
+warmed, and since F-11 two more: the forest at 4x (`scene_felisian_forest_4x`, from its indices: B-423's frame) and the cabin at
+1x through the game (`cabin_1x`: the start's parking with the light on and the hull polarised, every map of the system made, the
+game's RGB picture with its HUD drawn at one instant once it holds still), each drawn again by one thread in the same run: the
+regress fails when one thread draws one differently, and `bless` refuses then. They are written to
+`shots/tests/regress_forest_4x.png` and `regress_cabin_1x.png` for a look when their hash moves. Re-blessed 2026-09-27 (O1: the
+curvature applied to objects and the opened haze changed the three surface frames; the generation hashes did not move with
+generation version 5), and again the same day for the 32-bank pixel format (O0-02: every frame hash changes when the intensity
+units change; the pictures do not), and for generation version 6 (O6-02: every site profile, the thin-atmosphere maps and the
+three surface frames changed; the icy, rocky and cratered maps did not), and twice on 2026-09-27 for B-308/309/311 (the sun drawn
+by angle with a brightness floor, the veiling glare, smooth terrain shading, the two-material contours, bilinear texels, the tone
+tile and the tile variants changed all four frames; the band-parallel drawing of B-310 then reproduced them bit for bit, which is
+its test; the generation hashes did not move), and on 2026-09-28 for O9 (generation version 7 moved every system hash, the maps
+and the site profiles stayed; the sky depth, the seams and the vegetation changed the four frames; serial and parallel runs
+agree), and on 2026-10-01 for G-01 (generation 11: the five systems' names and two of the systems moved, the maps and the site
+profiles stayed), G-03 (the band in the three frames with a sky) and G-04 (`cratered_noon` at noon and `molten_night` at night
+once the finders got their light; `felisian_shore` and `space_S00` unchanged; the notes name the scene's body). A frame hash
+changes whenever a pixel changes, which is the point: run `./vesperis_test regress`, look at the frames in `shots/`, and
+`./vesperis_test regress bless` only when the change is intended; note the reason in `docs/decisions/log/` when it is a look change.
+`bench check` prints the timings and fails when a budget is exceeded. Since F-11 a budget is about 1.5 times its row's median on
+the development Mac after F-10 and at least the median + 0.5 ms, so a change that gives a gain back fails: space 2x 3.1 ms and 4x
+9.5, surface 2x 2.8 and 4x 4.5, forest 2x 8.2, 4x 13 and 12 at the game's 3x3, city 2x 5.7 and 4x 8.3, capital 2x 5.4 and 4x 8.3,
+the herd's draw 0.6, buggy 2x 6.1 and 4x 6.1, drone 2x 3.3, the belt 1.1, Vimana 2.0, the lamp 4x 7.0 (D-04: the `rogue_lamp`
+scene's thirty frames at 4x lit, against the same unlit: 4.7 ms either way), the telescope 2x 13 and 4x 28, probe 2x 8.9 and 4x
+13, the descent's first frame 26 and beside the capital 62, the sector map 8.2, the landing map 3.5, its zoom 3.9 and the zoom's
+build frame 22, the radar camera 3.8, a photo's PNG 11, the decoder 6.4, sunward 8.5 and sunaway 6.2, the sprint 5.7 and its worst
+frame at 1x 10 (a stall detector: one frame), an arrival's frames 6.6, the guide's save 1.5 and load 23 (38 rows since D-04's
+lamp; a recorded frame and an arrival's first frame have none: the writer's pace, the maps' threads). They are this Mac's with the
+workers: `bench check <factor>` multiplies every limit for another machine or one thread, and a failure on a busy Mac is worth a
+second run (one run on battery with the Mac swapping read a stretch of rows 20-45% over their medians). The space and surface rows
+draw five frames at one instant after a scale's change before their timed frames (the new scale's buffers and tables). `bench`
+also prints the landing (first surface frames after the descent), the prefetch worker's delivered cells and the map cache
+counters. S-01 (2026-10-01) re-blessed seven: the red dwarfs claimed Wyariothmai (16 bodies to 10; its first world felisian,
+`map_9`) and Feeyeithis (25 to 11), `felisian_shore` moved to Feeyeithis II and `cratered_noon` to Wyariothmai IV, `molten_night`
+kept its moon under a companion of another class, `space_S00` comes from Salyiesesh (the scan's first yellow star now). S-03
+(2026-10-02) re-blessed `space_S00` alone: 264 pixels of the dim glow of the pulsars round Salyiesesh moved by one unit where a
+pulsar is a neutron star now (the nearest 2.7 ly away); the five systems, the ten maps, the site profiles and the three surface
+frames held (`pngdiff` of the `space` mode's `sun_S00.png` against the previous build's). S-05 (2026-10-02) re-blessed
+`scene_molten_night` alone: the scan's first molten world is Shiesaimiori I now (sector 151 0 53), the first world of a blue giant
+the Wolf-Rayet claim turned molten, where it was Henaliolyen III-a (the previous build's render of the scene stands there still,
+`maps` moved its molten map the same way); the other 21 hashes held. S-06 (2026-10-02) re-blessed `space_S00` alone: four pixels
+of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer and warmer; `pngdiff` against the S-05 build's
+`sun_S00.png`); the other 21 hashes held. F-11 (2026-10-15) added the forest at 4x and the cabin at 1x and blessed them alone (the
+22 lines byte for byte).
 
 ## O10 modes (2026-09-28)
 
-| Mode | What it does | Output |
-| --- | --- | --- |
-| `capsule [scene]` | B-318: the surface from the descending capsule at eight altitudes (1800 m at -60 degrees to 40 m at -1.3) with the share of sky-bank pixels below the horizon (the curvature's dip included, the beacon beam excepted); fails over 0.5% | `shots/tests/capsule_<scene>.png`, a 4 x 2 sheet |
-| `climate [n]` | B-321: the first n felisian worlds: temperature, bias, sea level, cap and snow line, the land share, the inland water share, the traits, the area-weighted biome shares; then the cause of the land ice (cold, over the snow line, the polar cap) | stdout |
-| `water [n]` | B-320: the inland water of the first n felisian worlds at 16 m detail over 45 degrees of latitude: rivers, lakes, pools and rift lakes per thousand samples (and how many are wet), the first of each | stdout |
-| `traits [name]` | R-304/R-305: for every landform trait (or the named one, `canyon_lands`...) the first body carrying it, the spot where that trait alone is at its most distinctive (`SurfaceSample::landform`, scanned at 64 m, or 16/4 m for the fine ones), a hillshade of 8/24/160 km by the landform's size, a standing frame from dry ground west of the spot outside the landform, an aerial frame 350 m up; then the traits' distribution over 300 landable bodies | `shots/tests/trait_<name>.png`, stdout |
-| `stability <scene> <m/frame> [scale]` | B-319 addition: `skyline flips`, the pixels swapping between the sky and anything else per frame (in 1x pixel units) | stdout |
-| scenes `felisian_river`, `felisian_lake` | B-320: on the bank of the first river / lake found by `SurfaceSample::waterKind`, on dry ground within 300 m, facing the water | `shots/tests/scene_*.png` |
-| scenes `front_far`, `front_arriving`, `front_through`, `front_behind` | W-03: the fronts' site of the first felisian world (`PIN_FRONT_*`: open ground with hills within 16 km under a clear pattern sky with a strong front coming by day, found by `frontSceneSite` when the pin is 0/0 and printed to pin) facing where the front comes from: the deck's solid wall 18 km off (a dark band over the horizon), four minutes before the line (the deck overhead, the light down), the rain's peak 25 km behind the line, an hour after the rain's end (the sky clearing, the cold); each prints `front: line on, ahead ... km, cloud ... (pattern ...), rain, snow, cold, wind, temp, fog, sky` | `shots/tests/scene_front_*.png` |
-| scenes `meteor_shower`, `zodiacal_light`, `earthshine`, `moonlit_night` | W-04: each searched near home in a fixed order (sectors 150..200 x 20..80) and printed with its place and moment: the first landable world with an atmosphere and a stream of 0.7 at its first peak after t 1000, on the land site where the radiant stands highest with the sun 18 degrees down, facing the radiant 22 degrees under it at the moment of the peak's four minutes with the most streaks in view (`scene_meteor_shower_20s.png` beside it: twenty seconds in one picture, each pixel its brightest, the streaks fanning from the radiant); the first landable world with an atmosphere, no second sun and zodiacal dust of 0.7, the sun 20 degrees under the western horizon, facing where it set 12 degrees up; the first landable planet with a moon a degree across or more as a crescent (25-50 degrees from the sun) high with the sun 12-20 degrees down, facing it; the first landable moon of a gas giant with its parent near full and 6-14 degrees up at midnight over 350 m of relief, facing it. The scene prints `night:` (the moonlight, the dust, the showers and the activity) |
-| `spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> <t> <swim\|ascent\|stand\|dump> [pitchDeg] [yawDeg] [alt\|depth\|half] [eye]` | B-322: a frame at an exact place from a save's `star`/`site`/`t` lines: `swim` puts the player afloat in the nearest water of the given depth (the twelfth argument, default 3 m) with the eye forced to the given height over the water (the thirteenth, e.g. 0.1 or -0.02), `ascent` the capsule camera at `alt` metres and the pitch, `stand` on foot, `dump` the 64 m ring's heights and materials round the site (`half` cells; negative: the shore distance and the height over the water per vertex). Note that a generation bump changes the systems, so a saved spot may point at another world afterwards (the type table of GEN 9 did); B-418: on a people's world the world's works are built first, as the approach builds them, and the works the view draws within 4 km of the spot are printed (`SPOT_WORKS=1`: every one within 24 km) | `shots/tests/spot_*.png`, stdout |
-| `scene <name> [scale] [warm]` | R-307: `warm` runs the world that many seconds first (0.05 s steps) and stages the type's event in view: a tectonic fountain on the nearest lava cell 160-420 m ahead (and a quake), a meteorite strike 220 m ahead, a dust devil 130 m ahead. New scenes `europan_crack` (on the ice 70 m from a narrow linea, facing it), `tectonic_fissure` (60-150 m from a lava fissure), `desert_erg`, `hydrocarbon_shore` and `acidic_shore` (60-150 m from the liquid, facing it), `bombarded_plain` (on a rayed plain); the finder codes -30..-35 | `shots/tests/scene_<name>.png` |
-| `traits geyser_basins` | R-307 addition: prints the geyser vents near the spot (`geyserVents`), how many stand on sinter and the nearest | stdout |
-| `shards <sx> <sz> <body index> [n] [full \| <held> [full]]` | C-02: a world's lore (its people's names, the span of its years), then (C-06) its people's tongue (the syllable parts drawn), its language (how many words the fifty use, the words known with 1/2/3/5/7/10 shards held, the sixteen most used with their words in the tongue) and its first n shards (default fifty) as the decoder reads them with `held` shards of the world in hand (default one: about a third of the words, the rest in the people's tongue, the names kept; ten: the whole text), in the order of their years with the tone and the kind of each, and how many words were read; `full` prints the whole text under each; a world without the trait prints what it would have said. `shards 151 25 1 50 full` is Aieliaalas II's, `shards 153 70 2 50 full` Leileashphail III's (`12-civilisations.md`) | stdout |
-| `music <sx> <sz> <body index> [index] [wav] [age=N] [tone=N]` | C-04 (H-05: every record of the people, its six ensembles; `age=` and `tone=` play the records as if of that age or tone; a far future's field printed as each tone's spans): a world's musical tradition (the scale in cents with its tuning and period, the tonic, the resting degree, the cycle, the beat's subdivision, the tempo and its drift, each timbre's family and envelope, the drum's skins, the drone, the second voice, the ornament rule), the pieces among its fifty (index, year, tone, form, length, tempo, cycles, notes, a drum or not) in the order of their years, then one piece (the index given, else the first) as notation: a line per voice per cycle at the subdivision's resolution (a degree where a note starts: `0`-`9` from the tonic up, `A`-`Z` past nine, `a`-`z` below; `.` a note held, `-` silence; the drum's skins `o` and `x`); `wav` renders it through `AudioSynth` to `shots/tests/music_<sx>_<sz>_<body>_S<index>.wav` with the peak, the rms and the counts of non-finite and clipped samples | stdout, a WAV |
-| `signals [sx sy sz] [reach] [xG]` | C-07: the far signals heard from a sector (home by default; a reach in ly, 200 by default): each with its kind, its distance (the signal's age), its direction (galactic longitude and latitude from the observer), its strength, its star's class and sector and, for a people's, the world, its people and the recording on the air at the game's first hour (`S49, a piece of music` or a voice with the first words of its text); then the system's own signals there (`localSignals`) and whether the sector is a transmitter. From home: three peoples' transmissions (A-01: a modern people at 90 ly, a futuristic one at 184, an industrial one at 197; C-07 had 79, 85 and 179) and five pulsars, the cells scanned in under a millisecond; `signals wav` (or with a sector and reach before it) also renders the receiver for the ear: the bed over thirty seconds (something in the static every twelve to forty seconds), three seeds of each natural kind (`radar_pulsar_1..3.wav` at 0.7, 1.7 and 3.2 pulses a second, `radar_comet_*`, `radar_magnetosphere_*`) and every programme of the first people's world heard from the sector (`radar_people_voice.wav`, `_whispers`, `_chant`, `_numbers`, `_loop`, `_beacon`, `_data`, `_bell`, `_siren`, `_murmur`, `_music`), twelve seconds each, with each programme's words or length printed and the world's broadcast mix over its fifty slots. C-15: each signal's line has the least gain step that hears it and its power (`x1  power 0.010`); `xG` (`signals x32`, or after a sector) lists what that gain hears, beyond 200 ly as far as each power carries it (from home at x32 twenty-two: twelve peoples to 5,524 ly and ten pulsars, in about 10 ms); without a reach, `xG` or `wav` the six steps follow, one line a step from the sector (the peoples heard, what the step adds with their distances, the nearest and the farthest, the pulsars, the scan's time) and, from home, one line for each test world (the three C-series worlds and the six of `AGE_WORLDS`: x1 heard, then what each step adds); `wav` also renders the receiver overdriven (C-15: a voice, a beacon and the piece at 0.5 and 1, a pulsar at 1: `radar_overdriven_*.wav`). C-16: each line also has where the radar camera points for it (`AZ 275 EL +00`) and a people's age (`the modern age;`); the programmes rendered are fifteen (`_morse`, `_phonograph`, `_synthetic`, `_maths` after C-07's eleven), and `wav` renders what the gain lets in with rms and peaks: the bed at x1, x11 and x32 toward the band's plane (`radar_bed_x1.wav` ...) and at x32 toward a pole and the core (`_x32_pole`, `_x32_core`), with its events counted; the top step's static over two minutes (`radar_static_x32.wav`, the kinds of event heard listed); a near voice at x1, x11 and x32 (`radar_near_voice_x*.wav`) and a far one worn at x11, x25 and x32 (`radar_far_voice_x*.wav`); a pulsar under a voice at x18 and two broadcasts at x11 and x32 with the whistle and the ring (`radar_mixed_*.wav`); and each age's programmes from its test world with that world's mix over its fifty slots (`radar_industrial_morse.wav`, `_phonograph_voice`, `_phonograph_piece`, `radar_futuristic_synthetic.wav`, `_data`, `_beacon`, `radar_farfuture_maths_1..3.wav` with the sequence each sends) | stdout, fifty-six WAVs with `wav` |
-| `voice <sx> <sz> <body index> [index] [wav]` | C-05: a world's voice (its pitch and range, its rate in syllables a second, its tract, its breath, roughness, nasal murmur, tremor and second tone, its stress rule, its sentence melody, its marks: tones, clicks, rolled r's) and the sounds its tongue's pools spell, then one text shard (the index given, else the first text) as it is spoken: the text, and a line per word with its span in seconds, the word as the decoder gives it with the language whole, the people's word (a name as it is) and its sounds; `wav` renders it through `AudioSynth` to `shots/tests/voice_<sx>_<sz>_<body>_S<index>.wav` with the peak, the rms and the counts of non-finite and clipped samples | stdout, a WAV |
-| `ruins <sx> <sz> <body index> [latDeg lonDeg]` | C-01: a world's culture, the level its seas stood at, and the settlements of the 31 x 31 ruin cells round a point (default 0.2 rad N, 0.7 rad E) with the site test's verdict and reasons (the ground, the water, the corners wet, the old sea, the spread of the five samples), the planet function read without the drainage as the view reads it; C-03: under each printed settlement its shards (the index, the building and its kind, the place, the spot in metres from the centre) and in the summary the shards by class (Leileashphail III's 31 x 31 cells at 11.46 / 40.11: 92 in 152 hamlets, 119 in 78 villages, 133 in 43 towns, 21 at 45 monuments); `ruins 151 25 1 12 4.22` lists Aieliaalas II's | stdout; C-08: the culture's age and wet, each printed settlement's terrain read (the slope and its fall, the shore, the relief, the ridge, the wind) and its features, and a count of the sited settlements' features (harbours and those on the dry shore, terraced, cisterns, wind walls, cairns) |
-| `ruins ages [scale] [town\|village\|hamlet\|monument] [desert\|felisian] [wide\|near] [years ...]` | A-03: a settlement of each age (the rows) at 100, 1,000, 10,000 and 100,000 years since the end unless years are given (the columns), laid out at one cell of the scene world in each age's culture (`cultureAs`, `settlementOf`) and placed at the site (`testPlaceSettlement`), seen three quarters along its main street from outside its edge (the far future's structure from farther) or, with `near`, from 6 m off the dwelling nearest a point half way out; prints each cell's buildings by kind, its pieces, its tallest, the materials' decay at its years and the polygons drawn | `shots/tests/ruins_ages_<class>[_near]_<scale>x.png` |
-| `ruins kinds [scale] [years ...]` | A-03: every kind of building alone on the scene world's ground (the temple's three forms, the tower's three, the arcology's three, the hut of wattle and of dry stone), a page an age, each kind a row and each age since the end a column (1, 300, 3,000 and 30,000 years unless given), seen from a quarter turn off its front with all of it in the half frame kept; A-04: a last page of the genome's works and the kinds' new styles (the ten focal accents, the five monuments, the windmill, the market halls, the palace, the round temple, the amphitheatre, the aqueduct, the joined towers, the tunnel, the town halls' dome and spire, the mall, a modern temple), each in the scene world's people's genome | `shots/tests/ruins_kinds_<age>_<scale>x.png`, `ruins_kinds_genome_<scale>x.png` |
-| `ruins check` | A-03: the unit's four checks of the ages' buildings alone (the decay by material, what each age builds, its pieces resting and its rooms open, the decay's examples) | stdout |
-| `genome sheet [scale] [years] [town\|village\|hamlet] [desert\|felisian]` | A-04: the architecture sheet, a page an age: the twelve peoples nearest home (`peoplesNearHome`), each as if it had reached the page's age on the scene world's ground (`cultureWithGenome`: the world's own culture, the people's genome and ways), a settlement of the class at one cell under one light at 30 years since the end unless given, from outside its edge, its genome printed under it (every variable, the age's technique); prints each tile's buildings by kind, its pieces and its tallest; B-415: `felisian` a grassland site's (the first felisian site was the sea's) | `shots/tests/genome_<age>_<scale>x.png` |
-| `genome ages [scale] [peoples] [years]` | A-04: the nearest peoples (six unless given) as the rows, each in every age (the columns): one people's buildings of two ages side by side, to judge whether they read as one people's | `shots/tests/genome_ages_<scale>x.png` |
-| `genome distinct [n]` | A-04: the distinctness of the n peoples nearest home (100): the pairs by their distance on the strongest variables, the nearest eight with what they share, the share of 200,000 random pairs under each distance, DISTINCT or NOT, and the command to draw the nearest pair (exit 1 when two are alike) | stdout |
-| `genome pair <sx> <sy> <sz> <body> <people> <sx> <sy> <sz> <body> <people>` | A-04: two peoples in every age, side by side (`scale=N`) | `shots/tests/genome_pair_<scale>x.png` |
-| `genome print <sx> <sz> <body> [people]` | A-04: a people's genome (every variable's group, name and value) and its techniques by age | stdout |
-| `genome reach` | A-04: the unit's reach check with every variable's ages printed (exit 1 when an age is not reached) | stdout |
-| `genome street [scale] [peoples] [years] [desert\|felisian] [drone]` | B-415: the nearest peoples (six unless given) as the rows, each in every age but the far future's (the columns), its town (`settlementOf`, a town at the scene world's cell, 30 years after the end unless given) seen from inside it: of 24 spots round rings half, two thirds and a third of the way out, the one 4 m clear of every building with the first 18 m of its sight line clear and the most buildings ahead, at 1.8 m looking at the middle (`drone`: 35 m up at its edge, looking down at it); does every age read as itself? `felisian` a grassland site's | `shots/tests/genome_street[_drone]_<scale>x.png` |
-| `genome dress [scale] [age\|all] [desert\|felisian] [high] [years]` | R-412: each of an age's own variables (its R-412 ones) a row, its values across, on one plain genome (every R-412 variable at its first value, an upright, rectangular, pitched, detached people): a little street of the age's dwellings (huts and a longhouse, houses, villas and a row, suburban houses and a block, pods) fronting it by the layout's rules (their storeys, frontage, setback, a piece of furniture at the kerb), from the street (or over it: `high`), 5 years after the end unless given (`DRESS_DEBUG` prints the first house's pieces) | `shots/tests/genome_dress_<age>[_high][_old]_<scale>x.png` |
-| `genome floats` | R-412: the A-03 check's pieces on nothing and doorways shut (the unit's message is cut short), tallied by what they are (`FLOATS_DEBUG`: the first one's neighbours) | |
-| `genome why <VARIABLE> <age>` | R-412: the reach check's three peoples (their roof, profile, massing, modules, plan), each value's pieces in the town and the village: why a variable does not reach an age | |
-| `walls forms [peoples] [years...]` | B-420: every piece of the places and works of the age and scene worlds and BUBAS (and the peoples nearest home in every age) against its own colliders on flat ground: the discs at the feet over nothing drawn and above it, tallied by kind with an example and its `FORM` line | |
-| `walls view [worlds] [walks]`, `walls view near <peoples> [walks]` | B-420, B-421: the places and works of the test worlds (or of the worlds of the peoples nearest home) through the view: walks from round each (what stopped them: a boulder, a drawn piece, a heap's side, a log, a trunk; nothing drawn), every record and instrument (in water, inside a piece, under a heap, hidden in a drawn piece, out of reach, an instrument through a wall or over a record), each failure with its `[sx sy sz body]` and a `walls walk` line | |
-| `walls one <a FORM line's numbers>` | B-420: one piece's discs against its own mesh (a measure's example replayed; `WALLS_ALL` every disc) | |
-| `walls at`, `walls place`, `walls reach`, `walls walk <sx> <sy> <sz> <body> <latDeg> <lonDeg> ...` | B-420, B-421: the pieces near a point with their discs and slices; the works round a point and their records; the walk to a point from round it (`WALLS_DUMP`: the grid as a picture, `shots/tests/walls_reach_<n>.png`); one walk from a point frame by frame | |
-| `walls check` | B-420, B-421: the unit's four checks alone (the colliders over what is drawn, the walks, a heap stood on, the records clear) | |
-| `plan <sx> <sz> <body> [second]` | T-01: the world's plan for each age (the people as if it had reached it, over one reading of the world, the other people at its own): the territory tinted and outlined, the capital white, the cities red, the towns yellow, the seats orange, great places magenta, works cyan, the ways by kind (paths brown, roads pale, rail red, canals blue, highways orange, maglev magenta, crossings dotted, the trunk two pixels); prints the reading's time, each age's places, ways (counts and kilometres by kind), held share, people, connectedness and time, the capital's site; then the plan the game builds on one thread | `shots/tests/plan_<world>_<age>.png`, `plan_<world>_ages.png` |
-| `plan ages` | T-01: the six age worlds (`AGE_WORLDS`) at their own ages | `shots/tests/plan_<world>_<age>.png` |
-| `plan view <sx> <sz> <body> [second]` | T-01: the people's capital through the telescope from 3.5 radii above it under the turn's highest sun, at x64, x256 and x1024, with the plate (its cores and ways) and the map alone | `shots/tests/plan_view_<world>_x<power>[_map].png` |
-| `history <sx> <sz> <body> [second]` | H-02: the people's history as Dwarf Fortress's legends print it: the head (its span, height and end, what was told and by kind, the build time), the eras, the rulers by house, the places, the wars, the sicknesses, the inventions and institutions, the figures, the families, one family's years, the chronicle and the collapse to the last person; the screen leaves out the chronicle and the towns | `shots/tests/history_<world>[_2].txt` |
-| `history ages` | H-02: the six age worlds' peoples (`AGE_WORLDS`) | `shots/tests/history_<world>.txt` |
-| `history check` | H-02: the unit's history checks alone | |
-| `towns <sx> <sz> <body> [second]` | T-02: a people's capital, its first city, its oldest town, a place it left early, a town and a village of its countryside: each printed (its layers by age, its buildings by district and age, its streets by rank and how joined, its fields, its works, its wall, the time to lay it out) and drawn from above (the streets by rank, the squares, the layers' rings, the buildings by district, the wall red, the fields) | `shots/tests/towns_<world>_<what>.png` |
-| `towns ages` | T-02: the six age worlds' | `shots/tests/towns_<world>_<what>.png` |
-| `towns view [<sx> <sz> <body> [second]] [scale=N]` | T-02: the ages' scene worlds' capitals (or a world's) through the renderer: from the air over its edge, low over its old core, along a street of its middle (with `TOWNS_VERBOSE` the vertices across the nearest street); then, on the scene worlds, a harbour, a reservoir or cistern and the fields of each age from the air | `shots/tests/towns_view_<world>_<air\|core\|street>.png`, `towns_feature_<age>_<harbour\|water\|fields>.png` |
-| `towns check` | T-02: the unit's town checks alone (`TOWNS_VERBOSE` prints every point a standing piece blocks) | |
-| `works <sx> <sz> <body>` | T-03: a world's works: each people's count by kind, what its history finished (dams, mines, aqueducts, observatories, lighthouses, launch sites, its holy place) and its battles, every work's line (its age, left early, its place's distance, its rule's numbers) and its pieces' count; `WORKS_DEBUG` prints the dam search. B-418: and each people's land's works round its first ten places and at forty points of its land (by kind, the first twelve's lines), and what the scanner hears from forty points of its land | |
-| `works ages` | T-03: the six age worlds' and the six scene worlds' | |
-| `works gallery [scale=N]` | T-03: on each age's scene world a frame of each kind of work its people made, where its rule put it, through the renderer, and a sheet of them (B-418: a kind the world's list lacks taken from the land's round its first places) | `shots/tests/works_<age>_<kind>.png`, `works_<age>_sheet.png` |
-| `works map` | T-03: the same works on insets of the ground with the place each serves (the terrain, the cores, the ways, its reach, a battlefield's line between its sides, the rule in a line) | `shots/tests/works_map_<age>.png` |
-| `works view <sx> <sz> <body> <kind's word> [index]` | T-03: one work through the renderer, its pieces printed (`WORK_D`, `WORK_H` and `WORK_A` place the camera); B-418: the world's then the land's, a kind's whole name matched whole (`"a fort"`, not the fortified line) | `shots/tests/works_view_<word>_<index>.png` |
-| `works check` | T-03: the unit's works checks alone | |
-| `records <sx> <sz> <body> [second]` | T-04: a people's records: the count, by their years' age and by medium, the last recording and its place; where they lie over the plan's places, the works and the countryside round the capital (archives, painted walls, by building), the copies, and the sites of the capital, the first cities, a place left early, the last place, the works and a few villages | |
-| `records ages` | T-04: the six age worlds' | |
-| `records scenes [age] [scale=N]` | T-04: through the game, landed by each age's scene world's capital: an archive's row and each common medium's object, a frame before it, `E`, the frame after | `shots/tests/records_<age>_<n>_<medium>.png`, `records_<age>_archive.png`, `records_<age>_sheet.png` |
-| `records check` | T-04: the unit's records checks alone | |
-| `grammar [dir D] [embedded] [near N] [print N\|all]` | H-03: the records' grammar read from `src/galaxy/grammar/` (an edited rule reprinted without a rebuild; `embedded` the compiled-in copy) and its errors; every people's texts of the test worlds, the age worlds and the forty nearest home (`near N`) through every check (the failures with their texts), each world's line, the measures (the repeated frames at 50 and 100 texts, the most repeated, the 2- and 3-grams), the rule use (the most and the never drawn by file and line, the kinds told) and the cost; H-04: the texts by age, the genres' table (records, words, the shortest and the longest, the repeated frames within each), one event from several sides, every name checked against the history at the record's year | `shots/tests/grammar_texts.txt` (every text and caption, the formulas as `~f` lines) |
-| `grammar check` | H-03: the unit's grammar checks alone | |
-| `grammar ages [near N]` | H-04: with the run, fifty records of one people of each age printed for reading, each with its index, year, age, genre, medium, words, writer and reader, the counts by genre at the end | `shots/tests/records_<age>.txt` |
-| `grammar compare <file>` | H-04: with the run, C-02's texts of the same peoples (H-03's `grammar print all`, saved before H-04) measured as the records are: the repeated frames at 50, 100 and over all, the sentences written once, the distinct 2- and 3-grams | |
-| `grammar ... late N` `grammar ... out F` | H-04's second pass: `late N` adds the N nearest peoples of the modern age and later (a hundred texts and more each: with 20, seventeen peoples reach the measure at a hundred texts, not six); `out F` writes the texts to F instead of `shots/tests/grammar_texts.txt` (writers side by side, each with `dir D` on a copy of the tree and a copy of the binary). The run prints besides H-04's measures the share of a people's longer sentences on a frame another people wrote, the frames the most peoples wrote, and per genre the share between peoples and within one; `VESPERIS_TOPFRAMES=n` prints each people's n most repeated frames | `shots/tests/grammar_texts.txt` or F |
-| `decoder [ages]` | H-05: the counts of each category per world (the six age worlds' texts, music and charts, and by the age of each record's year; the 129 peoples nearest home by the age each reached), then the decoder's pages of each age through the game, the people's tongue learnt: a text on up to two of the media its records of that age were made on (a recording beside one the ship reads, where the age made both), a piece likewise, a star chart; each line says whether the record sounds of itself, the synth's medium and who speaks (its own voice, read by the ship) | `shots/tests/decoder_<age>_<text\|music\|chart>_<medium>.png` |
-| `decoder pages` | H-06: each age world with every third record held and four in five read (the last recording too from the modern age on): the records page, the timeline with the cursor halfway, the history page at its top and its end, each page's state printed (`testHistoryInfo`: the records read, the events learnt, the persons named, the age told, the eras placed) with the first rows; `ENTER` on the last event checked to open a record that told it; the modern people's records page with its music alone and its pages after three texts read; every history page's rows to a file (a name `{in braces}`, a word not learnt yet `~theirs`); then the unit's history checks (R-416 among them: `SHIFT` with an arrow held on the timeline and the history, a tap one step, a second's hold 17, a long one to the last and no further; R-417 the same on the records page, every kind and the music alone, `decoder_pages_records_hint.png`) | `shots/tests/decoder_pages_<age>_<records\|timeline\|history\|history_end>.png`, `decoder_pages_modern_records_music.png`, `decoder_pages_modern_early_<timeline\|history>.png`, `shots/tests/decoder_history_<age>[_early].txt` |
-| `instruments [ages]` / `instruments <sx> <sz> <body> [second]` | C-11: each age world's people's instruments by age (the name, the ensemble voice it is and its family, the register, the courses it shows) and their sites over its places (the plan's and the countryside round the capital): how many beside the music records' copies, in how many places, all within 1.6 m of their record, which of the people's instruments they are | printed |
-| `instruments wav` | C-11: each age world's instruments of its own age, a phrase each through the case's voices (up a period and back and a held note; a far future's slow tones three at a time; the gramophone its disc through its horn): the peak, the rms, the first note's pitch heard against its degree's (the autocorrelation's shortest strong period) | `shots/tests/instrument_<age>_<slot>_<name>.wav` |
-| `instruments scenes [age]` / `instruments check` | C-11: landed at each age's scene world's capital (its cities after), the explorer before an instrument of the world's own age where nothing else to take lies nearer (`testWalkToInstrument`), `E` until it is taken, the case on the cabin's left wall (`facing` 10), a few keys played (the gramophone wound); the unit's C-11 checks alone (the instruments and the player) | `shots/tests/instruments_<age>_<found\|taken\|case>.png` |
-| `instruments sheet [age] [peoples] [scale]` | C-17: each age's instruments of `peoples` (10) near home, a people a row, as the case draws them, each named with its materials | `shots/tests/instruments_sheet_<age>.png` |
-| `instruments plans [peoples] [scale]` | C-17: every plan made by `peoples` (2) peoples each at its class's age (the constructor's catalogue) | `shots/tests/instruments_plans_<n>.png` |
-| `instruments distinct [peoples]` | C-17: how far apart `peoples` (100) peoples' instruments are: each age's and class's first make a people, pairs sharing the plan, the plan and the body, pictures alike (drawn 144 x 80, under 6 of 255 on the mean); the closest sixteen pairs side by side; the forms an instrument takes; the commonest names (`VESPERIS_MAKERS=1`: every name) | `shots/tests/instruments_closest.png` |
-| `instruments check` (C-17's part) | C-17: the unit's three maker checks with C-11's: every instrument of 48 peoples near home made, named in 17 letters, of what its world and age gave, in bounds (5 cm to 1.6 m, 0.6 m high), 2 to 400 parts, three courses or more where its plan lays one a degree, the same made twice; the peoples apart (the same plan and body under 15%, pictures alike under 1.5%, prehistoric pipes of bone under half, the cylinders' machine for a quarter to nine tenths); the decoder's names the ruins' (`VESPERIS_MAKERS=1` prints every finding) | stdout |
-| `drones [frames]` / `drones check` / `drones world <sx> <sz> <body>` | C-18: the drone bay in a game parked over the modern age world (two peoples): the rack from the cabin's middle (`facing` 11), E, the screen, Enter (the drones sent, the screen gone to the rack), the launch at 1.2 s (drone 1 backing through its port, drone 3 waiting), the drones past the front window at 4 s and as strobes at 6.5 s, the screen descending and searching, the rack empty, every drone docked: two minutes searching each (its first place to its last), its finds what it wanted (2 to 8), none held before, none twice, the guide grown by them; R-414: the screen closed after the docks, the rack lists none of them (`screen_seen`), the guide's unchanged; the charge (refused five minutes from the launch and two seconds short of five from the return, sent after them; the second trip none of the first's) watched on the decoder (open at the world's records as the drones dock: its list the guide's at once); a recall (the ship leaves the parking: what was found aboard, the rest not); a save in a trip loaded and docked; the case's worlds (a second world's instrument added: Enter opens the ship's world, Esc back, Esc out; an instrument of each of the ship's world's two peoples added: a folder each people, each opening its people's alone). `check`: the unit's (a world's items: every record of both peoples, the instruments, all at a home; 200 hauls: 2 to 8 a drone, nothing twice, three stops, each find its place's own or a copy of its people's, the rarer kinds leaned toward; all but five held: five; all held: none; both peoples found and a haul that brought of both; then the game). `world`: a world's items by kind and three hauls drawn | `shots/tests/drones_<rack\|screen_ready\|launch\|lights\|lights_far\|screen_descent\|screen_search\|rack_away\|screen_back\|screen_seen\|decoder_after\|case_worlds\|case_world\|case_world_second>.png` |
-| `decoder counts` / `decoder wav` / `decoder check` | H-05: the counts alone; a text and a piece of the industrial and the modern world through each medium (the people's own voice bare, the ship's reading, a wax cylinder, a disc, a reel, a drive, a crystal, something that hums) with the peak, the rms and the surface in the bare speech's pauses, and the voice's pitch spread against the ship's reading; the unit's media checks alone | `shots/tests/medium_<age>_<medium>_<text\|music>.wav` |
-| `music ages [wav\|frames]` | H-05: each age world's musical core (C-04's, with the swing, the refrain, the singers' vowels) and its ensemble of that age (the melodic parts by role, the kit), three pieces of its age with their forms, lengths, notes, instruments, notation and levels; the modern world's pieces of three ages (the same people, the same scale); two peoples of one age; the synth's cost of the dearest piece; `frames` a piece of each age on the decoder | `shots/tests/music_age_<age>_<form>.wav`, `music_people_<age>.wav`, `music_pair_<age>_<people>.wav`, `music_decoder_<age>.png` |
-| `tongues [n]` | H-04's second pass: the n peoples nearest home (24) side by side: each tongue's consonant set, vowels, syllable shapes, endings and joiner; the people, the god, the river, the mountain, the sea, the two cities, the founder, the moon, the star, the festival; twelve persons, six families, ten places; their words for coin, bread, a beast, a feast and the decoder's for two words; then how often a held-out name tells its people from its letters against C-02's names | |
-| `charts ages` / `charts check` | H-05: a chart of each of the twelve ways (a cave's ceiling, a carved bone, a painted vault, an astrolabe's plate, a codex page, an engraved atlas, a photograph on glass, a survey on glass, printed and on a drive, a navigation chart, a chart of far places) found among the age worlds (the worlds near home for the oldest with a moon's count) and drawn on the decoder at 2x, four held up to the sky, each chart's elements printed (the moon's count, the wanderers, the grid, the numbers, the magnitudes, the voices heard, the routes, the far places); `check` the unit's charts-by-age check alone | `shots/tests/chart_age_<way>.png`, `chart_age_<way>_held.png` |
-| `charts <sx> <sz> <body index> [index] [second]` | C-10 (H-05: every chart of the people's records, each with its way and what it shows): a world's star charts (`galaxy/charts.h`): the stars its charts mark (the peoples it knew, heard or near, and the brightest of its nights, with the sector, the class, the light years and the other people's name), then each chart: its figures with their stars (the chart's x y, the brightness, the class, the sector, the light years from the world) and its caption; with an index that chart sketched in text (the field 61 x 31: the mark `@`, a bright star `*`, a faint one `.`, each figure's brightest star its letter). `charts 151 25 1 17` is Aieliaalas II's chart round Beysknoon, `charts 153 70 2 0` Leileashphail III's round a Wolf-Rayet star 4.3 ly off |
-| `roads <sx> <sz> <body index> [latDeg lonDeg]` | C-09: a world's roads (`galaxy/roads.h`): the culture's road style (paved or beaten, the width, the wear with the age and the wet), then the network of the 13 x 13 ruin cells round a point (default 0.2 rad N, 0.7 rad E): the sited settlements, the joined pairs, the roads walked and the pairs whose every way was wet, the settlements without a road and the degrees, the length along the way against the straight line, the bends, the steepest step, the share of the length left after the wear, the cost (the nodes, the pairs, the walks), sixteen roads with their ends' classes and cells, and a sketch of the region (61 x 31: a hamlet `h`, a village `v`, a town `T`, a monument `m`, the roads' points `.`). `roads 153 70 2` is Leileashphail III's default region (45 settlements, 66 roads, 94% left), `roads 151 25 1 12 4.22` Aieliaalas II's land region (58 and 89, 51% left) | stdout |
-| `zoom <sx> <sz> <body index> <latDeg> <lonDeg> [scale]` | C-09: the landing map's zoom window over a point of a world at a scale (default 4) in a `Game` (the park, the cursor set, `Z`, half a second of frames, `Z` and Esc, each step timed: the zoom's build is about three seconds on a big wet world, the roads a fifth of it), with the roads drawn and their count and cost printed; `zoom 151 25 1 12 4.22` is Aieliaalas II's land region (3,294 of the window's 4,578 roads drawn: the villages' and the towns'), `zoom 153 70 2 11.46 40.11` Leileashphail III's | `shots/tests/zoom_<sx>_<sz>_<body>.png` |
-| `graves <sx> <sz> <body index> [latDeg lonDeg] [cells]` | C-12: a world's calendar (`calendarLine`), the span from the founding to the last recording, the last recording (`lastShardOf`: its index, the end's count among the fifty, its date and its text) and the dates of the first five shards, then the graves (`galaxy/graves.h`) of the sited settlements within `cells` (default 4) of the point's ruin cell: each settlement's class, radius and count, each stone's name and years, standing or fallen, and its place; `graves 151 25 1 12 4.22` is Aieliaalas II's land region, `graves 153 70 2 11.46 40.11` Leileashphail III's |
-| `peoples [count]`, `peoples <sx> <sz> <body index> [latDeg lonDeg]`, `peoples ages [count]`, `peoples fresh`; A-03: `peoples fresh` lists, by age, the peoples on the harness's plane within 40 sectors of home that ended lately (under 400, 700, 900 and 1,200 years for the first four ages, any for the last two), the nearest first: the ages' scene worlds (`AGE_SCENE_WORLDS`) were taken from it | C-13: the worlds of two peoples among the civilisation worlds near home (the scan stops at `count`, default 6): each with its peoples by name, their ends, the divide's pole and how much land it crosses, a land point deep on each side and the frontier; or one world's peoples in full (names, culture, A-01's profile (the age, the eras with their years and governments, radio, the end and its cause with the collapse's stages, the extent, the government, economy, faith and values), calendar, span, last recording, voice, music, the shards of each that speak of the other). A-01: `ages` lists the peoples within 25 ly of home by distance, the first `count` (100) with their age, end, cause, extent, radio and whether they are on the air, then the ages' shares over all of them against the decided ones, radio, the ends' and the land's ranges, the causes by age, the profile's cost, the nearest people of each age in space and the test worlds (the nearest of each age on the plane, against the harness's pinned `AGE_WORLDS`: "hold" or "pin them again") and the settlements of the 13 x 13 cells round the frontier (or the point) by people with the roads between the two. The word `second` anywhere in the arguments of `shards`, `music`, `voice`, `charts` and `graves` asks for a world's second people; `ruins`, `graves` and `roads` print each settlement's and road's people on a world of two. |
-| `peoples map [sx sz body]` | R-415: the landing map's peoples (`V`) in a game parked over a world (default the drone bay's world of two, Yeesheleemiola II-b, 208 51 body 5) at 2x, the cursor on its first people's capital and two marks of ruins beside it: the map as it opens (the layer off, the marks hidden), `V` with no record held (the marks, the legend), a seventh of the first people's records held (the places they were kept at, the capital among them when one was), all of them (its whole map: its land to its frontier, every place and way), then the zoom over the capital with the layer on (the roads, the cores, the rings, `CAPITAL`) and off; the layer's info at each (what is held and known, what was drawn) | `shots/tests/landpeoples_<off\|none\|some\|all\|zoom\|zoom_off>.png` |
-| `scene geyser_basin [scale] [warm]` | R-307: 150 m south of a geyser basin's vent on the first world with the trait (type -1: any landable type, finder -36), looking north; with `warm` the clock moves to the first moment within 400 s the vent's jet is over 0.9 of full strength (`basinJetStrength`) | `shots/tests/scene_geyser_basin.png` |
+* `capsule [scene]`: B-318: the surface from the descending capsule at eight altitudes (1800 m at -60 degrees to 40 m at -1.3)
+  with the share of sky-bank pixels below the horizon (the curvature's dip included, the beacon beam excepted); fails over 0.5%
+  (output: `shots/tests/capsule_<scene>.png`, a 4 x 2 sheet)
+* `climate [n]`: B-321: the first n felisian worlds: temperature, bias, sea level, cap and snow line, the land share, the inland
+  water share, the traits, the area-weighted biome shares; then the cause of the land ice (cold, over the snow line, the polar
+  cap) (output: stdout)
+* `water [n]`: B-320: the inland water of the first n felisian worlds at 16 m detail over 45 degrees of latitude: rivers, lakes,
+  pools and rift lakes per thousand samples (and how many are wet), the first of each (output: stdout)
+* `traits [name|new|karst]`: R-304/R-305 (Q-01: R-304's eighteen and the new slots' eleven, `new` the eleven): for every landform
+  trait (or the named one, `canyon_lands`...) the first body carrying it (a new landform's on a world turning to its sun first: a
+  locked world's spot may lie in its night), the spot where that trait alone is at its most distinctive
+  (`SurfaceSample::landform`, scanned at 64 m, or 16/4 m for the fine ones), a hillshade of 8/24/160/600 km by the landform's
+  size, a standing frame from dry ground west of the spot outside the landform, an aerial frame 350 m up (Q-01: a field of small
+  things, the penitentes, the hollows, the columns, from 6 m up 40 m inside it and from 25 m up; a pingo field and a mud volcano
+  field from 80 m up), the sight the scanner hears of a new landform within 40 km; Q-01: the karst on the first acidic world
+  carrying it (`trait_karst_towers_acidic.png`); then the distribution over the six slots of the scan region's landable bodies
+  (R-304's three and the new three by count and by kind of trait, a people's world's and home's none) (output:
+  `shots/tests/trait_<name>.png`, stdout)
+* `traits q02` (or a quality's name, `great_tides`...): Q-02: a sheet a quality of the water, the sky, the life or the ground,
+  four frames at the times and places it shows: the first carrier in the scan region (a single star's world that turns, its sky
+  clear; the tides on a sea of water, the aurorae under an air that never rains, the milky seas on a living world's shores first),
+  the sky's at their hour beside the frame without the trait (`qualityFrame`'s strip), a sea's from its shore and from orbit
+  (`qualityGlobe`), a lake's with the rivers' tiles built round it, the ground's among it and from over it; the strewn fields'
+  sight heard (output: `shots/tests/trait_<name>.png`, stdout)
+* `tides [scene]`: Q-02: the great tides of the scan region's first ten worlds that carry them: each pull's body, its mass
+  (Earth's) and distance (the world's radii) and its share of the forcing, the forcing, the spring range, the range met at the
+  equator over three days and the time between two high waters; with `scene`, a sea of water's flat (its high water every 1.5-15
+  hours) and the capsule on it over the hour round the rising tide's fastest, by day: six frames twelve minutes apart, the sea's
+  level and the water at the capsule (output: stdout, `shots/tests/tide_shore_<k>.png`, `shots/tests/tide_shore.png`)
+* `sounds`: Q-03: the sounds of the ground through the synth as the game sets them (22,050 Hz mono, the master's 0.8): the singing
+  dunes as a slide down a slip face (the hum rising over a second, held three, dying as the sand runs on) at an Earth's grains'
+  note and at Titan's, a thin-aired Mars' and a heavy world's gravity, with the note and the loudest frequency; the singing ice at
+  dusk's level and at noon's, with the sounds counted; a quake under an air, through the boots of an airless world and on a
+  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them (output:
+  `shots/tests/sound_<name>.wav`, stdout (peak, rms))
+* `scene singing_dunes | singing_ice | quakes`: Q-03: the sounds' cues on the ground, each on the scan's first world with the
+  trait under an air of a third of a bar or more (finders -99, -100, -101): the explorer on a dune's slip face of 15 degrees or
+  more (over 4, 8 and 16 m: a face, not a ledge; no hazy world), the frame from the crest, then walking down it; on flat ice with
+  the sun four degrees up; on land as a quake strikes (the frame a second and a half in). Each prints its cue (the face's slope,
+  the hum's level and note; the ice's level and sounds; the quake's strength) and writes the cue's sound alone as the game hears
+  it (`groundSoundsTo` each frame) (output: `shots/tests/scene_<name>.png`, `.wav`, stdout)
+* `rogues [ly]`: D-01: the drifters within ly of home (1,000 by default), nearest first: the sector, the distance, the kind, the
+  radius, its own heat, its moons (their kinds and warmth), the star it came from (its class and sector, the years since it left,
+  its speed, how far back), with the cells and clusters looked at and the milliseconds; the stars there (the field's density
+  sampled) and one drifter for every how many of them against the field's rate; the kinds of those within three times as far
+  against the dark's table; then the nearest landable one (1,500 km and over) flown to as `V` flies (its seconds), arrived at (the
+  ship's distance in its radii, the disc's width, the class line, the light), parked at and landed on at 20 N 40 E (the sun's
+  height and light, the sky's brightness, the time of day) (output: `shots/tests/rogue_arrival.png`, `rogue_parked.png`,
+  `rogue_landing.png`, stdout)
+* `rogues voices`: D-03: a voice for every drifter. The drifters heard at x32 from home, the three C-series worlds and the six age
+  worlds, each one's voice in words and numbers (its class, its breath and the main lobe's share, the other pole and its answer's
+  key, its moon's pulse, its figure's whistles, scale, timbre and how long they hang, its drone chord, its moan and vowels, its
+  body's parts, its plasma's resonances, its parts' weights); twelve WAVs with their levels (no peak at 1, the rms within C-07's
+  0.02-0.13, at most 20 samples clipped): eight voices whole as at the drifter (the first two brown dwarfs and giants heard, the
+  field's nearest young, metal, rocky and icy worlds), the first heard from home as the radar hears it locked at its step (worn),
+  a giant under a people's voice at x18, the cabin's radio at a drifter beside the ship's hum and the suit's radio on its ground;
+  a beacon in its slot under a giant (D-05's); then the distinctness over the hundred drifters nearest home, each over a breath:
+  their parameters' nearest pair, their voice prints (the long spectrum in twelfths of an octave, its level taken out) pair by
+  pair against two signals of one kind (twenty pulsars, comets and magnetospheres over a minute each, their medians), and the
+  drifters in any pair under the largest median. Exits 1 on a level out of bounds or a pair under; D-05: the test drifters'
+  beacons as the radar plays them locked (the voice, the machine under it, the last broadcast's opening spoken slowed), read and
+  heard (output: `shots/tests/rogue_voice_01_brown_dwarf_1.wav` ... `rogue_voice_12_suit_radio.wav`, `rogue_beacon_slot.wav`,
+  stdout)
+* `rogues dark`: D-04: the ground in the dark. Over the drifters within 3,000 ly of home: their kinds (a dark ocean made from a
+  rocky drifter), the landable bodies of their systems with a drifter's own trait (FROZEN AIR, EMBERS, LIGHTS LEFT ON, LIGHTS IN
+  THE WATER) and by kind, the airs fallen as snow, the seas and lakes frozen at their level; then parked over a young interior's
+  ember fields, a dark ocean's lights in its water and an air fallen as snow (the pixels over shade 40 by bank: the globe's own
+  lights), the capsule's floodlights 120 m over a drifter coming down and the landing's status, and the lights left on staged on a
+  modern people's capital at night (the trait set on the world for the frame) (output:
+  `shots/tests/rogue_{embers,dark_ocean,frozen_air}_orbit.png`, `rogue_floodlights.png`, `rogue_lights_left_{off,on}.png`, stdout)
+* `peoples rogues [ly]`: D-05: the drifters within ly of home (3,000) that kept a people, nearest first: the drifter, the star it
+  left (how long ago, how fast, how far from it now), its year there; each people's age, radio, how it lost its sun (the giant of
+  the wanderer), the warning, the last sunrise and the end (the years in the dark, how long ago), its records, the beacon; the
+  totals by age and way (output: stdout)
+* `shards drifters [n] [held]`: D-05: the two test drifters' records (`TEST_DRIFTERS`: Balyaphebist, Vreikheid), fifty each as
+  `shards` prints them, in full (or as decoded with `held` shards held) (output: stdout)
+* `shards rogue <k>|age=<age> [n] [full | <held> [full]] [disk]`: D-05: the k-th drifter's people nearest home (`peoples rogues`'
+  order), or the nearest of an age within 12,000 ly; `disk` the tree's grammar files (output: stdout)
+* `grammar rogues[=ly]`: D-05: `grammar` with the drifters' peoples within ly of home (3,000) besides (output: as `grammar`)
+* `charts rogues`: D-05: the sun's measure and a star chart marking the star that was their sun, in each age's way, on the
+  drifters' peoples nearest home (output: `shots/tests/chart_rogue_<age>_{measure,dark}.png`, stdout)
+* `works rogue <k> [ly]`: D-05: the k-th drifter's people's works as `works` prints them (the works of the end among them)
+  (output: stdout)
+* `scene rogue_lamp | rogue_embers | rogue_frozen_air | dark_ocean [scale]`: D-04: the ground in the dark, each on the nearest
+  drifter from home that shows it (finders -102..-105, `setupDarkScene`): a rocky drifter at 20 N 40 E under the explorer's lamp
+  and without it (`scene_rogue_lamp_off.png`); on the rampart 14 m from a lava lake of the strongest ember fields of a rock
+  drifter with EMBERS, facing across it, the lamp off; a desert drifter whose air fell as snow, facing its highest ground within
+  two kilometres, the lamp on; a dark ocean's black sand four metres from its sea, facing the most water with lights in it within
+  60 m (one with LIGHTS IN THE WATER first), the lamp on; each prints the drifter, its kind, size, heat and traits, the reading of
+  its thermometer and air, and the lamp's light eight metres ahead (output: `shots/tests/scene_<name>.png`)
+* `rogues heard`: D-02: what the radar hears of the drifters (their own law, never at x1) from home, the three C-series worlds and
+  the six age worlds: the drifters heard at each of the six steps, the farthest, the first and the gain it needs; from home each
+  one with the gain it needs and its step, its power, its strength at x32, its kind, radius and own heat, its sector. Then the
+  radar in the game at home: the dial up, the nearest drifter heard locked at its own step (the seconds, the status, the log's
+  line), `Enter` flown (the arrival: the ship's distance in its radii, the local target); the black disc from 60 radii and from
+  orbit, a brown dwarf's and the nearest giant's heard (the middle row's bank and shade across the disc, the aurorae's pixels), a
+  brown dwarf's largest moon lit by its glow; the nearest landable drifter's landing map and its zoom in the survey look, landed,
+  its sector map (output: `shots/tests/rogue_radar_lock.png`, `rogue_heard_arrival.png`, `rogue_disc_60.png`,
+  `rogue_disc_orbit.png`, `rogue_bd_moon.png`, `rogue_giant_60.png`, `rogue_giant_orbit.png`, `rogue_landing_map.png`,
+  `rogue_landing_zoom.png`, `rogue_sector_map.png`, stdout)
+* `datasheet [n]`: Q-01: the data sheets of the n landable worlds of the scan region whose sheets run longest (6 by default), in
+  space and on their ground, each page (`RIGHT`), with the pages and where each page's last line falls (clear of the footer at 191
+  at most) (output: `shots/tests/datasheet_<k>_{space,ground}[2].png`, stdout)
+* `kinds [name|ground|family]`: P-00: a sheet a kind (or the named kind, `THIN_ATMOSPHERE`, or the kinds of a ground, `ice`; P-01:
+  or a made family, `furnace`; P-02: `living`; P-03: `deep`; P-04: `dead`; P-05: `cold`; P-06: `moons`; P-07: `giants`; D-04:
+  `dark`, the dark ocean on the nearest drifter that is one, its globe parked by the band's light, its first island's ground under
+  the explorer's lamp): its first body in the scan region (P-04: the frozen felisian staged on the scan's first felisian planet of
+  a yellow or orange star whose day is not its year and that had no people of C-01's, `stageElsewhere`: the kind on that world,
+  its then-world its own, its present 40 K; P-05: a real one first, a wanderer, `forTypeBodies` and the scenes trying the staged
+  ones only after every real one) from space by day and its world map in its own colours (the shared exposure rule at noon; P-01:
+  the map made for the frame's season first, or a tilted world's globe was drawn flat), the row's facts (the ground, the tags, the
+  eligible traits, the body's own), then at its first land site standing and from 350 m up, and its event staged where it has one:
+  an eruption, a fountain or a strike set off and faced, a dust devil raised and walked to, the stained cracks' or the crusts'
+  nearest vent faced, a steam vent's burst (`steamVents`, the clock moved to it), P-03: a hot spring (`springVents`' nearest pool,
+  walked to 40 m of it), P-05: a cryovolcanic plume from 25 km across its wind (`plumeStand`), a dry ice spider's spring jet from
+  60 m, in the northern spring with the clock at its burst (`springStand`), P-06: a tiger stripe's jets in a line and the curtains
+  beyond from 1.5 km off its middle, facing 4 km along it, the sun 8 degrees up (`curtainStand`) (a fountain's and a vent's site
+  on the kind's `eventMaterial`, found without the drainage: minutes on a drained world otherwise). Exit code 1 when a kind has no
+  body in the region (the companion star, a sun, has no sheet). P-04: a dead world's site is its first old land where its sun
+  stands at 35 degrees (a world whose day is its year keeps a night side). P-07: a giant's second row its globe from its night
+  side (a hot giant's glow) and its limb from 1.9 radii (a hazy giant's air), and the air a probe finds (`giantCharacterText`).
+  P-02: for a living ground, a kind with flora or one with accents, the line `land cover (by the map)` gives its land's share of
+  each material (each cell by its latitude's area): the flora's coverage per kind (output: `shots/tests/kind_<NAME>.png`, stdout)
+* `salt scan [name|ground|family] [tries]`: E-07: the made kinds against the protected worlds (`PROTECTED_SYSTEMS`,
+  `test_worlds.h`: the regress's five systems, the probe's three, the scenes' Shiesaimiori and Salyiesesh, home and B-427's
+  Wolf-Rayet giant). Each system is generated with `t_kindFactsSeen` set, so every world `kindOf` reads comes with the facts
+  `generate` gave it, and is walked through the made kinds as `kindOf` walks them (`kindSourceFits`, the first source of a row; a
+  world taken goes no further). Per kind: the worlds it reaches, the ones it takes now, and where it takes any, the first salt from
+  its own (its high word stepped, 4,096 tries) that takes none: the salt a new kind pins. With an argument, each world's hash and
+  share. Exit code 1 when the walk and `kindOf` disagree on a world (output: stdout)
+* `stability <scene> <m/frame> [scale]`: B-319 addition: `skyline flips`, the pixels swapping between the sky and anything else
+  per frame (in 1x pixel units) (output: stdout)
+* scenes `felisian_river`, `felisian_lake`: B-320: on the bank of the first river / lake found by `SurfaceSample::waterKind`, on
+  dry ground within 300 m, facing the water (output: `shots/tests/scene_*.png`)
+* scenes `front_far`, `front_arriving`, `front_through`, `front_behind`: W-03: the fronts' site of the first felisian world
+  (`PIN_FRONT_*`: open ground with hills within 16 km under a clear pattern sky with a strong front coming by day, found by
+  `frontSceneSite` when the pin is 0/0 and printed to pin) facing where the front comes from: the deck's solid wall 18 km off (a
+  dark band over the horizon), four minutes before the line (the deck overhead, the light down), the rain's peak 25 km behind the
+  line, an hour after the rain's end (the sky clearing, the cold); each prints
+  `front: line on, ahead ... km, cloud ... (pattern ...), rain, snow, cold, wind, temp, fog, sky` (output:
+  `shots/tests/scene_front_*.png`)
+* scenes `meteor_shower`, `zodiacal_light`, `earthshine`, `moonlit_night`: W-04: each searched near home in a fixed order (sectors
+  150..200 x 20..80) and printed with its place and moment: the first landable world with an atmosphere and a stream of 0.7 at its
+  first peak after t 1000, on the land site where the radiant stands highest with the sun 18 degrees down, facing the radiant 22
+  degrees under it at the moment of the peak's four minutes with the most streaks in view (`scene_meteor_shower_20s.png` beside
+  it: twenty seconds in one picture, each pixel its brightest, the streaks fanning from the radiant); the first landable world
+  with an atmosphere, no second sun and zodiacal dust of 0.7, the sun 20 degrees under the western horizon, facing where it set 12
+  degrees up; the first landable planet with a moon a degree across or more as a crescent (25-50 degrees from the sun) high with
+  the sun 12-20 degrees down, facing it; the first landable moon of a gas giant with its parent near full and 6-14 degrees up at
+  midnight over 350 m of relief, facing it. The scene prints `night:` (the moonlight, the dust, the showers and the activity)
+* `spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> <t> <swim|ascent|stand|dump> [pitchDeg] [yawDeg] [alt|depth|half] [eye]`: B-322: a
+  frame at an exact place from a save's `star`/`site`/`t` lines: `swim` puts the player afloat in the nearest water of the given
+  depth (the twelfth argument, default 3 m) with the eye forced to the given height over the water (the thirteenth, e.g. 0.1 or
+  -0.02), `ascent` the capsule camera at `alt` metres and the pitch, `stand` on foot, `dump` the 64 m ring's heights and materials
+  round the site (`half` cells; negative: the shore distance and the height over the water per vertex). Note that a generation
+  bump changes the systems, so a saved spot may point at another world afterwards (the type table of GEN 9 did); B-418: on a
+  people's world the world's works are built first, as the approach builds them, and the works the view draws within 4 km of the
+  spot are printed (`SPOT_WORKS=1`: every one within 24 km) (output: `shots/tests/spot_*.png`, stdout)
+* `scene <name> [scale] [warm]`: R-307: `warm` runs the world that many seconds first (0.05 s steps) and stages the type's event
+  in view: a tectonic fountain on the nearest lava cell 160-420 m ahead (and a quake), a meteorite strike 220 m ahead, a dust
+  devil 130 m ahead. New scenes `europan_crack` (on the ice 70 m from a narrow linea, facing it), `tectonic_fissure` (60-150 m
+  from a lava fissure), `desert_erg`, `hydrocarbon_shore` and `acidic_shore` (60-150 m from the liquid, facing it),
+  `bombarded_plain` (on a rayed plain); the finder codes -30..-35. P-01 adds the furnace worlds' scenes: `magma_shore` (-37:
+  60-150 m from the magma sea where the fixed sun of the locked world stands at the asked 22 degrees, facing it; `warm` stages a
+  fountain on the lava ahead), `chthonian_plain` (the default spot), `glass_flow` (-55: 60-150 m from glass, clear of it for 40 m
+  round, facing it), `steam_highland` (-38: the same by a sinter mound of a field of vents; `warm` moves the clock to the burst of
+  the nearest vent ahead), `salt_basin` (-39: the same by a brine pool on the salt floor) and `rust_valley` (-56: a dry valley, a
+  planet's: a land window with six channels of the flood's cells, then a wadi's sand 10 m under the ground 150 m out to both
+  sides; standing 90 m up one side facing across). P-02 adds the living worlds' scenes, which move the capsule behind the view and
+  take the next world when the asked light is a dim companion's (the sky under 0.3): `archean_flats` (-57: on a stromatolite
+  reef's flat with the reef going on 16-48 m in some direction and the sea beyond within 200 m, facing it), `hothouse_swamp` (-68:
+  wetland grass past 50 degrees with forest within 300 m, facing it), `superhabitable_shelf` (the beach finder over its shelf
+  sea), `steppe_plain` (-69: grass on the grassland or savanna with grass at the eight samples 250 and 600 m round), `tundra_ice`
+  (-58: along each meridian the ice sheet's own edge, `iceSheetEdgeDeg`, and flat grass 220 m short of it with the sheet's wall 15
+  m over it 60 m past the edge, facing it, the clock from the northern midsummer) and `lichen_hollow` (-59: on the crust 20-50 m
+  from the moss of a hollow, clear of it for 12 m round, facing it). P-03 adds the locked and the deep's: `eyeball_shore` (-76:
+  along 72 great circles from the substellar point the sea glacier's cliff top over the open sea, found to a metre, standing 40 m
+  in from it facing the fixed sun, the light its height there, in a clear hour, on a world without a haze), `terminator_ring`
+  (-77: grass where the fixed sun stands at the asked 6 degrees, with forest within 300 m toward it, faced), `hycean_sea` (-78:
+  the default spot in a clear hour of the next twenty days: no rain or snow, the sky under half cloud), `ammonia_shore` (-81: silt
+  0.5-4 m over the sea with its water and a slab of ice within 150 m, faced), `snowball_belt` (-82: at an equinox, along each
+  meridian north from the equator the first ice 5 m over the sea with open water 300 m south, found again on the ground of the
+  scene's own hour, 40 m north of it facing south) and `chemotroph_vents` (-83: 35 m from a spring's pool on its mats or sinter at
+  dusk, facing it: the steam, the chimneys, the spores). P-04 adds the dead worlds' (a frozen world's staged as the `kinds` sheet
+  stages it, on the scan's worlds in turn): `frozen_felisian_shore` (C-08's harbour finder, -50, on the first staged world with a
+  people of the frozen kind's own hash: standing 70 m out on the sea's ice facing the harbour, the sun at 25 degrees),
+  `scorched_felisian_seabed` (-84: a giant's scorched world, along each meridian the first old shore that drops 80 m to the bed in
+  900 m, standing on the bed facing it), and two of their forests, `frozen_felisian_forest` and `scorched_felisian_forest` (-85:
+  the first ground whose old forest was dense at 512 m and at 16 m, facing where it is densest; P-05: the frozen one on a
+  wanderer, the real ones tried before the staged). P-05 adds the far cold's: `nitrogen_cells` (-86: a sun-like star's nitrogen
+  world, along each bearing out from its great plain's middle the first plain ground at 512 m with a block of water ice standing
+  400 m over it 9 km further out, facing it, the sun 12 degrees up), `cryovolcanic_plume` (-87: 25 km across the wind from the
+  first active plume of a scan of the cap, facing it, the view raised to its flag: `plumeStand`), `dry_ice_spiders` (-88: in the
+  northern spring, 60 m south of the first spider under the frost 4 degrees inside the band, facing it, the clock moved to its
+  jet: `springStand`), `wanderer_snow` (-89: on the snow at 512 m with the old world's bare highland 250 m higher 1.5 km off,
+  facing it), `brine_faculae` (-90: on a young crater's salt floor seen at 64 m and not at 512 m, 300 m in from its edge, facing
+  across it to the far wall), `frost_dwarf` (-91: a sun-like star's frost dwarf, 60 m from a streak of tholin on the frost, facing
+  it, the sun 18 degrees up) and `brine_mountain` (-92: the brine dwarf's lone mountain from 25 km south, facing it). P-06 adds
+  the strange moons': `grooved_lanes` (-93: along each meridian the first dark ground at 512 m with a lane's bright ice 4 and 8 km
+  off in one of eight directions and 150 m lower, then 6 km into the lane (it lies below the dark ground's horizon); across the
+  grooves the bearing whose ground varies most over 6 km either way, the stand in the lowest trough along it within 4 km, facing
+  along the trough), `two_faced_boundary` (-94: the first bright ice at 64 m with bright ice 300 m behind and the dark face from
+  100 m ahead to 2 km, facing along the edge, the ice left and the dark right: a small moon's horizon is a kilometre or two away),
+  `two_faced_ridge` (-95: 25 km south of the equatorial ridge's crest where it stands highest over that foot on the bright ice
+  95-145 degrees from the apex with no dark ground between, facing it: on the coal-black face its relief hardly shows),
+  `tiger_stripes` (-96: `curtainStand`, the sun 8 degrees up), `patchwork_cliff` (-97: the great cliff from its corona's floor 25
+  km in from its foot, facing it: `greatCliffOf`) and `sponge_pits` (-98: the first dark floor at 512 m; along the first of eight
+  bearings whose ground rises 1.5 km and more within 12 km, standing on that rim facing back over the floor) (output:
+  `shots/tests/scene_<name>.png`)
+* `traits geyser_basins`: R-307 addition: prints the geyser vents near the spot (`geyserVents`), how many stand on sinter and the
+  nearest (output: stdout)
+* `shards <sx> <sz> <body index> [n] [full | <held> [full]]`: C-02: a world's lore (its people's names, the span of its years),
+  then (C-06) its people's tongue (the syllable parts drawn), its language (how many words the fifty use, the words known with
+  1/2/3/5/7/10 shards held, the sixteen most used with their words in the tongue) and its first n shards (default fifty) as the
+  decoder reads them with `held` shards of the world in hand (default one: about a third of the words, the rest in the people's
+  tongue, the names kept; ten: the whole text), in the order of their years with the tone and the kind of each, and how many words
+  were read; `full` prints the whole text under each; a world without the trait prints what it would have said.
+  `shards 151 25 1 50 full` is Aieliaalas II's, `shards 153 70 2 50 full` Leileashphail III's (`civilisations/records-and-grammar.md`) (output:
+  stdout)
+* `music <sx> <sz> <body index> [index] [wav] [age=N] [tone=N]`: C-04 (H-05: every record of the people, its six ensembles; `age=`
+  and `tone=` play the records as if of that age or tone; a far future's field printed as each tone's spans): a world's musical
+  tradition (the scale in cents with its tuning and period, the tonic, the resting degree, the cycle, the beat's subdivision, the
+  tempo and its drift, each timbre's family and envelope, the drum's skins, the drone, the second voice, the ornament rule), the
+  pieces among its fifty (index, year, tone, form, length, tempo, cycles, notes, a drum or not) in the order of their years, then
+  one piece (the index given, else the first) as notation: a line per voice per cycle at the subdivision's resolution (a degree
+  where a note starts: `0`-`9` from the tonic up, `A`-`Z` past nine, `a`-`z` below; `.` a note held, `-` silence; the drum's skins
+  `o` and `x`); `wav` renders it through `AudioSynth` to `shots/tests/music_<sx>_<sz>_<body>_S<index>.wav` with the peak, the rms
+  and the counts of non-finite and clipped samples (output: stdout, a WAV)
+* `signals [sx sy sz] [reach] [xG]`: C-07: the far signals heard from a sector (home by default; a reach in ly, 200 by default):
+  each with its kind, its distance (the signal's age), its direction (galactic longitude and latitude from the observer), its
+  strength, its star's class and sector and, for a people's, the world, its people and the recording on the air at the game's
+  first hour (`S49, a piece of music` or a voice with the first words of its text); then the system's own signals there
+  (`localSignals`) and whether the sector is a transmitter. From home: three peoples' transmissions (A-01: a modern people at 90
+  ly, a futuristic one at 184, an industrial one at 197; C-07 had 79, 85 and 179) and five pulsars, the cells scanned in under a
+  millisecond; `signals wav` (or with a sector and reach before it) also renders the receiver for the ear: the bed over thirty
+  seconds (something in the static every twelve to forty seconds), three seeds of each natural kind (`radar_pulsar_1..3.wav` at
+  0.7, 1.7 and 3.2 pulses a second, `radar_comet_*`, `radar_magnetosphere_*`) and every programme of the first people's world
+  heard from the sector (`radar_people_voice.wav`, `_whispers`, `_chant`, `_numbers`, `_loop`, `_beacon`, `_data`, `_bell`,
+  `_siren`, `_murmur`, `_music`), twelve seconds each, with each programme's words or length printed and the world's broadcast mix
+  over its fifty slots. C-15: each signal's line has the least gain step that hears it and its power (`x1  power 0.010`); `xG`
+  (`signals x32`, or after a sector) lists what that gain hears, beyond 200 ly as far as each power carries it (from home at x32
+  twenty-two: twelve peoples to 5,524 ly and ten pulsars, in about 10 ms); without a reach, `xG` or `wav` the six steps follow,
+  one line a step from the sector (the peoples heard, what the step adds with their distances, the nearest and the farthest, the
+  pulsars, the scan's time) and, from home, one line for each test world (the three C-series worlds and the six of `AGE_WORLDS`:
+  x1 heard, then what each step adds); `wav` also renders the receiver overdriven (C-15: a voice, a beacon and the piece at 0.5
+  and 1, a pulsar at 1: `radar_overdriven_*.wav`). C-16: each line also has where the radar camera points for it (`AZ 275 EL +00`)
+  and a people's age (`the modern age;`); the programmes rendered are fifteen (`_morse`, `_phonograph`, `_synthetic`, `_maths`
+  after C-07's eleven), and `wav` renders what the gain lets in with rms and peaks: the bed at x1, x11 and x32 toward the band's
+  plane (`radar_bed_x1.wav` ...) and at x32 toward a pole and the core (`_x32_pole`, `_x32_core`), with its events counted; the
+  top step's static over two minutes (`radar_static_x32.wav`, the kinds of event heard listed); a near voice at x1, x11 and x32
+  (`radar_near_voice_x*.wav`) and a far one worn at x11, x25 and x32 (`radar_far_voice_x*.wav`); a pulsar under a voice at x18 and
+  two broadcasts at x11 and x32 with the whistle and the ring (`radar_mixed_*.wav`); and each age's programmes from its test world
+  with that world's mix over its fifty slots (`radar_industrial_morse.wav`, `_phonograph_voice`, `_phonograph_piece`,
+  `radar_futuristic_synthetic.wav`, `_data`, `_beacon`, `radar_farfuture_maths_1..3.wav` with the sequence each sends) (output:
+  stdout, fifty-six WAVs with `wav`)
+* `voice <sx> <sz> <body index> [index] [wav]`: C-05: a world's voice (its pitch and range, its rate in syllables a second, its
+  tract, its breath, roughness, nasal murmur, tremor and second tone, its stress rule, its sentence melody, its marks: tones,
+  clicks, rolled r's) and the sounds its tongue's pools spell, then one text shard (the index given, else the first text) as it is
+  spoken: the text, and a line per word with its span in seconds, the word as the decoder gives it with the language whole, the
+  people's word (a name as it is) and its sounds; `wav` renders it through `AudioSynth` to
+  `shots/tests/voice_<sx>_<sz>_<body>_S<index>.wav` with the peak, the rms and the counts of non-finite and clipped samples
+  (output: stdout, a WAV)
+* `ruins <sx> <sz> <body index> [latDeg lonDeg]`: C-01: a world's culture, the level its seas stood at, and the settlements of the
+  31 x 31 ruin cells round a point (default 0.2 rad N, 0.7 rad E) with the site test's verdict and reasons (the ground, the water,
+  the corners wet, the old sea, the spread of the five samples), the planet function read without the drainage as the view reads
+  it; C-03: under each printed settlement its shards (the index, the building and its kind, the place, the spot in metres from the
+  centre) and in the summary the shards by class (Leileashphail III's 31 x 31 cells at 11.46 / 40.11: 92 in 152 hamlets, 119 in 78
+  villages, 133 in 43 towns, 21 at 45 monuments); `ruins 151 25 1 12 4.22` lists Aieliaalas II's (output: stdout; C-08: the
+  culture's age and wet, each printed settlement's terrain read (the slope and its fall, the shore, the relief, the ridge, the
+  wind) and its features, and a count of the sited settlements' features (harbours and those on the dry shore, terraced, cisterns,
+  wind walls, cairns))
+* `ruins ages [scale] [town|village|hamlet|monument] [desert|felisian] [wide|near] [years ...]`: A-03: a settlement of each age
+  (the rows) at 100, 1,000, 10,000 and 100,000 years since the end unless years are given (the columns), laid out at one cell of
+  the scene world in each age's culture (`cultureAs`, `settlementOf`) and placed at the site (`testPlaceSettlement`), seen three
+  quarters along its main street from outside its edge (the far future's structure from farther) or, with `near`, from 6 m off the
+  dwelling nearest a point half way out; prints each cell's buildings by kind, its pieces, its tallest, the materials' decay at
+  its years and the polygons drawn (output: `shots/tests/ruins_ages_<class>[_near]_<scale>x.png`)
+* `ruins kinds [scale] [years ...]`: A-03: every kind of building alone on the scene world's ground (the temple's three forms, the
+  tower's three, the arcology's three, the hut of wattle and of dry stone), a page an age, each kind a row and each age since the
+  end a column (1, 300, 3,000 and 30,000 years unless given), seen from a quarter turn off its front with all of it in the half
+  frame kept; A-04: a last page of the genome's works and the kinds' new styles (the ten focal accents, the five monuments, the
+  windmill, the market halls, the palace, the round temple, the amphitheatre, the aqueduct, the joined towers, the tunnel, the
+  town halls' dome and spire, the mall, a modern temple), each in the scene world's people's genome (output:
+  `shots/tests/ruins_kinds_<age>_<scale>x.png`, `ruins_kinds_genome_<scale>x.png`)
+* `ruins check`: A-03: the unit's four checks of the ages' buildings alone (the decay by material, what each age builds, its
+  pieces resting and its rooms open, the decay's examples) (output: stdout)
+* `genome sheet [scale] [years] [town|village|hamlet] [desert|felisian]`: A-04: the architecture sheet, a page an age: the twelve
+  peoples nearest home (`peoplesNearHome`), each as if it had reached the page's age on the scene world's ground
+  (`cultureWithGenome`: the world's own culture, the people's genome and ways), a settlement of the class at one cell under one
+  light at 30 years since the end unless given, from outside its edge, its genome printed under it (every variable, the age's
+  technique); prints each tile's buildings by kind, its pieces and its tallest; B-415: `felisian` a grassland site's (the first
+  felisian site was the sea's) (output: `shots/tests/genome_<age>_<scale>x.png`)
+* `genome ages [scale] [peoples] [years]`: A-04: the nearest peoples (six unless given) as the rows, each in every age (the
+  columns): one people's buildings of two ages side by side, to judge whether they read as one people's (output:
+  `shots/tests/genome_ages_<scale>x.png`)
+* `genome distinct [n]`: A-04: the distinctness of the n peoples nearest home (100): the pairs by their distance on the strongest
+  variables, the nearest eight with what they share, the share of 200,000 random pairs under each distance, DISTINCT or NOT, and
+  the command to draw the nearest pair (exit 1 when two are alike) (output: stdout)
+* `genome pair <sx> <sy> <sz> <body> <people> <sx> <sy> <sz> <body> <people>`: A-04: two peoples in every age, side by side
+  (`scale=N`) (output: `shots/tests/genome_pair_<scale>x.png`)
+* `genome print <sx> <sz> <body> [people]`: A-04: a people's genome (every variable's group, name and value) and its techniques by
+  age (output: stdout)
+* `genome reach`: A-04: the unit's reach check with every variable's ages printed (exit 1 when an age is not reached) (output:
+  stdout)
+* `genome street [scale] [peoples] [years] [desert|felisian] [drone]`: B-415: the nearest peoples (six unless given) as the rows,
+  each in every age but the far future's (the columns), its town (`settlementOf`, a town at the scene world's cell, 30 years after
+  the end unless given) seen from inside it: of 24 spots round rings half, two thirds and a third of the way out, the one 4 m
+  clear of every building with the first 18 m of its sight line clear and the most buildings ahead, at 1.8 m looking at the middle
+  (`drone`: 35 m up at its edge, looking down at it); does every age read as itself? `felisian` a grassland site's (output:
+  `shots/tests/genome_street[_drone]_<scale>x.png`)
+* `genome dress [scale] [age|all] [desert|felisian] [high] [years]`: R-412: each of an age's own variables (its R-412 ones) a row,
+  its values across, on one plain genome (every R-412 variable at its first value, an upright, rectangular, pitched, detached
+  people): a little street of the age's dwellings (huts and a longhouse, houses, villas and a row, suburban houses and a block,
+  pods) fronting it by the layout's rules (their storeys, frontage, setback, a piece of furniture at the kerb), from the street
+  (or over it: `high`), 5 years after the end unless given (`DRESS_DEBUG` prints the first house's pieces) (output:
+  `shots/tests/genome_dress_<age>[_high][_old]_<scale>x.png`)
+* `genome floats`: R-412: the A-03 check's pieces on nothing and doorways shut (the unit's message is cut short), tallied by what
+  they are (`FLOATS_DEBUG`: the first one's neighbours)
+* `genome why <VARIABLE> <age>`: R-412: the reach check's three peoples (their roof, profile, massing, modules, plan), each
+  value's pieces in the town and the village: why a variable does not reach an age
+* `walls forms [peoples] [years...]`: B-420: every piece of the places and works of the age and scene worlds and BUBAS (and the
+  peoples nearest home in every age) against its own colliders on flat ground: the discs at the feet over nothing drawn and above
+  it, tallied by kind with an example and its `FORM` line
+* `walls view [worlds] [walks]`, `walls view near <peoples> [walks]`: B-420, B-421: the places and works of the test worlds (or of
+  the worlds of the peoples nearest home) through the view: walks from round each (what stopped them: a boulder, a drawn piece, a
+  heap's side, a log, a trunk; nothing drawn), every record and instrument (in water, inside a piece, under a heap, hidden in a
+  drawn piece, out of reach, an instrument through a wall or over a record), each failure with its `[sx sy sz body]` and a
+  `walls walk` line
+* `walls one <a FORM line's numbers>`: B-420: one piece's discs against its own mesh (a measure's example replayed; `WALLS_ALL`
+  every disc)
+* `walls at`, `walls place`, `walls reach`, `walls walk <sx> <sy> <sz> <body> <latDeg> <lonDeg> ...`: B-420, B-421: the pieces
+  near a point with their discs and slices; the works round a point and their records; the walk to a point from round it
+  (`WALLS_DUMP`: the grid as a picture, `shots/tests/walls_reach_<n>.png`); one walk from a point frame by frame
+* `walls check`: B-420, B-421: the unit's four checks alone (the colliders over what is drawn, the walks, a heap stood on, the
+  records clear)
+* `plan <sx> <sz> <body> [second]`: T-01: the world's plan for each age (the people as if it had reached it, over one reading of
+  the world, the other people at its own): the territory tinted and outlined, the capital white, the cities red, the towns yellow,
+  the seats orange, great places magenta, works cyan, the ways by kind (paths brown, roads pale, rail red, canals blue, highways
+  orange, maglev magenta, crossings dotted, the trunk two pixels); prints the reading's time, each age's places, ways (counts and
+  kilometres by kind), held share, people, connectedness and time, the capital's site; then the plan the game builds on one thread
+  (output: `shots/tests/plan_<world>_<age>.png`, `plan_<world>_ages.png`)
+* `plan ages`: T-01: the six age worlds (`AGE_WORLDS`) at their own ages (output: `shots/tests/plan_<world>_<age>.png`)
+* `plan view <sx> <sz> <body> [second]`: T-01: the people's capital through the telescope from 3.5 radii above it under the turn's
+  highest sun, at x64, x256 and x1024, with the plate (its cores and ways) and the map alone (output:
+  `shots/tests/plan_view_<world>_x<power>[_map].png`)
+* `history <sx> <sz> <body> [second]`: H-02: the people's history as Dwarf Fortress's legends print it: the head (its span, height
+  and end, what was told and by kind, the build time), the eras, the rulers by house, the places, the wars, the sicknesses, the
+  inventions and institutions, the figures, the families, one family's years, the chronicle and the collapse to the last person;
+  the screen leaves out the chronicle and the towns (output: `shots/tests/history_<world>[_2].txt`)
+* `history ages`: H-02: the six age worlds' peoples (`AGE_WORLDS`) (output: `shots/tests/history_<world>.txt`)
+* `history check`: H-02: the unit's history checks alone
+* `towns <sx> <sz> <body> [second]`: T-02: a people's capital, its first city, its oldest town, a place it left early, a town and
+  a village of its countryside: each printed (its layers by age, its buildings by district and age, its streets by rank and how
+  joined, its fields, its works, its wall, the time to lay it out) and drawn from above (the streets by rank, the squares, the
+  layers' rings, the buildings by district, the wall red, the fields) (output: `shots/tests/towns_<world>_<what>.png`)
+* `towns ages`: T-02: the six age worlds' (output: `shots/tests/towns_<world>_<what>.png`)
+* `towns view [<sx> <sz> <body> [second]] [scale=N]`: T-02: the ages' scene worlds' capitals (or a world's) through the renderer:
+  from the air over its edge, low over its old core, along a street of its middle (with `TOWNS_VERBOSE` the vertices across the
+  nearest street); then, on the scene worlds, a harbour, a reservoir or cistern and the fields of each age from the air (output:
+  `shots/tests/towns_view_<world>_<air|core|street>.png`, `towns_feature_<age>_<harbour|water|fields>.png`)
+* `towns check`: T-02: the unit's town checks alone (`TOWNS_VERBOSE` prints every point a standing piece blocks)
+* `works <sx> <sz> <body>`: T-03: a world's works: each people's count by kind, what its history finished (dams, mines, aqueducts,
+  observatories, lighthouses, launch sites, its holy place) and its battles, every work's line (its age, left early, its place's
+  distance, its rule's numbers) and its pieces' count; `WORKS_DEBUG` prints the dam search. B-418: and each people's land's works
+  round its first ten places and at forty points of its land (by kind, the first twelve's lines), and what the scanner hears from
+  forty points of its land
+* `works ages`: T-03: the six age worlds' and the six scene worlds'
+* `works gallery [scale=N]`: T-03: on each age's scene world a frame of each kind of work its people made, where its rule put it,
+  through the renderer, and a sheet of them (B-418: a kind the world's list lacks taken from the land's round its first places)
+  (output: `shots/tests/works_<age>_<kind>.png`, `works_<age>_sheet.png`)
+* `works map`: T-03: the same works on insets of the ground with the place each serves (the terrain, the cores, the ways, its
+  reach, a battlefield's line between its sides, the rule in a line) (output: `shots/tests/works_map_<age>.png`)
+* `works view <sx> <sz> <body> <kind's word> [index]`: T-03: one work through the renderer, its pieces printed (`WORK_D`, `WORK_H`
+  and `WORK_A` place the camera); B-418: the world's then the land's, a kind's whole name matched whole (`"a fort"`, not the
+  fortified line) (output: `shots/tests/works_view_<word>_<index>.png`)
+* `works check`: T-03: the unit's works checks alone
+* `records <sx> <sz> <body> [second]`: T-04: a people's records: the count, by their years' age and by medium, the last recording
+  and its place; where they lie over the plan's places, the works and the countryside round the capital (archives, painted walls,
+  by building), the copies, and the sites of the capital, the first cities, a place left early, the last place, the works and a
+  few villages
+* `records ages`: T-04: the six age worlds'
+* `records scenes [age] [scale=N]`: T-04: through the game, landed by each age's scene world's capital: an archive's row and each
+  common medium's object, a frame before it, `E`, the frame after (output: `shots/tests/records_<age>_<n>_<medium>.png`,
+  `records_<age>_archive.png`, `records_<age>_sheet.png`)
+* `records check`: T-04: the unit's records checks alone
+* `grammar [dir D] [embedded] [near N] [print N|all]`: H-03: the records' grammar read from `src/peoples/grammar/` (its shelves walked; an
+  edited rule reprinted without a rebuild; `embedded` the compiled-in copy) and its errors; every people's texts of the test worlds, the age
+  worlds and the forty nearest home (`near N`) through every check (the failures with their texts), each world's line, the measures (the
+  repeated frames at 50 and 100 texts, the most repeated, the 2- and 3-grams), the rule use (the most and the never drawn by file and line,
+  the kinds told) and the cost; H-04: the texts by age, the genres' table (records, words, the shortest and the longest, the repeated frames
+  within each), one event from several sides, every name checked against the history at the record's year (output:
+  `shots/tests/grammar_texts.txt` (every text and caption, the formulas as `~f` lines))
+* `grammar check`: H-03: the unit's grammar checks alone
+* `grammar where [<rule> | <prefix>.* | check | md]`: E-11: the tree's grammar indexed: a rule's file and line, its options and
+  alternatives, every alternative that names it, the directive calls whose names the C++ builds into it (`{@entries annal}`:
+  `annal.<kind>`), its `@instead` lines, the roots that reach it; a prefix's rules with their counts; alone, the C++'s naming
+  conventions; `check` every rule named, built or stood in for (a known issue's rules print `FAIL(<id>)`, not counted); `md` the page
+  `civilisations/grammar-files.md` (output: stdout)
+* `grammar schema`: E-11: the facts (the names marked), the inventions, institutions and traits, the entities, their paths and
+  fields, the directives and the names they build, and the words each fact and field takes (`recordSchemaKeys`) (output: stdout)
+* `grammar ages [near N]`: H-04: with the run, fifty records of one people of each age printed for reading, each with its index,
+  year, age, genre, medium, words, writer and reader, the counts by genre at the end (output: `shots/tests/records_<age>.txt`)
+* `grammar compare <file>`: H-04: with the run, C-02's texts of the same peoples (H-03's `grammar print all`, saved before H-04)
+  measured as the records are: the repeated frames at 50, 100 and over all, the sentences written once, the distinct 2- and
+  3-grams
+* `grammar ... late N` `grammar ... out F`: H-04's second pass: `late N` adds the N nearest peoples of the modern age and later (a
+  hundred texts and more each: with 20, seventeen peoples reach the measure at a hundred texts, not six); `out F` writes the texts
+  to F instead of `shots/tests/grammar_texts.txt` (writers side by side, each with `dir D` on a copy of the tree and a copy of the
+  binary). The run prints besides H-04's measures the share of a people's longer sentences on a frame another people wrote, the
+  frames the most peoples wrote, and per genre the share between peoples and within one; `VESPERIS_TOPFRAMES=n` prints each
+  people's n most repeated frames (output: `shots/tests/grammar_texts.txt` or F)
+* `decoder [ages]`: H-05: the counts of each category per world (the six age worlds' texts, music and charts, and by the age of
+  each record's year; the 129 peoples nearest home by the age each reached), then the decoder's pages of each age through the
+  game, the people's tongue learnt: a text on up to two of the media its records of that age were made on (a recording beside one
+  the ship reads, where the age made both), a piece likewise, a star chart; each line says whether the record sounds of itself,
+  the synth's medium and who speaks (its own voice, read by the ship) (output:
+  `shots/tests/decoder_<age>_<text|music|chart>_<medium>.png`)
+* `decoder pages`: H-06: each age world with every third record held and four in five read (the last recording too from the modern
+  age on): the records page, the timeline with the cursor halfway, the history page at its top and its end, each page's state
+  printed (`testHistoryInfo`: the records read, the events learnt, the persons named, the age told, the eras placed) with the
+  first rows; `ENTER` on the last event checked to open a record that told it; the modern people's records page with its music
+  alone and its pages after three texts read; every history page's rows to a file (a name `{in braces}`, a word not learnt yet
+  `~theirs`); then the unit's history checks (R-416 among them: `SHIFT` with an arrow held on the timeline and the history, a tap
+  one step, a second's hold 17, a long one to the last and no further; R-417 the same on the records page, every kind and the
+  music alone, `decoder_pages_records_hint.png`) (output:
+  `shots/tests/decoder_pages_<age>_<records|timeline|history|history_end>.png`, `decoder_pages_modern_records_music.png`,
+  `decoder_pages_modern_early_<timeline|history>.png`, `shots/tests/decoder_history_<age>[_early].txt`)
+* `instruments [ages]` / `instruments <sx> <sz> <body> [second]`: C-11: each age world's people's instruments by age (the name,
+  the ensemble voice it is and its family, the register, the courses it shows) and their sites over its places (the plan's and the
+  countryside round the capital): how many beside the music records' copies, in how many places, all within 1.6 m of their record,
+  which of the people's instruments they are (output: printed)
+* `instruments wav`: C-11: each age world's instruments of its own age, a phrase each through the case's voices (up a period and
+  back and a held note; a far future's slow tones three at a time; the gramophone its disc through its horn): the peak, the rms,
+  the first note's pitch heard against its degree's (the autocorrelation's shortest strong period) (output:
+  `shots/tests/instrument_<age>_<slot>_<name>.wav`)
+* `instruments scenes [age]` / `instruments check`: C-11: landed at each age's scene world's capital (its cities after), the
+  explorer before an instrument of the world's own age where nothing else to take lies nearer (`testWalkToInstrument`), `E` until
+  it is taken, the case on the cabin's left wall (`facing` 10), a few keys played (the gramophone wound); the unit's C-11 checks
+  alone (the instruments and the player) (output: `shots/tests/instruments_<age>_<found|taken|case>.png`)
+* `instruments sheet [age] [peoples] [scale]`: C-17: each age's instruments of `peoples` (10) near home, a people a row, as the
+  case draws them, each named with its materials (output: `shots/tests/instruments_sheet_<age>.png`)
+* `instruments plans [peoples] [scale]`: C-17: every plan made by `peoples` (2) peoples each at its class's age (the constructor's
+  catalogue) (output: `shots/tests/instruments_plans_<n>.png`)
+* `instruments distinct [peoples]`: C-17: how far apart `peoples` (100) peoples' instruments are: each age's and class's first
+  make a people, pairs sharing the plan, the plan and the body, pictures alike (drawn 144 x 80, under 6 of 255 on the mean); the
+  closest sixteen pairs side by side; the forms an instrument takes; the commonest names (`VESPERIS_MAKERS=1`: every name)
+  (output: `shots/tests/instruments_closest.png`)
+* `instruments check` (C-17's part): C-17: the unit's three maker checks with C-11's: every instrument of 48 peoples near home
+  made, named in 17 letters, of what its world and age gave, in bounds (5 cm to 1.6 m, 0.6 m high), 2 to 400 parts, three courses
+  or more where its plan lays one a degree, the same made twice; the peoples apart (the same plan and body under 15%, pictures
+  alike under 1.5%, prehistoric pipes of bone under half, the cylinders' machine for a quarter to nine tenths); the decoder's
+  names the ruins' (`VESPERIS_MAKERS=1` prints every finding) (output: stdout)
+* `drones [frames]` / `drones check` / `drones world <sx> <sz> <body>`: C-18: the drone bay in a game parked over the modern age
+  world (two peoples): the rack from the cabin's middle (`facing` 11), E, the screen, Enter (the drones sent, the screen gone to
+  the rack), the launch at 1.2 s (drone 1 backing through its port, drone 3 waiting), the drones past the front window at 4 s and
+  as strobes at 6.5 s, the screen descending and searching, the rack empty, every drone docked: two minutes searching each (its
+  first place to its last), its finds what it wanted (2 to 8), none held before, none twice, the guide grown by them; R-414: the
+  screen closed after the docks, the rack lists none of them (`screen_seen`), the guide's unchanged; the charge (refused five
+  minutes from the launch and two seconds short of five from the return, sent after them; the second trip none of the first's)
+  watched on the decoder (open at the world's records as the drones dock: its list the guide's at once); a recall (the ship leaves
+  the parking: what was found aboard, the rest not); a save in a trip loaded and docked; the case's worlds (a second world's
+  instrument added: Enter opens the ship's world, Esc back, Esc out; an instrument of each of the ship's world's two peoples
+  added: a folder each people, each opening its people's alone). `check`: the unit's (a world's items: every record of both
+  peoples, the instruments, all at a home; 200 hauls: 2 to 8 a drone, nothing twice, three stops, each find its place's own or a
+  copy of its people's, the rarer kinds leaned toward; all but five held: five; all held: none; both peoples found and a haul that
+  brought of both; then the game). `world`: a world's items by kind and three hauls drawn (output:
+  `shots/tests/drones_<rack|screen_ready|launch|lights|lights_far|screen_descent|screen_search|rack_away|screen_back|screen_seen|decoder_after|case_worlds|case_world|case_world_second>.png`)
+* `decoder counts` / `decoder wav` / `decoder check`: H-05: the counts alone; a text and a piece of the industrial and the modern
+  world through each medium (the people's own voice bare, the ship's reading, a wax cylinder, a disc, a reel, a drive, a crystal,
+  something that hums) with the peak, the rms and the surface in the bare speech's pauses, and the voice's pitch spread against
+  the ship's reading; the unit's media checks alone (output: `shots/tests/medium_<age>_<medium>_<text|music>.wav`)
+* `music ages [wav|frames]`: H-05: each age world's musical core (C-04's, with the swing, the refrain, the singers' vowels) and
+  its ensemble of that age (the melodic parts by role, the kit), three pieces of its age with their forms, lengths, notes,
+  instruments, notation and levels; the modern world's pieces of three ages (the same people, the same scale); two peoples of one
+  age; the synth's cost of the dearest piece; `frames` a piece of each age on the decoder (output:
+  `shots/tests/music_age_<age>_<form>.wav`, `music_people_<age>.wav`, `music_pair_<age>_<people>.wav`, `music_decoder_<age>.png`)
+* `tongues [n]`: H-04's second pass: the n peoples nearest home (24) side by side: each tongue's consonant set, vowels, syllable
+  shapes, endings and joiner; the people, the god, the river, the mountain, the sea, the two cities, the founder, the moon, the
+  star, the festival; twelve persons, six families, ten places; their words for coin, bread, a beast, a feast and the decoder's
+  for two words; then how often a held-out name tells its people from its letters against C-02's names
+* `charts ages` / `charts check`: H-05: a chart of each of the twelve ways (a cave's ceiling, a carved bone, a painted vault, an
+  astrolabe's plate, a codex page, an engraved atlas, a photograph on glass, a survey on glass, printed and on a drive, a
+  navigation chart, a chart of far places) found among the age worlds (the worlds near home for the oldest with a moon's count)
+  and drawn on the decoder at 2x, four held up to the sky, each chart's elements printed (the moon's count, the wanderers, the
+  grid, the numbers, the magnitudes, the voices heard, the routes, the far places); `check` the unit's charts-by-age check alone
+  (output: `shots/tests/chart_age_<way>.png`, `chart_age_<way>_held.png`)
+* `charts <sx> <sz> <body index> [index] [second]`: C-10 (H-05: every chart of the people's records, each with its way and what it
+  shows): a world's star charts (`peoples/charts.h`): the stars its charts mark (the peoples it knew, heard or near, and the
+  brightest of its nights, with the sector, the class, the light years and the other people's name), then each chart: its figures
+  with their stars (the chart's x y, the brightness, the class, the sector, the light years from the world) and its caption; with
+  an index that chart sketched in text (the field 61 x 31: the mark `@`, a bright star `*`, a faint one `.`, each figure's
+  brightest star its letter). `charts 151 25 1 17` is Aieliaalas II's chart round Beysknoon, `charts 153 70 2 0` Leileashphail
+  III's round a Wolf-Rayet star 4.3 ly off
+* `roads <sx> <sz> <body index> [latDeg lonDeg]`: C-09: a world's roads (`peoples/roads.h`): the culture's road style (paved or
+  beaten, the width, the wear with the age and the wet), then the network of the 13 x 13 ruin cells round a point (default 0.2 rad
+  N, 0.7 rad E): the sited settlements, the joined pairs, the roads walked and the pairs whose every way was wet, the settlements
+  without a road and the degrees, the length along the way against the straight line, the bends, the steepest step, the share of
+  the length left after the wear, the cost (the nodes, the pairs, the walks), sixteen roads with their ends' classes and cells,
+  and a sketch of the region (61 x 31: a hamlet `h`, a village `v`, a town `T`, a monument `m`, the roads' points `.`).
+  `roads 153 70 2` is Leileashphail III's default region (45 settlements, 66 roads, 94% left), `roads 151 25 1 12 4.22` Aieliaalas
+  II's land region (58 and 89, 51% left) (output: stdout)
+* `zoom <sx> <sz> <body index> <latDeg> <lonDeg> [scale]`: C-09: the landing map's zoom window over a point of a world at a scale
+  (default 4) in a `Game` (the park, the cursor set, `Z`, half a second of frames, `Z` and Esc, each step timed: the zoom's build
+  is about three seconds on a big wet world, the roads a fifth of it), with the roads drawn and their count and cost printed;
+  `zoom 151 25 1 12 4.22` is Aieliaalas II's land region (3,294 of the window's 4,578 roads drawn: the villages' and the towns'),
+  `zoom 153 70 2 11.46 40.11` Leileashphail III's (output: `shots/tests/zoom_<sx>_<sz>_<body>.png`)
+* `graves <sx> <sz> <body index> [latDeg lonDeg] [cells]`: C-12: a world's calendar (`calendarLine`), the span from the founding
+  to the last recording, the last recording (`lastShardOf`: its index, the end's count among the fifty, its date and its text) and
+  the dates of the first five shards, then the graves (`peoples/graves.h`) of the sited settlements within `cells` (default 4) of
+  the point's ruin cell: each settlement's class, radius and count, each stone's name and years, standing or fallen, and its
+  place; `graves 151 25 1 12 4.22` is Aieliaalas II's land region, `graves 153 70 2 11.46 40.11` Leileashphail III's
+* `peoples [count]`, `peoples <sx> <sz> <body index> [latDeg lonDeg]`, `peoples ages [count]`, `peoples fresh`; A-03:
+  `peoples fresh` lists, by age, the peoples on the harness's plane within 40 sectors of home that ended lately (under 400, 700,
+  900 and 1,200 years for the first four ages, any for the last two), the nearest first: the ages' scene worlds
+  (`AGE_SCENE_WORLDS`) were taken from it: C-13: the worlds of two peoples among the civilisation worlds near home (the scan stops
+  at `count`, default 6): each with its peoples by name, their ends, the divide's pole and how much land it crosses, a land point
+  deep on each side and the frontier; or one world's peoples in full (names, culture, A-01's profile (the age, the eras with their
+  years and governments, radio, the end and its cause with the collapse's stages, the extent, the government, economy, faith and
+  values), calendar, span, last recording, voice, music, the shards of each that speak of the other). A-01: `ages` lists the
+  peoples within 25 ly of home by distance, the first `count` (100) with their age, end, cause, extent, radio and whether they are
+  on the air, then the ages' shares over all of them against the decided ones, radio, the ends' and the land's ranges, the causes
+  by age, the profile's cost, the nearest people of each age in space and the test worlds (the nearest of each age on the plane,
+  against the harness's pinned `AGE_WORLDS`: "hold" or "pin them again"; P-04: the scorched worlds' peoples among the listed,
+  marked, and their own test worlds, the nearest scorched people of each age on the plane within 300 ly against
+  `SCORCHED_WORLDS`). P-04: `peoples scorched [age]` prints a scorched test world's towns (as `towns`) and its fifty records (as
+  `shards`), the medieval one by default and the settlements of the 13 x 13 cells round the frontier (or the point) by people with
+  the roads between the two. The word `second` anywhere in the arguments of `shards`, `music`, `voice`, `charts` and `graves` asks
+  for a world's second people; `ruins`, `graves` and `roads` print each settlement's and road's people on a world of two.
+* `peoples map [sx sz body]`: R-415: the landing map's peoples (`V`) in a game parked over a world (default the drone bay's world
+  of two, Yeesheleemiola II-b, 208 51 body 5) at 2x, the cursor on its first people's capital and two marks of ruins beside it:
+  the map as it opens (the layer off, the marks hidden), `V` with no record held (the marks, the legend), a seventh of the first
+  people's records held (the places they were kept at, the capital among them when one was), all of them (its whole map: its land
+  to its frontier, every place and way), then the zoom over the capital with the layer on (the roads, the cores, the rings,
+  `CAPITAL`) and off; the layer's info at each (what is held and known, what was drawn) (output:
+  `shots/tests/landpeoples_<off|none|some|all|zoom|zoom_off>.png`)
+* `scene geyser_basin [scale] [warm]`: R-307: 150 m south of a geyser basin's vent on the first world with the trait (type -1: any
+  landable type, finder -36), looking north; with `warm` the clock moves to the first moment within 400 s the vent's jet is over
+  0.9 of full strength (`basinJetStrength`) (output: `shots/tests/scene_geyser_basin.png`)
 
 ## O6-03..O6-07 modes and switches (2026-09-28)
 
-| Mode | What it does | Output |
-| --- | --- | --- |
-| `drain [type]` | O6-03: the drainage of the first world of a type (default felisian): the flood's statistics over a window of the lattice round a land site (`drainageStats`: channel and lake cells, the largest accumulation, the share of channel cells whose downstream neighbour lies lower or level, the tile's build time, lakes kept and breached), then frames on the bank of the first river and the first lake found (`felisian_river`/`felisian_lake` scenes use the same finder) and from the air | stdout, `shots/tests/drain_*.png` |
-| `landmarks [type]` | O6-06, R-408: the sights round 24 random land sites of a type (`thin_atmosphere`, `quartz`, `cratered`... lowercase with underscores; default felisian): each kind's sights within 10 km (`sightsNear` for the cells' kinds, `ruinsNear` for every ruin), the first two sites' listed with their place, height, prominence and radius, the share of sites with a sight within 10 km and with each kind, the cost of a grid cell (the scan, the lake pass) and of the scanner's whole search of 40 km (four sites) | stdout |
-| `water [n]` | B-320, windowed in O6-03: a 1.2 x 1.2 degree window at 16 m round the first land site of each of the first n felisian worlds (400 x 400 samples; the flood's statistics for the window first); the "wet" columns count `MAT_WATER` samples, so a frozen window (T under -2) reads dry | stdout |
-| `terrain [type id]` | O6-07: one type only (the tuning loop, 10 s a type); with `VESPERIS_TRACE=1` the drainage's counts over the mountain windows and the flat windows' cells by kind (water, lake, valley floor, the rest) with their median grades | stdout |
-| `bench` | O6-03: waits up to 3 s of real time on the landing map for the drainage tiles (prints the wait and the tiles held); the descent budget is 80 ms (the four rings' first fill reads the drainage: 12,000 samples; 35 since F-03, 26 since F-11) | stdout |
-| `almanac [<sx> <sy> <sz> <body> [latDeg lonDeg [t [ship]]]]` | W-01 (2026-10-06): the almanac of a place with the generator's names and the list's cost: without arguments the unit's three test places and the ship parked at the first's giant; with a star and a body the ground at the latitude and longitude (12 N, 28.6 E by default) at the clock t (the start's by default), or the parking with `ship` (and for a body that cannot be landed on) | stdout |
-| `probe [<sx> <sy> <sz> <body>] [chute] [night] [wav]` | X-01: a giant's air and a probe's fall into it: the giant (the first gas giant of the scan without arguments: Thilawiane II, 150 0 66) and its numbers, the stages with their clocks, pressures, heights, temperatures and winds; a game parks at it, sends a probe under the ship and renders a frame in each stage (`shots/tests/probe_<n>_<stage>.png`: the fall's start and middle, the entry, high and low above the clouds, the haze, the ammonia deck and its base, between the decks, a lightning flash there, the water deck, the deep, the last frame), each timed (2x: 2-3 ms in the air, 6-11 ms in the fall and the entry, where the space renderer draws a frame-filling globe); `chute` opens the chute in the haze first, `night` carries the ship round to the night side first (R-405's Shift+Right; the frames named `probe_night_...`), `wav` writes each stage's relay to `shots/tests/probe_<stage>.wav` with its rms and peak; since X-02 each frame's line is followed by the picture's layers and costs (`floor 0 (83%, shade 48) ceiling -1 ... fog 0 (T 0.02) pano 395x195; 2.8 + 0.0 + 1.5 + 0.2 ms; sun 44 deg, light ...`: the decks drawn as the floor, the ceiling and the fog, their share of the frame and mean shade, the fog's mean transmittance, the panorama's size, the panoramas', the fog's, the nodes' and the spreading's milliseconds, the sun's elevation, the lights, the band's albedo at the probe, and a flash's place in the frame) |
-| `probe stages [night]` | X-02 ("each stage on two giants"): the same for the two test giants in one game, Thilawiane III (150 0 66 body 2: pale blue-grey, unringed, a scale height 2.2 times the plain giant's; since X-03 a warm giant: a hydrosulphide deck, a high water deck, salts far down) and Wailie VI (150 0 106 body 5: orange-brown, ringed, the plain giant's; since X-03 Jupiter's three decks), into `shots/tests/probe_stages_[night_]<A\|B>_<n>_<stage>.png`: the entry's handover, high and low over the clouds, a look up at the rings and the stars (`above_sky`), the haze, a look up at the cirrus, the deck's tops rushing up (`haze_low`); X-03: then each layer by its run along the clock (`probeLayerRuns`: inside each deck, `deck_<cloud>` and the first's `_base`, each clear band `between_<n>`, a flash with a channel (`bolt`) and one without in the first clear band that has one, the deep); the layers' clocks are printed as runs (a deck by its cloud's name) |
-| `probe giants` | X-03 ("a harness mode prints the character of the first twenty giants of the scan, and renders a hot young giant, an ice giant and a brown dwarf at the same stage"): the character of the first twenty giants of the probe mode's scan (sectors 150-319 by 20-139: kind, heat, the temperature at one bar, the haze's top, each deck by its cloud with its pressures and heights, storms, lightning, glow, aurora, wind, the rare features) and the counts over the first 600; then the hottest young gas giant, the first ice giant and the first brown dwarf with two decks or more at the same stages (`probe_giants_<hot\|ice\|brown>_<above\|deck\|between\|deep>.png`), the brown dwarf on its night side (`brown_night_above`, `brown_night_between`: its glow alone), a great storm's wall (the first gas giant with one, the time warped until its oval faces the sun, aimed just inside its northern rim: `storm_above_high`, `storm_above`, `storm_haze`, and its centre `storm_inside`; its globe from the parking and through the telescope, `globe_storm[_tele]`), the aurora (the gas giant with the strongest, aimed on its night side 1,200 km equatorward of its oval: `aurora_above`, `aurora_up` looking up 25 degrees), a descent down a clear-air hole (relaunched until one falls through: `hole_above`, `hole_haze`, `hole_shaft`, `hole_shaft_up`), diamond hail (`hail_deep`) and the rare giant's sight (`sight`, `sight_after` three seconds on), an ice giant's globe through the telescope (`globe_ice_tele`); the aims through `Game::testAimOverride` (as if the telescope's reticle were there), each frame's view line printed (`; in a hole`, `; aurora`) |
-| `probe stability [scale]` | X-02: sixteen frames a thirtieth of a second apart at three places of the ammonia deck's stage on Wailie VI (its tops rushing up, just inside, the clear band under it; X-03: the first deck's and the first clear band's runs) and (B-409) a fourth, `glow`, at 95% of the first deck of Weesies I (150 0 73 body 0, a brown dwarf: the fog lit from under it by the glow), the camera's shake and the link's static off (`Game::testProbeQuiet`): the mean change of a pixel's light a frame and the share of pixels jumping by over 40 (`steady` under 0.5%), with the last frame and its heat map side by side in `shots/tests/probe_stability_<place>.png`; exit code the places that flicker |
-| `showers [<sx> <sy> <sz> <body>]` | W-04: without arguments the scan of the systems near home (sectors 150..200 x 20..80): the planets with a shower (one in ten, 0.09 ms a world) and the twelve strongest worlds' showers; with a body its showers: the comet, the strength and the meteors a minute at the peak, the orbits' least distance, the year, the next peak after t 3.6e6, the width, the radiant (ecliptic longitude and latitude) and the speed |
-| `matlod [all\|<type>] [bodies] [sites] [halfKm] [stepM]`, `matlod spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> [halfKm] [stepM]` | B-404: the planet function's materials and heights at the five ring scales (4, 16, 64, 512, 2048 m), point by point over a square round random land sites of a type (default: three bodies, four sites, +-3 km at 75 m) or round one place: per type the share of points whose material differs between neighbouring scales with the pairs that differ (`DUST>ICE 4.35%`: dust at the finer scale, ice at the coarser) and the rms height difference, per body one line with its traits, `ALL` at the end; 30 s for every type. Before B-404: 0.31% / 0.78% / 4.8% / 5.4% of all ground at 4/16, 16/64, 64/512 and 512/2048; after: 0.06% / 0.46% / 3.0% / 3.6% (the rest is KI-341). `unit` runs the same measure over two sites of the first europan, volcanic, desert and felisian worlds (4, 16 and 64 m only) | stdout |
+* `drain [type]`: O6-03: the drainage of the first world of a type (default felisian): the flood's statistics over a window of the
+  lattice round a land site (`drainageStats`: channel and lake cells, the largest accumulation, the share of channel cells whose
+  downstream neighbour lies lower or level, the tile's build time, lakes kept and breached), then frames on the bank of the first
+  river and the first lake found (`felisian_river`/`felisian_lake` scenes use the same finder) and from the air (output: stdout,
+  `shots/tests/drain_*.png`)
+* `landmarks [type]`: O6-06, R-408: the sights round 24 random land sites of a type (`thin_atmosphere`, `quartz`, `cratered`...
+  lowercase with underscores; default felisian): each kind's sights within 10 km (`sightsNear` for the cells' kinds, `ruinsNear`
+  for every ruin), the first two sites' listed with their place, height, prominence and radius, the share of sites with a sight
+  within 10 km and with each kind, the cost of a grid cell (the scan, the lake pass) and of the scanner's whole search of 40 km
+  (four sites) (output: stdout)
+* `water [n]`: B-320, windowed in O6-03: a 1.2 x 1.2 degree window at 16 m round the first land site of each of the first n
+  felisian worlds (400 x 400 samples; the flood's statistics for the window first); the "wet" columns count `MAT_WATER` samples,
+  so a frozen window (T under -2) reads dry (output: stdout)
+* `terrain [type id]`: O6-07: one type only (the tuning loop, 10 s a type); with `VESPERIS_TRACE=1` the drainage's counts over the
+  mountain windows and the flat windows' cells by kind (water, lake, valley floor, the rest) with their median grades (output:
+  stdout)
+* `bench`: O6-03: waits up to 3 s of real time on the landing map for the drainage tiles (prints the wait and the tiles held); the
+  descent budget is 80 ms (the four rings' first fill reads the drainage: 12,000 samples; 35 since F-03, 26 since F-11) (output:
+  stdout)
+* `almanac [<sx> <sy> <sz> <body> [latDeg lonDeg [t [ship]]]]`: W-01 (2026-10-06): the almanac of a place with the generator's
+  names and the list's cost: without arguments the unit's three test places and the ship parked at the first's giant; with a star
+  and a body the ground at the latitude and longitude (12 N, 28.6 E by default) at the clock t (the start's by default), or the
+  parking with `ship` (and for a body that cannot be landed on) (output: stdout)
+* `probe [<sx> <sy> <sz> <body>] [chute] [night] [wav]`: X-01: a giant's air and a probe's fall into it: the giant (the first gas
+  giant of the scan without arguments: Thilawiane II, 150 0 66) and its numbers, the stages with their clocks, pressures, heights,
+  temperatures and winds; a game parks at it, sends a probe under the ship and renders a frame in each stage
+  (`shots/tests/probe_<n>_<stage>.png`: the fall's start and middle, the entry, high and low above the clouds, the haze, the
+  ammonia deck and its base, between the decks, a lightning flash there, the water deck, the deep, the last frame), each timed
+  (2x: 2-3 ms in the air, 6-11 ms in the fall and the entry, where the space renderer draws a frame-filling globe); `chute` opens
+  the chute in the haze first, `night` carries the ship round to the night side first (R-405's Shift+Right; the frames named
+  `probe_night_...`), `wav` writes each stage's relay to `shots/tests/probe_<stage>.wav` with its rms and peak; since X-02 each
+  frame's line is followed by the picture's layers and costs
+  (`floor 0 (83%, shade 48) ceiling -1 ... fog 0 (T 0.02) pano 395x195; 2.8 + 0.0 + 1.5 + 0.2 ms; sun 44 deg, light ...`: the
+  decks drawn as the floor, the ceiling and the fog, their share of the frame and mean shade, the fog's mean transmittance, the
+  panorama's size, the panoramas', the fog's, the nodes' and the spreading's milliseconds, the sun's elevation, the lights, the
+  band's albedo at the probe, and a flash's place in the frame)
+* `probe stages [night]`: X-02 ("each stage on two giants"): the same for the two test giants in one game, Thilawiane III (150 0
+  66 body 2: pale blue-grey, unringed, a scale height 2.2 times the plain giant's; since X-03 a warm giant: a hydrosulphide deck,
+  a high water deck, salts far down) and Wailie VI (150 0 106 body 5: orange-brown, ringed, the plain giant's; since X-03
+  Jupiter's three decks), into `shots/tests/probe_stages_[night_]<A|B>_<n>_<stage>.png`: the entry's handover, high and low over
+  the clouds, a look up at the rings and the stars (`above_sky`), the haze, a look up at the cirrus, the deck's tops rushing up
+  (`haze_low`); X-03: then each layer by its run along the clock (`probeLayerRuns`: inside each deck, `deck_<cloud>` and the
+  first's `_base`, each clear band `between_<n>`, a flash with a channel (`bolt`) and one without in the first clear band that has
+  one, the deep); the layers' clocks are printed as runs (a deck by its cloud's name)
+* `probe giants`: X-03 ("a harness mode prints the character of the first twenty giants of the scan, and renders a hot young
+  giant, an ice giant and a brown dwarf at the same stage"): the character of the first twenty giants of the probe mode's scan
+  (sectors 150-319 by 20-139: kind, heat, the temperature at one bar, the haze's top, each deck by its cloud with its pressures
+  and heights, storms, lightning, glow, aurora, wind, the rare features) and the counts over the first 600; then the hottest young
+  gas giant, the first ice giant and the first brown dwarf with two decks or more at the same stages
+  (`probe_giants_<hot|ice|brown>_<above|deck|between|deep>.png`), the brown dwarf on its night side (`brown_night_above`,
+  `brown_night_between`: its glow alone), a great storm's wall (the first gas giant with one, the time warped until its oval faces
+  the sun, aimed just inside its northern rim: `storm_above_high`, `storm_above`, `storm_haze`, and its centre `storm_inside`; its
+  globe from the parking and through the telescope, `globe_storm[_tele]`), the aurora (the gas giant with the strongest, aimed on
+  its night side 1,200 km equatorward of its oval: `aurora_above`, `aurora_up` looking up 25 degrees), a descent down a clear-air
+  hole (relaunched until one falls through: `hole_above`, `hole_haze`, `hole_shaft`, `hole_shaft_up`), diamond hail (`hail_deep`)
+  and the rare giant's sight (`sight`, `sight_after` three seconds on), an ice giant's globe through the telescope
+  (`globe_ice_tele`); P-07 the made giants among the 600 by class, then a descent into the first of each made class of the scan
+  region (else of the stream proofs' far strips), aimed under the sun (a hot giant's locked face), at its stages
+  (`probe_giants_<water|azure|alkali|silicate|dwarf|puff>_<above|haze|deck|between|deep|last>.png`: the last two seconds before
+  its end), the alkali and the silicate giants on their night side too (`<class>_night_above`, `_night_last`: the glow alone), and
+  each one's globe from its parking (`globe_<class>`); the aims through `Game::harness.aimOverride` (as if the telescope's reticle
+  were there), each frame's view line printed (`; in a hole`, `; aurora`)
+* `probe stability [scale]`: X-02: sixteen frames a thirtieth of a second apart at three places of the ammonia deck's stage on
+  Wailie VI (its tops rushing up, just inside, the clear band under it; X-03: the first deck's and the first clear band's runs)
+  and (B-409) a fourth, `glow`, at 95% of the first deck of Weesies I (150 0 73 body 0, a brown dwarf: the fog lit from under it
+  by the glow), the camera's shake and the link's static off (`Game::harness.probeQuiet`): the mean change of a pixel's light a frame
+  and the share of pixels jumping by over 40 (`steady` under 0.5%), with the last frame and its heat map side by side in
+  `shots/tests/probe_stability_<place>.png`; exit code the places that flicker
+* `showers [<sx> <sy> <sz> <body>]`: W-04: without arguments the scan of the systems near home (sectors 150..200 x 20..80): the
+  planets with a shower (one in ten, 0.09 ms a world) and the twelve strongest worlds' showers; with a body its showers: the
+  comet, the strength and the meteors a minute at the peak, the orbits' least distance, the year, the next peak after t 3.6e6, the
+  width, the radiant (ecliptic longitude and latitude) and the speed
+* `matlod [all|<type>] [bodies] [sites] [halfKm] [stepM]`, `matlod spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> [halfKm] [stepM]`:
+  B-404: the planet function's materials and heights at the five ring scales (4, 16, 64, 512, 2048 m), point by point over a
+  square round random land sites of a type (default: three bodies, four sites, +-3 km at 75 m) or round one place: per type the
+  share of points whose material differs between neighbouring scales with the pairs that differ (`DUST>ICE 4.35%`: dust at the
+  finer scale, ice at the coarser) and the rms height difference, per body one line with its traits, `ALL` at the end; 30 s for
+  every type. Before B-404: 0.31% / 0.78% / 4.8% / 5.4% of all ground at 4/16, 16/64, 64/512 and 512/2048; after: 0.06% / 0.46% /
+  3.0% / 3.6% (the rest is KI-341). `unit` runs the same measure over two sites of the first europan, volcanic, desert and
+  felisian worlds (4, 16 and 64 m only) (output: stdout)
 
 Environment switches: `VESPERIS_NODRAIN=1` runs without the drainage (the before/after of O6-03 on the same binary; the `terrain` rows without it are the O6-02 ground); `VESPERIS_TRACE=1` prints the timings above (`06-surface.md`); `VESPERIS_SKIP=cut|wq|refl` skips the shore cut, the water quads or the reflections (a rendering artefact is diagnosed by skipping passes and diffing the PNGs); `VESPERIS_THREADS=1` as before.
 
@@ -279,25 +1596,62 @@ Reference numbers (2026-09-28, GEN 10, Apple M4, idle): `bench check` space 2x 3
 
 ## F-01: the proof tools and what the bench did not see (2026-10-12)
 
-The performance plan's first milestone (`docs/ideas/PLAN-performance.md`): every later F item is proved and judged with these.
+The performance plan's first milestone (`docs/archive/ideas/PLAN-performance.md`): every later F item is proved and judged with these.
 
-| Mode | What it does | Output |
-| --- | --- | --- |
-| `pngdiff <a.png> <b.png> [diff.png]` | two harness PNGs pixel for pixel: the count that differ (and their share), the largest step of one channel, the first differing pixel, the rows they span and how many fall in each eighth of the height; with a third name the differing pixels in red over the first picture at a third of its brightness. Exit code 1 when they differ | stdout, the diff image |
-| `pngdiff <dirA> <dirB>` | every PNG of A against B's of the same name, the differing and missing ones listed, then the counts; exit code = differing + missing. The milestone's proof: keep the previous `vesperis_test`, run `unit`, `regress` and `flow` (and `scene`s at 2x/4x) with each binary, copy `shots/tests` aside after each, compare the two directories | stdout |
-| `bothways <scene> [scale]` | a `scene` drawn by the workers twice, by one thread (`parallelThreadsOverride`) and by the workers again, in one run: B-310's contract on any scene (`shots/tests/bothways_<scene>_<scale>x_{workers,serial,diff}.png`, the flora's bands printed); exit code 1 when the frames differ or the workers' frame is not the same twice | stdout, PNGs |
-| `screens [scale ...]` | F-05: the game's own frames the regress never hashes, each drawn at one instant (`frame(in, 0)`) once it has held still for half a second (a world's map or a tile arriving changes it), at 1x, 2x, 3x and 4x (or the scales named), by the workers and by one thread: the cabin (the light on and off, the hull glass dark and lit, the roof, the decoder's desk, the case, the drones' rack), the console, the ship's screen, the help, the guide, the radar camera, the modern test world's landing map and zoom, the drone bay's screen, the rack with the drones leaving, the drones outside the window, and on the home world the descent, the ground, the menu, the sector map near and wide and the nose camera (96 pictures); the waits for a thread's work run at one instant too, so two runs of one binary write the same pictures (`pngdiff` two binaries' sets: the proof for the cabin, the screens and the feeds). Exit code 1 when one thread draws a frame differently | `shots/tests/screens/<name>_<scale>x.png`, stdout (a single frame's times, a hint) |
-| `suncone` | F-05: the sun drawn alone (`SpaceRenderer::drawSun` on a cleared frame) with its direction swept toward the frame's corner across the angle where its glow's cone leaves the frame (61 steps of 1e-4 and 61 of 1e-6 radians round it, and 101 from half the cone inside to half outside), seven classes (the protostar's strip and the black hole's lens among them), three sizes, with an atmosphere and without, at 1x and 4x: a hash per case and one of every frame, for two binaries to agree on (the cone test, `coneMissesFrame`) | stdout |
-| `pool` | F-06: the pool's dispatch timed at its thread count (an empty one after a rest of 2 ms and fifteen back to back; 800 rows of uneven work against one thread), then its dealing checked: at 2, 3, 4, 6 and 8 threads twenty thousand dispatches each of random sizes, minimums and chunks with rests between visit every index once (`parallelFor`) and every band of the exact layout once (`parallelBands`), a dispatch inside a dispatch runs alone in one call, and two threads dispatching at once lose nothing (the second runs alone). Run it in a `-fsanitize=thread` build after a change to `core/parallel.cpp`. Exit code = failures | stdout |
-| `bench noise` | the noise's cost a call, the best of three passes over a million points at a planet's coordinates: `gnoise3`, `gnoise3d` (with its gradient), `worley3`, and a dome field (`benchFeatureField`: `visitFeatures`' 27 cells); each row's results hashed bit for bit, so a rewrite of the noise (F-07) keeps every hash or is a bug | stdout |
-| `load landing\|map\|arrival\|drive\|capital\|probe\|roads [seconds] [scale] [age]` | B-422's measure in the harness, the frames paced at 60 a second: every second the cores the process keeps busy (its CPU over the wall's), its threads (alive, and running at the samples between frames), the frames' mean and worst, the state and the resident MB; at the end the first frame, p50/p99/max and the maps generated and blocking calls. `landing`: the descent and the first minute on the ground; `map`: the landing map with the cursor tapped every 0.15 s; `arrival`: a star never seen; `drive`: full throttle from 400 m outside the modern test world's capital (its speed, distance and the roads' rebuilds; the buggy stops at the town's edge); `capital`: standing 400 m outside an age test world's capital facing it, the flora's listing timed (`age` 0-5, the industrial by default); `probe`: the launch from Wailie VI (the entry); `roads`: on foot by the modern capital, moved two ruin cells (4 km) ten times, each rebuild of the site's roads on the main thread timed | stdout |
-| `soak [minutes] [scale]` | a long expedition at 4x, frames paced at 60 a second, round the stars of the harness's plane: at each a parking, ten seconds of the cabin turning, a landing at the default site, forty seconds walking and turning, the ascent; after each stop the resident and peak memory, the threads, the maps and drainage tiles held. First the load of a guide of the player's composition | stdout |
-| `auto [profile] [minutes] [seed] [cockpit]` | R-419: a fresh expedition from home played by auto-explore (the profile by name or number, default the wanderer; ten minutes of frames by default, 30 a second drawn as fast as they come, so the threads' work arrives as on a slow machine; `cockpit` the classic cockpit's view; `scale=N` the frames' scale): its steps as they change with the state, at the end what it did (stars, parkings, landings, probes, records, outings, steps given up, unsticks) and how the eye moved (the cuts: a scene's change or a turn over 12 degrees in a frame, the game's own snaps; outside them the fastest turn and the share of frames over 60 degrees a second; `VESPERIS_AUTOTRACE=1` prints the ship's and the head's angles at each turn over 45; `VESPERIS_AUTOSHOT="the fine approach"` writes a step's frames twice a second, forty at most, `auto_<profile>_step_NN.png`). Each profile its own files (`shots/tests/auto_guide_<profile>.txt`), so two run side by side | stdout, `shots/tests/auto_<profile>_NNN.png` a frame every 20 s |
-| `tail [sx sy sz body]` | B-427: a Wolf-Rayet star's giant and the tail its wind strips (S-05), the user's by default (18071 1 -19950, body 1): parked, carried round it by Shift and the arrows as a player is, a frame every 45 degrees (`tail_<deg>.png`: the pixels at the ramp's top, over shade 50 and in the giant's bank off any body, the tail's, with their brightest and mean shade); from 12 and 40 radii beside it (`tail_far12/40.png`); from its first moon at quadrature, the giant 50 degrees up and the sun under the horizon (`tail_sky.png`); through the cabin's window 135 degrees round and the same at 1x (`tail_cabin.png`, `tail_1x.png`). Thirteen frames, the same between runs and with one thread |
-| `parkings` | B-428: twelve parkings near home of the scenes that were crowded (four solid worlds with a big moon, two twins, three giants with four moons or more, three giants' moons): each world parked at as a player is (`parkings_NN_a.png`), then from the same place the eyes on the biggest other disc in its sky (`parkings_NN_b.png`), with its family's moons (orbit and size in the planet's radii) and that disc's width and distance |
-| `tape [dir]` | R-420: auto-explore's tape. The tracks as read from `music/` (or dir), with their credits and gains; the deck's four sequences for three seeds into `shots/tests/tape_deck_<kind>_<seed>.wav` (22,050 Hz mono at the default master, as the synth plays them: listen to them); then auto-explore from home with that tape, the platform's side played by the harness (each track 12 s): `tape_00.png` the chooser with the tape's line, `tape_01`-`04` the caption fading in, whole, fading out and gone, `tape_05` the next track's, `tape_06` an empty folder's words |
-| `reanchor comet [scale]` | the comet's re-anchor (every 0.35 radii, KI-302) on `comet_day`: the update that re-anchors and the next three frames; with `VESPERIS_TRACE=1` the parts (the site's init, the roads, the marks and plan, the tiles asked) and each ring's misses and fill in the refill frame | stdout |
-| `zoom <sx> <sz> <body> <latDeg\|site\|capital> <lonDeg> [scale]` | F-01: also the build's parts (samples, colours, roads, plan ways, places' cores); `site` keeps the landing map's own cursor, `capital` takes the first people's capital (the plan waited for) | stdout |
+* `pngdiff`, `bothways`, `screens` and `suncone`, the proof tools, and F-01's proof of a bit-identical change:
+  `harness/proof.md`.
+* `pool`: F-06: the pool's dispatch timed at its thread count (an empty one after a rest of 2 ms and fifteen back to back; 800
+  rows of uneven work against one thread), then its dealing checked: at 2, 3, 4, 6 and 8 threads twenty thousand dispatches each
+  of random sizes, minimums and chunks with rests between visit every index once (`parallelFor`) and every band of the exact
+  layout once (`parallelBands`), a dispatch inside a dispatch runs alone in one call, and two threads dispatching at once lose
+  nothing (the second runs alone). Run it in a `-fsanitize=thread` build after a change to `core/parallel.cpp`. Exit code =
+  failures (output: stdout)
+* `bench noise`: the noise's cost a call, the best of three passes over a million points at a planet's coordinates: `gnoise3`,
+  `gnoise3d` (with its gradient), `worley3`, and a dome field (`benchFeatureField`: `visitFeatures`' 27 cells); each row's results
+  hashed bit for bit, so a rewrite of the noise (F-07) keeps every hash or is a bug (output: stdout)
+* `load landing|map|arrival|drive|capital|probe|roads [seconds] [scale] [age]`: B-422's measure in the harness, the frames paced
+  at 60 a second: every second the cores the process keeps busy (its CPU over the wall's), its threads (alive, and running at the
+  samples between frames), the frames' mean and worst, the state and the resident MB; at the end the first frame, p50/p99/max and
+  the maps generated and blocking calls. `landing`: the descent and the first minute on the ground; `map`: the landing map with
+  the cursor tapped every 0.15 s; `arrival`: a star never seen; `drive`: full throttle from 400 m outside the modern test world's
+  capital (its speed, distance and the roads' rebuilds; the buggy stops at the town's edge); `capital`: standing 400 m outside an
+  age test world's capital facing it, the flora's listing timed (`age` 0-5, the industrial by default); `probe`: the launch from
+  Wailie VI (the entry); `roads`: on foot by the modern capital, moved two ruin cells (4 km) ten times, each rebuild of the site's
+  roads on the main thread timed (output: stdout)
+* `soak [minutes] [scale]`: a long expedition at 4x, frames paced at 60 a second, round the stars of the harness's plane: at each
+  a parking, ten seconds of the cabin turning, a landing at the default site, forty seconds walking and turning, the ascent; after
+  each stop the resident and peak memory, the threads, the maps and drainage tiles held. First the load of a guide of the player's
+  composition (output: stdout)
+* `auto [profile] [minutes] [seed] [cockpit]`: R-419: a fresh expedition from home played by auto-explore (the profile by name or
+  number, default the wanderer; ten minutes of frames by default, 30 a second drawn as fast as they come, so the threads' work
+  arrives as on a slow machine; `cockpit` the classic cockpit's view; `scale=N` the frames' scale): its steps as they change with
+  the state, at the end what it did (stars, parkings, landings, probes, records, outings, steps given up, unsticks) and how the
+  eye moved (the cuts: a scene's change or a turn over 12 degrees in a frame, the game's own snaps; outside them the fastest turn
+  and the share of frames over 60 degrees a second; `VESPERIS_AUTOTRACE=1` prints the ship's and the head's angles at each turn
+  over 45; `VESPERIS_AUTOSHOT="the fine approach"` writes a step's frames twice a second, forty at most,
+  `auto_<profile>_step_NN.png`). Each profile its own files (`shots/tests/auto_guide_<profile>.txt`), so two run side by side
+  (output: stdout, `shots/tests/auto_<profile>_NNN.png` a frame every 20 s)
+* `tail [sx sy sz body]`: B-427: a Wolf-Rayet star's giant and the tail its wind strips (S-05), the user's by default (18071 1
+  -19950, body 1): parked, carried round it by Shift and the arrows as a player is, a frame every 45 degrees (`tail_<deg>.png`:
+  the pixels at the ramp's top, over shade 50 and in the giant's bank off any body, the tail's, with their brightest and mean
+  shade); from 12 and 40 radii beside it (`tail_far12/40.png`); from its first moon at quadrature, the giant 50 degrees up and the
+  sun under the horizon (`tail_sky.png`); through the cabin's window 135 degrees round and the same at 1x (`tail_cabin.png`,
+  `tail_1x.png`). Thirteen frames, the same between runs and with one thread
+* `parkings`: B-428: twelve parkings near home of the scenes that were crowded (four solid worlds with a big moon, two twins,
+  three giants with four moons or more, three giants' moons): each world parked at as a player is (`parkings_NN_a.png`), then from
+  the same place the eyes on the biggest other disc in its sky (`parkings_NN_b.png`), with its family's moons (orbit and size in
+  the planet's radii) and that disc's width and distance
+* `tape [dir]`: R-420: auto-explore's tape. The tracks as read from `music/` (or dir), with their credits and gains; the deck's
+  four sequences for three seeds into `shots/tests/tape_deck_<kind>_<seed>.wav` (22,050 Hz mono at the default master, as the
+  synth plays them: listen to them); then auto-explore from home with that tape, the platform's side played by the harness (each
+  track 12 s): `tape_00.png` the chooser with the tape's line, `tape_01`-`04` the caption fading in, whole, fading out and gone,
+  `tape_05` the next track's, `tape_06` an empty folder's words
+* `reanchor comet [scale]`: the comet's re-anchor (every 0.35 radii, KI-302) on `comet_day`: the update that re-anchors and the
+  next three frames; with `VESPERIS_TRACE=1` the parts (the site's init, the roads, the marks and plan, the tiles asked) and each
+  ring's misses and fill in the refill frame (output: stdout)
+* `zoom <sx> <sz> <body> <latDeg|site|capital> <lonDeg> [scale]`: F-01: also the build's parts (samples, colours, roads, plan
+  ways, places' cores); `site` keeps the landing map's own cursor, `capital` takes the first people's capital (the plan waited
+  for) (output: stdout)
 
 `bench check` prints, after the forest 4x row, the same forest at the game's 3x3 mush (the row above runs `setFramebufferScale`'s 5x5,
 a kernel the game never uses at 4x), every surface row's and the forest's band lines, the capital at 4x inside the capital's block,
@@ -325,8 +1679,8 @@ x 200 and 7 x 3 pictures of noise, read back as drawn, IEND's CRC `0xAE426082`; 
 neighbourhood kept across moves` (53 moves of a flight coreward, a far jump and back: the kept list the fresh walk's star for star) and
 `landing map and bay: no wait for the world's map` (a world never seen: the landing map open at once reading the world with no blocking
 map call, then the map; the drone bay's map drawn when the world's is made; Enter while reading lands). Since F-02 the screens read a
-world's map without waiting: `Game::testParkAt` waits for it before it returns (after giving the renderer the system's season, as a
-frame would), `testParkAt(s, body, false)` does not, and `Game::testWaitMap` waits for the landing map's world (the flow and the
+world's map without waiting: `TestGame::testParkAt` waits for it before it returns (after giving the renderer the system's season, as a
+frame would), `testParkAt(s, body, false)` does not, and `TestGame::testWaitMap` waits for the landing map's world (the flow and the
 descent's bench row after their `C`); `bench`'s recording row times the recorder's copy for the writer's thread and prints how long
 the writer's queue took to empty after the row.
 
@@ -366,18 +1720,6 @@ algorithm by a scratch oracle (576 random frames, every scale, kernels 1-8, one 
 `decoder wav`, `signals wav`: 87 files byte for byte), the noise's by `bench noise`'s hashes. The C-11 player check waits for its
 piece's records at one instant (frames at dt 0 until `testPlayerWaiting` is false): read nine frames after Enter, a loaded machine's
 late thread had failed it (KI-410).
-
-**The proof of a bit-identical change** (F-01's method, every F milestone; F-10's batch, which was allowed to move the hashes, kept
-them all): keep the previous `vesperis_test`; `regress` and `VESPERIS_THREADS=1 regress` (24 unchanged, 22 before F-11);
-`scene <name> 2` and `4` for the regress scenes and the frames the change touches, written by each binary and compared with `pngdiff`
-(deterministic: identical or it is a change); `unit` (its both-ways check) and `bothways` on the scenes the change touches. The `flow`
-is not deterministic between runs of one binary: 44 of its 166 frames varied between two runs from the same files (the threads deliver
-drainage tiles, works and scans at different frames; the slots, the log, the gallery and the drone bay's charge read the wall clock),
-and the unit's six scanner and marks frames depend on what a previous run left in `shots/tests`. Compare them only from the same
-restored state (the non-PNG files: `rsync --exclude '*.png'`), with a baseline-against-baseline run beside the new one as the noise
-floor; copy only the PNGs a run writes (`shots/tests` is about 2 GB). A wait that runs frames until a thread is done counts frames by
-the binary's speed: F-05 holds the flow's wait for the scanner at one instant (frames at dt 0, as `screens` waits), which had put a
-faster binary's clock, and every picture after the scanner, ahead.
 
 **The flat-core reading of the scaling curve.** `VESPERIS_THREADS=1, 2, 4, 6, 8` over the bench is the cheapest diagnosis of a pass
 that does not scale: a row whose section stays flat or grows past four threads repeats its work per band (the terrain today), one that
@@ -530,7 +1872,7 @@ warm-up after a scale's change read space 4x 11.0 and surface 2x 2.9, and one af
 of its 5.4). The budgets' rule and their list are under "Unit tests, frame hashes and budgets".
 
 The real window (2026-10-12, the dev Mac's built-in ProMotion display, 4x in a 1280x800 window, muted, two minutes a state; a scratch
-copy of the window loop driven by script through the game's test hooks; the in-tree way is `VESPERIS_TRACE=1 ./vesperis`):
+copy of the window loop driven by script through TestGame's hooks; the in-tree way is `VESPERIS_TRACE=1 ./vesperis`):
 
 | State | Frames a second | Work p50 / p99 (ms) | Interval p50 / p90 / p99 | Over 17.5 / 20 / 33.4 ms | Synth a block, worst | Upload |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -568,3 +1910,31 @@ refresh on a calm Mac but missed whole stretches under load (the decoder 41.7 a 
 average and 2.08 at worst with the radar and the player; the upload 0.42-0.77 ms (1.17 in the radar camera). `VESPERIS_TRACE=1` now
 prints `hold` (the platform's wait before the swap) beside `swap` (the swap and its vsync wait), the work is the frame without either,
 and the summary counts the intervals over 17.5 ms.
+
+## E-03: the harness in pieces (2026-10-24)
+
+The harness is `src/harness/` (46 files with E-02's fingerprints; `src/harness/CLAUDE.md` maps them), not one 2 MB file.
+
+* `help [md]`: every mode by group with its arguments, one line and its file (`MODES` in `main.cpp`); `md` the same as a table a
+  group, for the docs' index (output: stdout)
+* `unit list`: the unit's 41 groups in its order, each with its file (output: stdout)
+* `unit <group> ... [-q]`: those groups alone (`unit noise -q` in half a second); `-q`: stdout silenced while they run, only the
+  failures and the count printed (output: stdout, exit code)
+
+- `MODES` is the dispatch: main() runs the row named by the first argument. No argument runs `stars`; an unknown mode prints
+  "unknown mode" and exits 0, as before.
+- `unit` runs every group with the printout the one function gave. A group starts at the render scale and the mush the groups
+  before it leave in the full run (a scripted `Game` sets 4x), so a group alone gives the full run's results: all 41 do, but two
+  lines that move between full runs too (C-07's radar sweep time, the town's pieces drawn).
+- The scenes' codes are `SceneCode` (`SCENE_*` in `harness.h`, the old numbers' values); `setupSceneForType`'s finders are
+  `SceneFind`'s members, the flow's stages `Flow`'s, the bench's `Bench`'s.
+- `tools/mover.py` (`list`, `move <manifest>`, `verify`, `xref`) moves whole top-level chunks (a function, a type, a table, a
+  namespace, with the comments above them) between files and rebuilds the old file from the new ones to prove a move.
+  `tools/samecode.py [-I<dir>] <old files> -- <new files>` compiles both sides to IR at -O0 without exceptions and compares
+  every function by name (a lambda by its function, a constant by its contents): a move changes none; `--rename` reads names
+  that changed, `SAMECODE_ALL=1` lists every difference (twelve of each by default).
+- `PROVE_ITEMS=<file> tools/prove ...` runs another battery of the same form: E-03's A/B of the modes the battery leaves out
+  (`build/e03/ab_modes.items`, recorded before the edits with `PROVE_BIN` at the old binary). The landforms sheets and the
+  towns' maps print a time into their pictures: they differ between runs (E-12's A/B: `build/e12/ab_modes.items`, 46 items).
+- A one-file harness edit rebuilds in 1-3 s. The harness's objects compile the same twice but for three
+  (`modes_signals`, `unit_kinds`, `unit_sky`), so `tools/prove objects` still leaves the harness to its behaviour.

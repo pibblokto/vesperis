@@ -7,6 +7,7 @@
 #include "galaxy/starfield.h"
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
+#include "galaxy/planet_features.h"
 #include <map>
 #include <vector>
 #include <memory>
@@ -49,11 +50,11 @@ struct SpaceContext {
     // build may take (0: the whole plate now, for a photo or a harness frame)
     int detailBody = -1;
     int detailBudget = 8000;
-    // G-07: a Vimana flight's line (km) and its clock (real seconds), so the galaxy's band is built ahead of the ship along the
+    // a Vimana flight's line (km) and its clock (real seconds), so the galaxy's band is built ahead of the ship along the
     // line (`vimanaProgress`); flightDur 0 in a flight: no line given, no band
     Vec3 flightFrom, flightTo;
     double flightT = 0, flightDur = 0;
-    bool nebulae = true;      // G-07: the star-forming regions' patches over the band (the harness measures the band alone without them)
+    bool nebulae = true;      // the star-forming regions' patches over the band (the harness measures the band alone without them)
 };
 
 // W-06 (the user's review, 2026-10-06): the telescope's plate. The world map (512 x 256 texels, 11-44 km each) is the
@@ -80,9 +81,9 @@ struct DetailPlate {
     bool drainageWanted = false;
     double radiusM = 0;        // the ground radius the plate covers (what the drainage prefetch is asked for)
     long samples = 0;
-    // T-01: the world plan's places and ways over the plate (galaxy/plan.h), read once the plan is built: the cores' built ground and the
+    // the world plan's places and ways over the plate (peoples/plan.h), read once the plan is built: the cores' built ground and the
     // ways' beds over the cells as the ground has them (what is seen from orbit is what is walked on)
-    struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1, cosReach = -2; };   // F-07: the cosine of the reach, the acos's pre-test
+    struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1, cosReach = -2; };   // the cosine of the reach, the acos's pre-test
     struct PlanWay { Vec3 a, b; double half = 3, k = 0.3; };
     std::vector<PlanCore> cores; std::vector<PlanWay> ways; bool planRead = false;
     static constexpr int BLOCKS[4] = {8, 4, 2, 1};
@@ -93,42 +94,42 @@ struct DetailPlate {
 
 class SpaceRenderer {
 public:
-    static int dbgX, dbgY;   // debug: print shading terms for this pixel
     Proj proj = Proj::fromHFov(70);
     std::vector<BodyScreenInfo> bodyInfo;
     void render(Framebuffer& fb, const SpaceContext& c);
     // M5-07/N0-01: a comet's coma, its ion tail with streaming knots, its curved dust tail and, when the
     // nucleus is a disc of `nucleusRpx` pixels, jets from its sunlit side (the nucleus is drawn by drawGlobe)
     void drawCometTail(Framebuffer& fb, const SpaceContext& c, int bi, int bank, double nucleusRpx = 0);
-    // S-05: a gas giant (or a substellar object) of a Wolf-Rayet star, its envelope streaming away from the star in the wind
+    // a gas giant (or a substellar object) of a Wolf-Rayet star, its envelope streaming away from the star in the wind
     void drawStrippedTail(Framebuffer& fb, const SpaceContext& c, int bi, int bank);
-    // S-06: a black hole's companion being drawn out: its gas streams from the limb facing the hole into the disc
+    // a black hole's companion being drawn out: its gas streams from the limb facing the hole into the disc
     void drawAccretionStream(Framebuffer& fb, const SpaceContext& c, int bi, int bank);
-    // S-06: the black hole in place of a sun: the shadow, the lensed sky behind it, the accretion disc and the jet
+    // the black hole in place of a sun: the shadow, the lensed sky behind it, the accretion disc and the jet
     static void drawBlackHole(Framebuffer& fb, const Star& star, const Vec3& dirView, double angR, double t, double intensity,
                               int bank, bool depthTest, const Proj& pj, const Vec3* discUp);
-    // N0-01: position (0..1 along the ion tail) of knot k at time t; one traversal every 40 s
+    // position (0..1 along the ion tail) of knot k at time t; one traversal every 40 s
     static double cometKnot(int k, double t);
     // Palette banks: 0 = stars (white), 1 = sun, 2 = body A (rock family), 3 = body B (rock), 6/7 = their water,
     // body A's forest 11, sand 13, snow 14, grass 15; body B's forest 16, sand 17, snow 18, grass 19 (O0-02, B-305:
     // each world with a disc has its own six family banks since the pixel carries 32 banks); 12 = the companion
     // star (M5-01); 20 = belt rocks (O3); 8-10 belong to the cabin.
     void setupPalette(Framebuffer& fb, const StarSystem* sys, int bodyA, int bodyB, double fade);
-    // N1-02: the bank a globe pixel of this material goes to, given the body's rock bank (2 or 3; 0 = a far grey body)
-    static int globeBank(int bodyBank, int material);
+    // the bank a globe pixel of this material goes to on a body of this kind, given the body's rock bank (2 or 3; 0 = a far
+    // grey body); P-00: a kind's accents in its grass and forest banks
+    static int globeBank(int bodyBank, int type, int material);
     // the ramp of a material colour, shared by the globe and the landing map: {0 black, 14 0.25c, 34 0.6c, 47 c, 56 c->white, 63 white}
     static void materialRamp(uint8_t* pal, int bank, RGB c, const RGB* skyLight);
     const PlanetMap& mapFor(const Body& b);          // synchronous: waits for a background generation
-    const PlanetMap* mapIfReady(const Body& b);      // starts a background generation, nullptr until ready (M9-15)
+    const PlanetMap* mapIfReady(const Body& b);      // starts a background generation, nullptr until ready
     const BodyGen& genFor(const Body& b);
-    // W-03: the fronts' cloud at t on the map's grid (`buildFrontMap`), for the globe and the landing map; nullptr for a world
+    // the fronts' cloud at t on the map's grid (`buildFrontMap`), for the globe and the landing map; nullptr for a world
     // without fronts; built again when the clock has moved four minutes (a front moves a texel in an hour). `coarse` flags the
     // 16 x 16 texel blocks that hold any band (a texel's neighbours counted), so a globe pixel off every band costs one byte
     struct FrontMap { uint64_t seed = 0; double t = -1e18; std::vector<uint8_t> cloud, coarse; };
     static constexpr int FRONT_BLOCK = 16;
     const FrontMap* frontsFor(const Body& b, double t);
     ~SpaceRenderer();
-    // M9-09: maps and generators follow the season; call before rendering a system at time t
+    // maps and generators follow the season; call before rendering a system at time t
     void setSeason(const StarSystem& sys, double t);
 private:
     FrontMap frontMaps[4]; int frontMapNext = 0;
@@ -140,11 +141,11 @@ public:
     void drawSkyBodies(Framebuffer& fb, const SpaceContext& c);
     // Sun disc and glow shared with the surface view, drawn by angle (B-308): `dirView` is the unit direction to the
     // star in view space, `angR` its angular radius (may be tiny: under 0.8 px it is a point).
-    // S-04: `discUp`, the orbital plane's normal in view space, lets a protostar draw its dust disc as a band along the plane
+    // `discUp`, the orbital plane's normal in view space, lets a protostar draw its dust disc as a band along the plane
     static void drawSun(Framebuffer& fb, const Star& star, const Vec3& dirView, double angR, double t,
                         double intensity, int bank, bool atmosphere, double atmosHaze, bool depthTest, const Proj& pj, const Vec3* discUp = nullptr);
     static double lightFactor(double luminosity, double distKm);
-    // M1-03: flare discs along the line from the sun through the screen centre.
+    // flare discs along the line from the sun through the screen centre.
     static void drawLensFlare(Framebuffer& fb, double sx, double sy, double sunRadiusPx, double intensity, int bank, const Proj& pj);
 private:
     std::map<uint64_t, std::unique_ptr<PlanetMap>> maps;
@@ -152,18 +153,23 @@ private:
     std::map<uint64_t, uint64_t> mapLastUse;   // M7-02 LRU stamps
     uint64_t useStamp = 0;
 public:
-    // M7-02: cache policy and profiling counters (printed by `vesperis_test bench`)
+    // cache policy and profiling counters (printed by `vesperis_test bench`)
     int mapCacheCap = 24;
-    struct MapStats { int generated = 0, hits = 0, evicted = 0; double genMs = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // F-01: `mapFor` waiting on a map or making it
+    struct MapStats { int generated = 0, hits = 0, evicted = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // `mapFor` waiting on a map or making it
     std::atomic<long> genMicros{0};
     size_t mapsHeld() const { return maps.size(); }
 private:
     std::map<uint64_t, BodyGen> gens;
+    std::map<uint64_t, std::vector<EmberField>> emberFields;   // a young interior's fields by the body's seed (`emberFieldsOf`, once a body)
+    // the lights of a world in the dark after its disc is drawn: its ember fields' glow, a dead people's cities still lit
+    void drawDarkLights(Framebuffer& fb, const SpaceContext& c, int bi, int bank, const Vec3& posW, const Mat3& frameT, double R, double depthUnit, const Vec3& starDirW, bool dark);
     std::map<uint64_t, std::vector<float>> ringProfiles;
-    std::vector<float> bandMap;   // M1-09 galactic backdrop for the current neighbourhood
+    std::vector<float> bandMap;   // galactic backdrop for the current neighbourhood
     Vec3 bandPos; bool bandValid = false;
-    uint64_t bandGen = 0;         // F-07: moved on by every write of bandMap (the replay's key holds it)
-    // F-07: the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
+    uint64_t bandGen = 0;         // moved on by every write of bandMap (the replay's key holds it)
+    double bandSH[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; uint64_t bandSHGen = ~0ULL;   // the band's light on a sunless system's globes, kept with its build
+    bool auroraBank12 = false;    // the palette's bank 12 is a drifter's aurorae (a system with no sun has no second sun to hold it)
+    // the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
     // the pass outside a flight and without nebula patches: the camera, the projection, the frame's size and the band map. A frame
     // whose key matches the last one's keeps its layer; one whose key matches the kept layer's copies it
     struct BackdropKey { double cam[9], f, cx, cy; int w, h; uint64_t band; };
@@ -171,7 +177,7 @@ private:
     bool backHave = false, backPrevHave = false;
     std::vector<Pix> backLayer;
 public:
-    // G-07 (KI-364): the band in a Vimana flight. The flight's line is closed-form, so the band is built ahead of the ship:
+    // the band in a Vimana flight. The flight's line is closed-form, so the band is built ahead of the ship:
     // keyframes at flight times `tau` (half a second apart, closer where the galactic centre would turn more than two degrees
     // past the ship between two), each a whole band map at the ship's place then, built a share a frame on the pool so that it
     // is whole within half its interval; a frame draws the two keyframes round the clock blended (`shown`). The first keyframe
@@ -194,15 +200,15 @@ public:
     long parkedBandBuilds = 0;                                      // the parked band's builds (the harness: an arrival builds none)
     const std::vector<float>& parkedBand() const { return bandMap; }
     Vec3 parkedBandPos() const { return bandPos; }
-    const std::vector<float>& ringProfile(const StarSystem& sys, int bi);   // M5-04: the surface draws ring arcs with it
+    const std::vector<float>& ringProfile(const StarSystem& sys, int bi);   // the surface draws ring arcs with it
 private:
     void startMap(const Body& b, int bucket);
     void joinMap(uint64_t seed);
     void drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, int bank, BodyScreenInfo& info);
-    void drawBeltRocks(Framebuffer& fb, const SpaceContext& c, int k);   // O3 (R-302): the rocks around a ship inside belt k (bank 20)
+    void drawBeltRocks(Framebuffer& fb, const SpaceContext& c, int k);   // the rocks around a ship inside belt k (bank 20)
 public:
     int lastBeltRocks = 0, lastBeltMeshes = 0;   // bench: rocks drawn last frame (points and meshes)
-    // W-06: the telescope's plates: the current one and the previous (the fallback while the current builds)
+    // the telescope's plates: the current one and the previous (the fallback while the current builds)
     DetailPlate plates[2];
     int plateCur = 0;
     long plateSamplesFrame = 0;                 // samples taken by the last render

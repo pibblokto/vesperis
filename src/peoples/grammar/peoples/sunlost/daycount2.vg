@@ -1,0 +1,189 @@
+R"VG(
+# daycount2.vg (D-05): genre.daycount, continued (its first part in daycount.vg: a file holds at most 16 KB)
+@apart
+
+dc.cl.first
+  Day {#dc.dayn} without the dawn. {dc.cl.body}
+  The {#dc.dayn:ord} day. {dc.cl.body}
+  Day {#dc.dayn}. {dc.cl.body}
+dc.cl.next
+  The next day. {dc.cl.body}
+  {n} days later. {dc.cl.body}
+  Some days on. {dc.cl.body}
+  A {dc.span} after. {dc.cl.body}
+  (has:festival) On the day of {festival}, kept below without the sun it was for. {dc.cl.body}
+dc.cl.body (share=0.75)
+  (once) The fire was kept. {dc.cl.what}
+  (once) {dc.cl.what}
+  (once) Nothing to set down but the count, and [the cold at the door|the dark on the stair|the frost on the stones|the wind that is not there].
+  (once) The ice was cut above and carried down; the water is {dc.cl.water}.
+  (once) Someone went up and looked; the stars stood where the sun had been.
+  (once) {dc.cl.death}
+  (once) The old count was full, and [this book begun|a new one begun by the youngest keeper|the old book carried up to the dead].
+  (once) {dc.cl.born}
+  (once) The keepers of the count disagreed by a day, and it was settled [by lot|by the eldest|by {ruler.the}].
+  (once) The {dark.food} came up well by {warm.ground}. {dc.cl.what}
+  (once) A day like the one before it, [and the one before that|and like the one to come|but colder at the stair].
+dc.cl.what (people=5)
+  The {dark.food} grew.
+  Two children were born, and named for the warm stones.
+  The last of the old {fuel} was opened; there is little left.
+  The last {herd} were killed and shared out.
+  A song was made about {sun}; nobody sang it twice.
+  The water from the ice was sweet.
+  The air was bad by the north wall, and the sleepers there were moved.
+  The young asked again what the dawn was like.
+  Somebody painted a sun on the wall of {hall.below}, and the keepers let it stay.
+  The old ones sat by {warm.ground} and said the names of the summers.
+  (has:festival) We sang the songs of {festival}, low, so as not to wake the children.
+dc.cl.water (people=2)
+  clean
+  bitter
+  sweet
+  grey with ash
+dc.cl.death (people=3)
+  The oldest of us died, and was carried up into the cold, where the dead keep.
+  A child died of the cough. The cough is in every hall.
+  Two were lost above, cutting ice; the cold took them before they could come down.
+  The keeper of the fire died at the fire.
+dc.cl.born (people=3)
+  A child was born below, who will never see the sun; we named it for {sun}.
+  Twins were born by {warm.ground}, and both lived.
+  A child was born, the first this year, and we said the names over it.
+  A child was born, and its mother asked what it would be called in the old words for daylight.
+
+dc.cl.close (formula people=3)
+  So many days, and no dawn among them.
+  The count goes on; may the one who keeps it after us not lose it.
+  {god.keep}, and keep the count.
+  Let whoever finds this go on counting.
+  Count on. One day there will be a dawn to stop for.
+
+# =====================================================================================================================
+# a printed count, posted in the halls
+# =====================================================================================================================
+
+dc.pr.head (formula people=3)
+  THE COUNT. Day {#dc.dayn} without the dawn.
+  The days since the last sunrise: {#dc.dayn}. Posted at {$home}.
+  {$home}, below. Day {#dc.dayn} of the count.
+  The count of the days, as kept at {$seat}: today the {#dc.dayn:ord}.
+dc.pr.line (share=0.8)
+  (once) The {drink} ration for {festival} is one {vessel.one.n} a household; the count is kept as usual.
+  (once) {pastime} is permitted in the lower hall on the rest day, the count being read first.
+  (once) The {herd} on the warm level number {n}; the {dark.food} stores are counted with them.
+  (once) At the head of the shaft the frost is on everything, and the air outside will not come in.
+  (once) The {dark.food} beds by {warm.ground} are to be turned this week.
+  (once) The count was checked against [the clock at {$seat}|the old almanac|the keepers' own count]; it stands.
+  (once) Births this month: {n}. Deaths: {n}. The count goes on.
+  (once) The old calendar's {festival} falls in {n} days; it will be kept in the lower hall.
+  (once) The doors to the surface are shut except for the ice parties.
+  (once) The sky party went up and reports the stars as they were; {sun} is no brighter.
+  (once) The warmth at {warm.ground} is [steady|failing on the east side|better since the new shaft]. The upper rooms are to be closed.
+  (once) Lamps are to be turned down [after the evening count|at the second bell|on every level but the infirmary].
+  (once) {sunway.thing} is still seen from the surface, the sky party says, but it is going too.
+dc.pr.end (formula people=3)
+  The count is kept by the office at {$seat}; corrections to the office.
+  Next count posted in ten days.
+  Keep the count. Keep the lamps low.
+  By order, at {$seat}.
+
+# =====================================================================================================================
+# a reel's or a drive's log (the modern and the futuristic ages)
+# =====================================================================================================================
+
+dc.lg.head (formula people=4)
+  Count log, {$home}. Day {#dc.dayn} since the last sunrise.
+  (has:$me) This is {$me:name}, keeping the count at {$home}. Day {#dc.dayn}.
+  (age>=futuristic) Cycle {#year:digits}. Day {#dc.dayn} of the dark.
+  The count, {$home}, below. Day {#dc.dayn}.
+  (has:$me) Day {#dc.dayn}. {$me:name} on the count tonight.
+dc.lg.line (share=0.65)
+  (once) Outside: the frost, the stars, nothing [moving|living|changed].
+  (once) Inside: warm enough by {warm.ground}, cold [everywhere else|on the upper levels|at the doors].
+  (once) Heat from the deep rock [steady|down a little|up after the new shaft]. Air [good on the lower levels|thin by the north stair|bad again in the old rooms].
+  (once) The {dc.party} went up for ice[. All back|, {n} of them; {n} came down|. One frostbitten hand, nothing worse].
+  (once) [Two|Three] of the old ones died this [week|month]. They went up with the {dc.party}.
+  (once) Birth on the [lower|warm|third] level. [Healthy|Small, but breathing|Twins]. The count goes on.
+  (once) The {dark.food} came in [well|thin|late]. Rations [as before|cut by a quarter|as before, for now].
+  (once) [The children asked about the sun again|A child asked what morning meant|The young ones wanted to hear about the sun]. [Told them what we remember|Nobody could agree what colour it was|The old ones told it, as always].
+  (once) The lights [flickered for an hour|failed on the fifth level|were dimmed to save the line]. [Nobody slept|We sat in the dark and counted|The children sang].
+  (once) {sunway.thing} is no longer seen from the surface; the sky party [could not find it|looked for an hour|says it is gone].
+  (once) [The stars at noon, as every noon|Noon, and the stars|The noon bell, and the same stars]. [The surface party swore it was colder|Nobody looks up any more|The old ones still look up].
+  (once) [The frost line|The ice in the shaft|The cold at the stair] has come down [{n}|another {n}] steps since the last count.
+  (once) A [quarrel|fight] at the warm rock over [places|a blanket|the shift]. Settled by the wardens.
+  (once) Water from the melt tanks [is clean|tastes of the rock|is short this week], one {vessel.one.n} a head.
+  (once) The {herd} that were left were [killed and shared|moved to the warm level|counted again: {n}].
+  (once) Someone painted {sun} on the wall of the {dc.lg.room}. It is still there.
+  (once) [Music|A dance|A story] in the {dc.lg.room} tonight. Most came.
+  (once) {pastime} in the {dc.lg.room} tonight; [the young ones won|the old ones won|nobody kept the score].
+  (once) The last of the {drink} was opened for {festival}. [Nobody said so, but it was the last|It went round twice|The children had the dregs].
+  (once) The {herd} are down to {n}. [Kept at the warm rock|Fed before we eat|Nobody will say what happens after].
+  (once) Someone played {instrument} in the {dc.lg.room}. [Most came to listen|The old ones cried|It was out of tune and nobody minded].
+  (once) The {craft} rooms open again on the lower level. [Work for idle hands|The first thing made was for a child|{n} came the first day].
+  (once age>=futuristic) The halls' mind keeps its own count; ours and its agree [to the day|to the hour|again].
+  (once age>=modern inv.radio=1) The transmitter was tried again[. Nothing came back|, on the long band. Static|. The other halls did not answer].
+dc.lg.room (people=2)
+  main hall
+  lower hall
+  dining level
+  old store
+dc.lg.end (formula people=3)
+  End of log.
+  Count continues.
+  Logging off. Day {#dc.dayn}.
+  That's the count for today.
+
+# =====================================================================================================================
+# a crystal's reckoning (the futuristic age's and the far future's)
+# =====================================================================================================================
+
+dc.cr.head (formula people=4)
+  The count, as {$home} keeps it: {#darkyears|year} of the dark.
+  The reckoning of the dark, from the last sunrise to this reading: day {#dc.dayn}.
+  Day {#dc.dayn} of the dark. The count, kept in the crystal so that it cannot be lost.
+  (age=farfuture) The count of the days below, which the {people} keep as they keep everything: exactly.
+  (age=futuristic) The keeping count of {$home}: day {#dc.dayn} since the sun went.
+dc.cr.line (share=0.7)
+  (once) Every day is counted, though no day has a dawn to begin it.
+  (once) The warm levels hold. The cold levels are [shut and counted too|sealed, and their doors counted|empty, and kept].
+  (once) The {dark.food} are counted with the days, and the water, and the air.
+  (once) So many years since the last sunrise that the children of the dark now outnumber those who saw it.
+  (once) The count is read aloud at {festival}, and everyone listens to the number grow.
+  (once) The star that was the sun is still marked on the ceiling of the [hall|great hall|lower hall], where it was last seen.
+  (once) Nothing failed today. That is also counted.
+  (once) The halls are quiet. The count is the loudest thing in them.
+  (once) [Births|New names] since the last reading: {n}. [Deaths|Names gone up]: {n}.
+  (once) The heat of the rock is down by a [hair|breath|little] since the count began, and counted.
+  (once) The surface was looked at [today|this cycle|again]: the frost, the stars, no change.
+  (once) The [old ones|eldest] say the summers in their sleep, and the count takes them down too.
+  (once) The {craft} goes on in the warm levels, and its makers count the days by what they finish.
+  (once) {feast.custom} was kept below on its day, and the count read out before it.
+  (once age=farfuture) The count has outlasted the counters, as it was made to.
+  (once age=farfuture) We count the days because the dark does not; it has no days.
+  (once age=farfuture) The count is older than anyone who keeps it, and younger than the {people}.
+dc.cr.end (formula people=2)
+  The count goes on.
+  Read the number aloud; it is the {people}'s.
+  End of the reckoning, for today.
+
+# =====================================================================================================================
+# the far future's hum (the machine renders what it can)
+# =====================================================================================================================
+
+dc.hm.head (formula people=3)
+  The hum counts. The machine renders each pulse as one of their days: {#dc.dayn} so far.
+  A slow hum, one rise for every day since the sun went; the machine counts {#dc.dayn}.
+  The record hums in groups of {dc.group}. The machine reads it as a count of the days of the dark.
+dc.hm.line
+  (once) The pulses never miss.
+  (once) Every so often the hum drops a tone, the way a voice drops at a name.
+  (once) A longer pulse marks each of their years, and the pulses between are their days.
+  (once) Under the count, very faint, a tone the machine has heard before: the {people}'s sound for the sun.
+  (once) The hum is warm where the count was kept by {warm.ground}, the machine says, though it cannot say how it knows.
+  (once) The rises do not slow toward the end; whoever kept this expected to keep it.
+dc.hm.end
+  Then the hum goes on, and the machine stops rendering it.
+  The count does not end; the record does.
+  The last pulse is still sounding when the record runs out.
+)VG"

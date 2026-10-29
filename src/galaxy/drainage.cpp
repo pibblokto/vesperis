@@ -44,7 +44,9 @@ constexpr double COARSE_DETAIL = 1000.0; // from this scale up (the 2048 m ring)
 constexpr int CACHE_CAP = 28;
 constexpr double LAKE_DEPTH = 8.0;      // a depression at least this deep at its pit stays a lake; a shallower one is breached (its spill carved down)
 constexpr double LAKE_AREA_MAX = 30.0;  // km^2: a bigger depression is breached part way (below), so mountain basins are not seas
-constexpr double LAKE_KEEP = 0.4;       // the share of the small deep depressions that stay full lakes (by the pit's hash); the rest are breached to a pond: the ridged relief pockets every valley, and every pocket a lake made a highland half water
+// the share of the small deep depressions that stay full lakes (by the pit's hash); the rest are breached to a pond: the ridged relief
+// pockets every valley, and every pocket a lake made a highland half water
+constexpr double LAKE_KEEP = 0.4;
 constexpr double CARVE_MAX = 400.0;     // metres: no reach runs deeper than this under the ground it crosses (a canyon, never a slot)
 // a big basin's outlet is cut this far below its spill (a gorge, deeper for a bigger basin: more water cut it), the rest stays a lake
 inline double breachDepth(double areaKm2) { return 60.0 + 12.0 * std::sqrt(areaKm2); }
@@ -62,7 +64,7 @@ struct Tile {
     bool empty = true;
     std::vector<float> lvl, acc;                 // the filled height (m) and the accumulation (km^2) per domain cell
     std::vector<uint8_t> dir, up, flag;          // downstream neighbour 0-7 (8 none), main upstream neighbour (8 none), flags
-    double buildMs = 0, sampleMs = 0, sortMs = 0;   // F-03: the whole build, its sampling and its topological sort (the trace line)
+    double buildMs = 0, sampleMs = 0, sortMs = 0;   // the whole build, its sampling and its topological sort (the trace line)
     int lakesKept = 0, lakesBreached = 0;
     // -1 when (I, J) lies outside the domain
     int index(int I, int J) const {
@@ -95,16 +97,19 @@ std::atomic<int> g_built{0};          // the tiles computed (tests)
 std::vector<std::shared_ptr<std::atomic<bool>>> g_workerDone;
 
 inline uint64_t hashD(uint64_t h, double v) { uint64_t b; std::memcpy(&b, &v, 8); return mix64(h ^ (b + 0x9E3779B97F4A7C15ULL)); }
-// everything of a BodyGen that shapes the ground (a test's copy of a body with its traits removed must get its own tiles)
+// everything of a BodyGen that shapes the ground (a test's copy of a body with its traits removed must get its own tiles). P-04: a dead
+// world's are its then-world's (its living kind's: the rivers it had, routed on the ground they ran on, the same tiles in both times)
 uint64_t genKey(const BodyGen& g) {
-    uint64_t h = mix64(g.seed ^ 0xD8A1A6EULL) ^ (uint64_t)g.type * 0x9E37ULL;
+    uint64_t h = mix64(g.seed ^ 0xD8A1A6EULL) ^ (uint64_t)livingKindOf(g.type) * 0x9E37ULL;
     for (int k = 0; k < 3; k++) h = mix64(h ^ (uint64_t)(g.traits[k] + 1) * 0xC2B2AE3D27D4EB4FULL);
+    for (int k = 3; k < TRAIT_SLOTS; k++) if (g.traits[k] && TRAITS[g.traits[k]].moves) h = mix64(h ^ (uint64_t)(g.traits[k] + 1) * 0xC2B2AE3D27D4EB4FULL + (uint64_t)k);   // the new slots
+    // (a world without them keeps its key); Q-02: those that move the ground (a sky's or a sea's glow leaves the rivers where they were)
     h = hashD(h, g.R); h = hashD(h, g.seaLevel); h = hashD(h, g.mountainAmp); h = hashD(h, g.hillAmp); h = hashD(h, g.craterDensity); h = hashD(h, g.craterDepth);
     h = hashD(h, g.moistureBias); h = hashD(h, g.lavaLevel); h = hashD(h, g.duneAmp); h = hashD(h, g.duneWl); h = hashD(h, g.windAngle); h = hashD(h, g.plateK); h = hashD(h, g.chainAmp);
     h = hashD(h, g.tempBias); h = hashD(h, g.riverDensity); h = hashD(h, g.lakeDensity); h = hashD(h, g.liquidLevel); h = hashD(h, g.contScale); h = hashD(h, g.islandDensity);
     h = hashD(h, g.reliefWl0); h = hashD(h, g.reliefH); h = hashD(h, g.reliefRidge); h = hashD(h, g.reliefWarp); h = hashD(h, g.reliefErosion); h = hashD(h, g.reliefHybrid);
     h = hashD(h, g.reliefFlat); h = hashD(h, g.reliefHill); h = hashD(h, g.reliefMtn); h = hashD(h, g.snowLine); h = hashD(h, g.volcanoes); h = hashD(h, g.boulderDensity);
-    h = hashD(h, g.oldSeaM);   // C-01
+    h = hashD(h, g.oldSeaM);
     h = mix64(h ^ g.sA) ^ mix64(g.sB + 1) ^ mix64(g.sC + 2) ^ mix64(g.sD + 3) ^ mix64(g.sE + 4) ^ mix64(g.sF + 5) ^ mix64(g.sG + 6);
     h = mix64(h ^ (uint64_t)(g.tectonic ? 1 : 0) ^ (uint64_t)(g.locked ? 2 : 0) ^ (uint64_t)g.duneStyle * 16);
     if (g.locked) { h = hashD(h, g.lockedDir.x); h = hashD(h, g.lockedDir.y); h = hashD(h, g.lockedDir.z); }
@@ -112,7 +117,7 @@ uint64_t genKey(const BodyGen& g) {
 }
 
 inline bool isSeaSample(const BodyGen& g, const SurfaceSample& s) {
-    if (g.type == PT_FELISIAN) return s.biome == BIO_OCEAN;
+    if (livingGround(g.type)) return s.biome == BIO_OCEAN;
     if (g.oldSeaM > -1e8) return s.oldSea > 0.5;   // C-01: a dead desert world's rivers ran to its seas: the dry bed is the flood's outlet, so the wadis end at the old shore
     return g.liquidLevel > -1e8 && s.material == MAT_WATER && s.water > -1e8 && std::fabs(s.water - g.liquidLevel) < 0.01;
 }
@@ -130,7 +135,8 @@ struct Abandon {
     }
 };
 
-bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& abandon, int samplers) {
+bool buildTile(const BodyGen& gNow, int tLat, int tLon, Tile& T, const Abandon& abandon, int samplers) {
+    BodyGen gThen; const BodyGen& g = deadKind(gNow.type) ? thenWorld(gNow, gThen) : gNow;   // P-04: a dead world's rivers ran on its then-world (`genKey`)
     auto t0 = std::chrono::steady_clock::now();
     const int N0 = drainageLatticeN0(g.R);
     T.N0 = N0; T.M = std::max(2, (int)std::lround(MARGIN_DEG * N0)); T.Nd = N0 + 2 * T.M;
@@ -144,6 +150,7 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
     const double detail = std::max(30.0, 0.6 * cellLatM);
     std::vector<float> h(n, 0.f);
     std::vector<uint8_t> flag(n, 0);
+    std::vector<uint8_t> maar(n, 0);   // the cells a maar's landform marks (its pit's depression stays a lake: a maar is a crater lake)
     // the routing surface: the ground plus a metre of slow noise and a few centimetres of hash, so the flood's paths over
     // the flats (the sediment floors, the breached basins) follow a lie of the land instead of the scan order, which made
     // combs of parallel streams and dead-straight reaches. F-03: made beside each sample, by the sampling threads (a cell's noise
@@ -170,6 +177,7 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
                         SurfaceSample s = sampleSurface(g, u, detail);
                         h[c] = (float)s.height;
                         flag[c] = FL_VALID | (isSeaSample(g, s) ? FL_SEA : 0);
+                        maar[c] = s.landformTrait == TR_MAARS;
                     }
                     Vec3 pk = u * g.R;
                     hr[c] = h[c] + (float)(1.0 * gnoise3(pk / (2.5 * cellLatM * 0.001), g.sF ^ 0x0F10ULL) + 0.15 * (unitFromHash(hash2i(I, J, g.sF ^ 0x0F11ULL)) - 0.5));
@@ -247,7 +255,8 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
             // is breached part way: its outlet gorge is cut at most BREACH_MAX below the spill, the water stands at the gorge's
             // floor. A full breach dug trenches 1.6 km deep with vertical walls out of the highland basins
             if (depth >= LAKE_DEPTH) {
-                bool keep = !cut && areaKm2 <= LAKE_AREA_MAX && unitFromHash(hash2i(T.i0 + pit / Nd, T.j0 + pit % Nd, g.seed ^ 0x1AC3ULL)) < LAKE_KEEP;   // the pit's global cell: the same answer in every tile that sees the basin
+                // the pit's global cell: the same answer in every tile that sees the basin (Q-01: a maar's always)
+                bool keep = !cut && areaKm2 <= LAKE_AREA_MAX && (maar[pit] || unitFromHash(hash2i(T.i0 + pit / Nd, T.j0 + pit % Nd, g.seed ^ 0x1AC3ULL)) < LAKE_KEEP);
                 float L = keep ? spill : (float)(spill - std::min(depth - 4.0, std::min(breachDepth(areaKm2), CARVE_MAX - 20.0)));
                 if (L > minH + 0.5f) {
                     for (int c : members) if (hr[c] < L - 0.3f) { T.flag[c] |= FL_LAKE; T.lvl[c] = L; }
@@ -276,7 +285,7 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
         auto breach = [&](int m) {
             float base = hc[m];
             cur++;
-            q.clear();   // F-03: the last search's frontier dropped at once (it was popped one at a time)
+            q.clear();   // the last search's frontier dropped at once (it was popped one at a time)
             stamp[m] = cur; par[m] = -1; cost[m] = 0; q.push({0.f, m});
             int found = -1;
             while (!q.empty()) {
@@ -310,7 +319,7 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
                 v = hc[c] - 0.005f;
                 if (T.flag[best] & FL_LAKE) break;
                 if (best == prev && c == prev2) {
-                    // F-03: the walk turned back twice running: a pit of two cells, each the other's lowest neighbour from here on (the two only
+                    // the walk turned back twice running: a pit of two cells, each the other's lowest neighbour from here on (the two only
                     // sink, two steps lower at each turn, and the cells round them are not written), so it sinks them in turn by 5 mm a step until
                     // the guard. Every walk that reached the guard did this, from its third or fourth step: 520 million steps in a tile of lake
                     // country (3.1 s), each a scan of eight neighbours. The writes left, this step's to `best` and the rest's in turn: the two
@@ -435,8 +444,12 @@ std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLo
     const bool built = buildTile(g, tLat, tLon, *t, abandon, samplers);
     if (trace) {
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count();
-        if (built && !t->empty) fprintf(stderr, "    [%.0f] drainage tile %d %d built in %.1f ms (thread %zu; sampled %.1f, sorted %.1f; hash %016llx)\n", traceMs(), tLat, tLon, ms, std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000, t->sampleMs, t->sortMs, (unsigned long long)tileHash(*t));
-        else fprintf(stderr, "    [%.0f] drainage tile %d %d %s in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, built ? "built (empty)" : "abandoned", ms, std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
+        if (built && !t->empty)
+            fprintf(stderr, "    [%.0f] drainage tile %d %d built in %.1f ms (thread %zu; sampled %.1f, sorted %.1f; hash %016llx)\n", traceMs(), tLat, tLon, ms,
+                    std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000, t->sampleMs, t->sortMs, (unsigned long long)tileHash(*t));
+        else
+            fprintf(stderr, "    [%.0f] drainage tile %d %d %s in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, built ? "built (empty)" : "abandoned", ms,
+                    std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
     }
     lock.lock();
     if (!built) { g_tiles.erase(key); reapWorkers(); g_cv.notify_all(); return nullptr; }
@@ -455,7 +468,18 @@ std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLo
 }
 
 // joins the prefetch threads before the cache above is destroyed (defined after it: destroyed before it)
-struct Reaper { ~Reaper() { std::vector<std::thread> ws; { std::lock_guard<std::mutex> lock(g_mutex); ws.swap(g_workers); g_workerDone.clear(); } for (auto& t : ws) if (t.joinable()) t.join(); } } g_reaper;
+struct Reaper {
+    ~Reaper() {
+        std::vector<std::thread> ws;
+        {
+            std::lock_guard<std::mutex> lock(g_mutex);
+            ws.swap(g_workers);
+            g_workerDone.clear();
+        }
+        for (auto& t : ws)
+            if (t.joinable()) t.join();
+    }
+} g_reaper;
 
 // per thread: the tiles round the last query (a shared pointer each, so an evicted tile stays valid while in use)
 struct TileSlot { int tLat = INT_MIN, tLon = INT_MIN; std::shared_ptr<Tile> t; };
@@ -470,7 +494,9 @@ const Tile* tileFor(const BodyGen& g, uint64_t gkey, int tLat, int tLon) {
     return s.t.get();
 }
 
-struct CellVal { double lvl = 0, acc = 0, lake = 0, lakeLvl = 0; int dir = 8, up = 8; bool valid = false, sea = false; };   // lake/lakeLvl: the own tile's (a tile blends nothing of another's lakes: a basin cut by the other's domain edge looks like another lake there)
+// lake/lakeLvl: the own tile's (a tile blends nothing of another's lakes: a basin cut by the other's domain edge looks like another lake
+// there)
+struct CellVal { double lvl = 0, acc = 0, lake = 0, lakeLvl = 0; int dir = 8, up = 8; bool valid = false, sea = false; };
 struct Ctx { const BodyGen* g; uint64_t gkey; int N0; };
 
 // the blended values of a lattice cell: its own tile's, and, near a tile's edge, the neighbouring tiles' estimates for
@@ -521,8 +547,7 @@ inline double depthOf(double accKm2) { return 1.5 + 0.35 * std::pow(std::max(0.0
 inline double channelA0(const BodyGen& g) {
     double d = clampd((g.riverDensity - 0.4) / 0.5, 0, 1);
     double a0 = 3.0 + 9.0 * (1 - d);
-    if (g.type == PT_DESERT || g.type == PT_THINATMO) a0 *= 2.2;
-    else if (g.type != PT_FELISIAN) a0 *= 1.5;
+    if (KINDS[g.type].drainArea != 1) a0 *= KINDS[g.type].drainArea;   // P-00: a dry world 2.2, a wet one of another liquid 1.5
     return a0;
 }
 
@@ -688,7 +713,7 @@ bool drainageLakeCell(const BodyGen& g, const Vec3& unit, double& level, bool bu
 }
 DrainageOff::DrainageOff(bool off_) : off(off_) { if (off) t_noDrain++; }
 DrainageOff::~DrainageOff() { if (off) t_noDrain--; }
-bool typeHasDrainage(int type) { return type == PT_FELISIAN || type == PT_DESERT || type == PT_THINATMO || type == PT_HYDROCARBON || type == PT_ACIDIC; }
+bool typeHasDrainage(int type) { return kindHas(type, KT_DRAINAGE); }
 void setDrainageEnabled(bool on) { g_enabled.store(on); }
 bool drainageEnabled() { return g_enabled.load(); }
 int drainageLatticeN0(double radiusKm) { return clampi((int)std::lround(radiusKm * 1000.0 * DEG / CELL_M), 16, 1024); }
@@ -701,7 +726,10 @@ DrainInfo drainageAt(const BodyGen& g, const Vec3& unit, double detailM, double 
     {   // VESPERIS_TRACE=1: which thread first asks for drainage, and at what scale (a caller sampling finer than DETAIL_MAX builds tiles)
         static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
         thread_local bool first = true;
-        if (trace && first) { first = false; fprintf(stderr, "    [%.0f] drainageAt: first call on thread %zu, detail %.0f m\n", traceMs(), std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000, detailM); }
+        if (trace && first) {
+            first = false;
+            fprintf(stderr, "    [%.0f] drainageAt: first call on thread %zu, detail %.0f m\n", traceMs(), std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000, detailM);
+        }
     }
     double lat, lon;
     StarSystem::latLonFromBody(unit, lat, lon);
@@ -713,7 +741,8 @@ DrainInfo drainageAt(const BodyGen& g, const Vec3& unit, double detailM, double 
     int I = (int)std::floor(u), J = (int)std::floor(v);
     Neigh& N = t_neigh;
     const bool coarse = detailM >= COARSE_DETAIL;
-    if (N.gkey != c.gkey || N.N0 != c.N0 || N.I != I || N.J != J || N.coarse != coarse || N.brooks != (detailM < 300.0) || (coarse && N.detail != detailM)) buildNeigh(c, I, J, cellLatM, coarse, detailM);
+    if (N.gkey != c.gkey || N.N0 != c.N0 || N.I != I || N.J != J || N.coarse != coarse || N.brooks != (detailM < 300.0) || (coarse && N.detail != detailM))
+        buildNeigh(c, I, J, cellLatM, coarse, detailM);
     // every reach of the neighbourhood: its distance, the level and accumulation at its nearest point, its floodplain's
     // strength here and its valley's; the channel that shapes the point is the one whose floodplain reaches it most (a
     // brook beside a big river does not hide the river's plain), the water surface is the reaches' levels blended by
@@ -860,10 +889,12 @@ void drainagePrefetch(const BodyGen& g, const Vec3& unit, double radiusM, bool a
     }
     uint64_t gkey = genKey(g);
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
-    if (trace) fprintf(stderr, "    [%.0f] drainage prefetch %s: type %d lat %.2f lon %.2f radius %.0f m: tiles %d..%d x %d..%d (%zu)\n", traceMs(), async ? "async" : "sync", g.type, lat / DEG, lon / DEG, radiusM, la0, la1, lo0, lo1, want.size());
+    if (trace)
+        fprintf(stderr, "    [%.0f] drainage prefetch %s: type %d lat %.2f lon %.2f radius %.0f m: tiles %d..%d x %d..%d (%zu)\n", traceMs(), async ? "async" : "sync", g.type, lat / DEG, lon / DEG,
+                radiusM, la0, la1, lo0, lo1, want.size());
     BodyGen gc = g;
     uint64_t myGen;
-    {   // B-422: the tiles of this asking being computed already are marked wanted before the generation moves on (not abandoned)
+    {   // the tiles of this asking being computed already are marked wanted before the generation moves on (not abandoned)
         std::lock_guard<std::mutex> lock(g_mutex);
         myGen = g_prefetchGen.load() + 1;
         for (const auto& w : want) { auto it = g_tiles.find(Key{gkey, w.first, w.second}); if (it != g_tiles.end() && it->second.interest) it->second.interest->wanted = myGen; }

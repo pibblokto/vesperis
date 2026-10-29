@@ -1,9 +1,12 @@
 #include "landmarks.h"
-#include "plan.h"
-#include "peoples.h"
+#include "peoples/plan.h"
+#include "peoples/peoples.h"
 #include "drainage.h"
-#include "ruins.h"
-#include "works.h"
+#include "planet_features.h"
+#include "peoples/ruins.h"
+#include "peoples/works.h"
+#include "core/clock.h"
+#include "core/sphere.h"
 #include "core/noise.h"
 #include <cmath>
 #include <algorithm>
@@ -12,8 +15,28 @@
 #include <atomic>
 #include <chrono>
 
-const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS"};
-const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%"};
+const char* const LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS",
+                                            "CALDERA", "TESSERA", "LABYRINTH", "HOLLOWS", "CRATER CHAIN", "PENITENTES", "COLONNADE", "MUD VOLCANO", "RIVER RIDGE", "PINGO", "MAAR",
+                                            "STREWN FIELD"};
+const char* const LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%", "@", "X", "[", ":", "8", "!", "|", "&", "/", "\"", "0", ";"};
+
+int landformSight(int trait) {
+    switch (trait) {
+        case TR_GREAT_SHIELD: return LM_CALDERA;
+        case TR_TESSERAE: return LM_TESSERA;
+        case TR_LABYRINTH: return LM_LABYRINTH;
+        case TR_HOLLOWS: return LM_HOLLOWS;
+        case TR_CRATER_CHAINS: return LM_CHAIN;
+        case TR_PENITENTES: return LM_PENITENTES;
+        case TR_COLUMNS: return LM_COLUMNS;
+        case TR_MUD_VOLCANOES: return LM_MUD;
+        case TR_INVERTED_RIVERS: return LM_RIDGE;
+        case TR_PINGOS: return LM_PINGO;
+        case TR_MAARS: return LM_MAAR;
+        case TR_METEORITES: return LM_METEORITES;
+        default: return LM_COUNT;
+    }
+}
 
 namespace {
 constexpr double CELL_KM = 14.0;   // the sights' grid: one of each kind at most per cell of about 14 km
@@ -28,14 +51,6 @@ int colsOfRow(const BodyGen& g, const Grid& gr, int ci) {
 Vec3 cellCentre(const Grid& gr, int ci, int cj, int cols) {
     double lat = -PI / 2 + (ci + 0.5) * gr.dLat, lon = -PI + (cj + 0.5) * TAU / cols;
     return StarSystem::bodyFromLatLon(lat, lon);
-}
-// a point `dx`, `dz` metres east and north of a unit vector
-Vec3 offsetUnit(const BodyGen& g, const Vec3& u, double dx, double dz) {
-    Vec3 pole(0, 0, 1);
-    Vec3 e = cross(pole, u); double el = length(e);
-    if (el < 1e-9) e = Vec3(1, 0, 0); else e = e / el;
-    Vec3 n = cross(u, e);
-    return normalize(u + (e * dx + n * dz) / (g.R * 1000.0));
 }
 }
 
@@ -58,10 +73,9 @@ std::mutex g_lmMutex;
 std::map<CellKey, CellVal> g_lmCache;
 std::atomic<int> g_lmSearched{0};
 double g_lmMs[3] = {0, 0, 0};
-inline double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 inline uint64_t cellIdOf(const BodyGen& g, int ci, int cj) { return hash3i(ci, cj, (int64_t)(g.seed & 0xffffff), g.seed ^ 0x1A4DULL); }
 bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& out, bool buildTiles, bool& complete);
-bool sightsWorld(const BodyGen& g) { return PLANET_TYPES[g.type].landable && g.type != PT_OCEAN && g.type != PT_COMET; }
+bool sightsWorld(const BodyGen& g) { return KINDS[g.type].landable && !kindHas(g.type, KT_NO_SIGHTS); }
 }
 int landmarkCellsSearched() { return g_lmSearched.load(); }
 double landmarkScanMs(int part) { return g_lmMs[part]; }
@@ -98,7 +112,7 @@ bool legacyLandmarkOf(const CellSights& s, Landmark& out) {
             return true;
         }
         if (!s.has[k]) continue;
-        if (k == LM_RUIN && s.hiH - s.mean >= 150 && s.hiH > 0) continue;   // O6-06: a peak of 150 m over the cell came before the ruins
+        if (k == LM_RUIN && s.hiH - s.mean >= 150 && s.hiH > 0) continue;   // a peak of 150 m over the cell came before the ruins
         out = s.lm[k];
         return true;
     }
@@ -121,16 +135,15 @@ void cellsOfLegacyIds(const BodyGen& g, const std::set<uint32_t>& ids, std::map<
 unsigned sightKindsOf(const BodyGen& g) {
     if (!sightsWorld(g)) return 0;
     unsigned m = 1u << LM_PEAK;
-    switch (g.type) {
-        case PT_CRATERED: case PT_THINATMO: case PT_ICY: case PT_METAL: case PT_BOMBARDED: case PT_ROCKY: case PT_CARBON: case PT_QUARTZ: case PT_TECTONIC: case PT_DESERT: m |= 1u << LM_CRATER; break;
-        default: break;
-    }
+    const KindDef& K = KINDS[g.type];
+    for (int k = 0; k < K.nCraters; k++) if (K.craters[k].sight) { m |= 1u << LM_CRATER; break; }   // P-00: a kind whose crater stack has a landmark grid
     if (g.hasTrait(TR_CANYONS)) m |= 1u << LM_CANYON;
     if (g.hasTrait(TR_MESAS)) m |= 1u << LM_MESA;
     if (g.hasTrait(TR_GEYSERS)) m |= 1u << LM_GEYSERS;
-    if ((g.type == PT_QUARTZ || g.type == PT_CARBON) && g.hasTrait(TR_SPIRES)) m |= 1u << LM_CRYSTALS;
-    if (typeHasDrainage(g.type) && (g.type == PT_FELISIAN || g.type == PT_HYDROCARBON || g.type == PT_ACIDIC)) m |= 1u << LM_LAKE;
-    if (worldHadCivilisation(g)) m |= (1u << LM_RUIN) | (1u << LM_WORK);   // C-01, T-03 (B-417: no ruins on a world without a people)
+    if (kindHas(g.type, KT_CRYSTAL) && g.hasTrait(TR_SPIRES)) m |= 1u << LM_CRYSTALS;
+    if (typeHasDrainage(g.type) && kindHas(g.type, KT_WET)) m |= 1u << LM_LAKE;
+    if (worldHadCivilisation(g)) m |= (1u << LM_RUIN) | (1u << LM_WORK);   // (B-417: no ruins on a world without a people)
+    for (int k = 0; k < TRAIT_SLOTS; k++) { const int lm = landformSight(g.traits[k]); if (lm < LM_COUNT) m |= 1u << lm; }
     return m;
 }
 
@@ -160,7 +173,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
     // the cell is scanned at 500 m on a 24 x 24 grid (without the drainage: a tile's cell per sample would cost more than
     // the scan): the ground, its highest point, the traits' marks; the lakes are asked of the drainage at the cell's grid
     const int N = 24;
-    double hs[N * N]; double marks[N * N]; int mats[N * N]; int hiIdx = 0; double hiH = -1e9, loH = 1e9, sum = 0;
+    double hs[N * N]; double marks[N * N]; int mats[N * N]; int trs[N * N]; int hiIdx = 0; double hiH = -1e9, loH = 1e9, sum = 0;
     int wallN = 0;
     double tScan0 = nowMs();
     {
@@ -168,9 +181,9 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int j = 0; j < N; j++)
             for (int i = 0; i < N; i++) {
                 double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
-                SurfaceSample s = sampleSurface(g, offsetUnit(g, c, dx, dz), 500.0);
+                SurfaceSample s = sampleSurface(g, offsetFlat(c, dx, dz, g.R * 1000.0), 500.0);
                 int k = j * N + i;
-                hs[k] = s.height; marks[k] = s.landform; mats[k] = s.material;
+                hs[k] = s.height; marks[k] = s.landform; mats[k] = s.material; trs[k] = s.landformTrait;
                 if (s.material == MAT_WATER && s.height < 0) hs[k] = 0;
                 sum += hs[k];
                 if (hs[k] > hiH) { hiH = hs[k]; hiIdx = k; }
@@ -186,22 +199,13 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
     // 1. a crater: the biggest crater of the world's grids with its centre in the cell and a radius over 1.2 km
     {
         double bestR = 0; Vec3 bestC; double bestDep = 0;
-        struct Grd { double cellKm, density; } grids[5]; int ng = 0;
-        double cd = g.craterDensity, dp = g.craterDepth;
-        switch (g.type) {
-            case PT_CRATERED: grids[ng++] = {g.R * 0.06, cd}; grids[ng++] = {12.0, cd * 1.2}; grids[ng++] = {2.5, cd * 1.5}; break;
-            case PT_THINATMO: grids[ng++] = {g.R * 0.05, cd}; grids[ng++] = {8.0, cd * 0.9}; break;
-            case PT_ICY: grids[ng++] = {6.0, cd}; break;
-            case PT_METAL: grids[ng++] = {g.R * 0.08, cd}; grids[ng++] = {8.0, cd * 1.2}; break;
-            case PT_BOMBARDED: grids[ng++] = {g.R * 0.08, 0.7}; grids[ng++] = {8.0, 0.9}; break;
-            case PT_ROCKY: grids[ng++] = {20.0, cd}; break;
-            case PT_CARBON: grids[ng++] = {5.0, cd}; break;
-            case PT_QUARTZ: grids[ng++] = {15.0, cd}; break;
-            case PT_TECTONIC: grids[ng++] = {30.0, 0.08}; break;
-            case PT_DESERT: grids[ng++] = {3.0, cd * 0.6}; break;
-            default: break;
+        struct Grd { double cellKm, density; } grids[MAX_CRATER_GRIDS]; int ng = 0;
+        const KindDef& K = KINDS[g.type];
+        for (int k = 0; k < K.nCraters; k++) {   // the kind's crater stack's landmark grids (the same cells and densities `sampleSurface` sums)
+            const CraterGrid& e = K.craters[k];
+            if (!e.sight) continue;
+            grids[ng++] = {e.cellRel ? g.R * e.cell : e.cell, e.densMode == CD_REL ? g.craterDensity * e.dens : e.dens};
         }
-        (void)dp;
         Vec3 pc = c * g.R;
         for (int k = 0; k < ng; k++) {
             double cellKm = grids[k].cellKm;
@@ -241,13 +245,13 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
             int i = best % N, j = best / N;
             double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
             // step outward in eight directions until the mark ends: the rim
-            Vec3 rim = offsetUnit(g, c, dx, dz); double rimH = bestH; bool found = false;
+            Vec3 rim = offsetFlat(c, dx, dz, g.R * 1000.0); double rimH = bestH; bool found = false;
             for (int a = 0; a < 8 && !found; a++) {
                 double ax = std::cos(a * TAU / 8), az = std::sin(a * TAU / 8);
                 for (double d = 60; d <= 900; d += 60) {
-                    Vec3 u = offsetUnit(g, c, dx + ax * d, dz + az * d);
+                    Vec3 u = offsetFlat(c, dx + ax * d, dz + az * d, g.R * 1000.0);
                     SurfaceSample s = sampleSurface(g, u, 64.0);
-                    if (s.landform < 1000 && s.height > bestH - 30) { rim = offsetUnit(g, c, dx + ax * (d - 30), dz + az * (d - 30)); rimH = s.height; found = true; break; }
+                    if (s.landform < 1000 && s.height > bestH - 30) { rim = offsetFlat(c, dx + ax * (d - 30), dz + az * (d - 30), g.R * 1000.0); rimH = s.height; found = true; break; }
                 }
             }
             Landmark& L = sight(LM_CANYON);
@@ -275,7 +279,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
                     if (ci2 != ci || cj2 != cj) continue;
                     double capH = 60 + 160 * unitFromHash(mix64(w.id1 + 8)), rad = 0.3 + 0.25 * unitFromHash(mix64(w.id1 + 9));
                     if (capH <= bestCap) continue;
-                    SurfaceSample sr = sampleSurface(g, offsetUnit(g, cu, rad * 900.0, 0), 64.0);   // the wall stands where the mask does
+                    SurfaceSample sr = sampleSurface(g, offsetFlat(cu, rad * 900.0, 0, g.R * 1000.0), 64.0);   // the wall stands where the mask does
                     if (sr.landform < 1000) continue;
                     bestCap = capH; bestC = cu; bestRad = rad;
                 }
@@ -304,18 +308,18 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
     }
     // 5. a crystal field: a quartz or carbon world's spire province at its densest (the spires live in the 4 m ring: the
     // province is read where the mark stands at 2 m)
-    if ((g.type == PT_QUARTZ || g.type == PT_CARBON) && g.hasTrait(TR_SPIRES)) {
+    if (kindHas(g.type, KT_CRYSTAL) && g.hasTrait(TR_SPIRES)) {
         int hits = 0; double bx = 0, bz = 0;
         for (int j = 0; j < 6; j++)
             for (int i = 0; i < 6; i++) {
                 double dx = ((i + 0.5) / 6 - 0.5) * 2 * half, dz = ((j + 0.5) / 6 - 0.5) * 2 * half;
                 int n = 0;
-                for (int k = 0; k < 12; k++) { SurfaceSample s = sampleSurface(g, offsetUnit(g, c, dx + (k % 4) * 11.0, dz + (k / 4) * 13.0), 2.0); if (s.landform >= 1000) n++; }
+                for (int k = 0; k < 12; k++) { SurfaceSample s = sampleSurface(g, offsetFlat(c, dx + (k % 4) * 11.0, dz + (k / 4) * 13.0, g.R * 1000.0), 2.0); if (s.landform >= 1000) n++; }
                 if (n > hits) { hits = n; bx = dx; bz = dz; }
             }
         if (hits >= 3) {
             Landmark& L = sight(LM_CRYSTALS);
-            L.unit = offsetUnit(g, c, bx, bz); L.radiusM = 400; L.prominenceM = 25;
+            L.unit = offsetFlat(c, bx, bz, g.R * 1000.0); L.radiusM = 400; L.prominenceM = 25;
             L.heightM = sampleSurface(g, L.unit, 64.0).height;
         }
     }
@@ -324,7 +328,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
     // cell) and its peak of 200 m that came first, kept for the legacy pick. R-408's: the lakes of the cell (the samples joined to
     // their eight neighbours), the biggest that holds water at 64 m, at its sample under the water nearest its centroid (a lattice
     // cell of the lake holds shore and islands too; 48 asked at most a lake): the scanner points at water
-    if (typeHasDrainage(g.type) && (g.type == PT_FELISIAN || g.type == PT_HYDROCARBON || g.type == PT_ACIDIC)) {
+    if (typeHasDrainage(g.type) && kindHas(g.type, KT_WET)) {
         const int M = 20;
         bool wetAt[M * M] = {}; double levelAt[M * M] = {};
         double tl0 = nowMs();
@@ -333,7 +337,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int k = 0; k < M * M; k++) {
             double dx, dz; offOf(k, dx, dz);
             double lv; bool known;
-            bool lake = drainageLakeCell(g, offsetUnit(g, c, dx, dz), lv, buildTiles, known);
+            bool lake = drainageLakeCell(g, offsetFlat(c, dx, dz, g.R * 1000.0), lv, buildTiles, known);
             if (!known) complete = false;
             wetAt[k] = lake; levelAt[k] = lv;
             if (lake) { n++; sx += dx; sz += dz; sl += lv; }
@@ -341,7 +345,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         const double cellAreaKm2 = (2 * half / M) * (2 * half / M) * 1e-6;
         if (n >= 3 && n * cellAreaKm2 >= 0.6) {
             S.hasLake0 = true; Landmark& L = S.lake0; L = Landmark(); L.kind = LM_LAKE; L.id = id;
-            L.unit = offsetUnit(g, c, sx / n, sz / n); L.radiusM = std::sqrt(n * cellAreaKm2 * 1e6 / PI); L.heightM = sl / n;
+            L.unit = offsetFlat(c, sx / n, sz / n, g.R * 1000.0); L.radiusM = std::sqrt(n * cellAreaKm2 * 1e6 / PI); L.heightM = sl / n;
         }
         std::vector<std::vector<int>> lakes;
         int comp[M * M]; for (int k = 0; k < M * M; k++) comp[k] = -1;
@@ -372,7 +376,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
             const size_t stride = std::max<size_t>(1, order.size() / 48);
             for (size_t q = 0; q < order.size(); q += (q == 0 ? 1 : stride)) {
                 double dx, dz; offOf(order[q].second, dx, dz);
-                const Vec3 u = offsetUnit(g, c, dx, dz);
+                const Vec3 u = offsetFlat(c, dx, dz, g.R * 1000.0);
                 const SurfaceSample sm = sampleSurface(g, u, 64.0);
                 if (!(sm.water > -1e8 && sm.height < sm.water)) continue;
                 Landmark& L = sight(LM_LAKE);
@@ -383,7 +387,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         }
         g_lmMs[1] += nowMs() - tl0;
     }
-    // 7. on a world that had a civilisation (C-01, `galaxy/ruins.*`), its settlements in M4-07's grid of 2 km cells: the biggest of the
+    // 7. on a world that had a civilisation (C-01, `peoples/ruins.*`), its settlements in M4-07's grid of 2 km cells: the biggest of the
     // cell (a town before a village before a hamlet before a monument); the scanner lists every one of them apart (`ruinsNear`)
     if (worldHadCivilisation(g)) {
         double dLat = ruinCellLat(g);   // the ruins' grid (M4-07): 2 km cells of latitude and longitude
@@ -415,7 +419,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
     }
     // 8. a peak: the highest point of the cell, standing 90 m over the cell's mean (50 m on the flat types: an inselberg
     // of 50 m is the sight of a desert, whose sites had a landmark within 10 km one time in three), refined at 64 m in a 9 x 9 round it
-    const bool flatType = g.type == PT_DESERT || g.type == PT_HYDROCARBON || g.type == PT_EUROPAN || g.type == PT_VENUSIAN || g.type == PT_QUARTZ || g.type == PT_ACIDIC || g.type == PT_VOLCANIC || g.type == PT_CARBON;
+    const bool flatType = kindHas(g.type, KT_FLAT);
     if (hiH - mean >= (flatType ? 50 : 90) && hiH > 0) {
         int i = hiIdx % N, j = hiIdx / N;
         double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
@@ -424,17 +428,67 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int jj = -4; jj <= 4; jj++)
             for (int ii = -4; ii <= 4; ii++) {
                 double x = dx + ii * step / 4.5, z = dz + jj * step / 4.5;
-                double hh = sampleSurface(g, offsetUnit(g, c, x, z), 64.0).height;
+                double hh = sampleSurface(g, offsetFlat(c, x, z, g.R * 1000.0), 64.0).height;
                 if (hh > bestH) { bestH = hh; bx = x; bz = z; }
             }
         for (int jj = -3; jj <= 3; jj++)   // and once more at 16 m
             for (int ii = -3; ii <= 3; ii++) {
                 double x = bx + ii * 24.0, z = bz + jj * 24.0;
-                double hh = sampleSurface(g, offsetUnit(g, c, x, z), 16.0).height;
+                double hh = sampleSurface(g, offsetFlat(c, x, z, g.R * 1000.0), 16.0).height;
                 if (hh > bestH) { bestH = hh; dx = x; dz = z; }
             }
         Landmark& L = sight(LM_PEAK);
-        L.unit = offsetUnit(g, c, dx, dz); L.heightM = bestH; L.prominenceM = bestH - mean; L.radiusM = 900;
+        L.unit = offsetFlat(c, dx, dz, g.R * 1000.0); L.heightM = bestH; L.prominenceM = bestH - mean; L.radiusM = 900;
+    }
+    // 9. Q-01: the new landforms' sights. The ones built of points (a great shield's caldera, the chains' craters, the mud volcanoes, the
+    // pingos, the maars: `landformFeatures`) by the biggest centred in the cell whose ground carries the landform's mark (its province, its
+    // cold, its land hold it there); the fields by the cell's scan, its samples the landform marks (three at least): a tessera's, a colonnade's
+    // and an old river's highest, a labyrinth's lowest (its troughs' floor), the middle of the hollows' and the penitentes' field
+    for (int ts = 0; ts < TRAIT_SLOTS; ts++) {
+        const int t = g.traits[ts], kind = landformSight(t);
+        if (kind >= LM_COUNT) continue;
+        if (t == TR_GREAT_SHIELD || t == TR_CRATER_CHAINS || t == TR_MUD_VOLCANOES || t == TR_PINGOS || t == TR_MAARS) {
+            std::vector<LandFeature> fs;
+            landformFeatures(g, t, c, half / 1000.0 + 1.0, fs);
+            const LandFeature* best = nullptr;
+            for (const LandFeature& f : fs) {
+                int ci2, cj2; landmarkCellOf(g, f.unit, ci2, cj2);
+                if (ci2 != ci || cj2 != cj || (best && f.radiusKm <= best->radiusKm)) continue;
+                if (sampleSurface(g, f.unit, 64.0).landformTrait != t) continue;   // the landform stands there
+                best = &f;
+            }
+            if (best) {
+                Landmark& L = sight(kind);
+                L.unit = best->unit; L.radiusM = best->radiusKm * 1000.0; L.prominenceM = std::fabs(best->heightM);
+                L.heightM = sampleSurface(g, best->unit, 64.0).height;
+            }
+            continue;
+        }
+        int n = 0, pick = -1; double sx = 0, sz = 0;
+        for (int k = 0; k < N * N; k++) {
+            if (trs[k] != t) continue;
+            n++;
+            const int i = k % N, j = k / N;
+            sx += i; sz += j;
+            const bool better = t == TR_LABYRINTH ? (pick < 0 || hs[k] < hs[pick]) : (pick < 0 || hs[k] > hs[pick]);
+            if ((t != TR_HOLLOWS && t != TR_PENITENTES && t != TR_METEORITES) && better) pick = k;
+        }
+        if (n < 3) continue;
+        if (t == TR_HOLLOWS || t == TR_PENITENTES || t == TR_METEORITES) {   // the marked sample nearest the field's middle (Q-02: a strewn field's)
+            const double mi = sx / n, mj = sz / n; double bestD = 1e18;
+            for (int k = 0; k < N * N; k++) {
+                if (trs[k] != t) continue;
+                const double d = (k % N - mi) * (k % N - mi) + (k / N - mj) * (k / N - mj);
+                if (d < bestD) { bestD = d; pick = k; }
+            }
+        }
+        const int i = pick % N, j = pick / N;
+        const double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
+        Landmark& L = sight(kind);
+        L.unit = offsetFlat(c, dx, dz, g.R * 1000.0);
+        L.heightM = sampleSurface(g, L.unit, 64.0).height;
+        L.radiusM = std::sqrt(n * (2 * half / N) * (2 * half / N) / PI);   // the field's extent in the cell
+        L.prominenceM = t == TR_LABYRINTH ? mean - L.heightM : (t == TR_HOLLOWS || t == TR_PENITENTES || t == TR_METEORITES ? 0.0 : L.heightM - mean);
     }
     for (int k = 0; k < LM_COUNT; k++) if (S.has[k]) return true;
     return S.hasLake0;
@@ -465,7 +519,7 @@ void sightsNear(const BodyGen& g, const Vec3& unit, double radiusM, unsigned kin
 }
 
 void ruinsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::vector<Landmark>& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out.clear();
     if (!worldHadCivilisation(g) || !sightsWorld(g)) return;
     double lat, lon;
@@ -491,7 +545,7 @@ void ruinsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::ve
             out.push_back(L);
         }
     }
-    // T-01: the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
+    // the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
     // plan from 80, a band's seat from 40; a futuristic people's great places from 300 and 120; a far-future work from 1,500)
     {
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);

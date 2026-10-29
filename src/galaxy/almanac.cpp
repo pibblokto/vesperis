@@ -3,6 +3,7 @@
 // period it moves with and refined by bisection or a golden section: the time listed is the time the geometry reaches it.
 #include "almanac.h"
 #include "fronts.h"
+#include "nights.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -156,7 +157,7 @@ double stepOf(double period, double div = 64) { return std::max(10.0, std::fabs(
 
 // ---- the ground ----------------------------------------------------------------------------------------------------
 void findSun(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
-    if (!p.ground || p.body < 0) return;
+    if (!p.ground || p.body < 0 || p.sys->sunless()) return;   // D-01: a drifter's ground has no sun to rise
     const Body& b = p.sys->bodies[p.body];
     double h = stepOf(std::min(std::fabs(b.rotPeriod), std::fabs(b.orbitPeriod)));   // the sun moves with the turn, and on a locked world with the orbit alone
     double t0 = p.t, t1 = p.t + p.window, up, down;
@@ -201,14 +202,14 @@ void findSkyBodies(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
         firstCrossings([&](double t) { double ar; double a = bodyAlt(p, t, j, &ar); return a + ar; }, t0, t1, h, up, down);
         if (up > 0) out.push_back({AL_RISE, up, j});
         if (down > 0) out.push_back({AL_SET, down, j});
-        if (o.type == PT_COMPANION || o.type == PT_SUBSTELLAR) continue;   // a sun has no phase
+        if (o.type == PT_COMPANION || kindHas(o.type, KT_GLOWS) || p.sys->sunless()) continue;   // a sun has no phase (D-01: nor a body with no sun to light it)
         extrema([&](double t) { return litShare(p, t, j); }, t0, t1, h, true, [&](double t, double v) { out.push_back({AL_FULL, t, j, -1, v}); return true; });
         extrema([&](double t) { return litShare(p, t, j); }, t0, t1, h, false, [&](double t, double v) { out.push_back({AL_NEW, t, j, -1, v}); return true; });
     }
 }
 
 void findEclipses(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {   // a body over the sun from the ground
-    if (!p.ground || p.body < 0) return;
+    if (!p.ground || p.body < 0 || p.sys->sunless()) return;
     const Body& b = p.sys->bodies[p.body];
     std::vector<int> sky; skyBodies(p, sky);
     for (int j : sky) {
@@ -225,7 +226,7 @@ void findEclipses(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {   // 
 }
 
 void findRingShadow(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
-    if (!p.ground || p.body < 0 || p.ringProf.empty()) return;
+    if (!p.ground || p.body < 0 || p.ringProf.empty() || p.sys->sunless()) return;
     const Body& b = p.sys->bodies[p.body];
     double up, down;
     firstCrossings([&](double t) { return ringShadow(p, t) - 1e-4; }, p.t, p.t + p.window, stepOf(std::min(std::fabs(b.rotPeriod), std::fabs(b.orbitPeriod))), up, down);
@@ -280,9 +281,18 @@ void findShipMoons(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
             if (!front && !occult) { occult = true; out.push_back({AL_OCCULTATION, t, m, p.body}); }
             return transit && occult;
         });
+        if (p.sys->sunless()) continue;   // D-01: no sun casts a shadow
         double hs = stepOf(o.orbitPeriod);
-        crossings([&](double t) { return shadowGap(p, t, m, p.sys->bodyPos(p.body, t), B.radiusKm + o.radiusKm); }, t0, t1, hs, [&](double t, int dir) { if (dir < 0) out.push_back({AL_SHADOW, t, m, p.body}); return dir < 0; });
-        crossings([&](double t) { return shadowGap(p, t, p.body, p.sys->bodyPos(m, t), B.radiusKm); }, t0, t1, hs, [&](double t, int dir) { if (dir < 0) out.push_back({AL_ECLIPSED, t, m, p.body}); return dir < 0; });
+        crossings([&](double t) { return shadowGap(p, t, m, p.sys->bodyPos(p.body, t), B.radiusKm + o.radiusKm); }, t0, t1, hs,
+                [&](double t, int dir) {
+                    if (dir < 0) out.push_back({AL_SHADOW, t, m, p.body});
+                    return dir < 0;
+                });
+        crossings([&](double t) { return shadowGap(p, t, p.body, p.sys->bodyPos(m, t), B.radiusKm); }, t0, t1, hs,
+                [&](double t, int dir) {
+                    if (dir < 0) out.push_back({AL_ECLIPSED, t, m, p.body});
+                    return dir < 0;
+                });
     }
 }
 
@@ -303,7 +313,7 @@ void findConjunctions(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {  
 }
 
 void findSunTransits(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {   // a body touches the sun's disc as seen from the ship
-    if (p.ground) return;
+    if (p.ground || p.sys->sunless()) return;
     double lap = p.orbiting ? shipLapPeriod(p) : 1e18;
     for (int j = 0; j < (int)p.sys->bodies.size(); j++) {
         const Body& o = p.sys->bodies[j];
@@ -316,15 +326,27 @@ void findSunTransits(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {   
             if (!nearer) return false;
             // back from the deepest to the first contact: a crossing lasts under a thirty-second of the orbit (a sun of ten degrees' radius)
             double tFirst = tMin;
-            crossings([&](double t) { double r1, r2; return sunSeparation(p, t, j, r1, r2) - r1 - r2; }, std::max(p.t, tMin - 2 * hCoarse), tMin, std::min(hFine, hCoarse) / 4, [&](double t, int dir) { if (dir < 0) tFirst = t; return dir < 0; });
+            crossings(
+                    [&](double t) {
+                        double r1, r2;
+                        return sunSeparation(p, t, j, r1, r2) - r1 - r2;
+                    },
+                    std::max(p.t, tMin - 2 * hCoarse), tMin, std::min(hFine, hCoarse) / 4,
+                    [&](double t, int dir) {
+                        if (dir < 0) tFirst = t;
+                        return dir < 0;
+                    });
             out.push_back({AL_SUN_TRANSIT, tFirst, j, -1, coverOf(0, rs, rb)});
             return true;
         });
     }
 }
 
+// E-02: every finder, in a fixed order (the fronts' and the showers' last, where their start-up registrars had put them): the order
+// of events at one time after almanacOf's stable sort
 std::vector<AlmanacFinder>& registry() {
-    static std::vector<AlmanacFinder> r = {findSun, findSkyBodies, findEclipses, findRingShadow, findComets, findShipMoons, findConjunctions, findSunTransits};
+    static std::vector<AlmanacFinder> r = {findSun, findSkyBodies, findEclipses, findRingShadow, findComets, findShipMoons, findConjunctions, findSunTransits,
+                                           findFronts, findShowers};
     return r;
 }
 
@@ -335,8 +357,6 @@ std::string shortUpper(const std::string& s, size_t n) {
 }
 
 }   // namespace
-
-void addAlmanacFinder(AlmanacFinder fn) { registry().push_back(fn); }
 
 void almanacOf(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     out.clear();
@@ -350,6 +370,7 @@ void almanacOf(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
 
 double almanacSunAltitude(const AlmanacPlace& p, double t, double* angR) {
     if (!p.ground || !p.sys || p.body < 0 || p.body >= (int)p.sys->bodies.size()) { if (angR) *angR = 0; return 0; }
+    if (p.sys->sunless()) { if (angR) *angR = 0; return -PI / 2; }   // D-01: the nadir, as `SurfaceSite::sun` puts it
     return std::asin(sunSinAlt(p, t, angR));
 }
 
@@ -378,9 +399,10 @@ std::string almanacLabel(const AlmanacEvent& e, const StarSystem& sys, const std
         case AL_ECLIPSED: return N(e.body) + " ECLIPSED BY " + N(e.body2);
         case AL_CONJUNCTION: snprintf(buf, sizeof buf, " %.1f%s APART", e.value / DEG, degree); return N(e.body) + " AND " + N(e.body2) + buf;
         case AL_SUN_TRANSIT: return N(e.body) + " ACROSS THE SUN";
-        case AL_FRONT: return std::string(e.body >= 0 && e.body < (int)sys.bodies.size() && (sys.bodies[e.body].type == PT_DESERT || sys.bodies[e.body].type == PT_THINATMO) ? "A DUST FRONT FROM THE " : "A FRONT FROM THE ") + frontCompass(e.value);   // W-03
+        case AL_FRONT:
+            return std::string(e.body >= 0 && e.body < (int)sys.bodies.size() && kindHas(sys.bodies[e.body].type, KT_DUST) ? "A DUST FRONT FROM THE " : "A FRONT FROM THE ") + frontCompass(e.value);
         case AL_FRONT_CLEAR: return "THE FRONT CLEARS";
-        case AL_SHOWER: return N(e.body) + " METEORS PEAK";   // W-04
+        case AL_SHOWER: return N(e.body) + " METEORS PEAK";
         case AL_FREE: return "RUN FOR " + countdownString(e.value);
         default: return "?";
     }

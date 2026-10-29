@@ -1,7 +1,7 @@
 # Milestones for 1.1.0 and beyond
 
 The ideas in this directory, cut into milestones with ids to reference in requests, bug
-reports and `PROGRESS.md` ("proceed with C-02"). Each item names the section of its
+reports and the log ("proceed with C-02"). Each item names the section of its
 document. Sizes: S (an afternoon), M (a day or two), L (a week), XL (a milestone of its own).
 Order is a suggestion.
 
@@ -10,8 +10,8 @@ Order is a suggestion.
 **Released as 1.1.0 (2026-10-03), generation 11:** G-01 to G-04, S-01 to S-06, C-01 to C-10 and
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
-B-403 to B-406 (`docs/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0`, `1.2.0`, `1.3.0` or `1.3.1` shipped in that release, `1.4.0` is for the next one.
+B-403 to B-406 (`docs/archive/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
+column: `1.1.0` to `1.4.0` shipped in that release, `later` is for a release not planned yet.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
@@ -30,7 +30,17 @@ B-423 and B-424: the frame about twice as fast with the same pictures, the stall
 R-418 (the controller), B-425 (the companion stars; generation 14), B-426 (a capital's records), R-419 (auto-explore), B-427 (a
 Wolf-Rayet star's giants' tail), B-428 (the moons spread; generation 15) and R-420 (auto-explore's tape).
 
-**Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
+**Released as 1.4.0 (2026-10-29), generation 16:** the iteration `ITERATION-1.4.0.md` on the branch `release/v1.4.0`, on the
+user's request of 2026-10-21 (R-421 thirty to fifty new kinds of world, R-422 more modifiers, R-423 rogue planets found by
+radio), the design in `IDEAS-worlds-and-wanderers.md`: sixteen milestones, P-00 to P-07 (the P series re-cut: the old list's
+twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01. All sixteen done
+2026-10-23, committed as 92e580a. Added the same day, before the release: the E series (`PLAN-reorganisation.md`), E-01 to
+E-13, the repo made cheaper to read and change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 to E-08
+2026-10-24, E-09 to E-11 2026-10-25, E-12 and E-13 2026-10-26. Then the U series (`PLAN-screens.md`, R-424), U-01 to U-06, a
+screen in one row, done 2026-10-26 and 2026-10-27; with B-429 to B-433 (the last four the known issues KI-423, KI-432, KI-433
+and KI-434). The rows not done are marked `later`.
+
+**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -59,7 +69,7 @@ generation change.
 | S-04 | Protostar (nebula sky, dust and belts, accretion disc) | M | 1.1.0 |
 | S-05 | Wolf-Rayet star (shell ring in the sky, stripping wind, radiation) | M | 1.1.0 |
 | S-06 | Black hole: lensing, accretion ring, drawn-out companion, survivor rocks | XL | 1.1.0 |
-| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | 1.4.0 or later |
+| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | later |
 
 ## C: civilisations (`IDEAS-ruins-shards-signals.md`)
 
@@ -126,13 +136,13 @@ grammar, C-03's shards, C-08's reading of the site, C-09's roads, C-12's graves)
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| V-01 | Continuous LOD: nested rings geomorphed everywhere, one shading and one set of material tiles at every distance, no cell popping, no shore steps | XL | 1.4.0 |
-| V-02 | Normals from the planet function's gradient, ambient by slope and sky, a finer intensity ramp | M | 1.4.0 |
-| V-03 | Aerial perspective: height-aware per-pixel fog shared by every pass, a horizon haze band, scattering toward the sun | M | 1.4.0 |
-| V-04 | Flora and rock LOD: distance-faded instancing, billboards far out, forests that do not shimmer | L | 1.4.0 |
-| V-05 | Ground texture to the horizon: the meso tiles at coarser octaves on every ring, the macro tone at all scales | M | 1.4.0 |
-| V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | 1.4.0 |
-| V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | 1.4.0 |
+| V-01 | Continuous LOD: nested rings geomorphed everywhere, one shading and one set of material tiles at every distance, no cell popping, no shore steps | XL | later |
+| V-02 | Normals from the planet function's gradient, ambient by slope and sky, a finer intensity ramp | M | later |
+| V-03 | Aerial perspective: height-aware per-pixel fog shared by every pass, a horizon haze band, scattering toward the sun | M | later |
+| V-04 | Flora and rock LOD: distance-faded instancing, billboards far out, forests that do not shimmer | L | later |
+| V-05 | Ground texture to the horizon: the meso tiles at coarser octaves on every ring, the macro tone at all scales | M | later |
+| V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | later |
+| V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | later |
 
 V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this series, or GPU rendering through raylib) is to be discussed before any of it starts.
 
@@ -141,49 +151,69 @@ V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
 | W-01 | The time-lapse as an almanac menu: upcoming events with countdowns, run-to-it with a slowdown at the end; orbital events on the ship | M | 1.2.0, done 2026-10-06 |
-| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.4.0 |
+| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.4.0, as Q-02's great tides |
 | W-03 | Weather that arrives: fronts with position, heading and speed; visible from orbit, on the map and on the ground; the data sheet forecast | L | 1.2.0, done 2026-10-06 |
 | W-04 | Nights: aurorae, meteor showers from comet orbits, zodiacal light, ring and moon shadows, earthshine | M | 1.2.0, done 2026-10-07 |
-| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.4.0 |
+| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | later |
 | W-06 | The telescope on the ship: zoom, reticle, drift, photo mode | M | 1.2.0, done 2026-10-06, reworked the same day on review (the plate, the set, R-404), then R-405 (the stabiliser, the orbit keys) |
 
 W-01 first: it makes every other timed event (W-02..W-04) something you can witness.
 
-## P: planet kinds (`IDEAS-planet-kinds-and-looks.md`, first list) — each is a generation change
+## P: kinds of world (`IDEAS-worlds-and-wanderers.md` section 1) — generation 16 from P-01
+
+Re-cut on 2026-10-21 for 1.4.0 (R-421): the first list of `IDEAS-planet-kinds-and-looks.md` had twelve rows, one a kind, none
+started; its kinds are in the families below (the eyeball and the ammonia world in P-03, the salt, glass and chthonian worlds
+and the supercritical one as the steam world's lowlands in P-01, the fungal world as P-03's chemotroph, the rogue-captured
+world as P-05's wanderer, the shattered world as P-06's patchwork, the iron rain as P-07's silicate giant); the shepherd moon
+(a place) and the pelagic island (a trait) are left for later.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.4.0 or later |
-| P-02 | Ammonia world | M | 1.4.0 or later |
-| P-03 | Salt world | M | 1.4.0 or later |
-| P-04 | Glass world | M | 1.4.0 or later |
-| P-05 | Fungal world | L | 1.4.0 or later |
-| P-06 | Rogue-captured world | M | 1.4.0 or later |
-| P-07 | Chthonian world | M | 1.4.0 or later |
-| P-08 | Shattered world | L | 1.4.0 or later |
-| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.4.0 or later |
-| P-10 | Iron rain world | M | 1.4.0 or later |
-| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.4.0 or later |
-| P-12 | Pelagic world with a single island | S | 1.4.0 or later |
+| P-00 | The kind table: every kind a row, the planet function's shared skeleton, accent hues, traits by tags; nothing drawn changes | XL | 1.4.0, done 2026-10-21 |
+| P-01 | The furnace worlds: magma ocean, chthonian, glass, steam, salt, rust; the new kinds from the old draws; generation 16 | L | 1.4.0, done 2026-10-21 |
+| P-02 | The living worlds: archean, hothouse, superhabitable, steppe, tundra, lichen | L | 1.4.0, done 2026-10-21 |
+| P-03 | The locked and the deep: eyeball, terminator, hycean, ammonia, snowball, chemotroph | L | 1.4.0, done 2026-10-21 |
+| P-04 | The dead worlds and their peoples: frozen felisian, scorched felisian | L | 1.4.0, done 2026-10-21 |
+| P-05 | The far cold: nitrogen, cryovolcanic, dry ice, wanderer, brine dwarf, frost dwarf | L | 1.4.0, done 2026-10-22 |
+| P-06 | The strange moons: grooved ice, two-faced, tiger-striped, patchwork, sponge | M | 1.4.0, done 2026-10-22 |
+| P-07 | The giants: water-cloud, azure, alkali, silicate, gas dwarf, super-puff; the probe's decks | L | 1.4.0, done 2026-10-22 |
+
+## Q: the qualities (`IDEAS-worlds-and-wanderers.md` section 2)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Q-01 | Six slots a world, the facts, eleven landforms | L | 1.4.0, done 2026-10-22 |
+| Q-02 | Water, sky, life and ground: sixteen traits, the tides among them (W-02) | L | 1.4.0, done 2026-10-22 |
+| Q-03 | The sounds of the ground: singing dunes, singing ice, quakes | M | 1.4.0, done 2026-10-22 |
+
+## D: the drifters (`IDEAS-worlds-and-wanderers.md` section 3)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| D-01 | The dark between: the drifters' field, a system with no sun, the way there and back, the save | L | 1.4.0, done 2026-10-23 |
+| D-02 | Heard, not seen: the radar finds them, the lock, the jump into the void, the black disc, the map without light | L | 1.4.0, done 2026-10-23 |
+| D-03 | The voices of the dark: a voice for every drifter | L | 1.4.0, done 2026-10-23 |
+| D-04 | The ground in the dark: the explorer's lamp, frozen air, embers, the lights left on, the dark ocean | L | 1.4.0, done 2026-10-23 |
+| D-05 | The people who lost their sun: the history's new end, its records, charts and music, the beacon | XL | 1.4.0, done 2026-10-23 |
 
 ## L: looks and effects (`IDEAS-planet-kinds-and-looks.md`, second list)
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| L-01 | Atmospheric scattering with distance and altitude | L | 1.4.0 or later |
-| L-02 | Cloud shadows moving over the ground | M | 1.4.0 or later |
-| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | 1.4.0 or later |
-| L-04 | Snow and frost by time of day and season | M | 1.4.0 or later |
-| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | 1.4.0 or later |
-| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | 1.4.0 or later |
-| L-07 | Volumetric light: rays, shafts, plume glow | L | 1.4.0 or later |
-| L-08 | Wind on vegetation and water | M | 1.4.0 or later |
-| L-09 | Heat shimmer | S | 1.4.0 or later |
-| L-10 | Bioluminescence as a trait | M | 1.4.0 or later |
-| L-11 | Ring light and planetshine on the ground | M | 1.4.0 or later |
-| L-12 | Palette moods per world | S | 1.4.0 or later |
-| L-13 | Weathering on the capsule and the buggy | M | 1.4.0 or later |
-| L-14 | Ground fog and mist | M | 1.4.0 or later |
+| L-01 | Atmospheric scattering with distance and altitude | L | later |
+| L-02 | Cloud shadows moving over the ground | M | later |
+| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | later |
+| L-04 | Snow and frost by time of day and season | M | later |
+| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | later |
+| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | later |
+| L-07 | Volumetric light: rays, shafts, plume glow | L | later |
+| L-08 | Wind on vegetation and water | M | later |
+| L-09 | Heat shimmer | S | later |
+| L-10 | Bioluminescence as a trait | M | later |
+| L-11 | Ring light and planetshine on the ground | M | later |
+| L-12 | Palette moods per world | S | later |
+| L-13 | Weathering on the capsule and the buggy | M | later |
+| L-14 | Ground fog and mist | M | later |
 
 L-01 and L-02 first: they change every frame on every world.
 
@@ -200,11 +230,11 @@ L-01 and L-02 first: they change every frame on every world.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | 1.4.0 or later |
-| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | 1.4.0 or later |
-| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.4.0 or later |
-| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.4.0 or later |
-| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.4.0 or later |
+| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | later |
+| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | later |
+| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | later |
+| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | later |
+| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | later |
 
 ## F: the frame (`PLAN-performance.md`) — faster without changing a pixel, no generation change
 
@@ -227,6 +257,44 @@ F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 
 | F-09 | The release flags: thin LTO on the clang lines, the build scripts into `packaging/`, the Linux and Windows flags gated on the container's regress | M | 1.3.1, done 2026-10-15 (thin LTO on macOS and Windows; Linux `-O3`, its `-flto` slower and `-fno-math-errno` nothing in the container; Windows untimed; B-424 found by the Windows builds) |
 | F-10 | The hash-moving batch, one bless: the sky's pows as products, the cloud drift wrapped once, the limb, the `atan2`/`asin` pair | M | 1.3.1, done 2026-10-15 (the sky's powers as products, the cloud drift wrapped once, the limb as products: surface 4x -14%, space 4x -8%; no hash moved, nothing blessed; the `atan2`/`asin` pair built and dropped, slower in the frame) |
 | F-11 | The close: budgets lowered, the regress widened, the docs and KNOWN-ISSUES | S | 1.3.1, done 2026-10-15 (37 budgets at about 1.5 times the dev Mac's medians, `bench check <factor>` elsewhere; the regress 24: the forest at 4x and the cabin at 1x, each drawn by one thread too; KI-312 and KI-206 closed) |
+
+## E: the repo for its readers (`PLAN-reorganisation.md`) — nothing generated or drawn changes, no generation change
+
+Planned 2026-10-23 for 1.4.0, after D-05 and before the release, on the user's request: the repo made cheaper for an agent to
+read and change, and more modular. The plan holds the measurements, the hazards a move can break, the rules, the proof and each
+milestone's done-when. Every step is proven identical to the binary before it; nothing is blessed.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| E-01 | What every session loads: the memory, the root CLAUDE.md with the map, the directory notes, the guards; the eight tasks measured | M | 1.4.0, done 2026-10-23 |
+| E-02 | The proof kept: fingerprints of every module, `tools/prove`, the almanac's order explicit, a safe `make clean`, `make check`, clangd | L | 1.4.0, done 2026-10-24 |
+| E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | 1.4.0, done 2026-10-24 |
+| E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | 1.4.0, done 2026-10-24 |
+| E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | 1.4.0, done 2026-10-24 |
+| E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | 1.4.0, done 2026-10-24 |
+| E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | 1.4.0, done 2026-10-24 |
+| E-08 | The views: surface_view and space_view split | L | 1.4.0, done 2026-10-24 |
+| E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | 1.4.0, done 2026-10-25 |
+| E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | 1.4.0, done 2026-10-25 |
+| E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | 1.4.0, done 2026-10-25 |
+| E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | 1.4.0, done 2026-10-26 |
+| E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0, done 2026-10-26 |
+
+## U: the screens (`PLAN-screens.md`) — nothing generated or drawn changes, no generation change
+
+Planned 2026-10-26 for 1.4.0, after E-13 and before the release, on the user's request (R-424): "I will have tons of those". A
+new screen or device becomes a row of one table and a file of its own; the frame, the menus, the controller and the harness
+find it from its row. The plan holds the places a screen touches today, the targets, the rules and each milestone's done-when.
+Every step is proven identical to the binary before it, and nothing is blessed.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| U-01 | The proof reaches every screen: a tour of every state, its keys and its controller menu; `settings` mended | L | 1.4.0, done 2026-10-26 |
+| U-02 | The screen table: each state's update, picture and sound in its row; the frame without a switch | L | 1.4.0, done 2026-10-26 |
+| U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | 1.4.0, done 2026-10-26 |
+| U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | 1.4.0, done 2026-10-26 |
+| U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | 1.4.0, done 2026-10-26 |
+| U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0, done 2026-10-27 |
 
 ## Suggested order for 1.2.0
 

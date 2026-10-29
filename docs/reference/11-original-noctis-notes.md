@@ -2,6 +2,13 @@
 
 Collected from the released source (dgcole/noctis-iv-lr port of Ghignola's code) and the manuals, to guide fidelity work. Marked with what this clone does.
 
+<!-- contents -->
+Contents:
+- Rendering
+- Generation
+- Ship and interface
+<!-- /contents -->
+
 ## Rendering
 
 * 320x200, 256 colours in four banks of 64 (`psmooth_64` averages the low six bits of a 2x2 block, keeps the high two). **Replicated** (`Framebuffer::mush`).

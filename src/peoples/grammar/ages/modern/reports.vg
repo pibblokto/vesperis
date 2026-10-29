@@ -1,0 +1,421 @@
+R"VG(
+# reports.vg (H-04, the second pass): the modern age's reports (a ministry's, a board's, a company's: the figures, a survey, the
+# recommendation nobody follows). Every sentence is built from parts, the people's own crops, crafts, waters and quarters in the figures,
+# each people's inspectors with their own few ways of recommending and closing (`people=K`). The scientific paper is paper.vg's.
+
+genre.mreport (words=23..90)
+  {mr.head}\n{mr.summary}\n{mr.finding} {mr.finding}\n{mr.rec}
+  {mr.head}\n{mr.summary}\n{mr.finding} {mr.finding} {mr.finding}\n{mr.rec}
+  {mr.head}\n{mr.finding} {mr.survey}\n{mr.rec} {mr.coda}
+  {mr.head}\n{mr.summary}\n{mr.compare} {mr.finding}\n{mr.rec}
+  {mr.head}\n{mr.survey} {mr.finding}\n{mr.rec} {mr.coda}
+
+mr.head (formula people=3)
+  Report to {ruler.the}, {season.now}, year {#year:digits}. Restricted.
+  (has:company) {company}: annual report, year {#year:digits}.
+  A report of the ministry, on the state of the {mr.what}.
+  The {mr.what}: a report for the year {#year:digits}.
+  Confidential. The state of the {mr.what} in {$home}.
+  To the committee on the {mr.what}, from the inspectors.
+  Survey of the {mr.what}, {$home} district, {season.now}.
+  The inspectors' report on the {mr.what}, year {#year:digits}.
+
+mr.what (people=6)
+  water supply
+  harvest
+  roads
+  population
+  grid
+  schools
+  hospitals
+  markets
+  housing
+  trams
+  {craft} trade
+  {crop} crop
+  (coast=1) harbour
+  (coast=1) fisheries
+  (desert=0) forests
+  (economy=herding|economy2=herding) herds
+
+# ---- what the report is ----------------------------------------------------------------------------------------------------
+
+mr.summary (share=0.8)
+  This report covers {mr.span}, {mr.sum.how}.
+  The inspectors visited {#n|district} and {#nbig} households, {mr.sum.ins}.
+  The figures were collected {mr.sum.coll}, and some of them are {mr.sum.qual}.
+  The last report {mr.last}, so this one is {mr.shorter}.
+  It was asked for by {ruler.the} in {season.any}, and it is {mr.late}.
+  (stage>=0) This report concerns the long-term trend, which the committee asked us not to call {mr.word}.
+mr.span (people=4)
+  the year
+  the last {#n|year}
+  the months of {season.any}
+  the districts north of {$seat}
+  the whole of {$home}
+  the river towns
+  the {craft} trade
+  the {crop} harvest
+mr.sum.how (people=3)
+  as the committee asked
+  as far as the figures allow
+  with some gaps
+  and is late
+  at the request of {ruler.the}
+  for the third time
+  without the help of the ministry
+  in the spirit of the founder
+  with the figures the {craft} guild would release
+  by hand and by lamplight
+  as plainly as we can
+mr.sum.ins (people=3)
+  in all weathers
+  on foot
+  by tram
+  and were welcomed in most of them
+  and were given {drink} in most of them
+  and counted the {herd} as well
+mr.sum.coll (people=3)
+  under difficult conditions
+  by the schools
+  by the {craft} guild
+  in a hurry
+  twice
+mr.sum.qual (people=2)
+  guesses
+  old
+  better than nothing
+  the clerk's own
+mr.last (people=4)
+  was not read
+  was lost
+  was read and ignored
+  was too long
+  was answered with a letter of thanks and nothing else
+  was used to light a stove
+  was misfiled under {crop}
+mr.shorter (people=3)
+  shorter
+  in plainer words
+  on one page
+  late
+  in larger print
+mr.late
+  late
+  shorter than was hoped
+  frank
+mr.word
+  a crisis
+  a decline
+  a problem
+  anything at all
+
+# ---- what was found ---------------------------------------------------------------------------------------------------------
+
+mr.finding
+  (4) {mr.thing} {mr.change} {mr.since}{mr.because}.
+  (once) {mr.outof} is {n} parts in a hundred {mr.updown} the previous year{mr.forecast}.
+  (once) {mr.costs} have {mr.costv} in {#n|year}{mr.because}.
+  (once) The population of {mr.pop} continues to {mr.popv}{mr.because}.
+  (once has:$home.quarter) {mr.share} of the houses in {$home.quarter} have no {mr.lack}.
+  (once stage<0) The figures are, {mr.onwhole}, satisfactory.
+  (once stage>=1) The decline is now in every district, {mr.decl}.
+  (once stage>=2) We can no longer maintain the {mr.serv} to the outer towns.
+mr.thing (people=10)
+  Demand for water
+  The number of children in the schools
+  The yield of {crop} per field
+  Traffic on the {bc.road}
+  The cost of {fuel}
+  The number of empty houses in {$home}
+  Use of the hospitals
+  The price of {food}
+  Output of the {craft} works
+  Attendance at {holyplace}
+  The number of {craft} workshops
+  Use of {watersrc.n} water
+  The number of marriages
+  Membership of the {craft} guild
+  The sale of {drink}
+  The number of {herd} in the district
+  (coast=1) The catch of {fish}
+  (has:$home.landmark) The number of visitors to {$home.landmark}
+  (has:$home.quarter) Crime in {$home.quarter}
+  The export of {crop2}
+mr.change (people=6)
+  has risen by a {nth}
+  has fallen by a {nth}
+  is unchanged
+  has doubled
+  has halved
+  is at its lowest since the records began
+  is at its highest in {#n|decade}
+  has risen slightly
+  has fallen sharply
+  has gone up and down for no reason anyone can find
+mr.since (people=4)
+  in {#n|year}
+  since the last report
+  since the census
+  over the decade
+  {season.this}
+  since the new tolls
+  since {festival} last year
+mr.because
+  (3)
+  , owing to {mr.cause}
+  , which nobody can explain
+  , as forecast
+  , against every forecast
+  , which the committee puts down to {mr.cause}
+mr.cause (people=5)
+  the dry {season.any}
+  the cost of {fuel}
+  the new road
+  the closing of the {craft} works
+  people leaving for {$seat}
+  the price of {food}
+  the old pipes
+  {weather}
+  (war=1) the war
+  (sick=1) the sickness
+mr.outof (people=3)
+  Output
+  Output of the {craft} works
+  The {crop} harvest
+  Revenue
+  Attendance
+  (coast=1) The catch
+mr.updown
+  below
+  above
+mr.forecast
+  (2)
+  , in line with the forecast
+  , against the forecast
+mr.costs (people=4)
+  Costs
+  Wages
+  Prices at the market
+  Rents in {$home}
+  The prices of {food} and {drink}
+  Fares on the {msg.transit}
+  The cost of a {vessel.one.n} of {crop}
+  Doctors' fees
+  The price of a cart of {fuel}
+mr.costv (people=3)
+  doubled
+  trebled
+  risen by half
+  fallen by a third
+  crept up
+  jumped
+mr.pop (people=4)
+  the outer towns
+  the river villages
+  the hill country
+  the old town
+  the mill streets
+  the farms north of {$seat}
+  the {craft} towns
+  (coast=1) the coast
+  (coast=1) the fishing villages
+mr.popv (people=4)
+  fall
+  rise
+  age
+  drift towards {$seat}
+  fall, slowly, as it has for a generation
+  rise, which nobody expected
+  change, and not for the better
+mr.share (people=2)
+  Half
+  A third
+  Most
+  Nearly all
+  A quarter
+mr.lack (people=3)
+  running water
+  heating
+  glass in the windows
+  a {mod.room2}
+mod.room2 (people=2)
+  kitchen
+  privy
+  bath
+  stove
+mr.onwhole (people=4)
+  on the whole
+  for once
+  in most districts
+  if read kindly
+  by the standards of the last decade
+  in the towns, if not in the hills
+  as the clerk would put it
+  against all expectation
+  except where they are not
+mr.decl (people=2)
+  the hills first
+  the coast last
+  as was foreseen
+mr.serv (people=2)
+  services
+  trams
+  clinics
+  schools
+
+mr.survey
+  Of {#nbig} households asked, {mr.surveyres}.
+  Asked what they most wanted, most of those asked in {$home} said {mr.want}.
+  The survey found that {mr.surveyres}.
+mr.surveyres (people=5)
+  most said they had enough {food}
+  a third said they would leave if they could
+  nearly all said the {msg.transit} was late
+  half had not heard of the committee
+  most named {pastime} as their first pleasure
+  a quarter had kept {herd} in the last year
+  most said they trusted {ruler.the}, and most of those said it quietly
+  nearly half had a relative in {$seat}
+  the commonest complaint was the noise of the {craft} works
+  most could name the founder of the town and few could name the mayor
+mr.want (people=4)
+  a new {msg.place}
+  cheaper {food}
+  fewer reports
+  the old {festival} customs back
+  a bridge
+  quiet
+  work
+  a {msg.transit} that comes
+
+mr.compare
+  {mr.cmpa} {mr.cmpv} twice the {mr.cmpx} of {mr.cmpb}.
+  {$home} spends a {nth} of its budget on {mr.spend}, {$seat} half that.
+  The coastal towns and the inland towns are moving in opposite directions.
+  (has:$home.quarter) {$home.quarter} has the highest rate of {mr.ill} in {$home}.
+mr.cmpa (people=3)
+  The northern districts
+  The river towns
+  The old town
+  The new streets
+  (coast=1) The coastal towns
+mr.cmpv (people=2)
+  use
+  spend
+  lose
+  need
+mr.cmpx (people=2)
+  water
+  {fuel}
+  {food}
+  money on repairs
+mr.cmpb (people=2)
+  the southern
+  the hill towns
+  the rest of {$home}
+  {$seat}
+mr.ill (people=3)
+  sickness
+  unemployment
+  fires
+  accidents
+  theft
+mr.spend (people=2)
+  the roads
+  the schools
+  {fuel}
+  the {craft} works
+
+# ---- what is recommended -----------------------------------------------------------------------------------------------------
+
+mr.rec
+  (3) We recommend {mr.act} {mr.act2}.
+  We have one recommendation: {mr.act}.
+  (stage>=1) We recommend that the population be told the truth {mr.act2}.
+mr.act (people=4)
+  that the matter be kept under review
+  that a committee be formed
+  that the figures be published
+  immediate action
+  that the {craft} works be inspected
+  that the {mr.fix} be repaired
+  that {ruler.the} be told plainly
+  nothing, since nothing will be done
+  that the old {watersrc.n} be opened again
+  a study of the study
+  a tax on {drink}
+  that the {herd} be moved out of the town
+  that the schools teach {craft}
+  a new road to {$seat}
+  that the price of {food} be fixed
+  that the {min.building} be closed
+  that the {craft} guild be consulted
+  that the old {watersrc.n} be cleaned
+  a count of every {beast} in the district
+  that the trams run later
+  that the schools open earlier
+  that the price of {fuel} be reviewed
+  that the stores of {crop} be inspected
+  that the report be read
+  that {$home} be given its own {min.building}
+  a new bridge over {river}
+  that the {festival} holiday be moved
+  that no further reports be commissioned
+  that the inspectors be paid
+  that the north road be widened
+mr.act2 (people=3)
+  (3)
+  before {season.next}
+  at once
+  within the year
+  , as a matter of urgency
+  , for what it is worth
+mr.fix (people=3)
+  pipes
+  roads
+  bridges
+  schools
+  dykes
+  pumps
+mr.coda (share=0.6)
+  We made the same recommendation {mr.same}.
+  We would be glad to be {mr.glad}.
+  The figures are attached{mr.att}.
+  The committee thanks {mr.thanks}.
+  The cost of this report is given in the appendix{mr.cost}.
+  A shorter version has been sent to {ruler.the}.
+  The inspectors ask that this report be read before it is filed.
+mr.same (people=3)
+  last year
+  in the last report
+  twice before
+  every year since the census
+  in {season.any} and in the year before
+  to three governments
+  in writing and by hand
+mr.glad (people=3)
+  wrong
+  proved wrong
+  contradicted
+  ignored, for once
+  overruled by events
+  shown up by the farmers
+mr.att
+  (2)
+  , with the gaps marked
+  , in the clerk's hand
+mr.thanks (people=3)
+  the staff of {$home}
+  the people of {$home}
+  the {craft} guild
+  the schoolchildren who counted
+  the clerks who copied it
+  the families who opened their doors
+  the {herd} keepers, who were patient
+  the keeper of {holyplace}
+mr.cost
+  (2)
+  , and is not small
+  , and was paid by the {craft} guild
+)VG"

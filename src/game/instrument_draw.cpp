@@ -1,10 +1,10 @@
-// C-11 (2026-10-10): an instrument of the old peoples drawn on the cabin's case. C-17 (2026-10-10): drawn from its parts (galaxy/instruments.h)
+// C-11 (2026-10-10): an instrument of the old peoples drawn on the cabin's case. C-17 (2026-10-10): drawn from its parts (peoples/instruments.h)
 // as it lies, seen from above: the same parts the ruins draw as its object. Each part in its material's colour (its people's own where it takes
 // their banks: stone their structure's, glass their glass, paint their accent, light their light), lit from the upper left (a tube's light
 // side and its shadow, a body's bevel and its dome's sheen, a ball's sheen, a bowl's dark inside), over its shadow on the case's dark cloth;
 // what a key sounds glows as it is played and a string shivers; a ruler under it gives its size. Logical units of the 320 x 200 HUD.
 #include "game.h"
-#include "galaxy/instruments.h"
+#include "peoples/instruments.h"
 #include <cmath>
 #include <algorithm>
 
@@ -14,7 +14,9 @@ uint32_t mixc(uint32_t a, uint32_t b, double t) {
     auto ch = [&](int s) { return (int)std::lround(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t); };
     return rgb(ch(0), ch(8), ch(16));
 }
-uint32_t ofRGB(const RGB& c) { return rgb((int)std::lround(std::max(0.0f, std::min(1.0f, c.r)) * 255), (int)std::lround(std::max(0.0f, std::min(1.0f, c.g)) * 255), (int)std::lround(std::max(0.0f, std::min(1.0f, c.b)) * 255)); }
+uint32_t ofRGB(const RGB& c) {
+    return rgb((int)std::lround(std::max(0.0f, std::min(1.0f, c.r)) * 255), (int)std::lround(std::max(0.0f, std::min(1.0f, c.g)) * 255), (int)std::lround(std::max(0.0f, std::min(1.0f, c.b)) * 255));
+}
 const uint32_t WHITE = rgb(255, 255, 255), BLACK = rgb(0, 0, 0), LIT = rgb(255, 236, 160);
 
 // the picture's frame: the instrument's metres (u along, v across, up the picture) to the canvas's units, turned a quarter where it lies tall
@@ -99,8 +101,17 @@ int outlineOf(const InstrumentPart& p, double* u, double* v, double grow = 0) {
                 case 1: put(0, -L, r); put(1, L, r); put(2, L, -r); put(3, -L, -r); return 4;                       // a slit
                 case 2: put(0, -r, r); put(1, r, r); put(2, r, -r); put(3, -r, -r); return 4;                       // square
                 case 3: for (int i = 0; i < 3; i++) { const double a = PI / 2 + TAU * i / 3; put(i, std::sin(a) * r * 1.2, std::cos(a) * r * 1.2); } return 3;
-                case 4: { for (int i = 0; i < 12; i++) { const double a = TAU * i / 12; put(i, std::cos(a) * r * 0.75 + r * 0.45, std::sin(a) * r * 0.75); } put(12, -r * 1.1, r * 0.45); put(13, -r * 1.1, -r * 0.45); return 14; }   // a keyhole
-                case 5: { for (int i = 0; i <= 8; i++) { const double a = PI * i / 8; put(i, std::sin(a) * r * 0.6 + r * 0.35, std::cos(a) * r); } put(9, -r, -r); put(10, -r, r); return 11; }   // an arch
+                case 4: {
+                    for (int i = 0; i < 12; i++) {
+                        const double a = TAU * i / 12;
+                        put(i, std::cos(a) * r * 0.75 + r * 0.45, std::sin(a) * r * 0.75);
+                    }
+                    put(12, -r * 1.1, r * 0.45);
+                    put(13, -r * 1.1, -r * 0.45);
+                    return 14;
+                }   // a keyhole
+                // an arch
+                case 5: { for (int i = 0; i <= 8; i++) { const double a = PI * i / 8; put(i, std::sin(a) * r * 0.6 + r * 0.35, std::cos(a) * r); } put(9, -r, -r); put(10, -r, r); return 11; }
                 case 6: for (int i = 0; i < 10; i++) { const double a = TAU * i / 10, rr = i % 2 ? r * 0.45 : r * 1.15; put(i, std::cos(a) * rr, std::sin(a) * rr); } return 10;   // a star
                 default: for (int i = 0; i < 14; i++) { const double a = TAU * i / 14; put(i, std::cos(a) * r, std::sin(a) * r); } return 14;
             }
@@ -156,7 +167,13 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
         const InstrumentPart& p = parts[i];
         if (p.kind == IPK_MARK || p.kind == IPK_STRING || topOf(p) < 0.004) continue;
         const double off = std::min(3.0, 1.0 + topOf(p) * P.s * 0.08);
-        if (p.kind == IPK_RING && !p.standing) { for (int k = 0; k < 32; k++) { const double a0 = TAU * k / 32, a1 = TAU * (k + 1) / 32; P.lineUV(p.u + std::cos(a0) * p.r0, p.v + std::sin(a0) * p.r0, p.u + std::cos(a1) * p.r0, p.v + std::sin(a1) * p.r0, shadow, off, off); } continue; }
+        if (p.kind == IPK_RING && !p.standing) {
+            for (int k = 0; k < 32; k++) {
+                const double a0 = TAU * k / 32, a1 = TAU * (k + 1) / 32;
+                P.lineUV(p.u + std::cos(a0) * p.r0, p.v + std::sin(a0) * p.r0, p.u + std::cos(a1) * p.r0, p.v + std::sin(a1) * p.r0, shadow, off, off);
+            }
+            continue;
+        }
         if (p.kind == IPK_RING) continue;
         const int n = outlineOf(p, U, V);
         P.polyUV(U, V, n, shadow, off, off);
@@ -182,7 +199,11 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
                 auto stripe = [&](double f0, double f1, uint32_t col) {
                     const double q[4][2] = {{0, f0}, {p.len, f0}, {p.len, f1}, {0, f1}};
                     double su[4], sv[4];
-                    for (int k = 0; k < 4; k++) { const double r = k == 1 || k == 2 ? p.r1 : p.r0; su[k] = p.u + c * q[k][0] - s * q[k][1] * r * side; sv[k] = p.v + s * q[k][0] + c * q[k][1] * r * side; }
+                    for (int k = 0; k < 4; k++) {
+                        const double r = k == 1 || k == 2 ? p.r1 : p.r0;
+                        su[k] = p.u + c * q[k][0] - s * q[k][1] * r * side;
+                        sv[k] = p.v + s * q[k][0] + c * q[k][1] * r * side;
+                    }
                     P.polyUV(su, sv, 4, col);
                 };
                 if (std::max(p.r0, p.r1) * P.s >= 1.6) { stripe(0.25, 0.7, hi); stripe(-0.55, -1.0, lo); }
@@ -259,7 +280,8 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
                 const double size = std::max(p.r0, p.len * 0.5) * P.s;
                 if (size < 0.6) { double x, y; P.at(p.u, p.v, x, y); fillRectRGB(cv, (int)std::floor(x), (int)std::floor(y), (int)std::floor(x), (int)std::floor(y), base); break; }
                 P.polyUV(U, V, n, base);
-                if (p.mat == IM_HOLE && size > 0.9) P.bevelUV(U, V, n, mixc(base, BLACK, 0.5), rgb(150, 140, 124));   // an incised edge: its lower right catches the light (a hole in a dark body shows by it)
+                // an incised edge: its lower right catches the light (a hole in a dark body shows by it)
+                if (p.mat == IM_HOLE && size > 0.9) P.bevelUV(U, V, n, mixc(base, BLACK, 0.5), rgb(150, 140, 124));
                 else if (p.mat == IM_LIGHT && g > 0.05) { double Ug[96], Vg[96]; const int m = outlineOf(p, Ug, Vg, 1.2 / P.s); P.bevelUV(Ug, Vg, m, LIT, LIT); }   // a light played: a halo round it
                 break;
             }
@@ -268,7 +290,7 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
     }
     if (ruler) {   // its size: the longest round length that fits a third of the box
         static const double LEN[6] = {0.02, 0.05, 0.1, 0.2, 0.5, 1.0};
-        static const char* LBL[6] = {"2 CM", "5 CM", "10 CM", "20 CM", "50 CM", "1 M"};
+        static const char* const LBL[6] = {"2 CM", "5 CM", "10 CM", "20 CM", "50 CM", "1 M"};
         int k = 0; for (int j = 0; j < 6; j++) if (LEN[j] * P.s <= w * 0.34) k = j;
         const int len = std::max(2, (int)std::lround(LEN[k] * P.s)), x = x0 + 5, y = y0 + h - 6;
         const uint32_t col = rgb(128, 138, 136);
@@ -277,6 +299,7 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
     }
 }
 
+// C-17: its parts (`drawInstrumentParts`)
 void Game::drawInstrumentPicture(int x0, int y0, int w, int h, const Instrument& I, const Tradition& T, const FormPalette& pal, const std::vector<double>& glow, double t) {
     std::vector<InstrumentPart> parts; instrumentParts(T, I, parts);
     drawInstrumentParts(canvas, x0, y0, w, h, parts, pal, glow, t, true);

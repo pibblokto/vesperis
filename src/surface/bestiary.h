@@ -7,13 +7,13 @@
 #include <vector>
 
 enum BodyPlan { PLAN_QUADRUPED = 0, PLAN_LONGNECK, PLAN_HEXAPOD, PLAN_HOPPER, PLAN_BIPED, PLAN_GIANT, PLAN_FLYER, PLAN_SWIMMER, PLAN_COUNT };
-extern const char* PLAN_NAMES[PLAN_COUNT];
+extern const char* const PLAN_NAMES[PLAN_COUNT];
 enum Gait { GAIT_WALK = 0, GAIT_TROT, GAIT_GALLOP, GAIT_HOP, GAIT_CRAWL, GAIT_STRIDE };
 enum Temperament { TEMP_SHY = 0, TEMP_CURIOUS, TEMP_INDIFFERENT };
 enum Activity { ACT_DAY = 0, ACT_NIGHT, ACT_DUSK };
 enum CallKind { CALL_NONE = 0, CALL_CHIRP, CALL_LOW, CALL_HOOT, CALL_CLICK };
-extern const char* ACTIVITY_NAMES[3];
-extern const char* TEMPERAMENT_NAMES[3];
+extern const char* const ACTIVITY_NAMES[3];
+extern const char* const TEMPERAMENT_NAMES[3];
 
 struct Species {
     std::string name;

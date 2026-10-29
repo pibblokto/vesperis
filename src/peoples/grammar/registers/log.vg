@@ -1,0 +1,173 @@
+R"VG(
+# log.vg (H-04; the second pass): the log's register: an event as a station's, a plant's or a machine's log keeps it (`@news public log`):
+# the facts, short, without a person's feelings, an action taken. The genres put a time before each line, in the day's order (`log.t1`
+# to `log.t5`). The modern logs and the futuristic machines' logs share it (`age` guards the words). Each people's logs close their
+# entries their own way (`log_everyday.vg`: `mod.lg.ack` and the rest), so one people's watch keeps "Logged." and another's "Forwarded".
+# This file: the history's kinds; log_everyday.vg: the everyday's.
+
+@root log.*
+
+# the times of a log's entries, in their order through a day (the event register's lines carry none; the genres put one before each)
+log.t1
+  05:40.
+  06:10.
+  07:25.
+log.t2
+  09:15.
+  10:30.
+  11:45.
+log.t3
+  13:20.
+  14:00.
+  15:35.
+log.t4
+  17:20.
+  18:05.
+  19:50.
+log.t5
+  21:05.
+  22:40.
+  23:50.
+
+log.sickness
+  {mod.lg.tag} Outbreak of {$e.sickness} confirmed at {$e.place}. Deaths to date: {#$e.value:digits}. {mod.lg.sick}
+  {mod.lg.tag} {$e.sickness}, wave {#$e.wave}, at {$e.place}. Deaths: {#$e.value:digits}. {mod.lg.ack}
+  {mod.lg.tag} Medical officer at {$e.place} reports {$e.sickness}. {#$e.value:digits} dead. {mod.lg.sick}
+  {mod.lg.tag} Cases of {$e.sickness} rising at {$e.place}; the dead put at {#$e.value:digits}. {mod.lg.sick}
+  {mod.lg.tag} {$e.sickness} back at {$e.place}, wave {#$e.wave}. {mod.lg.sick} {mod.lg.ack}
+log.famine
+  (has:$e.place) {mod.lg.tag} Food stocks critical at {$e.place}. Rationing in force. Deaths reported: {#$e.value:digits}.
+  (!has:$e.place) {mod.lg.tag} Food stocks critical in every district. Rationing in force. Deaths: {#$e.value:digits}.
+  (has:$e.place) {mod.lg.tag} Supply convoys to {$e.place} doubled. Deaths from hunger: {#$e.value:digits}. {mod.lg.ack}
+  {mod.lg.tag} Ration cut by a {nth}. {#$e.value:digits} dead of hunger this period. {mod.lg.ack}
+log.harvest
+  ($e.harvest=rich) {mod.lg.tag} Yield above forecast. Storage at capacity. {mod.lg.ack}
+  ($e.harvest=rich) {mod.lg.tag} Harvest returns in: the best in {#n|year}. Silos full.
+  ($e.harvest!=rich) {mod.lg.tag} Yield below forecast. Reserves drawn down. {mod.lg.ack}
+  ($e.harvest!=rich) {mod.lg.tag} Harvest returns in: {crop} short by a {nth}. Imports requested.
+log.war
+  {mod.lg.tag} State of war declared. All stations to readiness.
+  {mod.lg.tag} War declared: {$e.war}. Blackout in force from tonight. {mod.lg.ack}
+  {mod.lg.tag} Mobilisation order received. {#nbig} staff called up. Shifts doubled.
+  {mod.lg.tag} {$e.war}: the station placed under military control. {mod.lg.ack}
+log.battle
+  {mod.lg.tag} Engagement at {$e.place}. Casualties: {#$e.value:digits}. Outcome: {log.won}.
+  {mod.lg.tag} Reports of fighting at {$e.place}; {#$e.value:digits} dead. Our side {log.won}. {mod.lg.ack}
+  {mod.lg.tag} {$e.war}: battle at {$e.place}, {log.won}. Casualty lists to follow.
+log.won
+  ($e.won=1) held
+  ($e.won=0) lost
+  ($e.won=draw) unresolved
+log.siege
+  {mod.lg.tag} {$e.place} under siege. Lines to it cut. {mod.lg.ack}
+  {mod.lg.tag} No contact with {$e.place} for {#n|day}; the town is surrounded.
+log.sack
+  {mod.lg.tag} {$e.place} taken and burned. {#$e.value:digits} dead. All traffic to it stopped.
+  {mod.lg.tag} Station at {$e.place} lost. Last message received at dawn.
+log.peace
+  {mod.lg.tag} Ceasefire. {$e.war} ended. Stand down.
+  {mod.lg.tag} {$e.war}: peace signed. Blackout lifted. {mod.lg.ack}
+  {mod.lg.tag} End of hostilities announced. Crews released to their homes.
+log.flood
+  (has:$e.place) {mod.lg.tag} Flood warning at {$e.place}. Water above the marks. Evacuation of the low districts.
+  (has:$e.place) {mod.lg.tag} {$e.place}: water over the {mod.lg.where}. {#$e.value:digits} dead. Pumps at full.
+  (has:$e.place) {mod.lg.tag} River gauge at {$e.place} off the scale. Crews to the dykes. {mod.lg.ack}
+log.drought
+  {mod.lg.tag} No precipitation recorded. Reservoir at a third.
+  {mod.lg.tag} Day {#nbig} without rain. Water pressure reduced to half. {mod.lg.ack}
+  {mod.lg.tag} Reservoir below the intake. Supply from the {watersrc.n} only. {mod.lg.ack}
+log.quake
+  {mod.lg.tag} Seismic event at {$e.place}. Damage reported. Deaths: {#$e.value:digits}.
+  {mod.lg.tag} Tremor felt at {$e.place}, the instruments off the drum. {#$e.value:digits} dead. {mod.lg.ack}
+  {mod.lg.tag} {$e.place}: the ground moved at {mod.lg.hour}. Buildings down; deaths {#$e.value:digits}.
+log.eruption
+  {mod.lg.tag} Eruption, {mountain}. Ash fall over {$e.place}.
+  {mod.lg.tag} {mountain} active. Ash on the roofs at {$e.place}; {#$e.value:digits} dead. {mod.lg.ack}
+log.impact
+  {mod.lg.tag} Impact event near {$e.place}. All instruments off scale.
+  {mod.lg.tag} Flash in the sky, then the shock. Impact near {$e.place}; {#$e.value:digits} dead. {mod.lg.ack}
+log.flare
+  {mod.lg.tag} Solar flare. Communications lost on the day side. Shelter ordered.
+  {mod.lg.tag} Flare warning from the observatory. Lines down for {#n|hour}. {mod.lg.ack}
+log.winter
+  {mod.lg.tag} Temperatures below the seasonal record for the {nth} month running.
+  {mod.lg.tag} Hard winter: {#n|pipe} burst at the station this week. {mod.lg.ack}
+  {mod.lg.tag} No thaw. Supply of {fuel} rationed to the halls.
+log.built
+  {mod.lg.tag} {$e.work} at {$e.place} complete. Handed over.
+  {mod.lg.tag} Handover of {$e.work} at {$e.place}. Crews released. {mod.lg.ack}
+  {mod.lg.tag} {$e.place}: {$e.work} open, {#$e.value|year} after the first stone.
+log.way
+  {mod.lg.tag} Line between {$e.place} and {$e.place2} open to traffic.
+  {mod.lg.tag} First traffic on the new line from {$e.place} to {$e.place2}. {mod.lg.ack}
+log.invention
+  {mod.lg.tag} Trial of {$e.invention} at {$e.place}: successful. Report to follow.
+  {mod.lg.tag} Demonstration of {$e.invention} at {$e.place}. The engineers asked for copies. {mod.lg.ack}
+log.discovery
+  {mod.lg.tag} Expedition back at {$e.place} with news. Report sealed. {mod.lg.ack}
+  {mod.lg.tag} Word from the expedition: the find confirmed. {mod.lg.ack}
+log.institution
+  {mod.lg.tag} {$e.instname} founded at {$e.place}. Notice posted.
+  {mod.lg.tag} New body in being: {$e.instname}. The station to report to it. {mod.lg.ack}
+log.unrest
+  {mod.lg.tag} Disturbance at {$e.place}. Security deployed. Casualties: {#$e.value:digits}.
+  ($e.unrest=strike) {mod.lg.tag} Strike at {$e.place}. The shift did not come in. {mod.lg.ack}
+  {mod.lg.tag} Crowds at {$e.place}; the gates closed. {mod.lg.ack}
+log.abandoned
+  {mod.lg.tag} {$e.place} evacuated. Services there withdrawn.
+  {mod.lg.tag} Last train out of {$e.place}. Its station closed. {mod.lg.ack}
+  {mod.lg.tag} {$e.place}: supply cut off at the order of {$seat}. Nobody there to supply.
+log.exodus
+  {mod.lg.tag} Departures from {$e.place}: {#$e.value:digits} this period.
+  {mod.lg.tag} Roads out of {$e.place} full. {#$e.value:digits} left. {mod.lg.ack}
+log.sign
+  {mod.lg.tag} {$e.sign}. Logged. No instruction received.
+  {mod.lg.tag} {$e.sign}. Reported to {$seat}. No reply. {mod.lg.ack}
+log.stage
+  {mod.lg.tag} Status changed. All stations notified.
+  {mod.lg.tag} New status from {$seat}. Standing orders replaced. {mod.lg.ack}
+log.rulerdeath
+  (has:$e.a) {mod.lg.tag} Death of {$e.a:full} announced. Flags lowered.
+  (has:$e.a) {mod.lg.tag} {$e.a:full} dead. Two minutes' silence at noon. {mod.lg.ack}
+  (!has:$e.a) {mod.lg.tag} Death of the head of state announced. Flags lowered.
+log.accession
+  (has:$e.a) {mod.lg.tag} {$e.a:full} assumes office.
+  (has:$e.a) {mod.lg.tag} New head of state: {$e.a:full}. Portraits to be changed. {mod.lg.ack}
+  (!has:$e.a) {mod.lg.tag} New administration in office. Orders unchanged. {mod.lg.ack}
+log.ruleend
+  (has:$e.a) {mod.lg.tag} {$e.a:full} out of office. Orders pending. {mod.lg.ack}
+  (!has:$e.a) {mod.lg.tag} The head of state out of office. Orders pending.
+log.government
+  {mod.lg.tag} New administration in force. Orders unchanged pending review.
+  {mod.lg.tag} Change of government. The old letterheads to be used up first. {mod.lg.ack}
+log.festival
+  {mod.lg.tag} {festival}: half shifts. {mod.lg.ack}
+  (has:$e.place) {mod.lg.tag} Holiday at {$e.place}, {#$e.value|year} since its founding. Station manned by volunteers.
+log.omen
+  {mod.lg.tag} Unusual sky activity. Recorded for the archive.
+  ($e.omen=comet) {mod.lg.tag} Comet visible at dusk. Recorded. {mod.lg.ack}
+  ($e.omen=eclipse) {mod.lg.tag} Eclipse observed, {#n|minute} of totality. {mod.lg.ack}
+  ($e.omen=aurora) {mod.lg.tag} Aurora in the north all night; radio poor. {mod.lg.ack}
+  ($e.omen=wanderer 3) {mod.lg.tag} The wanderer at a new brightness record; its orbit predictions revised again. {mod.lg.ack}
+  ($e.omen=intruder 3) {mod.lg.tag} The intruding star nearer again this season. {mod.lg.ack}
+  ($e.omen=bent 3) {mod.lg.tag} Star positions near the dark object displaced again. {mod.lg.ack}
+  ($e.omen=dance 3) {mod.lg.tag} The companion's separation increased again. {mod.lg.ack}
+log.contact
+  {mod.lg.tag} Contact with the {other} at {$e.place}. Protocols applied.
+  {mod.lg.tag} First signal from the {other}, received at {$e.place}. {mod.lg.ack}
+log.treaty
+  {mod.lg.tag} Treaty with the {other} signed. Border posts to stand down. {mod.lg.ack}
+log.otherend
+  {mod.lg.tag} No signal from the {other} for one year. Their stations presumed abandoned.
+log.migration
+  (has:$e.place has:$e.place2) {mod.lg.tag} Population transfer from {$e.place} to {$e.place2}: {#$e.value:digits}.
+  (!has:$e.place|!has:$e.place2) {mod.lg.tag} Movement into the cities this period: {#$e.value:digits}.
+log.death
+  (has:$e.a has:$e.place) {mod.lg.tag} Death of {$e.a:full} at {$e.place}. Noted.
+  (has:$e.a !has:$e.place) {mod.lg.tag} Death of {$e.a:full}. Noted.
+  (!has:$e.a) {mod.lg.tag} A death reported. Noted.
+log.none
+  Nothing to report.
+  All systems normal.
+  {mod.lg.quiet}
+)VG"

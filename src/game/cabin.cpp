@@ -13,28 +13,65 @@
 #include <algorithm>
 
 namespace {
-const double CAB_HALF = 2.5, CAB_H = 2.4, EYE = 1.6, CAGE_R = 1.0;
-const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10;
+constexpr double CAB_HALF = 2.5, CAB_H = 2.4, EYE = 1.6, CAGE_R = 1.0;
 const double GLASS_SHEEN = 16;   // B-411: the shade of the cabin light on a glass hull
-// R-404 (2026-10-06): every computer in a colour of its own, so the one wanted is found at a glance: by `facing` (6 is
-// the cage, 0 nothing), the bank its screen is drawn in (9 the flight computer's green, 21-27 the others) and its colour;
-// the prompt under the crosshair takes the colour too
-struct ScreenLook { int bank; RGB col; };
-const ScreenLook SCREENS[12] = {
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 0: nothing faced
-    {21, RGB(1.0f, 0.72f, 0.25f)},            // 1 the GOES console: amber
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 2 the flight computer: the green phosphor
-    {22, RGB(0.4f, 0.55f, 1.0f)},             // 3 the star map screen: blue
-    {23, RGB(1.0f, 0.45f, 0.8f)},             // 4 the landing map screen: pink (an orange sat too near the radar's red)
-    {24, RGB(0.3f, 0.95f, 0.9f)},             // 5 the target data screen: cyan
-    {BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f)},    // 6 the capsule cage: no screen
-    {25, RGB(0.75f, 0.45f, 1.0f)},            // 7 the shard decoder: violet
-    {26, RGB(1.0f, 0.35f, 0.3f)},             // 8 the signal radar: red
-    {27, RGB(0.8f, 0.9f, 1.0f)},              // 9 the telescope: ice
-    {28, RGB(0.72f, 1.0f, 0.3f)},             // 10 the instruments' case (C-11): lime
-    {29, RGB(1.0f, 1.0f, 0.45f)},             // 11 the drone bay (C-18): a pale yellow
-};
 const int BANK_DRONE_PAINT = 30;   // C-18: the drones' paint, a light warm grey under the cabin's light
+// U-03: the explorer kept off a device's body, back to its face from the wall's side, along the wall between `from` and `to`
+void keepOff(const CabinBlock& b, double& x, double& z) {
+    if (b.wall == WALL_LEFT && x < b.face && z > b.from && z < b.to) x = b.face;
+    else if (b.wall == WALL_BACK && z < b.face && x > b.from && x < b.to) z = b.face;
+    else if (b.wall == WALL_FRONT && z > b.face && x > b.from && x < b.to) z = b.face;
+}
+}
+
+// U-03: the cabin's devices, a row a CabinFacing in its order: FACE_NOTHING's first (E there says what there is to use), then
+// the GOES console on the left wall, the flight computer on the front desk, the three screens on the right wall, the capsule's
+// cage in the middle, the decoder, the radar and the telescope on the back wall, the case and the drone bay on the left
+const RowList<CabinDevice>& Game::cabinDevices() {
+    static constexpr auto atGiant = [](const Game& g) {   // the landing screen and the cage serve the probe at a giant
+        return g.sys.valid && g.ship.mode == ShipState::PARKED && g.ship.parkedBody >= 0 && g.ship.parkedBelt < 0 && isProbeGiant(g.sys.bodies[g.ship.parkedBody].type);
+    };
+    static constexpr auto relay = [](const Game& g) {
+        return g.probe.endClock >= 0 ? "PROBE RELAY - E SHOWS ITS LAST FRAME" : "PROBE RELAY - E TO WATCH THE PROBE";
+    };
+    static constexpr CabinDevice ROWS[] = {
+        {FACE_NOTHING, 0, 0, 0, "", "", BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f),
+         [](Game& g) { g.status("NOTHING TO USE HERE - WALK TO A CONSOLE, A SCREEN, THE DECODER, THE CASE OR THE CAPSULE", 3); }},
+        {FACE_GOES, -2.3, 0.0, 1.6, "GOES CONSOLE - E TO USE", "THE GOES CONSOLE", 21, RGB(1.0f, 0.72f, 0.25f),   // amber
+         [](Game& g) { g.openScreen(GameState::CONSOLE); }, {WALL_LEFT, -1.9, -0.9, 0.9}},
+        {FACE_FLIGHT, 0.0, 2.3, 1.8, "FLIGHT COMPUTER - E TO USE", "THE FLIGHT COMPUTER", BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f),   // the green phosphor
+         [](Game& g) { g.openScreen(GameState::SHIPSCREEN); }, {WALL_FRONT, 1.95, -1.5, 1.5}},
+        {FACE_STAR_MAP, 2.4, -1.4, 1.5, "STAR MAP SCREEN - E", "THE STAR MAP SCREEN", 22, RGB(0.4f, 0.55f, 1.0f),   // blue
+         [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::STAR_MAP); }},
+        {FACE_LANDING, 2.4, 0.0, 1.5, "LANDING MAP SCREEN - E TO DEPLOY THE CAPSULE", "THE LANDING SCREEN", 23,
+         RGB(1.0f, 0.45f, 0.8f),   // pink (an orange sat too near the radar's red)
+         [](Game& g) { g.deployCapsule(); }, {},
+         [](const Game& g) { return g.probe.active ? relay(g) : (atGiant(g) ? "PROBE SCREEN - E TO LAUNCH A PROBE" : nullptr); }},
+        {FACE_TARGET, 2.4, 1.4, 1.5, "TARGET DATA SCREEN - E", "THE TARGET SCREEN", 24, RGB(0.3f, 0.95f, 0.9f),   // cyan
+         [](Game& g) {
+             if (g.sys.valid && g.ship.localTarget >= 0) { g.returnState = GameState::SPACE; g.openScreen(GameState::DATA); }
+             else g.status("NO LOCAL TARGET ON THE SCREEN", 3);
+         }},
+        {FACE_CAGE, 0.0, 0.0, 1.9, "SURFACE CAPSULE - E TO BOARD", "THE CAPSULE", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),   // no screen
+         [](Game& g) { g.deployCapsule(); }, {},
+         [](const Game& g) { return g.probe.active ? relay(g) : (atGiant(g) ? "PROBE BAY - E TO LAUNCH A PROBE" : nullptr); }},
+        {FACE_DECODER, 0.0, -2.3, 1.6, "SHARD DECODER - E TO READ THE SHARDS", "THE SHARD DECODER", 25, RGB(0.75f, 0.45f, 1.0f),   // C-06: violet
+         [](Game& g) { g.openScreen(GameState::SHARDS); }, {WALL_BACK, -1.9, -0.9, 0.9}},
+        {FACE_RADAR, -1.55, -2.3, 1.4, "SIGNAL RADAR - E TO SWEEP THE SKY", "THE SIGNAL RADAR", 26, RGB(1.0f, 0.35f, 0.3f),   // C-07: red
+         [](Game& g) { g.radarToggle(); }, {WALL_BACK, -1.9, -CAB_HALF, -0.95},
+         [](const Game& g) { return g.radar.on ? "SIGNAL RADAR - E SWITCHES IT OFF" : nullptr; }},
+        {FACE_TELESCOPE, 1.55, -2.3, 1.4, "TELESCOPE - E TO LOOK THROUGH IT", "THE TELESCOPE", 27, RGB(0.8f, 0.9f, 1.0f),   // W-06: ice
+         [](Game& g) { g.telescopeToggle(); }, {WALL_BACK, -1.9, 0.95, CAB_HALF},   // the eye to the eyepiece
+         [](const Game& g) { return g.tele.on ? "TELESCOPE - E STOWS IT" : nullptr; }},
+        {FACE_CASE, -2.35, -1.38, 1.4, "INSTRUMENT CASE - E TO PLAY", "THE INSTRUMENT CASE", 28, RGB(0.72f, 1.0f, 0.3f),   // C-11: lime
+         [](Game& g) { g.openScreen(GameState::INSTRUMENTS); }, {WALL_LEFT, -1.95, -1.9, -0.85}},
+        {FACE_BAY, -2.05, 1.435, 2.0, "DRONE BAY - E TO SEND THE DRONES", "THE DRONE BAY", 29, RGB(1.0f, 1.0f, 0.45f),   // C-18: a pale yellow
+         [](Game& g) { g.openScreen(GameState::DRONES); }, {WALL_LEFT, -1.62, 0.82, 2.05},
+         [](const Game& g) { return g.bay.out ? "DRONE BAY - E FOLLOWS THE DRONES" : (!g.droneBayReady() ? "DRONE BAY - THE DRONES ARE CHARGING" : nullptr); }},
+    };
+    static constexpr RowList<CabinDevice> LIST = rowsOf(ROWS);
+    static_assert(devicesWhole(LIST), "a device a row, in CabinFacing's order, with its lines and its act");
+    return LIST;
 }
 
 Mat3 Game::viewBasis() const {
@@ -48,19 +85,20 @@ void Game::cabinPalette() {
     double lit = cabin.lightLevel;
     setRamp(fb.pal, BANK_HULL, {{0, RGB(0, 0, 0)}, {20, hull * (float)(0.12 + 0.25 * lit)}, {40, hull * (float)(0.3 + 0.5 * lit)}, {63, hull * (float)(0.6 + 0.6 * lit)}});
     setRamp(fb.pal, BANK_SCREEN, {{0, RGB(0, 0, 0)}, {24, scr * 0.25f}, {50, scr * 0.8f}, {63, lerp(scr, RGB(1, 1, 1), 0.5f)}});
-    for (int k = 1; k <= 11; k++) {   // R-404: the other computers' banks in their own colours (C-11: and the case's; C-18: the bay's)
-        if (SCREENS[k].bank == BANK_SCREEN || SCREENS[k].bank == BANK_LIGHT) continue;
-        RGB c = SCREENS[k].col;
-        setRamp(fb.pal, SCREENS[k].bank, {{0, RGB(0, 0, 0)}, {24, c * 0.25f}, {50, c * 0.8f}, {63, lerp(c, RGB(1, 1, 1), 0.5f)}});
+    for (const CabinDevice& d : cabinDevices()) {   // R-404: the other computers' banks in their own colours
+        if (d.bank == BANK_SCREEN || d.bank == BANK_LIGHT) continue;
+        RGB c = d.col;
+        setRamp(fb.pal, d.bank, {{0, RGB(0, 0, 0)}, {24, c * 0.25f}, {50, c * 0.8f}, {63, lerp(c, RGB(1, 1, 1), 0.5f)}});
     }
     setRamp(fb.pal, BANK_LIGHT, {{0, RGB(0, 0, 0)}, {30, warm * 0.4f}, {63, warm}});
-    const RGB paint(0.78f, 0.76f, 0.7f);   // C-18
+    const RGB paint(0.78f, 0.76f, 0.7f);
     setRamp(fb.pal, BANK_DRONE_PAINT, {{0, RGB(0, 0, 0)}, {20, paint * (float)(0.1 + 0.2 * lit)}, {44, paint * (float)(0.35 + 0.45 * lit)}, {63, paint * (float)(0.7 + 0.45 * lit)}});
 }
 
-// Walking in the cabin: WASD moves, the mouse looks; walls, the cage and the consoles block.
+// Walking in the cabin: WASD moves, the mouse looks; walls, the cage and the devices block.
 void Game::updateCabin(const Input& in, double realDt) {
     Cabin& c = cabin;
+    const RowList<CabinDevice>& devices = cabinDevices();
     c.yaw += in.mouseDx * 0.0032 * settings.mouseSensitivity;
     c.pitch -= in.mouseDy * 0.0032 * settings.mouseSensitivity * (settings.invertY ? -1 : 1);
     c.pitch = clampd(c.pitch, -85 * DEG, 85 * DEG);
@@ -79,54 +117,40 @@ void Game::updateCabin(const Input& in, double realDt) {
         nx = clampd(nx, -CAB_HALF + 0.35, CAB_HALF - 0.35); nz = clampd(nz, -CAB_HALF + 0.35, CAB_HALF - 0.35);
         double d = std::sqrt(nx * nx + nz * nz);                      // the capsule cage
         if (d < CAGE_R + 0.3 && d > 1e-6) { nx = nx / d * (CAGE_R + 0.3); nz = nz / d * (CAGE_R + 0.3); }
-        if (nx < -1.9 && std::fabs(nz) < 0.9) nx = -1.9;              // GOES console on the left wall
-        if (nz < -1.9 && std::fabs(nx) < 0.9) nz = -1.9;              // the shard decoder on the back wall (C-06)
-        if (nz < -1.9 && nx < -0.95) nz = -1.9;                       // the signal radar beside it (C-07)
-        if (nz < -1.9 && nx > 0.95) nz = -1.9;                        // the telescope's set at the wall's other end (W-06)
-        if (nx < -1.95 && nz < -0.85 && nz > -1.9) nx = -1.95;        // the instruments' case on the left wall behind the console (C-11)
-        if (nx < -1.62 && nz > 0.82 && nz < 2.05) nx = -1.62;         // the drone bay's rack by the front window (C-18)
-        if (nz > 1.95 && std::fabs(nx) < 1.5) nz = 1.95;              // the front desk
+        for (const CabinDevice& dev : devices) keepOff(dev.block, nx, nz);   // the devices' bodies (U-03: in any order, every place ends the same)
     }
     c.x = nx; c.z = nz;
     // the roof lifter
-    if (in.wasPressed(KEY_PAGE_UP) && !c.onRoof) { c.onRoof = true; c.x = clampd(c.x, -1.4, 1.4); c.z = clampd(c.z, -1.4, 1.4); status("ON THE OBSERVATION DECK - PAGE DOWN TO COME BACK IN", 4); audio.beep = 4; }
-    else if (in.wasPressed(KEY_PAGE_DOWN) && c.onRoof) { c.onRoof = false; status("BACK IN THE CABIN", 3); audio.beep = 4; }
-    if (in.wasPressed(KEY_U) && !in.ctrl()) {   // B-411: with the hull glass, the light says so (Y lies beside U)
-        c.light = !c.light; audio.beep = 4;
+    if (in.wasPressed(KEY_PAGE_UP) && !c.onRoof) {
+        c.onRoof = true;
+        c.x = clampd(c.x, -1.4, 1.4);
+        c.z = clampd(c.z, -1.4, 1.4);
+        status("ON THE OBSERVATION DECK - PAGE DOWN TO COME BACK IN", 4);
+        audio.beep = BEEP_UI;
+    } else if (in.wasPressed(KEY_PAGE_DOWN) && c.onRoof) {
+        c.onRoof = false;
+        status("BACK IN THE CABIN", 3);
+        audio.beep = BEEP_UI;
+    }
+    if (in.wasPressed(KEY_U) && !in.ctrl()) {   // with the hull glass, the light says so (Y lies beside U)
+        c.light = !c.light; audio.beep = BEEP_UI;
         if (c.depolarised) status(c.light ? "CABIN LIGHT ON - Y POLARISES THE GLASS HULL" : "CABIN LIGHT OFF - Y POLARISES THE GLASS HULL", 4);
         else status(c.light ? "CABIN LIGHT ON" : "CABIN LIGHT OFF", 3);
     }
-    if (in.wasPressed(KEY_Y) && !in.ctrl()) { c.depolarised = !c.depolarised; status(c.depolarised ? "HULL DEPOLARISED - THE WALLS ARE GLASS" : "HULL POLARISED", 3); audio.beep = 4; }
+    if (in.wasPressed(KEY_Y) && !in.ctrl()) { c.depolarised = !c.depolarised; status(c.depolarised ? "HULL DEPOLARISED - THE WALLS ARE GLASS" : "HULL POLARISED", 3); audio.beep = BEEP_UI; }
     c.lightLevel += ((c.light ? 1.0 : 0.0) - c.lightLevel) * (1 - std::exp(-realDt * 3));
-    // what the explorer is facing: 0 nothing, 1 GOES console, 2 front screen, 3 right-left, 4 right-middle, 5 right-right, 6 capsule cage, 7 the shard decoder (C-06), 8 the signal radar (C-07), 9 the telescope (W-06), 10 the instruments' case (C-11), 11 the drone bay (C-18)
-    c.facing = 0;
+    // what the explorer faces: the device whose spot is most ahead within its reach (nothing's has no reach)
+    c.facing = FACE_NOTHING;
     if (!c.onRoof) {
-        struct Spot { double x, z; int id; double range; };
-        const Spot spots[] = {{-2.3, 0.0, 1, 1.6}, {0.0, 2.3, 2, 1.8}, {2.4, -1.4, 3, 1.5}, {2.4, 0.0, 4, 1.5}, {2.4, 1.4, 5, 1.5}, {0.0, 0.0, 6, 1.9}, {0.0, -2.3, 7, 1.6}, {-1.55, -2.3, 8, 1.4}, {1.55, -2.3, 9, 1.4}, {-2.35, -1.38, 10, 1.4}, {-2.05, 1.435, 11, 2.0}};
         double best = 0.55;
-        for (const Spot& s : spots) {
+        for (const CabinDevice& s : devices) {
             double dx = s.x - c.x, dz = s.z - c.z, d = std::sqrt(dx * dx + dz * dz);
-            if (d > s.range || d < 1e-6) continue;
+            if (d > s.reach || d < 1e-6) continue;
             double facing = (dx / d) * sy + (dz / d) * cy;
-            if (facing > best) { best = facing; c.facing = s.id; }
+            if (facing > best) { best = facing; c.facing = s.facing; }
         }
     }
-    if (in.wasPressed(KEY_E) && !in.ctrl()) {
-        switch (c.facing) {
-            case 1: openConsole(); break;
-            case 2: shipScreenPage = 0; shipScreenSel = 0; state = GameState::SHIPSCREEN; audio.beep = 4; break;
-            case 3: guideReturn = GameState::SPACE; returnState = GameState::SPACE; openStarMap(); break;
-            case 4: deployCapsule(); break;
-            case 5: if (sys.valid && ship.localTarget >= 0) { returnState = GameState::SPACE; state = GameState::DATA; } else status("NO LOCAL TARGET ON THE SCREEN", 3); break;
-            case 6: deployCapsule(); break;
-            case 7: openShards(); break;   // C-06
-            case 8: radarToggle(); break;   // C-07
-            case 9: telescopeToggle(); break;   // W-06: the eye to the eyepiece
-            case 10: openInstruments(); break;   // C-11: the instruments' case
-            case 11: openDroneBay(); break;      // C-18: the drone bay
-            default: status("NOTHING TO USE HERE - WALK TO A CONSOLE, A SCREEN, THE DECODER, THE CASE OR THE CAPSULE", 3); break;
-        }
-    }
+    if (in.wasPressed(KEY_E) && !in.ctrl()) devices.row[c.facing].act(*this);
 }
 
 // The cabin drawn over the space view, in ship-local metres (+z forward, +y up, +x right). F-05: in bands of rows on the pool, as the
@@ -147,7 +171,7 @@ void Game::drawCabin() {
         f.sweep = radar.on ? 0.8 + 0.2 * std::sin(realTime * 3.1) : f.flick;
         f.glow = tele.on ? 0.85 + 0.15 * std::sin(realTime * 2.6) : f.flick;
         const double held = std::min(1.0, guide.instruments.size() / 6.0);
-        f.shine = (c.facing == 10 ? 50 : 26 + 14 * held) * f.flick;
+        f.shine = (c.facing == FACE_CASE ? 50 : 26 + 14 * held) * f.flick;
         droneRackFrame(f);
     }
     parallelFor(FBH, 32, [&](int yb, int ye) {
@@ -168,7 +192,7 @@ void Game::drawCabin() {
             double sx, sy; if (projectPoint(p, spaceR.proj, sx, sy)) fb.glowDisc(sx, sy, (8 + 14 * lit) * FB_SCALE, 2 * FB_SCALE, (int)(14 * lit), BANK_LIGHT, true);
         }
         double pulse = 0.7 + 0.3 * std::sin(realTime * 1.3);
-        Vec3 orb = toView(-2.1, 0.5, 2.1);   // W-06: moved to the front-left corner from the back-right, where the telescope's set stands now
+        Vec3 orb = toView(-2.1, 0.5, 2.1);   // the front-left corner (the telescope's set stands in the back-right)
         if (orb.z > NEAR_Z) {
             RVert p; p.x = orb.x; p.y = orb.y; p.z = orb.z; p.shade = 40 + 20 * pulse;
             rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 3);
@@ -185,7 +209,7 @@ void Game::drawCabinBand(const CabinFrame& f) {
     auto toView = [&](double x, double y, double z) { return look * Vec3(x - eye.x, y - eye.y, z - eye.z); };
     const double lit = f.lit;
     const double hullShade = f.hullShade;
-    // B-411: a depolarised hull is glass (the walls, the floor, the ceiling): the outside tinted through it, and the cabin light
+    // a depolarised hull is glass (the walls, the floor, the ceiling): the outside tinted through it, and the cabin light
     // caught on it as a sheen that clears with the light off; what stands in the room (the consoles, the sets, the case, the
     // desk) stays solid and lit, where it went to glass with the walls and the light had nothing left to light
     RasterParams solid; solid.bank = BANK_HULL; solid.grain = &cabinGrain; solid.grainScale = 12.0 * FB_SCALE; solid.grainWeight = 0.6;
@@ -194,7 +218,15 @@ void Game::drawCabinBand(const CabinFrame& f) {
     const double sheen = c.depolarised ? GLASS_SHEEN * lit / hullShade : 1;   // the glass's shade for a shade of the solid hull
     auto face = [&](const RasterParams& prm, Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) {
         RVert q[4]; Vec3 pts[4] = {a, b, cc, d};
-        for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].z * 0.31; q[k].v = pts[k].y + pts[k].z * 0.17; }
+        for (int k = 0; k < 4; k++) {
+            Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z);
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].z * 0.31;
+            q[k].v = pts[k].y + pts[k].z * 0.17;
+        }
         rasterPolygon(fb, q, 4, prm, spaceR.proj);
     };
     auto quad = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) { face(rp, a, b, cc, d, shade * sheen); };   // the hull
@@ -250,7 +282,14 @@ void Game::drawCabinBand(const CabinFrame& f) {
     }
     {
         RVert ring[16];
-        for (int k = 0; k < 16; k++) { double a = k * TAU / 16; Vec3 v = toView(std::cos(a) * (CAGE_R - 0.1), 0.02, std::sin(a) * (CAGE_R - 0.1)); ring[k].x = v.x; ring[k].y = v.y; ring[k].z = v.z; ring[k].shade = hullShade * 0.5; }
+        for (int k = 0; k < 16; k++) {
+            double a = k * TAU / 16;
+            Vec3 v = toView(std::cos(a) * (CAGE_R - 0.1), 0.02, std::sin(a) * (CAGE_R - 0.1));
+            ring[k].x = v.x;
+            ring[k].y = v.y;
+            ring[k].z = v.z;
+            ring[k].shade = hullShade * 0.5;
+        }
         RasterParams rr; rr.bank = BANK_HULL;
         rasterPolygon(fb, ring, 16, rr, spaceR.proj);
         // the capsule itself, parked in the net: a dome in the light bank
@@ -268,8 +307,16 @@ void Game::drawCabinBand(const CabinFrame& f) {
     RasterParams rs; rs.bank = BANK_SCREEN; rs.grain = &cabinGrain; rs.grainScale = 30.0 * FB_SCALE; rs.grainWeight = 0.5;
     auto screen = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade, int facingId) {
         RVert q[4]; Vec3 pts[4] = {a, b, cc, d};
-        for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].z; q[k].v = pts[k].y * 3 + realTime * 0.4; }
-        rs.bank = SCREENS[facingId].bank;
+        for (int k = 0; k < 4; k++) {
+            Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z);
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].z;
+            q[k].v = pts[k].y * 3 + realTime * 0.4;
+        }
+        rs.bank = cabinDevices().row[facingId].bank;
         rasterPolygon(fb, q, 4, rs, spaceR.proj);
     };
     const double flick = f.flick;
@@ -277,32 +324,32 @@ void Game::drawCabinBand(const CabinFrame& f) {
         Vec3 a(-H, 0, -0.8), b(-1.9, 0, -0.8), cc(-1.9, 0, 0.8), d(-H, 0, 0.8);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
-        screen(Vec3(-1.89, 0.35, -0.6), Vec3(-1.89, 0.35, 0.6), Vec3(-1.89, 0.9, 0.6), Vec3(-1.89, 0.9, -0.6), (c.facing == 1 ? 50 : 30) * flick, 1);
+        screen(Vec3(-1.89, 0.35, -0.6), Vec3(-1.89, 0.35, 0.6), Vec3(-1.89, 0.9, 0.6), Vec3(-1.89, 0.9, -0.6), (c.facing == FACE_GOES ? 50 : 30) * flick, FACE_GOES);
     }
-    {   // C-06: the shard decoder against the back wall, a desk like the console's with its screen toward the room; the screen
+    {   // the shard decoder against the back wall, a desk like the console's with its screen toward the room; the screen
         // glows and breathes while a shard waits to be read at the language's current share
         Vec3 a(-0.8, 0, -H), b(-0.8, 0, -1.9), cc(0.8, 0, -1.9), d(0.8, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         const bool waiting = f.waiting;
         const double breathe = f.breathe;
-        screen(Vec3(-0.6, 0.35, -1.89), Vec3(0.6, 0.35, -1.89), Vec3(0.6, 0.9, -1.89), Vec3(-0.6, 0.9, -1.89), (c.facing == 7 ? 50 : (waiting ? 44 : 30)) * breathe, 7);
+        screen(Vec3(-0.6, 0.35, -1.89), Vec3(0.6, 0.35, -1.89), Vec3(0.6, 0.9, -1.89), Vec3(-0.6, 0.9, -1.89), (c.facing == FACE_DECODER ? 50 : (waiting ? 44 : 30)) * breathe, FACE_DECODER);
     }
-    {   // C-07: the signal radar beside the decoder, a narrower set against the back wall; its screen brightens while the receiver is on
+    {   // the signal radar beside the decoder, a narrower set against the back wall; its screen brightens while the receiver is on
         Vec3 a(-2.1, 0, -H), b(-2.1, 0, -1.9), cc(-1.0, 0, -1.9), d(-1.0, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         const double sweep = f.sweep;
-        screen(Vec3(-1.95, 0.35, -1.89), Vec3(-1.15, 0.35, -1.89), Vec3(-1.15, 0.9, -1.89), Vec3(-1.95, 0.9, -1.89), (c.facing == 8 ? 50 : (radar.on ? 46 : 30)) * sweep, 8);
+        screen(Vec3(-1.95, 0.35, -1.89), Vec3(-1.15, 0.35, -1.89), Vec3(-1.15, 0.9, -1.89), Vec3(-1.95, 0.9, -1.89), (c.facing == FACE_RADAR ? 50 : (radar.on ? 46 : 30)) * sweep, FACE_RADAR);
     }
-    {   // W-06 (the user's review): the telescope's set at the back wall's other end, the radar's twin; its screen glows while the eye is at the eyepiece
+    {   // (the user's review): the telescope's set at the back wall's other end, the radar's twin; its screen glows while the eye is at the eyepiece
         Vec3 a(1.0, 0, -H), b(1.0, 0, -1.9), cc(2.1, 0, -1.9), d(2.1, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         const double glow = f.glow;
-        screen(Vec3(1.15, 0.35, -1.89), Vec3(1.95, 0.35, -1.89), Vec3(1.95, 0.9, -1.89), Vec3(1.15, 0.9, -1.89), (c.facing == 9 ? 50 : (tele.on ? 46 : 30)) * glow, 9);
+        screen(Vec3(1.15, 0.35, -1.89), Vec3(1.95, 0.35, -1.89), Vec3(1.95, 0.9, -1.89), Vec3(1.15, 0.9, -1.89), (c.facing == FACE_TELESCOPE ? 50 : (tele.on ? 46 : 30)) * glow, FACE_TELESCOPE);
     }
-    {   // C-11: the instruments' case on the left wall behind the console: a cabinet, its glass front lit in the case's colour, brighter with
+    {   // the instruments' case on the left wall behind the console: a cabinet, its glass front lit in the case's colour, brighter with
         // what it holds and while an instrument is played
         Vec3 a(-H, 0, -1.85), b(-1.98, 0, -1.85), cc(-1.98, 0, -0.9), d(-H, 0, -0.9);
         box(a + Vec3(0, 1.45, 0), b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.9);   // top
@@ -312,149 +359,150 @@ void Game::drawCabinBand(const CabinFrame& f) {
         const double shine = f.shine;
         for (int shelf = 0; shelf < 3; shelf++) {   // three shelves behind the glass, each a band of light
             const double y0 = 0.18 + shelf * 0.42, y1 = y0 + 0.34;
-            screen(Vec3(-1.97, y0, -1.78), Vec3(-1.97, y0, -0.97), Vec3(-1.97, y1, -0.97), Vec3(-1.97, y1, -1.78), shine * (0.8 + 0.1 * shelf), 10);
+            screen(Vec3(-1.97, y0, -1.78), Vec3(-1.97, y0, -0.97), Vec3(-1.97, y1, -0.97), Vec3(-1.97, y1, -1.78), shine * (0.8 + 0.1 * shelf), FACE_CASE);
         }
     }
-    drawDroneRack(f);   // C-18: the drone bay by the front window (game/drone_draw.cpp)
+    drawDroneRack(f);   // the drone bay by the front window (game/drone_draw.cpp)
     {   // the front desk under the front window
         box(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0, H), Vec3(-1.5, 0, H), hullShade * 0.8);
         box(Vec3(-1.5, 0.85, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(1.5, 0.85, H), Vec3(-1.5, 0.85, H), hullShade * 0.9);
         box(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(-1.5, 0.85, 1.95), hullShade * 0.75);
-        screen(Vec3(-1.2, 0.86, 2.0), Vec3(1.2, 0.86, 2.0), Vec3(1.2, 0.95, H - 0.05), Vec3(-1.2, 0.95, H - 0.05), (c.facing == 2 ? 48 : 28) * flick, 2);
+        screen(Vec3(-1.2, 0.86, 2.0), Vec3(1.2, 0.86, 2.0), Vec3(1.2, 0.95, H - 0.05), Vec3(-1.2, 0.95, H - 0.05), (c.facing == FACE_FLIGHT ? 48 : 28) * flick, FACE_FLIGHT);
     }
     {   // three screens on the right wall's lower band
         for (int k = 0; k < 3; k++) {
             double zc = (k - 1) * 1.4;
-            bool relay = k == 1 && probe.active;   // X-01: the landing screen relays the probe; it breathes while one falls, glows on its last frame
-            double sh = c.facing == 3 + k ? 48 : (relay ? 44 * (probe.endClock >= 0 ? 0.75 + 0.25 * std::sin(realTime * 1.1) : 0.85 + 0.15 * std::sin(realTime * 2.4)) : 26 * flick);
-            screen(Vec3(H - 0.02, 0.3, zc - 0.55), Vec3(H - 0.02, 0.3, zc + 0.55), Vec3(H - 0.02, 0.85, zc + 0.55), Vec3(H - 0.02, 0.85, zc - 0.55), sh, 3 + k);
+            bool relay = k == 1 && probe.active;   // the landing screen relays the probe; it breathes while one falls, glows on its last frame
+            double sh = c.facing == FACE_STAR_MAP + k ? 48 : (relay ? 44 * (probe.endClock >= 0 ? 0.75 + 0.25 * std::sin(realTime * 1.1) : 0.85 + 0.15 * std::sin(realTime * 2.4)) : 26 * flick);
+            screen(Vec3(H - 0.02, 0.3, zc - 0.55), Vec3(H - 0.02, 0.3, zc + 0.55), Vec3(H - 0.02, 0.85, zc + 0.55), Vec3(H - 0.02, 0.85, zc - 0.55), sh, FACE_STAR_MAP + k);
         }
     }
 }
 
+// the faced device's line under the crosshair, in its computer's own colour (one with no screen, the cage, in amber)
 void Game::renderCabinHUD() {
-    const char* names[] = {"", "GOES CONSOLE - E TO USE", "FLIGHT COMPUTER - E TO USE", "STAR MAP SCREEN - E", "LANDING MAP SCREEN - E TO DEPLOY THE CAPSULE", "TARGET DATA SCREEN - E", "SURFACE CAPSULE - E TO BOARD",
-                           "SHARD DECODER - E TO READ THE SHARDS", "SIGNAL RADAR - E TO SWEEP THE SKY", "TELESCOPE - E TO LOOK THROUGH IT", "INSTRUMENT CASE - E TO PLAY",
-                           "DRONE BAY - E TO SEND THE DRONES"};   // C-06; C-07; W-06; C-11; C-18
-    if (cabin.facing > 0) {
-        const char* txt = cabin.facing == 8 && radar.on ? "SIGNAL RADAR - E SWITCHES IT OFF" : (cabin.facing == 9 && tele.on ? "TELESCOPE - E STOWS IT" : names[cabin.facing]);
-        if (cabin.facing == 11 && bay.out) txt = "DRONE BAY - E FOLLOWS THE DRONES";   // C-18
-        else if (cabin.facing == 11 && !droneBayReady()) txt = "DRONE BAY - THE DRONES ARE CHARGING";
-        bool atGiant = sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type);   // X-01: the landing screen and the cage serve the probe at a giant
-        if ((cabin.facing == 4 || cabin.facing == 6) && probe.active) txt = probe.endClock >= 0 ? "PROBE RELAY - E SHOWS ITS LAST FRAME" : "PROBE RELAY - E TO WATCH THE PROBE";
-        else if (cabin.facing == 4 && atGiant) txt = "PROBE SCREEN - E TO LAUNCH A PROBE";
-        else if (cabin.facing == 6 && atGiant) txt = "PROBE BAY - E TO LAUNCH A PROBE";
-        const RGB& c = SCREENS[cabin.facing].col;   // R-404: the prompt in the computer's own colour
-        drawTextCentered(canvas, UW / 2, UH / 2 + 12, txt, cabin.facing == 6 ? HUD_AMBER : rgb((int)(c.r * 255), (int)(c.g * 255), (int)(c.b * 255)));
-    }
-}
-
-// R-404: the computers with a colour of their own and the smallest distance between two of them (the cage left out)
-int Game::testScreenColours(double& minDist) const {
-    minDist = 9; int n = 0;
-    for (int i = 1; i <= 11; i++) {
-        if (i == 6) continue;
-        n++;
-        for (int j = i + 1; j <= 11; j++) {
-            if (j == 6) continue;
-            const RGB &a = SCREENS[i].col, &b = SCREENS[j].col;
-            minDist = std::min(minDist, (double)std::sqrt((a.r - b.r) * (a.r - b.r) + (a.g - b.g) * (a.g - b.g) + (a.b - b.b) * (a.b - b.b)));
-        }
-    }
-    return n;
+    if (cabin.facing <= FACE_NOTHING || cabin.facing >= FACE_COUNT) return;
+    const CabinDevice& d = cabinDevices().row[cabin.facing];
+    const char* now = d.hudNow ? d.hudNow(*this) : nullptr;
+    const RGB& c = d.col;
+    drawTextCentered(canvas, UW / 2, UH / 2 + 12, now ? now : d.hud, d.bank == BANK_LIGHT ? HUD_AMBER : rgb((int)(c.r * 255), (int)(c.g * 255), (int)(c.b * 255)));
 }
 
 // ---------------------------------------------------------------------------
 // the front computer (M2-02): three pages of the ship's commands
 // ---------------------------------------------------------------------------
 
-namespace {
-const char* PAGE_NAMES[3] = {"FLIGHT CONTROL", "ONBOARD DEVICES", "PREFERENCES"};
-const char* PAGE0[] = {"REMOTE TARGET: AIM AT A STAR", "VIMANA FLIGHT TO THE REMOTE TARGET", "LOCAL TARGET: NEXT BODY", "SOLAR SYSTEM ANALYZER", "FINE APPROACH TO THE LOCAL TARGET",
-                       "CENTER THE SHIP ON THE LOCAL TARGET", "ORBIT / FIXED POINT CHASE", "DEPLOY THE CAPSULE OR A PROBE", "TARGET THE HOME STAR", "RETURN TO THE PREVIOUS STAR",
-                       "VIMANA JUMP: LIGHT YEARS ALONG THE AIM"};   // X-01: a probe at a giant; R-407: the jump (last, so the rows kept their places)
-const char* PAGE1[] = {"CABIN LIGHT", "HULL POLARISATION", "OBSERVATION DECK LIFTER", "FIELD AMPLIFICATOR", "TIME WARP", "SCANLINES", "SIGNAL RADAR", "THE ALMANAC", "THE TELESCOPE", "THE INSTRUMENTS",
-                       "THE DRONE BAY"};   // C-07: the radar; W-01: the almanac; C-11: the case; C-18: the drones
-const char* PAGE2[] = {"SETTINGS", "THE GUIDE", "EXPEDITION LOG", "THE SHARDS", "SAVE THE EXPEDITION"};   // C-06: the shards
+// U-03: the flight computer's pages and their rows. A row's act runs at the window (SPACE) unless the row stays on the screen
+const RowList<ShipPage>& Game::shipPages() {
+    static constexpr auto inSystem = [](const Game& g) { return g.sys.valid && !g.sys.bodies.empty() && g.ship.mode != ShipState::VIMANA; };
+    static constexpr ShipRow FLIGHT[] = {
+        {"REMOTE TARGET: AIM AT A STAR", [](Game& g) {
+             if (g.ship.mode != ShipState::VIMANA) { g.ship.targeting = true; g.targetCycle = -1; g.status("AIM: N NEXT NEAREST STAR, ENTER LOCKS, R CANCELS", 4); }
+         }},
+        {"VIMANA FLIGHT TO THE REMOTE TARGET", [](Game& g) { g.toggleVimana(); }},
+        {"LOCAL TARGET: NEXT BODY", [](Game& g) {
+             if (!inSystem(g)) return;
+             g.ship.localTarget = (g.ship.localTarget + 1) % (int)g.sys.bodies.size();
+             g.ship.targetBelt = -1;
+             g.status(fmt("LOCAL TARGET: %s", upper(g.bodyNameOf(g.ship.localTarget)).c_str()), 4);
+         }},
+        {"SOLAR SYSTEM ANALYZER", [](Game& g) {
+             if (inSystem(g)) { g.listSel = std::max(0, g.ship.localTarget); g.returnState = GameState::SPACE; g.openScreen(GameState::SYSTEM_LIST); }
+         }},
+        {"FINE APPROACH TO THE LOCAL TARGET", [](Game& g) { if (inSystem(g) && g.ship.localTarget >= 0) g.startApproach(g.ship.localTarget); }},
+        {"CENTER THE SHIP ON THE LOCAL TARGET", [](Game& g) {
+             if (!inSystem(g) || g.ship.localTarget < 0) return;
+             Vec3 fwd = normalize(g.sys.bodyPos(g.ship.localTarget, g.t) - g.ship.pos);
+             g.ship.yaw = std::atan2(fwd.x, fwd.z);
+             g.ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+             g.cabin.yaw = 0;
+             g.cabin.pitch = 0;
+         }},
+        {"ORBIT / FIXED POINT CHASE", [](Game& g) {
+             if (g.ship.mode == ShipState::PARKED) { g.ship.orbiting = !g.ship.orbiting; g.status(g.ship.orbiting ? "SYNCHRONOUS ORBIT" : "FIXED POINT CHASE", 3); }
+         }},
+        {"DEPLOY THE CAPSULE OR A PROBE", [](Game& g) { g.deployCapsule(); }},   // X-01: a probe at a giant
+        {"TARGET THE HOME STAR", [](Game& g) { g.targetHome(); }},
+        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { g.targetPreviousStar(); }},
+        {"VIMANA JUMP: LIGHT YEARS ALONG THE AIM", [](Game& g) {   // R-407: the aim along the nose (last, so the rows kept their places)
+             if (g.ship.mode == ShipState::VIMANA) return;
+             g.ship.targeting = true;
+             g.targetCycle = -1;
+             g.jumpDigits.clear();
+             g.cabin.yaw = 0;
+             g.cabin.pitch = 0;
+             g.status("JUMP: TURN THE SHIP, TYPE THE LIGHT YEARS, ENTER", 6);
+         }},
+    };
+    static constexpr ShipRow DEVICES[] = {   // C-07: the radar; W-01: the almanac; C-11: the case; C-18: the drones
+        {"CABIN LIGHT", [](Game& g) { g.cabin.light = !g.cabin.light; }, [](const Game& g) -> std::string { return g.cabin.light ? "ON" : "OFF"; }, true},
+        {"HULL POLARISATION", [](Game& g) { g.cabin.depolarised = !g.cabin.depolarised; },
+         [](const Game& g) -> std::string { return g.cabin.depolarised ? "GLASS" : "OPAQUE"; }, true},
+        {"OBSERVATION DECK LIFTER", [](Game& g) { g.cabin.onRoof = !g.cabin.onRoof; g.cabin.x = clampd(g.cabin.x, -1.4, 1.4); g.cabin.z = clampd(g.cabin.z, -1.4, 1.4); },
+         [](const Game& g) -> std::string { return g.cabin.onRoof ? "UP" : "DOWN"; }},
+        {"FIELD AMPLIFICATOR", [](Game& g) { g.fieldAmp = !g.fieldAmp; }, [](const Game& g) -> std::string { return g.fieldAmp ? "ON" : "OFF"; }, true},
+        {"TIME WARP", [](Game& g) { g.timeWarp = g.timeWarp >= 10000 ? 1 : g.timeWarp * 10; g.status(fmt("TIME WARP X%.0f", g.timeWarp), 2); },
+         [](const Game& g) { return fmt("X%.0f", g.timeWarp); }, true},
+        {"SCANLINES", [](Game& g) { g.settings.scanlines = !g.settings.scanlines; g.settings.save(g.settingsPath); },
+         [](const Game& g) -> std::string { return g.settings.scanlines ? "ON" : "OFF"; }, true},
+        {"SIGNAL RADAR", [](Game& g) { g.radarToggle(); }, [](const Game& g) -> std::string { return g.radar.on ? "ON" : "OFF"; }},   // at the window, where the sweep is
+        {"THE ALMANAC", [](Game& g) { g.openScreen(GameState::ALMANAC); },   // from the parking: Esc returns here, a run goes to the window
+         [](const Game& g) -> std::string { return g.almanacRunning ? "RUNNING" : ""; }, true},
+        {"THE TELESCOPE", [](Game& g) { g.telescopeToggle(); },   // at the window, the eye at the eyepiece
+         [](const Game& g) { return g.tele.on ? fmt("X%.0f", g.telescopeZoom()) : std::string("STOWED"); }},
+        {"THE INSTRUMENTS", [](Game& g) { g.openScreen(GameState::INSTRUMENTS); }, [](const Game& g) { return fmt("%d", (int)g.guide.instruments.size()); }},   // in the case
+        {"THE DRONE BAY", [](Game& g) { g.openScreen(GameState::DRONES); }, [](const Game& g) {
+             if (g.bay.out) return std::string("AWAY");
+             if (!g.droneBayReady()) { const int sec = (int)std::ceil(g.droneCooldownLeft()); return fmt("%d:%02d", sec / 60, sec % 60); }
+             return std::string("READY");
+         }},
+    };
+    static constexpr ShipRow PREFERENCES[] = {   // C-06: the shards
+        {"SETTINGS", [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::SETTINGS); }},
+        {"THE GUIDE", [](Game& g) { g.openScreen(GameState::GUIDE); }},
+        {"EXPEDITION LOG", [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::LOG); }},
+        {"THE SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }},
+        {"SAVE THE EXPEDITION", [](Game& g) { g.saveSlot(g.currentSlot); }},
+    };
+    static constexpr ShipPage PAGES[] = {{"FLIGHT CONTROL", rowsOf(FLIGHT)}, {"ONBOARD DEVICES", rowsOf(DEVICES)}, {"PREFERENCES", rowsOf(PREFERENCES)}};
+    static constexpr RowList<ShipPage> LIST = rowsOf(PAGES);
+    static_assert(rowsWhole(LIST), "each page its name and rows, each row its label and its act");
+    return LIST;
 }
 
-void Game::updateShipScreen(const Input& in) {
-    int counts[3] = {11, 11, 5};
-    if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_TAB)) { shipScreenPage = (shipScreenPage + 2) % 3; shipScreenSel = 0; }
-    if (in.wasPressed(KEY_RIGHT)) { shipScreenPage = (shipScreenPage + 1) % 3; shipScreenSel = 0; }
-    int n = counts[shipScreenPage];
-    if (in.wasPressed(KEY_UP)) shipScreenSel = (shipScreenSel + n - 1) % n;
-    if (in.wasPressed(KEY_DOWN)) shipScreenSel = (shipScreenSel + 1) % n;
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_E)) { state = GameState::SPACE; return; }
+// the flight computer: Left and Right turn its pages, Enter does the row's act
+void Game::updateShipScreen(const Input& in, double dt, double realDt) {
+    const RowList<ShipPage>& pages = shipPages();
+    if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_TAB)) { shipScreenPage = (shipScreenPage + pages.count - 1) % pages.count; shipScreenSel = 0; }
+    if (in.wasPressed(KEY_RIGHT)) { shipScreenPage = (shipScreenPage + 1) % pages.count; shipScreenSel = 0; }
+    const RowList<ShipRow>& rows = pages.row[shipScreenPage].rows;
+    menuStep(in, shipScreenSel, rows.count);
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_E)) { closeScreen(); return; }
     if (!enterKey(in)) return;
-    bool inSystem = sys.valid && !sys.bodies.empty() && ship.mode != ShipState::VIMANA;
-    state = GameState::SPACE;
-    if (shipScreenPage == 0) switch (shipScreenSel) {
-        case 0: if (ship.mode != ShipState::VIMANA) { ship.targeting = true; targetCycle = -1; status("AIM: N NEXT NEAREST STAR, ENTER LOCKS, R CANCELS", 4); } break;
-        case 1: toggleVimana(); break;
-        case 2: if (inSystem) { ship.localTarget = (ship.localTarget + 1) % (int)sys.bodies.size(); ship.targetBelt = -1; status(fmt("LOCAL TARGET: %s", upper(bodyNameOf(ship.localTarget)).c_str()), 4); } break;
-        case 3: if (inSystem) { listSel = std::max(0, ship.localTarget); returnState = GameState::SPACE; state = GameState::SYSTEM_LIST; } break;
-        case 4: if (inSystem && ship.localTarget >= 0) startApproach(ship.localTarget); break;
-        case 5: if (inSystem && ship.localTarget >= 0) { Vec3 fwd = normalize(sys.bodyPos(ship.localTarget, t) - ship.pos); ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1)); cabin.yaw = 0; cabin.pitch = 0; } break;
-        case 6: if (ship.mode == ShipState::PARKED) { ship.orbiting = !ship.orbiting; status(ship.orbiting ? "SYNCHRONOUS ORBIT" : "FIXED POINT CHASE", 3); } break;
-        case 7: deployCapsule(); break;
-        case 8: guideReturn = GameState::SPACE; targetHome(); state = GameState::SPACE; break;
-        case 9: guideReturn = GameState::SPACE; targetPreviousStar(); state = GameState::SPACE; break;
-        case 10: if (ship.mode != ShipState::VIMANA) { ship.targeting = true; targetCycle = -1; jumpDigits.clear(); cabin.yaw = 0; cabin.pitch = 0; status("JUMP: TURN THE SHIP, TYPE THE LIGHT YEARS, ENTER", 6); } break;   // R-407: the aim along the nose
-    } else if (shipScreenPage == 1) switch (shipScreenSel) {
-        case 0: cabin.light = !cabin.light; state = GameState::SHIPSCREEN; break;
-        case 1: cabin.depolarised = !cabin.depolarised; state = GameState::SHIPSCREEN; break;
-        case 2: cabin.onRoof = !cabin.onRoof; cabin.x = clampd(cabin.x, -1.4, 1.4); cabin.z = clampd(cabin.z, -1.4, 1.4); break;
-        case 3: fieldAmp = !fieldAmp; state = GameState::SHIPSCREEN; break;
-        case 4: timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); state = GameState::SHIPSCREEN; break;
-        case 5: settings.scanlines = !settings.scanlines; settings.save(settingsPath); state = GameState::SHIPSCREEN; break;
-        case 6: radarToggle(); break;   // C-07: back to the window, where the sweep is
-        case 7: state = GameState::SHIPSCREEN; openAlmanac(); break;   // W-01: the almanac from the parking (Esc returns here, a run goes to the window)
-        case 8: telescopeToggle(); break;   // W-06: back to the window, the eye at the eyepiece
-        case 9: openInstruments(); break;   // C-11
-        case 10: openDroneBay(); break;     // C-18
-    } else switch (shipScreenSel) {
-        case 0: returnState = GameState::SPACE; settingsSel = 0; state = GameState::SETTINGS; break;
-        case 1: openGuide(); break;
-        case 2: guideReturn = GameState::SPACE; returnState = GameState::SPACE; logPage = 0; state = GameState::LOG; break;
-        case 3: openShards(); break;   // C-06
-        case 4: saveSlot(currentSlot); break;
-    }
+    const bool has = shipScreenSel >= 0 && shipScreenSel < rows.count;
+    if (!has || !rows.row[shipScreenSel].stays) closeScreen();
+    if (has) rows.row[shipScreenSel].act(*this);
+}
+
+// U-05: the flight computer opens on its first page's first row
+void Game::shipScreenEnter() { shipScreenPage = 0; shipScreenSel = 0; audio.beep = BEEP_UI; }
+
+// U-04: the flight computer's commands (the controller's first page)
+void Game::shipScreenPad(PadMenu& m) const {
+    m.title = "FLIGHT COMPUTER"; m.item("THE NEXT PAGE", KEY_RIGHT); m.item("THE PAGE BEFORE", KEY_LEFT); m.item("CLOSE", KEY_ESCAPE);
 }
 
 void Game::renderShipScreen() {
+    const RowList<ShipPage>& pages = shipPages();
     const int top = 22, bottom = UH - 22;
-    blendRectRGB(canvas, 24, top, UW - 24, bottom, rgb(0, 12, 6), 225);
-    drawRectRGB(canvas, 24, top, UW - 24, bottom, HUD_DIM);
-    for (int p = 0; p < 3; p++) drawText(canvas, 34 + p * 96, top + 6, PAGE_NAMES[p], p == shipScreenPage ? HUD_WHITE : HUD_DIM);
-    const char** items = shipScreenPage == 0 ? PAGE0 : (shipScreenPage == 1 ? PAGE1 : PAGE2);
-    int n = shipScreenPage == 0 ? 11 : (shipScreenPage == 1 ? 11 : 5);
-    for (int i = 0; i < n; i++) {
+    drawPanel(canvas, 24, top, UW - 24, bottom, rgb(0, 12, 6), 225);
+    for (int p = 0; p < pages.count; p++) drawText(canvas, 34 + p * 96, top + 6, pages.row[p].name, p == shipScreenPage ? HUD_WHITE : HUD_DIM);
+    const RowList<ShipRow>& rows = pages.row[shipScreenPage].rows;
+    for (int i = 0; i < rows.count; i++) {
         int y = top + 22 + i * 10;
-        std::string label = items[i];
-        if (shipScreenPage == 1) {
-            std::string st;
-            switch (i) {
-                case 0: st = cabin.light ? "ON" : "OFF"; break;
-                case 1: st = cabin.depolarised ? "GLASS" : "OPAQUE"; break;
-                case 2: st = cabin.onRoof ? "UP" : "DOWN"; break;
-                case 3: st = fieldAmp ? "ON" : "OFF"; break;
-                case 4: st = fmt("X%.0f", timeWarp); break;
-                case 5: st = settings.scanlines ? "ON" : "OFF"; break;
-                case 6: st = radar.on ? "ON" : "OFF"; break;
-                case 7: st = almanacRunning ? "RUNNING" : ""; break;
-                case 8: st = tele.on ? fmt("X%.0f", telescopeZoom()) : "STOWED"; break;   // W-06
-                case 9: st = fmt("%d", (int)guide.instruments.size()); break;   // C-11: in the case
-                default: {   // C-18: the bay
-                    if (bay.out) st = "AWAY";
-                    else if (!droneBayReady()) { const int sec = (int)std::ceil(droneCooldownLeft()); st = fmt("%d:%02d", sec / 60, sec % 60); }
-                    else st = "READY";
-                    break;
-                }
-            }
-            drawText(canvas, UW - 44 - textWidth(st.c_str()), y, st.c_str(), HUD_AMBER);
-        }
-        drawText(canvas, 44, y, label.c_str(), i == shipScreenSel ? HUD_WHITE : HUD_GREEN);
+        const ShipRow& r = rows.row[i];
+        if (r.status) { const std::string st = r.status(*this); drawText(canvas, UW - 44 - textWidth(st.c_str()), y, st.c_str(), HUD_AMBER); }
+        drawText(canvas, 44, y, r.label, i == shipScreenSel ? HUD_WHITE : HUD_GREEN);
         if (i == shipScreenSel) drawText(canvas, 34, y, ">", HUD_AMBER);
     }
     if (shipScreenPage == 0 && sys.valid) {
@@ -474,11 +522,10 @@ void Game::consolePrint(const std::string& line) {
     if (consoleLines.size() > 200) consoleLines.erase(consoleLines.begin());
 }
 
-void Game::openConsole() {
+void Game::consoleEnter() {
     if (consoleLines.empty()) { consolePrint("GOES CONSOLE READY. TYPE HELP."); }
     consoleInput.clear();
-    state = GameState::CONSOLE;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::consoleCommand(const std::string& raw) {
@@ -497,26 +544,38 @@ void Game::consoleCommand(const std::string& raw) {
         consolePrint("CAST TEXT    WRITE A NOTE INTO THE LOG");
         consolePrint("CAT          READ THE LAST NOTES");
         consolePrint("HOME / PREV  TARGET THE HOME OR THE PREVIOUS STAR");
-        consolePrint("JUMP LY      A VIMANA JUMP ALONG THE SHIP'S NOSE");   // R-407
+        consolePrint("JUMP LY      A VIMANA JUMP ALONG THE SHIP'S NOSE");
     } else if (cmd == "SL") {
         double range = rest.empty() ? 3.0 : atof(rest.c_str());
         std::vector<std::pair<double, const Star*>> list;
         for (const Star& s : nb.stars) { double ly = length(s.pos - ship.pos) / SECTOR_KM; if (ly <= range && !(sys.valid && s.seed == sys.star.seed)) list.push_back({ly, &s}); }
         std::sort(list.begin(), list.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
         consolePrint(fmt("%d STARS WITHIN %.1f LY", (int)list.size(), range));
-        for (size_t i = 0; i < list.size() && i < 12; i++) { Star full; starInSector(list[i].second->sx, list[i].second->sy, list[i].second->sz, full, true); consolePrint(fmt("  %-16s %s  %.2f LY  %+lld %+lld %+lld", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, list[i].first, (long long)full.sx, (long long)full.sy, (long long)full.sz)); }
+        for (size_t i = 0; i < list.size() && i < 12; i++) {
+            Star full;
+            starInSector(list[i].second->sx, list[i].second->sy, list[i].second->sz, full, true);
+            consolePrint(fmt(
+                    "  %-16s %s  %.2f LY  %+lld %+lld %+lld", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, list[i].first, (long long)full.sx, (long long)full.sy, (long long)full.sz));
+        }
     } else if (cmd == "DL") {
         if (!sys.valid) { consolePrint("NO SYSTEM HERE"); return; }
         consolePrint(fmt("%s: %d BODIES, %d BELTS", upper(starNameOf(sys.star)).c_str(), (int)sys.bodies.size(), (int)sys.belts.size()));
-        for (int i = 0; i < (int)sys.bodies.size() && i < 14; i++) consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), PLANET_TYPES[sys.bodies[i].type].name));
-        for (size_t k = 0; k < sys.belts.size(); k++) consolePrint(fmt("  %-16s BELT %s - %s", upper(beltNameOf((int)k)).c_str(), distanceString(sys.belts[k].innerKm).c_str(), distanceString(sys.belts[k].outerKm).c_str()));   // O3
+        for (int i = 0; i < (int)sys.bodies.size() && i < 14; i++)
+            consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), KINDS[sys.bodies[i].type].name));
+        for (size_t k = 0; k < sys.belts.size(); k++)
+            consolePrint(fmt("  %-16s BELT %s - %s", upper(beltNameOf((int)k)).c_str(), distanceString(sys.belts[k].innerKm).c_str(), distanceString(sys.belts[k].outerKm).c_str()));
     } else if (cmd == "PAR" || cmd == "WHERE") {
-        if (rest.empty()) { consolePrint(fmt("SHIP AT SECTOR %+lld %+lld %+lld, %s", (long long)sectorOf(ship.pos.x), (long long)sectorOf(ship.pos.y), (long long)sectorOf(ship.pos.z), REGION_NAMES[galaxyRegion(sectorOf(ship.pos.x), sectorOf(ship.pos.y), sectorOf(ship.pos.z))])); return; }
+        if (rest.empty()) {
+            consolePrint(fmt("SHIP AT SECTOR %+lld %+lld %+lld, %s", (long long)sectorOf(ship.pos.x), (long long)sectorOf(ship.pos.y), (long long)sectorOf(ship.pos.z),
+                    REGION_NAMES[galaxyRegion(sectorOf(ship.pos.x), sectorOf(ship.pos.y), sectorOf(ship.pos.z))]));
+            return;
+        }
         const Star* best = nullptr; double bd = 1e300;
         for (const Star& s : nb.stars) { if (upper(starNameOf(s)).rfind(rest, 0) != 0) continue; double d = length2(s.pos - ship.pos); if (d < bd) { bd = d; best = &s; } }
         if (!best) { consolePrint("NO SUCH STAR NEARBY"); return; }
         Star full; starInSector(best->sx, best->sy, best->sz, full, true);
-        consolePrint(fmt("%s: SECTOR %+lld %+lld %+lld, %s %s, %.2f LY", upper(starNameOf(full)).c_str(), (long long)full.sx, (long long)full.sy, (long long)full.sz, STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, std::sqrt(bd) / SECTOR_KM));
+        consolePrint(fmt("%s: SECTOR %+lld %+lld %+lld, %s %s, %.2f LY", upper(starNameOf(full)).c_str(), (long long)full.sx, (long long)full.sy, (long long)full.sz, STAR_CLASSES[full.cls].code,
+                STAR_CLASSES[full.cls].name, std::sqrt(bd) / SECTOR_KM));
     } else if (cmd == "ST") {
         if (rest.empty()) { consolePrint("ST NEEDS A NAME"); return; }
         targetStarByName(rest);
@@ -529,8 +588,8 @@ void Game::consoleCommand(const std::string& raw) {
         int shown = 0;
         for (int i = (int)guide.log.size() - 1; i >= 0 && shown < 8; i--) if (guide.log[i].kind == "NOTE") { consolePrint("  " + trunc(guide.log[i].text, 48)); shown++; }
         if (!shown) consolePrint("NO NOTES YET");
-    } else if (cmd == "HOME") { guideReturn = GameState::CONSOLE; targetHome(); state = GameState::CONSOLE; consolePrint(statusMsg); }
-    else if (cmd == "PREV") { guideReturn = GameState::CONSOLE; targetPreviousStar(); state = GameState::CONSOLE; consolePrint(statusMsg); }
+    } else if (cmd == "HOME") { targetHome(); consolePrint(statusMsg); }
+    else if (cmd == "PREV") { targetPreviousStar(); consolePrint(statusMsg); }
     else if (cmd == "JUMP") {   // R-407: along the ship's nose (the console faces the cabin's wall, not the way)
         double ly = std::atof(rest.c_str());
         if (ly < 1) { consolePrint("JUMP NEEDS LIGHT YEARS, 1 TO 100000"); return; }
@@ -540,20 +599,30 @@ void Game::consoleCommand(const std::string& raw) {
     else consolePrint("UNKNOWN COMMAND - TYPE HELP");
 }
 
-void Game::updateConsole(const Input& in) {
+void Game::updateConsole(const Input& in, double dt, double realDt) {
     for (int k = KEY_A; k <= KEY_Z; k++) if (in.wasPressed(k) && consoleInput.size() < 40) consoleInput += (char)('A' + (k - KEY_A));
     for (int k = KEY_0; k <= KEY_9; k++) if (in.wasPressed(k) && consoleInput.size() < 40) consoleInput += (char)('0' + (k - KEY_0));
     if (in.wasPressed(KEY_SPACE) && consoleInput.size() < 40 && !consoleInput.empty()) consoleInput += ' ';
     if (in.wasPressed(KEY_MINUS) && consoleInput.size() < 40) consoleInput += '-';
     if (in.wasPressed(KEY_PERIOD) && consoleInput.size() < 40) consoleInput += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !consoleInput.empty()) consoleInput.pop_back();
-    if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (in.wasPressed(KEY_ENTER)) { std::string cmd = consoleInput; consoleInput.clear(); consoleCommand(cmd); }
 }
 
+// U-04: the console's commands (the controller's first page): its keyboard, its commands typed, and what the keyboard's buttons do
+void Game::consolePad(PadMenu& m) const {
+    m.title = "GOES CONSOLE";
+    m.typing = "A TYPES  X DELETES  START RUNS  SELECT COMMANDS";
+    m.item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
+    m.typed("SL: THE STARS NEAR", "SL\n"); m.typed("DL: THIS SYSTEM'S BODIES", "DL\n"); m.typed("WHERE: THE SHIP'S SECTOR", "WHERE\n");
+    m.typed("HOME: TARGET THE HOME STAR", "HOME\n"); m.typed("PREV: TARGET THE STAR BEFORE", "PREV\n"); m.typed("CAT: THE LAST NOTES", "CAT\n");
+    m.typed("HELP: THE COMMANDS", "HELP\n");
+    m.item("CLOSE THE CONSOLE", KEY_ESCAPE);
+}
+
 void Game::renderConsole() {
-    blendRectRGB(canvas, 6, 6, UW - 6, UH - 6, rgb(0, 10, 4), 235);
-    drawRectRGB(canvas, 6, 6, UW - 6, UH - 6, HUD_DIM);
+    drawPanel(canvas, 6, 6, UW - 6, UH - 6, rgb(0, 10, 4), 235);
     drawText(canvas, 12, 10, "GOES CONSOLE", HUD_AMBER);
     const bool kb = padKeyboardShown();   // R-418: the controller's keyboard takes the lower half; the last lines and the prompt over it
     int rows = kb ? 8 : 17;
@@ -568,11 +637,11 @@ void Game::renderConsole() {
 }
 
 void Game::deployCapsule() {
-    if (ship.mode != ShipState::PARKED) { status("DEPLOY THE CAPSULE FROM ORBIT: APPROACH A PLANET FIRST", 4); audio.beep = 3; }
-    else if (ship.parkedBelt >= 0) { status("NO WORLD UNDER THE SHIP - THE BELT'S ROCKS ARE TOO SMALL FOR THE CAPSULE", 4); audio.beep = 3; }   // O3
+    if (ship.mode != ShipState::PARKED) { refuse("DEPLOY THE CAPSULE FROM ORBIT: APPROACH A PLANET FIRST"); }
+    else if (ship.parkedBelt >= 0) { refuse("NO WORLD UNDER THE SHIP - THE BELT'S ROCKS ARE TOO SMALL FOR THE CAPSULE"); }
     else if (isProbeGiant(sys.bodies[ship.parkedBody].type)) { if (probe.active) watchProbe(); else launchProbe(); }   // X-01: a giant takes a probe (a probe already sent: its screen)
-    else if (!PLANET_TYPES[sys.bodies[ship.parkedBody].type].landable) { status("SURFACE NOT CONSISTENT - LANDING IMPOSSIBLE", 4); audio.beep = 3; }
-    else beginLanding();
+    else if (!KINDS[sys.bodies[ship.parkedBody].type].landable) { refuse("SURFACE NOT CONSISTENT - LANDING IMPOSSIBLE"); }
+    else openScreen(GameState::LANDING_MAP);
 }
 
 void Game::toggleVimana() {
@@ -582,30 +651,32 @@ void Game::toggleVimana() {
         nb.update(ship.pos);
         const Star* near = nb.nearest(ship.pos);
         if (near) { Star full; starInSector(near->sx, near->sy, near->sz, full, true); sys.generate(full); }
-    } else if (!ship.hasRemote) { status("NO REMOTE TARGET - PRESS R TO SELECT A STAR", 4); audio.beep = 3; }
+    } else if (!ship.hasRemote) { refuse("NO REMOTE TARGET - PRESS R TO SELECT A STAR"); }
     else {
         if (jumpPlot.seed && jumpPlot.seed == ship.remote.seed) {   // R-407 / G-06: a plotted jump, logged as it is flown
             const Star& r = ship.remote;
-            logEvent("JUMP", fmt("%.0f LY %s FROM %s TO PARSIS %+lld %+lld %+lld, %s%s%s", jumpPlot.ly, jumpPlot.way.c_str(), jumpPlot.from.c_str(), (long long)r.sx, (long long)r.sy, (long long)r.sz,
-                                 REGION_NAMES[galaxyRegion(r.sx, r.sy, r.sz)], jumpPlot.shortLy > 0 ? fmt(" (%.0f LY SHORT: THE VOID)", jumpPlot.shortLy).c_str() : "", jumpPlot.onChart ? " - PLOTTED ON THE CHART" : ""));
+            logEvent("JUMP",
+                    fmt("%.0f LY %s FROM %s TO PARSIS %+lld %+lld %+lld, %s%s%s", jumpPlot.ly, jumpPlot.way.c_str(), jumpPlot.from.c_str(), (long long)r.sx, (long long)r.sy, (long long)r.sz,
+                            REGION_NAMES[galaxyRegion(r.sx, r.sy, r.sz)], jumpPlot.shortLy > 0 ? fmt(" (%.0f LY SHORT: THE VOID)", jumpPlot.shortLy).c_str() : "",
+                            jumpPlot.onChart ? " - PLOTTED ON THE CHART" : ""));
             jumpPlot.seed = 0;
         }
         ship.mode = ShipState::VIMANA;
-        radarOff();   // C-07: nothing is heard in the flight
+        radarOff();   // nothing is heard in the flight
         ship.flightFrom = ship.pos;
         Vec3 dir = normalize(ship.flightFrom - ship.remote.pos);
         double firstOrbit = std::max(ship.remote.radiusKm * STAR_CLASSES[ship.remote.cls].firstOrbitMult, STAR_CLASSES[ship.remote.cls].minFirstOrbitKm);
-        ship.flightTo = ship.remote.pos + dir * std::max(ship.remote.radiusKm * 25.0, firstOrbit * 0.55);
+        ship.flightTo = ship.remote.pos + dir * (ship.remote.cls == STAR_ROGUE ? drifterStandOffKm(ship.remote) : std::max(ship.remote.radiusKm * 25.0, firstOrbit * 0.55));   // off a drifter
         ship.flightT = 0;
         double ly = length(ship.flightTo - ship.flightFrom) / SECTOR_KM;
-        ship.flightDur = vimanaSeconds(ly);   // R-407: 7 + 2 sqrt(ly) to 100 ly, then 6 s a doubling
+        ship.flightDur = vimanaSeconds(ly);   // 7 + 2 sqrt(ly) to 100 ly, then 6 s a doubling
         ship.parkedBody = -1; ship.localTarget = -1; ship.targeting = false;
-        ship.targetBelt = -1; ship.parkedBelt = -1;   // O3
+        ship.targetBelt = -1; ship.parkedBelt = -1;
         sys.valid = false;
         Vec3 fwd = normalize(ship.flightTo - ship.flightFrom);
         ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
         if (std::sqrt(fwd.x * fwd.x + fwd.z * fwd.z) < 0.01) {
-            // G-07: a flight straight out of the disc has no heading (its yaw came from the target's few light years aside, and the
+            // a flight straight out of the disc has no heading (its yaw would come from the target's few light years aside, and the
             // galactic centre could lie under the floor, the one side without a window): the ship turns its right side to the centre,
             // so the side windows watch the disc fall away; the nose stays within 0.6 degrees of the line
             const Vec3 c = Vec3(GALAXY_CENTRE_SX * SECTOR_KM, 0, GALAXY_CENTRE_SZ * SECTOR_KM) - ship.flightFrom;
@@ -613,6 +684,6 @@ void Game::toggleVimana() {
         }
         cabin.yaw = 0; cabin.pitch = 0;   // face the front window for the flight
         status(fmt("VIMANA FLIGHT TO %s - %.2f LY", upper(starNameOf(ship.remote)).c_str(), ly), 5);
-        audio.beep = 1;
+        audio.beep = BEEP_LOCK;
     }
 }

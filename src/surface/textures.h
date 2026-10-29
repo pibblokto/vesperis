@@ -12,9 +12,8 @@
 void buildMesoTile(GrainTexture& g, int material, uint64_t seed);
 // true for materials that have a meso tile at all
 bool materialHasMesoTile(int material);
-// the look of a material on this planet (0..2), and its name for the data sheets
+// the look of a material on this planet (0..2)
 int mesoVariant(int material, uint64_t seed);
-const char* mesoVariantName(int material, int variant);
 void buildMacroTile(GrainTexture& g, uint64_t seed);
 // B-315: the vegetation's tiles, per planet: the leaf tile (lumps of light and shade the size of a leaf cluster's leaves, a
 // texel is 8 cm at 12 texels a metre), the leaf edge (signed, the cut of a cluster's ragged rim) and the bark (streaks

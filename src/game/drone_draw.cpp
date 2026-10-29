@@ -9,7 +9,7 @@
 #include <cmath>
 
 namespace {
-const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10, BANK_AMBER = 21, BANK_EYE = 24, BANK_RED = 26, BANK_BAY = 29, BANK_PAINT = 30;
+const int BANK_AMBER = 21, BANK_EYE = 24, BANK_RED = 26, BANK_BAY = 29, BANK_PAINT = 30;   // the cabin's banks: game_types.h
 // the hull's outline from above (x its right, z its nose): 0 the nose's right corner, round its right side, its tail, its left side
 const double HULL_X[8] = {0.07, 0.16, 0.16, 0.09, -0.09, -0.16, -0.16, -0.07};
 const double HULL_Z[8] = {0.25, 0.12, -0.14, -0.24, -0.24, -0.14, 0.12, 0.25};
@@ -18,7 +18,6 @@ const double DUCT_X = 0.31, DUCT_Z = 0.19, DUCT_Y = 0.19, DUCT_R = 0.09, DUCT_H 
 // the rack against the left wall by the front window (the cabin's metres: +x right, +y up, +z the front window): three shelves, a drone on
 // each facing the room (drone 1 on the top shelf), the bay's screen across its head
 const double RACK_X0 = -2.5, RACK_X1 = -1.88, RACK_Z0 = 0.92, RACK_Z1 = 1.95, RACK_TOP = 1.66, SCREEN_Y0 = 1.38, SCREEN_Y1 = 1.60;
-const double SHELF_Y[DRONE_COUNT] = {1.00, 0.52, 0.04};
 const double RACK_DX = -2.19, RACK_DZ = 1.435;   // where a drone stands on its shelf
 const double BAY_OUT_S = 2.2, DOCK_S = 2.2;      // its way out of the rack into the hull, and back (game/drones.cpp's clock)
 
@@ -43,7 +42,11 @@ void droneModel(const DronePose& pose, std::vector<DronePrim>& out) {
     const Vec3 mid(0, (Y_BELLY + Y_TOP) * 0.5, 0);
     // ---- the hull: its sides, the bevel to its deck (the nose's three the dark band of its eye), its deck, its belly
     Vec3 lo[8], belt[8], top[8];
-    for (int i = 0; i < 8; i++) { lo[i] = Vec3(HULL_X[i] * BELLY_K, Y_BELLY, HULL_Z[i] * BELLY_K); belt[i] = Vec3(HULL_X[i], Y_BELT, HULL_Z[i]); top[i] = Vec3(HULL_X[i] * TOP_K, Y_TOP, HULL_Z[i] * TOP_K); }
+    for (int i = 0; i < 8; i++) {
+        lo[i] = Vec3(HULL_X[i] * BELLY_K, Y_BELLY, HULL_Z[i] * BELLY_K);
+        belt[i] = Vec3(HULL_X[i], Y_BELT, HULL_Z[i]);
+        top[i] = Vec3(HULL_X[i] * TOP_K, Y_TOP, HULL_Z[i] * TOP_K);
+    }
     for (int i = 0; i < 8; i++) {
         const int j = (i + 1) % 8;
         const bool nose = i == 6 || i == 7 || i == 0;
@@ -154,10 +157,8 @@ bool Game::droneRackPlace(int k, double& x, double& lift, double& blur) const {
     return false;
 }
 
-double Game::testDroneRackX(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) ? x : -99; }
-double Game::testDroneRackY(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) && k >= 0 && k < DRONE_COUNT ? SHELF_Y[k] + lift : -99; }
-
-// F-05: the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
+// F-05: the rack's drones for the cabin's bands (their places, poses and models)
+// the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
 void Game::droneRackFrame(CabinFrame& f) const {
     f.ready = droneBayReady();
     for (int k = 0; k < DRONE_COUNT; k++) {
@@ -169,6 +170,7 @@ void Game::droneRackFrame(CabinFrame& f) const {
     }
 }
 
+// the rack and the drones on it, in the cabin (`drawCabinBand`)
 void Game::drawDroneRack(const CabinFrame& f) {
     const Mat3& look = f.look; const Vec3& eye = f.eye;
     const double hullShade = f.hullShade;
@@ -176,7 +178,15 @@ void Game::drawDroneRack(const CabinFrame& f) {
     RasterParams solid; solid.bank = BANK_HULL; solid.grain = &cabinGrain; solid.grainScale = 12.0 * FB_SCALE; solid.grainWeight = 0.6;
     auto quad = [&](const RasterParams& prm, Vec3 a, Vec3 b, Vec3 c, Vec3 d, double shade) {
         RVert q[4]; const Vec3 pts[4] = {a, b, c, d};
-        for (int k = 0; k < 4; k++) { const Vec3 v = toView(pts[k]); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].z * 0.31; q[k].v = pts[k].y + pts[k].z * 0.17; }
+        for (int k = 0; k < 4; k++) {
+            const Vec3 v = toView(pts[k]);
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].z * 0.31;
+            q[k].v = pts[k].y + pts[k].z * 0.17;
+        }
         rasterPolygon(fb, q, 4, prm, spaceR.proj);
     };
     auto lampAt = [&](const Vec3& p, int bank, double shade, int size) {
@@ -202,7 +212,8 @@ void Game::drawDroneRack(const CabinFrame& f) {
         const bool docked = bay.clock < 0 || bay.run[k].docked;
         if (!docked || x < RACK_DX - 0.01) {   // the port in the back open: its drone out or on its way
             RasterParams dark; dark.bank = 0;
-            quad(dark, Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z0 + 0.06), Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z1 - 0.06), Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z1 - 0.06), Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z0 + 0.06), 2);
+            quad(dark, Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z0 + 0.06), Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z1 - 0.06), Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z1 - 0.06),
+                    Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z0 + 0.06), 2);
         }
         // the shelf's lamp: green aboard and ready, amber charging, red blinking while its drone is out
         const Vec3 lampP(RACK_X1 + 0.004, y - 0.015, RACK_Z1 - 0.07);
@@ -210,10 +221,18 @@ void Game::drawDroneRack(const CabinFrame& f) {
         else lampAt(lampP, BANK_RED, std::fmod(realTime, 1.0) < 0.5 ? 60 : 22, 2);
         // the screen's cell
         const double z0 = RACK_Z0 + 0.05 + k * (RACK_Z1 - RACK_Z0 - 0.1) / 3, z1 = z0 + (RACK_Z1 - RACK_Z0 - 0.1) / 3 - 0.02;
-        const double cell = cabin.facing == 11 ? 46 : (docked && here ? (ready ? 38 : 28 + 7 * std::sin(realTime * 2.4)) : (std::fmod(realTime + k * 0.3, 1.2) < 0.6 ? 24 : 14));
+        const double cell = cabin.facing == FACE_BAY ? 46 : (docked && here ? (ready ? 38 : 28 + 7 * std::sin(realTime * 2.4)) : (std::fmod(realTime + k * 0.3, 1.2) < 0.6 ? 24 : 14));
         RasterParams rs; rs.bank = BANK_BAY; rs.grain = &cabinGrain; rs.grainScale = 30.0 * FB_SCALE; rs.grainWeight = 0.5;
         RVert q[4]; const Vec3 pts[4] = {Vec3(RACK_X1 + 0.006, SCREEN_Y0, z1), Vec3(RACK_X1 + 0.006, SCREEN_Y0, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z1)};
-        for (int i = 0; i < 4; i++) { const Vec3 v = toView(pts[i]); q[i].x = v.x; q[i].y = v.y; q[i].z = v.z; q[i].shade = cell * flick; q[i].u = pts[i].x + pts[i].z; q[i].v = pts[i].y * 3 + realTime * 0.4; }
+        for (int i = 0; i < 4; i++) {
+            const Vec3 v = toView(pts[i]);
+            q[i].x = v.x;
+            q[i].y = v.y;
+            q[i].z = v.z;
+            q[i].shade = cell * flick;
+            q[i].u = pts[i].x + pts[i].z;
+            q[i].v = pts[i].y * 3 + realTime * 0.4;
+        }
         rasterPolygon(fb, q, 4, rs, spaceR.proj);
     }
     // ---- the drones: each where it stands, facing the room (its nose +x, its right -z), lit by the cabin's lamp over the cage
@@ -281,6 +300,7 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
 
 // ---- the drones outside: lights leaving the ship for the world and coming back to it -------------------------------------------------
 
+// the drones leaving the ship and coming back, as lights in the space view
 void Game::drawDroneLights() {
     if (!bay.out || bay.clock < 0 || !droneBayHere()) return;
     const Mat3 look = cameraBasis(cabin.yaw, cabin.pitch);
@@ -337,6 +357,7 @@ void wireLine(RGBCanvas& c, double x0, double y0, double x1, double y1, uint32_t
 }
 }
 
+// a drone in lines on the screen
 void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col) {
     std::vector<DronePrim> prims;
     droneModel(pose, prims);
@@ -375,11 +396,12 @@ void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, do
 
 // ---- the bay's map of the world ----------------------------------------------------------------------------------------------------
 
+// the screen's map of a world of this system (F-02: none until the world's map is made)
 void Game::buildDroneMap(int body) {
     bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
-    const PlanetMap* mp = spaceR.mapIfReady(b);   // F-02: never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
+    const PlanetMap* mp = spaceR.mapIfReady(b);   // never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
     if (!mp) return;
     const PlanetMap& m = *mp;
     MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
@@ -395,12 +417,14 @@ void Game::buildDroneMap(int body) {
         sum2 += gx * gx + gy * gy; cnt++;
     }
     const double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
+    const bool survey = sys.sunless();   // a sunless world's map the survey's, as the landing map's
+    double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
         const double lon = (x + 0.5) / W * TAU - PI, lat = (0.5 - (y + 0.5) / H) * PI;
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade);
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);

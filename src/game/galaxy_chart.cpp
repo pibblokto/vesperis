@@ -6,7 +6,7 @@
 // steps over anything 30 ly thick). Nothing on it has a name: the explorer's things are drawn over it (the ship, home, the stars
 // visited (R-414: not the way between them), the remote target and its line, the signals the radar locked, the stars named at the close
 // levels).
-// G-06 (2026-10-08): the next jump chosen on it ("the ability to select on that map where to jump next"): a cursor with what lies under
+// the next jump chosen on it ("the ability to select on that map where to jump next"): a cursor with what lies under
 // it (the region, the stars there, its height, the way and the flight from the ship, what the explorer has there), Enter plots the jump
 // to its point by R-407's line (`plotJump`) and flies it on a second Enter, Tab looks at the stars round the plotted end first, N steps
 // through the explorer's things, L marks a place of the galaxy with a name (`Guide::galaxyMarks`, lent like R-408's marks).
@@ -188,18 +188,21 @@ Vec3 sectorCentre(const std::string& key) {   // a star key's sector, its middle
 
 }   // namespace
 
+// the view's centre at a level (sector units), before the pixel grid
 void Game::chartCentre(int level, double& cx, double& cz) const {
     if (level == 0) { cx = GALAXY_CENTRE_SX; cz = GALAXY_CENTRE_SZ; return; }   // the whole disc
     if (gchart.follow) { cx = ship.pos.x / SECTOR_KM; cz = ship.pos.z / SECTOR_KM; return; }
     cx = gchart.cx; cz = gchart.cz;
 }
 
+// the view's centre in pixels of its level (the pixel grid anchored in the galaxy)
 void Game::chartView(long long& I, long long& J) const {
     const double s = chartScale(gchart.level);
     double cx, cz; chartCentre(gchart.level, cx, cz);
     I = std::llround(cx / s); J = std::llround(cz / s);
 }
 
+// a place (sector units) on the face, logical pixels; false off the face
 bool Game::chartProject(double sx, double sz, int& px, int& py) const {
     long long I, J; chartView(I, J);
     const double s = chartScale(gchart.level);
@@ -210,12 +213,15 @@ bool Game::chartProject(double sx, double sz, int& px, int& py) const {
 
 // ---- G-06: the next jump chosen on the chart --------------------------------------------------------------------------------------
 
+// the cursor's point (sector units): the ship's while it sits on it
 Vec3 Game::chartCursor() const { return gchart.onShip ? ship.pos / SECTOR_KM : Vec3(gchart.curX, gchart.curY, gchart.curZ); }
 
+// a jump plotted at the cursor, still the remote target
 bool Game::chartPlotted() const {
     return gchart.plotHere && !gchart.onShip && jumpPlot.seed && jumpPlot.onChart && ship.hasRemote && ship.remote.seed == jumpPlot.seed && ship.mode != ShipState::VIMANA;
 }
 
+// the cursor leaves the ship (to the plane unless its height is what moves); a plot lets go
 void Game::chartLetGo(bool height) {
     if (gchart.onShip) {
         const Vec3 s = ship.pos / SECTOR_KM;
@@ -225,6 +231,7 @@ void Game::chartLetGo(bool height) {
     chartUnplot();
 }
 
+// the plot let go (the target stays), its status with it
 void Game::chartUnplot() {
     if (gchart.plotHere && statusMsg.rfind("PLOTTED", 0) == 0) statusUntil = 0;   // its status goes with it
     gchart.plotHere = false;
@@ -233,16 +240,19 @@ void Game::chartUnplot() {
 // Enter on the chart: the jump plotted to the cursor's point (R-407's line: the star nearest its end, or back along it to the first
 // stars), or, plotted, flown
 void Game::chartEnter() {
-    if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return; }
-    if (chartPlotted()) { state = GameState::SPACE; flyJump(); return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("CANNOT JUMP DURING VIMANA FLIGHT", 3); return; }
+    if (chartPlotted()) { closeScreen(); flyJump(); return; }
     const Vec3 to = chartCursor(), from = ship.pos / SECTOR_KM;
     const double ly = length(to - from);
-    if (gchart.onShip || ly < 1) { status("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); audio.beep = 3; return; }
-    if (!plotJump(ly, (to - from) / ly, true)) return;
+    if (gchart.onShip || ly < 1) { refuse("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); return; }
+    Star drifter;   // a drifter of the explorer's under the cursor is the jump's end itself
+    const bool snap = chartDrifterAt(to, drifter) && !(sys.valid && sys.star.seed == drifter.seed);
+    if (!plotJump(snap ? length(drifter.pos / SECTOR_KM - from) : ly, (to - from) / ly, true, snap ? &drifter : nullptr)) return;
     gchart.plotHere = true;
     status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4);
 }
 
+// N's stops: the locked signals, home, the named stars, the marks, the systems visited (nearest first in each)
 std::vector<Game::ChartStop> Game::chartStops() const {
     const Vec3 ss = ship.pos / SECTOR_KM;
     std::vector<ChartStop> out, g;
@@ -253,8 +263,8 @@ std::vector<Game::ChartStop> Game::chartStops() const {
         int64_t x, y, z;
         if (taken.count(k) || !Guide::parseStarKey(k, x, y, z)) return;
         taken.insert(k);
-        Star st;
-        g.push_back({starInSector(x, y, z, st, false) ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), label, col});
+        Star st; const bool at = placeInSector(x, y, z, st, false);
+        g.push_back({at ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), at && st.cls == STAR_ROGUE && label == "A STAR VISITED" ? std::string("VISITED - NO STAR") : label, col});
     };
     auto kind = [&]() {   // a kind's stops, nearest the ship first
         std::stable_sort(g.begin(), g.end(), [&](const ChartStop& a, const ChartStop& b) { return length2(a.p - ss) < length2(b.p - ss); });
@@ -277,7 +287,7 @@ std::vector<Game::ChartStop> Game::chartStops() const {
 
 void Game::chartNextStop(int dir) {
     const std::vector<ChartStop> stops = chartStops();
-    if (stops.empty()) { status("NOTHING OF YOURS ON THE CHART YET", 3); audio.beep = 3; return; }
+    if (stops.empty()) { refuse("NOTHING OF YOURS ON THE CHART YET", 3); return; }
     const int n = (int)stops.size();
     gchart.stop = gchart.stop < 0 || gchart.stop >= n ? (dir > 0 ? 0 : n - 1) : (gchart.stop + dir + n) % n;
     const ChartStop& st = stops[gchart.stop];
@@ -285,9 +295,10 @@ void Game::chartNextStop(int dir) {
     gchart.curX = st.p.x; gchart.curY = st.p.y; gchart.curZ = st.p.z;
     if (gchart.level > 0) { gchart.follow = false; gchart.cx = st.p.x; gchart.cz = st.p.z; }
     status(fmt("%s - %d OF %d", trunc(st.label, 36).c_str(), gchart.stop + 1, n), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
+// the explorer's mark of the galaxy within `px` pixels of a place at the chart's level, -1 none
 int Game::galaxyMarkNear(double sx, double sz, double px) const {
     const double r = px * chartScale(gchart.level);
     int best = -1; double bd = r * r;
@@ -299,6 +310,7 @@ int Game::galaxyMarkNear(double sx, double sz, double px) const {
     return best;
 }
 
+// what the explorer has within four pixels of a place (the first of the kinds)
 Game::ChartThere Game::chartThere(const Vec3& p) const {
     const double r = 4 * chartScale(gchart.level), r2 = r * r;
     auto near = [&](const std::string& key) { const Vec3 v = sectorCentre(key); return (v.x - p.x) * (v.x - p.x) + (v.z - p.z) * (v.z - p.z) <= r2; };
@@ -311,12 +323,46 @@ Game::ChartThere Game::chartThere(const Vec3& p) const {
     }
     for (const auto& kv : guide.signals) if (near(kv.first)) { t.kind = 2; t.key = kv.first.substr(0, kv.first.find('/')); t.col = HUD_RED; t.label = "A SIGNAL"; return t; }
     if (!guide.home.empty() && near(guide.home)) { t.kind = 3; t.key = guide.home; t.col = HUD_AMBER; t.label = "HOME"; return t; }
-    for (const auto& kv : guide.names) if (kv.first.find('/') == std::string::npos && near(kv.first)) { t.kind = 4; t.key = kv.first; t.col = HUD_GREEN; t.label = trunc(upper(kv.second), 16); return t; }
-    for (const auto& kv : guide.inbox) if (kv.first.find('/') == std::string::npos && !guide.names.count(kv.first) && near(kv.first)) { t.kind = 4; t.key = kv.first; t.col = HUD_CYAN; t.label = trunc(upper(kv.second), 16); return t; }
+    for (const auto& kv : guide.names)
+        if (kv.first.find('/') == std::string::npos && near(kv.first)) {
+            t.kind = 4;
+            t.key = kv.first;
+            t.col = HUD_GREEN;
+            t.label = trunc(upper(kv.second), 16);
+            return t;
+        }
+    for (const auto& kv : guide.inbox)
+        if (kv.first.find('/') == std::string::npos && !guide.names.count(kv.first) && near(kv.first)) {
+            t.kind = 4;
+            t.key = kv.first;
+            t.col = HUD_CYAN;
+            t.label = trunc(upper(kv.second), 16);
+            return t;
+        }
     for (const std::string& k : guide.visited) if (near(k)) { t.kind = 5; t.key = k; t.col = HUD_GREEN; t.label = "VISITED"; return t; }
     return t;
 }
 
+// D-02: the drifters the explorer knows (its locks' sectors, its visits, its names, its home) within four pixels of a place on the face,
+// the nearest: the chart's Enter plots the jump to it
+bool Game::chartDrifterAt(const Vec3& p, Star& out) const {
+    const double r = 4 * chartScale(gchart.level);
+    double best = r * r; bool found = false;
+    auto tryKey = [&](const std::string& key) {
+        int64_t x, y, z; Star d;
+        if (!Guide::parseStarKey(key.substr(0, key.find('/')), x, y, z) || !drifterInSector(x, y, z, d, true)) return;
+        const Vec3 v = d.pos / SECTOR_KM;
+        const double d2 = (v.x - p.x) * (v.x - p.x) + (v.z - p.z) * (v.z - p.z);
+        if (d2 <= best) { best = d2; out = d; found = true; }
+    };
+    for (const auto& kv : guide.signals) tryKey(kv.first);
+    for (const std::string& k : guide.visited) tryKey(k);
+    for (const auto& kv : guide.names) if (kv.first.find('/') == std::string::npos) tryKey(kv.first);
+    if (!guide.home.empty()) tryKey(guide.home);
+    return found;
+}
+
+// "SPIRAL ARM, 13,040 LY FROM THE CORE" (and the height over the plane)
 std::string Game::galaxyPlace(const Vec3& p, bool height) const {
     const GalaxyTerms g = galaxyTerms(p.x, p.y, p.z);
     std::string s = std::string(REGION_NAMES[galaxyRegion((int64_t)std::floor(p.x), (int64_t)std::floor(p.y), (int64_t)std::floor(p.z))]) + ", " +
@@ -325,13 +371,13 @@ std::string Game::galaxyPlace(const Vec3& p, bool height) const {
     return s;
 }
 
+// the entry for a new mark at the cursor (-1) or a mark's new name
 void Game::beginGalaxyMark(int mi) {
     if (mi >= (int)guide.galaxyMarks.size()) return;
     textGalaxyMark = mi;
     textGalaxyAt = mi >= 0 ? Vec3(guide.galaxyMarks[mi].x, guide.galaxyMarks[mi].y, guide.galaxyMarks[mi].z) : chartCursor();
     textGalaxyLine = galaxyPlace(textGalaxyAt, false);
-    guideReturn = GameState::STAR_MAP;
-    beginTextEntry(mi >= 0 ? "RENAME THE PLACE" : "NAME THE PLACE", 10, mi >= 0 ? upper(guide.galaxyMarks[mi].name) : std::string());
+    beginTextEntry(mi >= 0 ? "RENAME THE PLACE" : "NAME THE PLACE", TEXT_PLACE, mi >= 0 ? upper(guide.galaxyMarks[mi].name) : std::string());
 }
 
 void Game::finishGalaxyMark(const std::string& name) {
@@ -350,9 +396,10 @@ void Game::finishGalaxyMark(const std::string& name) {
     guide.galaxyMarks.push_back(m);
     logEvent("MARK", fmt("%s IN THE GALAXY: %s", name.empty() ? "A MARK" : name.c_str(), galaxyPlace(textGalaxyAt, true).c_str()));   // saves the guide
     status(name.empty() ? "A MARK PLACED - L ON IT NAMES IT" : fmt("MARKED: %s", name.c_str()), 4);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
+// the status over the map's key line (true when one is shown)
 bool Game::drawMapStatus() {
     if (realTime >= statusUntil || statusMsg.empty()) return false;
     blendRectRGB(canvas, 0, UH - 13, UW - 1, UH - 3, rgb(0, 0, 0), 160);
@@ -361,12 +408,12 @@ bool Game::drawMapStatus() {
 }
 
 void Game::updateGalaxyChart(const Input& in) {
-    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_M) && !in.ctrl())) { state = GameState::SPACE; return; }
+    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_M) && !in.ctrl())) { closeScreen(); return; }
     const int was = gchart.level;
     if (in.wheel > 0 || in.wasPressed(KEY_EQUAL)) gchart.level = std::min(CHART_LEVELS - 1, gchart.level + 1);
     if (in.wheel < 0 || in.wasPressed(KEY_MINUS)) gchart.level = std::max(0, gchart.level - 1);
     if (gchart.level != was) {
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
         if (!gchart.onShip && gchart.level > 0) {   // G-06: the zoom about the cursor: it keeps its pixel
             double vx, vz; chartCentre(was, vx, vz);
             const double k = chartScale(gchart.level) / chartScale(was);
@@ -374,7 +421,7 @@ void Game::updateGalaxyChart(const Input& in) {
             gchart.follow = false;
         }
     }
-    if (in.wasPressed(KEY_C) || in.wasPressed(KEY_SPACE)) { gchart.follow = true; gchart.onShip = true; chartUnplot(); audio.beep = 4; }
+    if (in.wasPressed(KEY_C) || in.wasPressed(KEY_SPACE)) { gchart.follow = true; gchart.onShip = true; chartUnplot(); audio.beep = BEEP_UI; }
     if (in.wasPressed(KEY_N) && !in.ctrl()) chartNextStop(in.shift() ? -1 : 1);
     const Vec3 cur = chartCursor();
     if (in.wasPressed(KEY_L) && !in.ctrl()) { beginGalaxyMark(galaxyMarkNear(cur.x, cur.z, 4)); return; }
@@ -383,11 +430,11 @@ void Game::updateGalaxyChart(const Input& in) {
         if (mk >= 0 && mk == gchart.delMark && realTime < gchart.delUntil) {
             const std::string name = guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name);
             guide.galaxyMarks.erase(guide.galaxyMarks.begin() + mk); guide.save(guidePath);
-            gchart.delMark = -1; status(fmt("MARK REMOVED: %s", trunc(name, 30).c_str()), 3); audio.beep = 4;
+            gchart.delMark = -1; status(fmt("MARK REMOVED: %s", trunc(name, 30).c_str()), 3); audio.beep = BEEP_UI;
         } else if (mk >= 0) {
             gchart.delMark = mk; gchart.delUntil = realTime + 3;
-            status(fmt("REMOVE %s? DELETE AGAIN", trunc(guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name), 24).c_str()), 3); audio.beep = 3;
-        } else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+            refuse(fmt("REMOVE %s? DELETE AGAIN", trunc(guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name), 24).c_str()), 3);
+        } else { refuse("NO MARK UNDER THE CURSOR", 2); }
     }
     if (enterKey(in) || in.mousePressed[0]) { chartEnter(); if (state != GameState::STAR_MAP) return; }
     // the height over the plane (PgUp, PgDn): two seconds from the plane to the strip's edge, Shift faster
@@ -453,7 +500,12 @@ void Game::renderGalaxyChart() {
         for (int k = 0; k <= n; k += 2) dot(ix0 + (n ? (ix1 - ix0) * k / n : 0), iy0 + (n ? (iy1 - iy0) * k / n : 0), c);
         return true;
     };
-    auto ring = [&](int x, int y, int r, uint32_t c) { for (int k = 0; k < 16; k++) { const double a = k * TAU / 16; dot(x + (int)std::lround(r * std::cos(a)), y + (int)std::lround(r * std::sin(a)), c); } };
+    auto ring = [&](int x, int y, int r, uint32_t c) {
+        for (int k = 0; k < 16; k++) {
+            const double a = k * TAU / 16;
+            dot(x + (int)std::lround(r * std::cos(a)), y + (int)std::lround(r * std::sin(a)), c);
+        }
+    };
     auto diamond = [&](int x, int y, int r, uint32_t c) {
         for (int k = 0; k <= r; k++) { dot(x - r + k, y - k, c); dot(x + r - k, y - k, c); dot(x - r + k, y + k, c); dot(x + r - k, y + k, c); }
     };
@@ -462,12 +514,12 @@ void Game::renderGalaxyChart() {
         draw(x, y, c);
     };
     auto cross = [&](int x, int y, uint32_t c) { for (int d = 2; d <= 5; d++) { dot(x + d, y, c); dot(x - d, y, c); dot(x, y + d, c); dot(x, y - d, c); } };
-    auto pennant = [&](int x, int y, uint32_t c) {   // G-06: a mark of the galaxy, its foot at the place
+    auto pennant = [&](int x, int y, uint32_t c) {   // a mark of the galaxy, its foot at the place
         for (int k = 0; k <= 5; k++) dot(x, y - k, c);
         for (int k = 1; k <= 3; k++) dot(x + k, y - 5, c);
         dot(x + 1, y - 4, c); dot(x + 2, y - 4, c); dot(x + 1, y - 3, c);
     };
-    auto corners = [&](int x, int y, uint32_t c) {   // G-06: the cursor, open round what lies under it
+    auto corners = [&](int x, int y, uint32_t c) {   // the cursor, open round what lies under it
         for (int k = 0; k < 3; k++) {
             dot(x - 4 + k, y - 4, c); dot(x - 4, y - 4 + k, c); dot(x + 4 - k, y - 4, c); dot(x + 4, y - 4 + k, c);
             dot(x - 4 + k, y + 4, c); dot(x - 4, y + 4 - k, c); dot(x + 4 - k, y + 4, c); dot(x + 4, y + 4 - k, c);
@@ -531,7 +583,7 @@ void Game::renderGalaxyChart() {
         named(guide.names, HUD_GREEN);
         named(guide.inbox, HUD_CYAN);
     }
-    // the signals the radar locked: rings in the radar's red (KI-349)
+    // the signals the radar locked: rings in the radar's red
     for (const auto& kv : guide.signals) {
         const Vec3 v = sectorCentre(kv.first); int x, y;
         if (chartProject(v.x, v.z, x, y)) ring(x, y, 3, HUD_RED);
@@ -567,7 +619,7 @@ void Game::renderGalaxyChart() {
         drawTextShadow(canvas, lx, ay, "YOU", HUD_WHITE, HUD_SHADOW);
         gchart.youX = gchart.youY = -9999;
     }
-    // G-06: the cursor, and what the explorer has under it
+    // the cursor, and what the explorer has under it
     gchart.curPX = gchart.curPY = -9999;
     if (curIn) {
         shadowed(corners, ccx, ccy, HUD_WHITE);
@@ -578,10 +630,22 @@ void Game::renderGalaxyChart() {
     // the strip: the ship's height and home's, the cursor's
     {
         const double dyPx = 2 * half / EH;
-        auto stripAt = [&](double x, double y, int& px, int& py) { px = (int)std::floor(x / s - (double)I + UW / 2); py = EY0 + (int)std::floor((half - y) / dyPx); return px >= 0 && px < UW && py >= EY0 && py < EY0 + EH; };
+        auto stripAt = [&](double x, double y, int& px, int& py) {
+            px = (int)std::floor(x / s - (double)I + UW / 2);
+            py = EY0 + (int)std::floor((half - y) / dyPx);
+            return px >= 0 && px < UW && py >= EY0 && py < EY0 + EH;
+        };
         auto sdot = [&](int x, int y, uint32_t c) { if (x >= 0 && x < UW && y >= EY0 && y < EY0 + EH) fillRectRGB(canvas, x, y, x, y, c); };
         int x, y;
-        if (!guide.home.empty()) { const Vec3 h = sectorCentre(guide.home); if (stripAt(h.x, h.y, x, y)) { sdot(x - 1, y, HUD_AMBER); sdot(x + 1, y, HUD_AMBER); sdot(x, y - 1, HUD_AMBER); sdot(x, y + 1, HUD_AMBER); } }
+        if (!guide.home.empty()) {
+            const Vec3 h = sectorCentre(guide.home);
+            if (stripAt(h.x, h.y, x, y)) {
+                sdot(x - 1, y, HUD_AMBER);
+                sdot(x + 1, y, HUD_AMBER);
+                sdot(x, y - 1, HUD_AMBER);
+                sdot(x, y + 1, HUD_AMBER);
+            }
+        }
         auto sline = [&](int ax, int ay, int bx, int by, uint32_t c, bool dotted) {
             const int n = std::max(std::abs(bx - ax), std::abs(by - ay));
             for (int k = 0; k <= n; k += dotted ? 2 : 1) sdot(ax + (n ? (bx - ax) * k / n : 0), ay + (n ? (by - ay) * k / n : 0), c);
@@ -625,7 +689,9 @@ void Game::renderGalaxyChart() {
             if (t.size() > max && t.size() >= tail.size() && t.compare(t.size() - tail.size(), tail.size(), tail) == 0) t.erase(t.size() - tail.size());
             return t;
         };
-        auto heightOf = [](double y) { return std::fabs(y) < 50 ? std::string("IN THE PLANE") : thousands(std::round(std::fabs(y) / 10) * 10) + (y > 0 ? " LY NORTH OF THE PLANE" : " LY SOUTH OF THE PLANE"); };
+        auto heightOf = [](double y) {
+            return std::fabs(y) < 50 ? std::string("IN THE PLANE") : thousands(std::round(std::fabs(y) / 10) * 10) + (y > 0 ? " LY NORTH OF THE PLANE" : " LY SOUTH OF THE PLANE");
+        };
         const std::string region = REGION_NAMES[galaxyRegion((int64_t)std::floor(cur.x), (int64_t)std::floor(cur.y), (int64_t)std::floor(cur.z))];
         drawText(canvas, 6, 4, "THE GALAXY", HUD_AMBER);
         drawText(canvas, UW - 6 - textWidth(region.c_str()), 4, region.c_str(), HUD_WHITE);
@@ -662,7 +728,7 @@ void Game::renderGalaxyChart() {
         const std::string line = fmt("%s LY %s - %.0f S BY VIMANA", thousands(ly).c_str(), way.c_str(), vimanaSeconds(ly));
         drawTextCentered(canvas, UW / 2, UH - 23, line.c_str(), plotted ? HUD_CYAN : HUD_WHITE);
     } else {
-        const char* items[] = {"YOU", "HOME", "VISITED", "SIGNAL", "TARGET", "MARK"};
+        const char* const items[] = {"YOU", "HOME", "VISITED", "SIGNAL", "TARGET", "MARK"};
         const int N = 6;
         int total = 0;
         for (const char* t : items) total += 9 + textWidth(t) + 10;

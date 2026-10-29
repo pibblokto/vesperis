@@ -1,0 +1,313 @@
+R"VG(
+# song.vg (H-04; the second pass 2026-10-10): the song's register: an event of the history sung (`@event ... song`: the ballads, the
+# laments, the old time's songs), in lines (`\n`), with a refrain. Each people sings with its own refrains (`song.refrain`: a people
+# keeps its own five), its own beasts, crops, instruments and griefs (the culture pools), so a ballad of a battle is a different song on
+# every world. A line of a prehistoric song names nothing a later age made (no bells, no iron). The rest of the register: song_land.vg (the
+# land and the sky, the works, the leaving, the everyday); the picture's: picture.vg.
+
+@root song.* picture.*
+
+# =====================================================================================================================
+# the refrains: a people's own (a formula: they come back by design)
+# =====================================================================================================================
+
+song.refrain (formula people=5)
+  sing it low, sing it slow, {god} knows who lies there.
+  and the river goes on, and the river goes on.
+  oh {city}, {city}, who will remember you.
+  turn the cup, turn the cup, and drink to the ones not here.
+  and {skyone} saw it, and said nothing.
+  so the old ones sing it, and the young ones learn.
+  bring the {herd} home, bring the {herd} home, the night is coming down.
+  and the {bird} cry over {river}, and nobody answers them.
+  weep for them, weep, under {skynight}.
+  hold the light, hold the light, {festival} is coming.
+  the {tree>.tr} remember it, the {.tr} remember.
+  and that is why we wear {colour.mourn}.
+  a {beast} for the road and a song for the dead.
+  lay it down, lay it down, by {watersrc}.
+  and {time.pass}.
+  and they have {death.went>.dw}, they have {.dw}.
+  {exclaim>.ex}, {.ex}, and fill the cup again.
+  fill the {vessel} and drink to them, drink to them all.
+  dance the {~dance}, dance it round, and stamp on the hard ground.
+  to {instrument>.in}, to {.in}, all the night long.
+  {crop} and salt, {crop} and salt, and a fire against the cold.
+  and the wind comes down off {mountain}, and the wind comes down.
+  {god} have them, {god} have them, we cannot.
+  so we sing it at {festival}, and then we go home.
+  and the {herd} lie down in the long grass, and the {herd} lie down.
+  ho, the {crop}, the {crop}, and the long road home.
+  and the {fruit} fall where they fall.
+  sing it once for them and once for us.
+  let the {~hymn} go up, let it go up.
+  and {sea} took the rest, as {sea} does.
+  under the {roofs}, under the {roofs}, the children sleep.
+  ask {mountain}, {mountain} was there.
+  round the fire, round the fire, and nobody leave.
+
+# =====================================================================================================================
+# war
+# =====================================================================================================================
+
+song.battle
+  {ann.sg.bat.a}\n{ann.sg.bat.b}\n{ann.sg.bat.c}\n{song.refrain}
+  {ann.sg.bat.a}\n{ann.sg.bat.b}\n{ann.sg.bat.d}\n{ann.sg.bat.c}\n{song.refrain}
+ann.sg.bat.a
+  At {$e.place} in {$e.season} the army stood,
+  They went down to {$e.place} with the {crop} still green,
+  Who was at {$e.place}? Ask the ones who came home,
+  They marched to {$e.place} singing, as the young ones do,
+  They left the {herd} with the old and went down to {$e.place},
+  We were {ann.craftfolk} and we were {ann.herdfolk}, and we went to {$e.place},
+  Early in {$e.season} they took up the spears at {$e.place},
+  ($e.won=1) Hear what was done at {$e.place}, hear it and learn,
+  (age>=medieval) The {colour.holy} banners went down the road to {$e.place},
+  (age=prehistoric) The bands went painted to {$e.place}, painted in {colour.holy},
+  They kissed their mothers at the door and went to {$e.place},
+ann.sg.bat.b
+  ($e.won=1) and the enemy broke like ice on {river};
+  ($e.won=1) and by evening the field was ours;
+  ($e.won=1) and the others ran, and we let them run;
+  ($e.won=1) and the {bird} came down on the others' dead, not ours;
+  ($e.won=0) and the field was theirs by night;
+  ($e.won=0) and we were too few, and they were too many;
+  ($e.won=0) and we came back fewer than we went;
+  ($e.won=0) and they drove us down to the water like {herd};
+  ($e.won=draw) and neither would give, and both stood till dark;
+  ($e.won=draw) and both went home and called it won;
+  and the fighting went on until nobody could lift an arm;
+ann.sg.bat.c
+  ($e.value>0) {#$e.value:about} lay down there and did not rise,
+  the {bird} came down on {$e.place} for a week,
+  and the mothers of {city} went out in {colour.mourn} to look,
+  and what was won there nobody could say over the {drink},
+  and the rain came after and washed it into the {crop},
+  and the ones who came back went back to the {craft} and did not talk of it,
+  and we {ann.sg.buried} them where they fell,
+  and the {crop} grows thicker there to this day,
+  and the {herd} would not graze that ground again,
+ann.sg.bat.d
+  and {tool} was put down and the spear taken up,
+  and somebody sang, and the others joined in,
+  (age>=medieval) and the steel rang all day like a smithy,
+  and the dust stood over them like smoke,
+  and the shouting was heard as far as {$seat},
+
+# how the dead were put away, as a verb phrase after "we" (the people's custom)
+ann.sg.buried
+  (deadway=barrows) laid
+  (deadway=tombs) carried
+  (deadway=cemeteries) buried
+  (deadway=towers) carried
+  (deadway=none) gave
+ann.craftfolk
+  (economy=hunting) hunters
+  (economy=herding) herders
+  (economy=farming) {crop} growers
+  (economy=trade) traders
+  (economy=industry) mill hands
+  (economy=information) clerks
+  weavers
+  potters
+ann.herdfolk
+  (economy=herding|economy2=herding) the ones who keep the {herd}
+  (economy!=herding) the ones who till the ground
+  the young of the river towns
+
+song.sack
+  {ann.sg.sack.a}\n{ann.sg.sack.b}\n{ann.sg.sack.c}\n{song.refrain}
+ann.sg.sack.a
+  {$e.place} had a gate and the gate was strong,
+  {$e.place} had {roofs} and they burned like straw,
+  There was {food} on the tables in {$e.place} that night,
+  They came to {$e.place} with fire in {vessel},
+ann.sg.sack.b
+  and they burned it down in a single night,
+  and they took the children and the {herd},
+  and what they could not carry they broke,
+  and they left {motif.over} black on every wall,
+ann.sg.sack.c
+  and who was inside, ask the ashes,
+  and the {bird} nest there now, and nothing else,
+  ($e.value>0) and {#$e.value:about} went down with the walls,
+  and nobody lives there, and nobody will,
+
+song.siege
+  {ann.sg.siege.a}\n{ann.sg.siege.b}\n{ann.sg.siege.c}\n{song.refrain}
+ann.sg.siege.a
+  They sat outside {$e.place} through {season.now},
+  The {ann.foe} camped round {$e.place} like a ring round {ann.moonsun},
+  We shut the gates of {$e.place} and counted the {vessel},
+ann.sg.siege.b
+  we ate the {herd} and then we ate the hides,
+  we drank from {watersrc} and it held, it held,
+  we burned the doors when the {fuel} was gone,
+  we ate the {crop} seed we were keeping for spring,
+ann.sg.siege.c
+  ($e.out=0) and the gate held, the gate held, and they went home,
+  ($e.out=1) and the gate fell, and we were taken,
+  ($e.out=1) and in the end we opened the gate ourselves,
+  ($e.out=0) and one morning the camp was empty and the fires were cold,
+ann.foe
+  (contact=1) {other}
+  enemy
+ann.moonsun
+  (moons>0) {moon}
+  the sun
+
+song.war
+  {ann.sg.war.a}\n{ann.sg.war.b}\n{ann.sg.war.c}\n{song.refrain}
+ann.sg.war.a
+  When {$e.war} began, the young ones sang over the {drink},
+  When {$e.war} came, it came in {$e.season},
+  They called it {$e.war}, like the name of a feast with {feast.custom},
+  Nobody wanted {$e.war}, so everybody went,
+ann.sg.war.b
+  (age>=medieval) the smiths worked all night, and the {craft} stopped,
+  the drums went down the road and the mothers watched from the {roofs},
+  (age>=medieval) the {colour.holy} banners went up and the {food} went dear,
+  the {herd} were driven up into the hills,
+  the {craft} was left half done on every bench,
+  the {crop} was cut green so the armies would not have it,
+ann.sg.war.c
+  and everyone said it would be over by {festival}, with {drink} for all,
+  and everyone said it would be over by the {crop} harvest,
+  and everyone said it would be over by {season.next}, before the {herd} came down,
+  and it lasted longer than anyone who sang it, and longer than the {crop},
+  and the ones who said it was glorious stayed at home with their {herd},
+
+# =====================================================================================================================
+# the sick
+# =====================================================================================================================
+
+song.sickness
+  {ann.sg.sick.a}\n{ann.sg.sick.b}\n{ann.sg.sick.c}\n{song.refrain}
+  {ann.sg.sick.a}\n{ann.sg.sick.b}\n{ann.sg.sick.d}\n{ann.sg.sick.c}\n{song.refrain}
+ann.sg.sick.a
+  ($e.wave=1) {$e.sickness} came to {$e.place} with the boats,
+  {$e.sickness} came in {$e.season}, nobody asked it in,
+  ($e.wave>1) {$e.sickness} came back, as it always comes back,
+  {$e.sickness} walked into {$e.place} like a guest,
+  It came to {$e.place} in {$e.season}, and they named it {$e.sickness},
+  {$e.sickness} came down the road from {$e.place},
+ann.sg.sick.b
+  it sat at every table and ate the {food}, and it slept in every bed,
+  it took the old ones first, then the {ann.craftfolk}, then the rest,
+  (age>=medieval) and the bells were rung until there was no one to ring them,
+  and the {fuel} fires went out one by one along the river,
+  and the {herd} stood unmilked in the yards,
+  and the {craft} stopped, and the market stopped,
+  and the healers went from door to door with {vessel} until they fell,
+  and we marked the doors with {colour.any},
+ann.sg.sick.c
+  ($e.value>0) {#$e.value:about} we carried out to {deadplace},
+  and the doors of {$e.place} stood open all that year, and the {herd} walked in,
+  and we sang this then, to {instrument}, and we sing it still,
+  and the ones it spared went back to the {crop} and did not know why,
+  and when it went, it went in a night, the way it came, and the {bird} came back,
+ann.sg.sick.d
+  my mother, my brother, the child next door who kept the {herd},
+  we burned {fuel} in the streets against it,
+  we prayed at {holyplace} and it came in with us,
+
+# =====================================================================================================================
+# the deaths
+# =====================================================================================================================
+
+song.rulerdeath
+  {ann.sg.rd.a}\n{ann.sg.rd.b}\n{ann.sg.rd.c}\n{song.refrain}
+  {ann.sg.rd.a}\n{ann.sg.rd.b}\n{ann.sg.rd.d}\n{ann.sg.rd.c}\n{song.refrain}
+ann.sg.rd.a
+  (age=prehistoric) {$e.a:full} is dead, and the {fuel} fires are put out for {$e.a:obj},
+  (age>=medieval) {$e.a:full} is dead, hang {colour.mourn} on the doors for {$e.a:obj},
+  They carried {$e.a:full} out {time.of},
+  (age=prehistoric) Who will sit where {$e.a:name} sat, on the {colour.holy} stone by the fire,
+  (age>=medieval) Who will sit where {$e.a:name} sat, under {motif.over} at {city},
+  {$e.a:name} has gone to {deadplace} and the {herd} are crying,
+  (age>=medieval gov=monarchy) The crown of {city} is on another head, and the {herd} do not care,
+  (has:$e.a.epithet) {$e.a:name} {$e.a.epithet} is dead at {$e.place}, and the {bird} know it,
+  Put on {colour.mourn}, {$e.a:name} is dead,
+  {$e.a:full} has {death.went},
+  The {ann.instrument.cry} for {$e.a:full}, who is dead at {$e.place},
+ann.instrument.cry
+  drums are beating
+  pipes are crying
+  horns are blowing
+  songs are going up
+ann.sg.rd.b
+  (has:$e.a.reigned) {$e.a:name} who held the rule {#$e.a.reigned:words|year} and ate {food} like the rest of us,
+  {$e.a:name} who knew every path to {mountain}, every {watersrc.n} and every {tree.n},
+  {$e.a:name} who was hard, and was fair, and liked {drink} too much,
+  (age=prehistoric) and {$e.a:poss} spear is laid down beside {$e.a:obj}, with {$e.a:poss} {vessel.one.n} of {drink},
+  (age>=medieval) and {$e.a:poss} seal is broken in {colour.holy} wax on the steps of {hall},
+  (has:$e.a.trait) {$e.a:name} who was {$e.a.trait}, and wore {garment} in every weather,
+  {$e.a:name} who gave us {food} in the bad year,
+  {$e.a:name} who sat with the {ann.craftfolk} and drank their {drink},
+  {$e.a:name} who loved {pastime} and lost at it, and laughed,
+  {$e.a:name} who counted the {herd} with us every {season.any},
+ann.sg.rd.c
+  there was never another like {$e.a:obj} under the {roofs},
+  and the next will be no better, and will eat more {food},
+  (age=prehistoric) and nobody speaks at the {fuel} fire tonight,
+  (age>=medieval) and nobody speaks in {hall} tonight, and the {vessel} stand full,
+  and the young ones look at each other over the {vessel} and wait,
+  and the women keen in {colour.mourn} at the door till dawn,
+  and the new one counts the {herd} and is afraid, and should be,
+  and the {bird} sit on the roof of {hall} and say nothing,
+  and the {herd} would not go out to the grass that day,
+  and the {crop} stood in the field with nobody to cut it,
+ann.sg.rd.d
+  we {ann.sg.buried} {$e.a:obj} with {$e.a:poss} {garment.n} and a {vessel.one.n} of {drink},
+  we played {instrument} until our hands were sore,
+  we cut {motif.over} for {$e.a:obj} on the post by the door,
+  we burned {fuel} on the grave for {#number|night}, and poured {drink} on it,
+
+song.death
+  {ann.sg.death.a}\n{ann.sg.death.b}\n{ann.sg.death.c}\n{song.refrain}
+ann.sg.death.a
+  {$e.a:full} is gone, who was known to every {ann.craftfolk.one},
+  {$e.a:full} has {death.went},
+  ($e.a.role!=none) {$e.a:name} the {$e.a.role} is dead at {$e.place}, and the {bird} know it,
+  They carried {$e.a:full} out at {ann.hour}, in {colour.mourn},
+  Who will do it now that {$e.a:name} is gone, who will see to the {herd},
+  Hang {colour.mourn} on the door, {$e.a:name} is dead,
+ann.sg.death.b
+  they carried {$e.a:obj} up to {deadplace} on a bed of {material},
+  the town came out to see {$e.a:obj} go, and the {herd} came too,
+  we put {$e.a:poss} {garment.n} round {$e.a:obj} against the cold,
+  and {$e.a:poss} {ann.tooln} hangs on the wall and nobody takes it down,
+  ($e.how=sickness has:$e.sickness) {$e.sickness} took {$e.a:obj} in {$e.season}, before the {crop} was in,
+  ($e.how=battle) {$e.a:name} went to the fighting and did not come back to the {herd},
+  ($e.how=sea) {sea} has {$e.a:obj}, and keeps {$e.a:obj}, and gives back {ann.seagift},
+  ($e.how=old) {$e.a:name} was old, and tired, and ready, and had eaten {food} that morning,
+ann.sg.death.c
+  and the house is quiet where {$e.a:name} used to play {instrument},
+  and the dogs look for {$e.a:obj} at the door of {ann.house1},
+  and we will not see the like again, not if the {crop} comes up gold,
+  and {$e.a:poss} children have {$e.a:poss} eyes, and {$e.a:poss} way with the {herd},
+  and the {vessel.one.n} {$e.a:name} drank from is turned over on the shelf,
+ann.craftfolk.one
+  hunter
+  herder
+  weaver
+  potter
+  boatman
+  child
+ann.seagift
+  (coast=1) {fish}
+  driftwood
+ann.hour
+  first light
+  dusk
+  noon
+  lamp-lighting
+ann.tooln
+  (age<=prehistoric) spear
+  (age<=prehistoric) net
+  adze
+  sickle
+  hoe
+  (age>=medieval) hammer
+  (age>=medieval) knife
+)VG"

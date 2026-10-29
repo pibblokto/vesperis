@@ -21,4 +21,4 @@ three right-wall screens, the decoder, the radar and the new telescope's set all
   THROUGH IT`, ...) is written in the faced computer's colour; the capsule cage keeps the amber.
 * Harness: the flow's `cabin_back` (the back wall's three sets) and `cabin_telescope`; `unit` checks that the eight
   computers' colours are pairwise at least 0.3 apart in RGB (`testScreenColours`).
-* Docs: 07 (the cabin), 02 (the bank table), 10-decisions (under the W-06 rework).
+* Docs: 07 (the cabin), 02 (the bank table), the decisions log (under the W-06 rework).

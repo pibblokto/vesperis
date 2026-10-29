@@ -1,0 +1,234 @@
+R"VG(
+# annal_everyday.vg (H-04's second pass): the annal's register for the everyday (the history's own stream of a year: fairs, fires, storms,
+# plagues of the fields, wonders, games, laws, trials, envoys, disasters of the works, prices, the herds, shows, the ruler's visits).
+# The small entries of the quiet years. `$e.what` is the kind's own word (peoples/history_tables.h); a person (`$e.a`) may be
+# missing; the storm's and the price's place may be the whole land.
+
+# ---- a fair or a gathering ------------------------------------------------------------------------------------------------
+
+annal.fair
+  {ann.lead} {ann.fair.m}{ann.fair.t}
+  {ann.lead} {ann.fair.m}{ann.fair.t}
+ann.fair.m
+  ($e.what=gathering) the bands gathered at {$e.place}
+  ($e.what=gathering) the people of the hills came down to {$e.place} to trade and to marry
+  ($e.what!=gathering) a great fair was held at {$e.place}
+  ($e.what!=gathering $e.value<=40000) the fair at {$e.place} drew {#$e.value:about}
+  ($e.what!=gathering) traders filled {$e.place} for {#n|day}
+  ($e.what=beasts) the beast fair at {$e.place} was the biggest in years
+  ($e.what=horses) the horse fair at {$e.place} was held in the rain
+  ($e.what=cloth) the cloth fair was held at {$e.place}
+  ($e.what=salt) the salt came up to {$e.place}, and the fair with it
+  ($e.what=grain) the {crop} market at {$e.place} ran for a week
+  ($e.what=pots) the potters came to {$e.place} with their wares
+  ($e.what=iron) the smiths' fair was held at {$e.place}
+  ($e.what=wine) the wine fair at {$e.place} ended in a fight, as usual
+  ($e.what=fish) the fish market at {$e.place} was opened
+  ($e.what=furs) the trappers brought their furs to {$e.place}
+  ($e.what=books) a fair of books was held at {$e.place}
+  ($e.what=machines) a show of machines was held at {$e.place}
+  ($e.what=flowers) {$e.place} held its flower fair
+ann.fair.t
+  (5) .
+  ; there was {food} and {drink} and {pastime}.
+  ($e.value<=40000) ; {#$e.value:about} came, and most of them went home poorer.
+  ; a {beast} was sold for more than a house, and everyone talked of it.
+  ; they played {instrument} at every corner.
+  ; the prices were the talk of {$seat} for a month.
+  ; {vessel} of {crop2} changed hands by the cartload.
+  ; two families from far apart were joined by marriage there.
+  {ann.after}
+
+# ---- a fire -------------------------------------------------------------------------------------------------------------------
+
+annal.fire
+  {ann.lead} {ann.fire.m}{ann.fire.t}
+  {ann.lead} {ann.fire.m}{ann.fire.t}
+ann.fire.m
+  fire broke out at {$e.place}
+  a fire at {$e.place}
+  {$e.place} burned
+  ($e.what=street) a street of {$e.place} burned
+  ($e.what=street) fire ran down a street of {$e.place} in the night
+  ($e.what=half) half of {$e.place} burned
+  ($e.what=half) {$e.place} burned from end to end
+  ($e.what=granary) the granary at {$e.place} burned with the {crop} in it
+  ($e.what=market) the market at {$e.place} burned
+  ($e.what=temple) {holyplace} at {$e.place} burned
+  ($e.what=mill) the mill at {$e.place} burned
+  ($e.what=library) the library at {$e.place} burned
+  ($e.what=harbour) the boats burned at their moorings in {$e.place}
+  ($e.what=palace) the palace at {$e.place} burned
+  ($e.what=works) the works at {$e.place} burned
+  ($e.what=camp) the camp at {$e.place} burned
+  ($e.what=grass) the grass burned round {$e.place}
+  ($e.what=forest) the {tree} burned for a week above {$e.place}
+  ($e.what=tower) a tower burned at {$e.place}, from the top down
+ann.fire.t
+  ; {#$e.value|house} were lost.
+  ; it began among the {craft} sheds.
+  ; {fuel} stored for the winter fed it.
+  ; the people stood in a line from {watersrc} with {vessel} and could not stop it.
+  ; it was the wind that carried it.
+  ; nobody died, which was a wonder.
+  ; the {roofs} went up like straw.
+  ; they rebuilt in {material}, which burns less.
+  (5) .
+  {ann.after}
+
+# ---- a storm --------------------------------------------------------------------------------------------------------------
+
+annal.storm
+  {ann.lead} {ann.storm.m}{ann.storm.t}
+  {ann.lead} {ann.storm.m}{ann.storm.t}
+ann.storm.m
+  ($e.what=wind) a great wind blew
+  ($e.what=wind has:$e.place) the wind took the roofs off {$e.place}
+  ($e.what=hail) hail fell, the size of eggs
+  ($e.what=hail has:$e.place) hail beat the fields of {$e.place} flat
+  ($e.what=snow) a great snow fell
+  ($e.what=snow has:$e.place) the snow cut {$e.place} off for {#n|week}
+  ($e.what=dust) a storm of dust came out of the dry country
+  ($e.what=dust has:$e.place) the dust buried the doors of {$e.place}
+  ($e.what=sea has:$e.place) a storm came in off the sea at {$e.place}
+  ($e.what=sea) the sea rose in a storm and took the boats
+  ($e.what=lightning has:$e.place) lightning struck {$e.place}
+  ($e.what=lightning) a storm of lightning walked across the land
+  ($e.what=rain) it rained for {#n|day} without stopping
+  ($e.what=rain has:$e.place) the rain washed out the roads to {$e.place}
+  there was a great storm
+ann.storm.t
+  ($e.value>0) ; {#$e.value:about} died.
+  ; the {herd} were found miles off.
+  ; the {crop} lay flat in the fields.
+  ; {holyplace} lost its roof.
+  ; the {tree} came down across the roads.
+  ; nobody had seen one like it.
+  (5) .
+  {ann.after}
+
+# ---- a plague of the fields or the herds ----------------------------------------------------------------------------------
+
+annal.pest
+  {ann.lead} {ann.pest.m}{ann.pest.t}
+  {ann.lead} {ann.pest.m}{ann.pest.t}
+ann.pest.m
+  ($e.what=locusts) locusts came, and ate the land bare
+  ($e.what=locusts) a cloud of locusts came down on the fields round {$e.place}
+  ($e.what=blight) the blight came into the {crop}
+  ($e.what=blight) the {crop} turned black in the fields round {$e.place}
+  ($e.what=murrain) the {herd} sickened and died
+  ($e.what=murrain) a sickness of the {herd} went through {$e.place}
+  ($e.what=rats) the rats came into the stores at {$e.place}
+  ($e.what=rats) rats ate a winter's {crop} at {$e.place}
+  ($e.what=worm) the worm got into the {fruit}
+  ($e.what=mildew) mildew spoiled the {crop} in the stores
+  ($e.what=wolves) wolves came down on the {herd} at {$e.place}
+  ($e.what=mites) mites got into the stores at {$e.place}
+  the fields round {$e.place} were spoiled
+ann.pest.t
+  ; there was little to eat that winter.
+  ; the {herd} were burned where they fell.
+  ; the priests went out and cursed it, which did nothing.
+  ; the {crop} was sown again, late.
+  ; cats were worth their weight in {crop}.
+  (5) .
+  {ann.after}
+
+# ---- a wonder ----------------------------------------------------------------------------------------------------------------
+
+annal.wonder
+  {ann.lead} {ann.won.m}{ann.won.t}
+  {ann.lead} {ann.won.m}{ann.won.t}
+ann.won.m
+  ($e.what=calf) a calf with two heads was born at {$e.place}
+  ($e.what=calf) one of the {herd} at {$e.place} bore a young one with two heads
+  ($e.what=fish) a fish as long as a boat was taken at {$e.place}
+  ($e.what=fish) a fish nobody could name was brought up at {$e.place}
+  ($e.what=hoard) a pot of old coins was dug up at {$e.place}
+  ($e.what=hoard) a hoard of the old time was found under a field at {$e.place}
+  ($e.what=stone) a stone fell out of a clear sky at {$e.place}
+  ($e.what=stone) a black stone, warm to the hand, was found at {$e.place}
+  ($e.what=rain) it rained red at {$e.place}
+  ($e.what=spring) the {watersrc.n} at {$e.place} ran warm all winter
+  ($e.what=spring) the water at {$e.place} turned salt for a season, then sweet again
+  ($e.what=beast) a white {game.one} was seen at {$e.place}
+  ($e.what=beast) a beast nobody had seen came out of the hills at {$e.place}
+  ($e.what=bones) great bones were found in the riverbank at {$e.place}
+  ($e.what=twins) a woman at {$e.place} bore three at once, and all lived
+  ($e.what=tree) the {tree.n} at {$e.place} flowered in winter
+  ($e.what=bell) the bell at {$e.place} rang by itself in the night
+  ($e.what=ruin) the walls of an older people were found at {$e.place}
+  ($e.what=signal) a voice was heard on the air at {$e.place}, from no one
+ann.won.t
+  ; people came from far off to see it.
+  ; the priests said it meant one thing, and the farmers another.
+  ; it was taken for {ann.goodsign}.
+  ; it was taken for {ann.badsign}.
+  ; nobody knew what to make of it, and it was soon forgotten.
+  ; it was shown at {festival}.
+  (5) .
+  {ann.after}
+
+# ---- games ----------------------------------------------------------------------------------------------------------------------
+
+annal.games
+  {ann.lead} {ann.games.m}{ann.games.t}
+  {ann.lead} {ann.games.m}{ann.games.t}
+ann.games.m
+  games were held at {$e.place}
+  ($e.what=race) the great race was run at {$e.place}
+  ($e.what=wrestling) the wrestlers met at {$e.place}
+  ($e.what=archery) the archers shot for the prize at {$e.place}
+  ($e.what=boats) the boat race was rowed at {$e.place}
+  ($e.what=ball) the ball game was played at {$e.place} before a great crowd
+  ($e.what=song) the singers contended at {$e.place}
+  ($e.what=horses) the horses were raced at {$e.place}
+  ($e.what=chess) the masters of the board met at {$e.place}
+  ($e.what=swimming) the swimmers raced at {$e.place}
+ann.games.t
+  (has:$e.a) ; {$e.a:name} won.
+  (has:$e.a) ; the prize went to {$e.a:name}, who was {#$e.a.age}.
+  (has:$e.a) ; {$e.a:name} of {$e.a.home} carried it off.
+  ; there was {drink} for the winners and {drink} for the losers.
+  ; the losers said the judges were bought.
+  ; it was talked of until {festival}.
+  (5) .
+
+# ---- a law ------------------------------------------------------------------------------------------------------------------------
+
+annal.law
+  {ann.lead} {ann.law.m}{ann.law.t}
+  {ann.lead} {ann.law.m}{ann.law.t}
+ann.law.m
+  ($e.what=measures) the measures were made one for the whole land
+  ($e.what=measures) a new law fixed the weights in every market
+  ($e.what=tax) a new tax was laid on the {crop}
+  ($e.what=tax) a tax was laid on every hearth
+  ($e.what=water) a law was made on the sharing of the water
+  ($e.what=water) the water of {watersrc} was shared out by law
+  ($e.what=tolls) tolls were set on the roads and the bridges
+  ($e.what=curfew) the gates were to be shut at dark, by law
+  ($e.what=coin) a new coin was struck
+  ($e.what=coin) the old coin was called in and a new one given out
+  ($e.what=inheritance) a law was made on who inherits
+  ($e.what=drink) {drink} was forbidden in the streets
+  ($e.what=weapons) arms were forbidden inside the walls
+  ($e.what=school) every child was to be taught to read, by law
+  ($e.what=census) the people were counted, house by house
+  ($e.what=calendar) the calendar was set right
+  ($e.what=dogs) a law was made about the dogs
+  ($e.what=hours) the hours of work were fixed by law
+  ($e.what=noise) a law was made against noise at night
+  ($e.what=forests) the {tree} were not to be cut without leave
+  ($e.what=rations) the rations were fixed for every house
+ann.law.t
+  (has:$e.a) ; it was {$e.a:poss} law.
+  (has:$e.a) , by order of {$e.a:full}.
+  ; it was read out in {town.open} and grumbled at.
+  ; nobody kept it for long.
+  ; it was cut on a stone by the gate.
+  ; the old ones said it had been the law before, and nobody had kept it then either.
+  (5) .
+  {ann.after}
+)VG"

@@ -33,7 +33,7 @@ void Game::buildAlmanac() {
     } else if (almanacScene == 2 && sys.valid && landBody >= 0 && landBody < (int)sys.bodies.size()) {
         const Body& b = sys.bodies[landBody];
         p.ground = true; p.body = landBody; p.window = GROUND_WINDOW; p.lat = landLat; p.lon = landLon;
-        p.atmosphere = PLANET_TYPES[b.type].atmosphere;
+        p.atmosphere = bodyHasAir(b);
         if (b.rings) p.ringProf = spaceR.ringProfile(sys, landBody);
     } else {
         p.ground = false; p.window = SHIP_WINDOW; p.pos = ship.pos;
@@ -47,44 +47,49 @@ void Game::buildAlmanac() {
     if (almanacSel > (int)almanacEvents.size()) almanacSel = (int)almanacEvents.size();
 }
 
-void Game::openAlmanac() {
-    almanacReturn = state == GameState::DATA ? returnState : state;
-    almanacScene = (state == GameState::SURFACE || (state == GameState::DATA && returnState == GameState::SURFACE)) && surf.valid ? 1 : (state == GameState::LANDING_MAP ? 2 : 0);
+// U-05: the almanac of the place it is opened from (the data sheet closes first: its way back is the almanac's)
+void Game::almanacEnter() {
+    almanacScene = state == GameState::SURFACE && surf.valid ? 1 : (state == GameState::LANDING_MAP ? 2 : 0);
     almanacSel = 0; almanacScroll = 0;
     buildAlmanac();
-    state = GameState::ALMANAC;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::almanacRunTo(const AlmanacEvent& e) {
     almanacRunning = true; almanacRunT = e.t; almanacRunEvent = e;
     almanacRunLabel = almanacLabelOf(e);
     status(fmt("RUNNING TO %s - T STOPS", almanacRunLabel.c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::almanacStop(bool arrived) {
     almanacRunning = false; timeWarp = 1;
-    if (arrived) { status(fmt("%s - X1", almanacRunLabel.c_str()), 5); audio.beep = 2; }
+    if (arrived) { status(fmt("%s - X1", almanacRunLabel.c_str()), 5); audio.beep = BEEP_ARRIVE; }
     else status("RUN STOPPED - X1", 2);
 }
 
-void Game::updateAlmanac(const Input& in) {
+void Game::updateAlmanac(const Input& in, double dt, double realDt) {
     int n = (int)almanacEvents.size() + 1;   // the events and the free row
-    if (in.wasPressed(KEY_UP)) almanacSel = (almanacSel + n - 1) % n;
-    if (in.wasPressed(KEY_DOWN)) almanacSel = (almanacSel + 1) % n;
+    menuStep(in, almanacSel, n);
     if (in.wasPressed(KEY_PAGE_UP)) almanacSel = std::max(0, almanacSel - ALMANAC_ROWS);
     if (in.wasPressed(KEY_PAGE_DOWN)) almanacSel = std::min(n - 1, almanacSel + ALMANAC_ROWS);
     if (almanacSel == n - 1) {
         if (in.wasPressed(KEY_LEFT)) almanacFree = std::max(0, almanacFree - 1);
         if (in.wasPressed(KEY_RIGHT)) almanacFree = std::min(FREE_COUNT - 1, almanacFree + 1);
     }
-    if (in.wasPressed(KEY_ESCAPE)) { state = almanacReturn; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (!enterKey(in)) return;
-    if (settings.clockMode == 1) { status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); audio.beep = 3; return; }
+    if (settings.clockMode == 1) { refuse("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); return; }
     if (almanacSel == n - 1) { AlmanacEvent e; e.kind = AL_FREE; e.t = t + FREE_STEPS[almanacFree]; e.value = FREE_STEPS[almanacFree]; almanacRunTo(e); }
     else almanacRunTo(almanacEvents[almanacSel]);
-    state = almanacReturn == GameState::SHIPSCREEN ? GameState::SPACE : almanacReturn;   // the run is watched from the window
+    const GameState from = openedFrom[(int)GameState::ALMANAC];
+    state = from == GameState::SHIPSCREEN ? GameState::SPACE : from;   // the run is watched from the window
+}
+
+// U-04: the almanac's commands (the controller's first page)
+void Game::almanacPad(PadMenu& m) const {
+    m.title = "THE ALMANAC";
+    m.item("RUN THE CLOCK TO IT", KEY_ENTER); if (almanacRunning) m.item("STOP THE RUN", KEY_T); m.item("BACK", KEY_ESCAPE);
 }
 
 // the ground's state now and when it changes: "DAY  DARK IN 2 H 05 MIN"
@@ -103,12 +108,14 @@ std::string Game::almanacStateLine() const {
 }
 
 void Game::renderAlmanac() {
+    // over the scene it was opened from (the landing map keeps its picture)
+    if (almanacScene == 2) renderLandingMap(); else if (almanacScene == 1 && surf.valid) renderSurfaceScene(); else renderSpace();
     const int top = 10, bottom = UH - 10, x0 = 14;
-    blendRectRGB(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
-    drawRectRGB(canvas, x0, top, UW - x0, bottom, HUD_DIM);
+    drawPanel(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
     const AlmanacPlace& p = almanacAt;
     std::string place;
-    if (p.ground && p.sys) place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");
+    if (p.ground && p.sys)
+        place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");
     else if (p.sys && p.body >= 0) place = "THE STARDRIFTER AT " + trunc(upper(bodyNameOf(p.body)), 14);
     else place = "THE STARDRIFTER";
     drawText(canvas, x0 + 6, top + 5, ("THE ALMANAC - " + place).c_str(), HUD_AMBER);
@@ -132,17 +139,4 @@ void Game::renderAlmanac() {
     if (almanacScroll + ALMANAC_ROWS < n) drawText(canvas, UW - x0 - 10, y0 + ALMANAC_ROWS * 9, "\x03", HUD_DIM);
     const char* foot = settings.clockMode == 1 ? "REAL-TIME CLOCK: NO RUNNING TO AN EVENT  ESC CLOSE" : "UP/DOWN SELECT  ENTER RUNS TO IT  ESC CLOSE";
     drawTextCentered(canvas, UW / 2, bottom - 9, foot, HUD_DIM);
-}
-
-std::string Game::testAlmanacInfo() const {
-    std::string s = fmt("%s; %s; %zu events", almanacAt.ground ? "ground" : "ship", almanacStateLine().c_str(), almanacEvents.size());
-    for (size_t i = 0; i < almanacEvents.size() && i < 12; i++) s += fmt("%s %s in %s", i ? "," : ":", almanacLabelOf(almanacEvents[i]).c_str(), countdownString(almanacEvents[i].t - t).c_str());
-    if (almanacEvents.size() > 12) s += fmt(", +%zu more", almanacEvents.size() - 12);
-    return s;
-}
-
-bool Game::testAlmanacSelect(int kind, int body) {
-    for (size_t i = 0; i < almanacEvents.size(); i++)
-        if ((kind < 0 || almanacEvents[i].kind == kind) && (body < 0 || almanacEvents[i].body == body)) { almanacSel = (int)i; return true; }
-    return false;
 }

@@ -1,15 +1,10 @@
-// O6-03: drainage. Rivers that run downhill to a lake or the sea, valleys that join into a tree, lakes at the fill
-// levels of real depressions. The planet function stays one deterministic function of position: the drainage is a
-// precomputed layer of it, built per one-degree tile of a world on a lattice of about 400 m (`latticeN0` cells per
-// degree) from the planet function sampled at that scale without the drainage itself, by priority-flood filling
-// (every depression filled to its spill, the flow direction of every cell toward an outlet along a non-rising path),
-// D8 flow and area accumulation. A tile is computed over its core plus a margin of 0.3 degrees, so a river crossing a
-// tile border was routed with the same ground on both sides; the estimates of two tiles for one cell are blended by the
-// cell's distance to each tile's edge (`drainageAt`), so nothing jumps at a border. Tiles are cached (a few megabytes
-// each, an LRU of a few dozen), computed lazily by the first sample that needs one, or ahead of time by a landing
-// (`drainagePrefetch`). The channel between two lattice nodes is a Catmull-Rom curve through jittered node points,
-// swung into meanders on flat reaches; the water of a reach lies a metre under the filled ground of its nodes, so it
-// never rises along the flow; a filled depression is a lake whose shore is the contour of the fine ground at its level.
+// The drainage (O6-03): rivers running downhill to a lake or the sea, valleys joining into a tree, lakes at the fill levels of real
+// depressions. A precomputed layer of the planet function, a one-degree tile at a time on a lattice of about 400 m (`latticeN0` cells a
+// degree), from the planet function sampled at that scale without the drainage: a priority flood (every depression filled to its spill), D8
+// flow and area accumulation, over the tile's core and a margin of 0.3 degrees; two tiles' estimates of a cell are blended by its distance
+// to their edges (`drainageAt`). Tiles are cached (an LRU of a few dozen), made by the first sample that needs one or ahead by a landing
+// (`drainagePrefetch`). A channel is a Catmull-Rom curve through jittered nodes, meandering on flat reaches, its water a metre under its
+// nodes' filled ground (never rising along the flow); a filled depression is a lake whose shore is its level's contour.
 #pragma once
 #include "planetmap.h"
 
@@ -46,7 +41,9 @@ bool drainageLakeCell(const BodyGen& g, const Vec3& unit, double& level, bool bu
 // scan; the landing map's site probe while the site's tiles are not built yet: a probe must not build them)
 struct DrainageOff { explicit DrainageOff(bool off = true); ~DrainageOff(); bool off; };
 int drainageLatticeN0(double radiusKm);    // cells per degree of the lattice of a world of that radius
-// F-03: v after `steps` of `v = v - 0.005f`, bit for bit what that loop computes, a binade at a time (the routing's descent sinking a
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// v after `steps` of `v = v - 0.005f`, bit for bit what that loop computes, a binade at a time (the routing's descent sinking a
 // pit of two cells; the unit checks it against the loop)
 float drainageSink(float v, long steps);
 // tests: the flood's own numbers over a window of the lattice round a point: channel cells, lake cells, the largest

@@ -1,0 +1,315 @@
+R"VG(
+# world.vg: the world's words the records are told in (C-02's, moved here by H-03; H-04 adds the seasons, the weather by the
+# season, the second crop, the herd by what the people lived on, the trade's goods by the age and the people's similes).
+# The facts are the record model's (peoples/genres_schema.cpp, `schemaOf`): the star's class, the sky's moons, ring, lights and wanderers,
+# the land's traits, the climate, the water; the record's season (`season`, of `seasons`), year and age.
+# A list's number is its rule's option: (pl) plural, (mass) no article, (keep) the same word all through a record.
+
+# =====================================================================================================================
+# the sky
+# =====================================================================================================================
+
+# the sun by the class of the star the world circles (a companion's world has the companion's)
+sun
+  {sun.first}
+  {sun.second}
+sun.first
+  (sunclass=0) the sun
+  (sunclass=1) the small sun
+  (sunclass=2) the white sun
+  (sunclass=3) the great red sun
+  (sunclass=4) the small white sun
+  (sunclass=5) the beating star
+  (sunclass=6) the red sun
+  (sunclass=7) the blue sun
+  (sunclass=8) the amber sun
+  (sunclass=9) the ember sun
+  (sunclass=10) the white point
+  (sunclass=11) the young sun
+  (sunclass=12) the burning sun
+  (sunclass=13) the dark star
+sun.second
+  (sunclass=0) the sun
+  (sunclass=1) the orange sun
+  (sunclass=2) the great white sun
+  (sunclass=3) the swollen sun
+  (sunclass=4) the hard little sun
+  (sunclass=5) the star that beats
+  (sunclass=6) the dim red sun
+  (sunclass=7) the hard blue sun
+  (sunclass=8) the great amber sun
+  (sunclass=9) the sun in its soot
+  (sunclass=10) the needle sun
+  (sunclass=11) the sun in its cloud
+  (sunclass=12) the sun in its ring
+  (sunclass=13) the hole in the sky
+
+# anything up there
+sky
+  the stars
+  {sun.first}
+  (2 moons>0) {moon}
+  (moons=2) the two moons
+  (moons>2) the moons
+  (rings=1) the ring
+  (rings=1) the arch of the ring
+  (aurora=1) the lights in the north
+  (aurora=1) the curtains of light
+  (locked=1) the edge of the day
+  (companion=1) the second sun
+  (comet=1) the hairy star
+  (giant=1) the wanderer
+  (mother=1) the mother world
+
+# one thing up there, that a singular verb follows
+skyone (sing)
+  {sun.first}
+  (2 moons>0) {moon}
+  (moons=0) {star}
+  (rings=1) the ring
+  (companion=1) the second sun
+  (comet=1) the hairy star
+  (giant=1) the wanderer
+  (mother=1) the mother world
+
+# what can stand in the night sky (the suns left out)
+skynight (sing)
+  (2 moons>0) {moon}
+  (moons=0) {star}
+  (rings=1) the ring
+  (comet=1) the hairy star
+  (giant=1) the wanderer
+  (mother=1) the mother world
+
+bright
+  (moons>0) {moon} full
+  (moons=0) {star}
+
+skyverb
+  stood over {mountain}
+  rose late and red
+  was hidden by {weather.now}
+  was bright enough to read by
+  stood still over the gate
+  came up where it should not have
+
+# =====================================================================================================================
+# the land and the water
+# =====================================================================================================================
+
+land
+  (canyons=1) the canyons
+  (mesas=1) the flat hills
+  (karst=1) the stone towers
+  (rift=1) the great rift
+  (scarps=1) the scarps
+  (glacial=1) the ice valleys
+  (inselbergs=1) the lone hills
+  (cinders=1) the black fields
+  (chaos=1) the broken ground
+  (polygons=1) the patterned ground
+  (yardangs=1) the wind-cut ridges
+  (erg=1) the sand sea
+  (saltflats=1) the salt flats
+  (traps=1) the stair hills
+  (basin=1) the great basin
+  (coronae=1) the rings of hills
+  (spires=1) the spires
+  (geysers=1) the hot springs
+  (archipelago=1) the islands
+  (lakeland=1) the lake country
+  (snowball=1) the ice
+  (storms=1) the storm country
+  (haze=1) the haze
+  (greatflora=1) the great trees
+  (glowflora=1) the glowing woods
+  (deadforest=1) the dead forest
+  (redsoil=1) the red earth
+  (blacksand=1) the black sand
+  (chalk=1) the white cliffs
+  (desert=1) the dry country
+  (desert=1) the dunes
+  (desert=0) the hills
+  (desert=0) the forest
+  (desert=0 highmountains=1) the high mountains
+  (desert=0) the marsh
+
+# where the water is: a living world's rivers, lakes and sea; a desert's while they ran, then what is left
+water
+  (desert=0) {river}
+  (desert=0) the lake
+  (desert=0 coast=1) the sea
+  (desert=0) the spring under {mountain}
+  (desert=1 stage<0) {river}
+  (desert=1 stage<0 coast=1) the quay
+  (desert=1) the well
+  (desert=1) the cistern
+  (desert=1 stage>=1) the last spring
+
+dest
+  the mountains
+  the north
+  the high country
+  the coast
+  the south
+
+# =====================================================================================================================
+# what grows and what is kept
+# =====================================================================================================================
+
+
+
+
+
+
+
+
+skill
+  mend a net
+  set a bone
+  make the {crop} beer
+  (age<=prehistoric) knap a blade
+  (age<=prehistoric) read the tracks
+  (age>=medieval) read the lintel
+  (age>=medieval) cut a stela
+  (age>=industrial) read the timetables
+  (age>=industrial) mend the pump
+
+
+offering
+  the first cup
+  bread and salt
+  a goat
+  the first of the {crop}
+  oil and a lamp
+
+# what traders carry
+trade (mass)
+  salt
+  cloth
+  oil
+  seed
+  (age>=medieval) iron
+  (age>=medieval) lamp oil
+  (age>=industrial) coal
+  (age>=industrial) tinned meat
+
+# =====================================================================================================================
+# the year: the record's season (`season`: its index, `seasons` four on a tilted world, else two), the next and the last
+# =====================================================================================================================
+
+season.now
+  (seasons=4 season=0) spring
+  (seasons=4 season=1) summer
+  (seasons=4 season=2) autumn
+  (seasons=4 season=3) winter
+  (seasons=2 desert=0 season=0) the rains
+  (seasons=2 desert=0 season=1) the dry months
+  (seasons=2 desert=1 season=0) the cool months
+  (seasons=2 desert=1 season=1) the hot months
+season.this
+  (seasons=4 season=0) this spring
+  (seasons=4 season=1) this summer
+  (seasons=4 season=2) this autumn
+  (seasons=4 season=3) this winter
+  (seasons=2 desert=0 season=0) these rains
+  (seasons=2 desert=0 season=1) this dry season
+  (seasons=2 desert=1 season=0) these cool months
+  (seasons=2 desert=1 season=1) these hot months
+season.next
+  (seasons=4 season=0) summer
+  (seasons=4 season=1) autumn
+  (seasons=4 season=2) winter
+  (seasons=4 season=3) spring
+  (seasons=2 desert=0 season=0) the dry months
+  (seasons=2 desert=0 season=1) the rains
+  (seasons=2 desert=1 season=0) the hot months
+  (seasons=2 desert=1 season=1) the cool months
+season.any
+  {season.now}
+  {season.next}
+
+# the weather of the record's season (no frost in summer)
+weather.now
+  (desert=1 seasons=2 season=1) the heat
+  (desert=1 seasons=2 season=1) the dust
+  (desert=1 seasons=2 season=0) the cold nights
+  (desert=1 seasons=2 season=0) the wind off the dunes
+  (desert=1 seasons=4 season>=1 season<=2) the heat
+  (desert=1 seasons=4 season=0|season=3) the cold nights
+  (desert=1) the dust
+  (desert=1) the wind
+  (desert=0 seasons=4 season=3 cold=1) the snow
+  (desert=0 seasons=4 season=3) the frost
+  (desert=0 seasons=4 season=3) the sleet
+  (desert=0 seasons=4 season=0) the late frost
+  (desert=0 seasons=4 season=0) the spring rains
+  (desert=0 seasons=4 season=1) the heat
+  (desert=0 seasons=4 season=1) the storms
+  (desert=0 seasons=4 season=2) the autumn gales
+  (desert=0 seasons=4 season=2) the fog
+  (desert=0 seasons=2 season=0) the rains
+  (desert=0 seasons=2 season=0) the floods
+  (desert=0 seasons=2 season=1) the heat
+  (desert=0 seasons=2 season=1) the dry wind
+  (desert=0) the wind
+
+# any weather of the world (a year's, a story's)
+weather
+  (desert=1) the dust
+  (desert=1) the heat
+  (desert=1) the wind
+  (desert=1) the cold nights
+  (desert=0 cold=1) the snow
+  (desert=0 cold=1) the frost
+  (desert=0) the fog
+  (desert=0) the rains
+  (desert=0) the storms
+  (desert=0) the wind
+
+# =====================================================================================================================
+# counts (written as they are read: the realiser takes their value for the nouns that follow `{#n|noun}`)
+# =====================================================================================================================
+
+n
+  two
+  three
+  four
+  five
+  six
+  seven
+  eight
+  nine
+  ten
+  twelve
+  twenty
+
+nth
+  second
+  third
+  fourth
+  fifth
+
+nbig
+  forty
+  sixty
+  a hundred
+  two hundred
+  three hundred
+
+# =====================================================================================================================
+# the people's own turns of phrase, from their world (Mark R. Johnson's: a culture's references are its geography and sky)
+# =====================================================================================================================
+
+simile
+  as patient as {skyone}
+  older than {mountain}
+  slower than {river} in {season.any}
+  as sure as the {crop} coming up
+  (moons>0) as faithful as {moon}
+  (desert=1) as dry as the old quay
+  (desert=0) as wet as the rains
+  as steady as {star}
+  (comet=1) as rare as the hairy star
+  as old as the {#number} stones
+)VG"

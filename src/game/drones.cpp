@@ -1,4 +1,4 @@
-// C-18 (2026-10-11): the drone bay (game.h's DroneBay; what a world holds and a trip's haul: galaxy/drones.h; the drones drawn:
+// C-18 (2026-10-11): the drone bay (game.h's DroneBay; what a world holds and a trip's haul: peoples/drones.h; the drones drawn:
 // game/drone_draw.cpp). The user's request: "add three drones with robotic hands (don't model them exactly like you modeled surface drone
 // but still in similar design) that you can send from stardrifter to felisian/desert planets with civilizations. When you send them each can
 // bring 2-8 items on stardrifter each ... cooldown is 5 minutes. They can bring both shards (all three kinds) and instruments".
@@ -12,8 +12,8 @@
 // they had found.
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"
-#include "galaxy/ruins.h"
+#include "peoples/records.h"
+#include "peoples/ruins.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <cmath>
@@ -37,7 +37,6 @@ const char* placeWord(int sclass) {
     }
 }
 double smooth01(double u) { u = clampd(u, 0, 1); return u * u * (3 - 2 * u); }
-std::string findKeyOf(const std::string& world, int kind, int index) { return world + (kind == DF_INSTRUMENT ? "/I" : "/S") + std::to_string(index); }
 double arcBetween(double lat0, double lon0, double lat1, double lon1) {
     const double c = std::sin(lat0) * std::sin(lat1) + std::cos(lat0) * std::cos(lat1) * std::cos(lon1 - lon0);
     return std::acos(clampd(c, -1, 1));
@@ -49,12 +48,15 @@ void lerpLatLon(double lat0, double lon0, double lat1, double lon1, double u, do
 std::string kmString(double km) { return km >= 10 ? fmt("%.0f KM", km) : fmt("%.1f KM", std::max(0.0, km)); }
 }
 
+// the ship is parked at the trip's world
 bool Game::droneBayHere() const {
     return sys.valid && sys.star.seed == bay.starSeed && ship.mode == ShipState::PARKED && ship.parkedBody == bay.body && ship.parkedBelt < 0 &&
            bay.body >= 0 && bay.body < (int)sys.bodies.size();
 }
+// not out and charged (five minutes from the last trip's end)
 bool Game::droneBayReady() const { return !bay.out && (bay.clock < 0 || bay.clock >= bay.back + DRONE_COOLDOWN_S); }
 double Game::droneCooldownLeft() const { return bay.clock < 0 || bay.out ? 0.0 : std::max(0.0, bay.back + DRONE_COOLDOWN_S - bay.clock); }
+// seconds until the last of them docks (-1: not out, or its trip not laid out yet)
 double Game::droneBackIn() const {   // the last dock's clock from now
     if (!bay.out || !bay.planned) return -1;
     double last = bay.clock;
@@ -62,6 +64,7 @@ double Game::droneBackIn() const {   // the last dock's clock from now
     return last - bay.clock;
 }
 std::string Game::droneFindKey(const DroneFindRec& f) const { return findKeyOf(bay.worldKey, f.kind, f.index); }
+// "A CLAY TABLET", "A WAX CYLINDER", "A SHELL PIPE"
 std::string Game::droneFindLabel(const DroneFindRec& f) const {
     if (f.kind == DF_INSTRUMENT) return f.name.empty() ? std::string("AN INSTRUMENT") : f.name;
     return RECORD_MEDIUM_HUD[clampi(f.medium, 0, RM_COUNT - 1)];
@@ -81,21 +84,22 @@ void Game::droneWorldAsk(int body) {
     });
 }
 
+// the drones sent down (or the refusal's status)
 void Game::droneBayLaunch() {
-    auto refuse = [&](const std::string& why) { status(why, 5); audio.beep = 3; };
-    if (bay.out) { refuse("THE DRONES ARE DOWN THERE - THEY COME BACK BY THEMSELVES"); return; }
-    if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); refuse(fmt("THE DRONES ARE CHARGING - READY IN %d:%02d", s / 60, s % 60)); return; }
+    if (bay.out) { refuse("THE DRONES ARE DOWN THERE - THEY COME BACK BY THEMSELVES", 5); return; }
+    if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); refuse(fmt("THE DRONES ARE CHARGING - READY IN %d:%02d", s / 60, s % 60), 5); return; }
     if (!sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) {
-        refuse("THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD"); return;
+        refuse("THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD", 5); return;
     }
     const int b = ship.parkedBody;
     const BodyGen& g = spaceR.genFor(sys.bodies[b]);
-    if (!worldHadCivilisation(g)) { refuse("NO PEOPLE LIVED DOWN THERE: NOTHING TO BRING"); return; }
+    if (!worldHadCivilisation(g)) { refuse("NO PEOPLE LIVED DOWN THERE: NOTHING TO BRING", 5); return; }
     const std::string wk = worldKeyOf(b);
     if (droneWorldHere(sys.star.seed, b)) {   // all of it held already
         int left = 0;
-        for (const DroneItem& it : bay.world.items) if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
-        if (left == 0) { refuse("THE SHIP HOLDS ALL THEY LEFT DOWN THERE"); return; }
+        for (const DroneItem& it : bay.world.items)
+            if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
+        if (left == 0) { refuse("THE SHIP HOLDS ALL THEY LEFT DOWN THERE", 5); return; }
     }
     bay.out = true; bay.planned = false; bay.recalled = false; bay.clock = 0; bay.back = 0;
     bay.starSeed = sys.star.seed; bay.body = b; bay.worldKey = wk; bay.worldName = upper(bodyNameOf(b));
@@ -108,7 +112,7 @@ void Game::droneBayLaunch() {
     if (droneWorldHere(sys.star.seed, b)) dronePlanTrip(); else droneWorldAsk(b);
     logEvent("DRONES", fmt("THE THREE DRONES SENT DOWN TO %s FROM ITS ORBIT", bay.worldName.c_str()));
     status("THE DRONES ARE AWAY - E AT THEIR RACK FOLLOWS THEM", 6);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 // the haul drawn and each drone's clock laid out: out of its port, the fall to its first stop, two minutes searching (DRONE_SEARCH_S: the flights
@@ -181,9 +185,10 @@ void Game::droneDock(int k) {
     R.finds.erase(std::remove_if(R.finds.begin(), R.finds.end(), [&](const DroneFindRec& f) { return !f.aboard; }), R.finds.end());
     if (surf.valid && sys.valid && sys.star.seed == bay.starSeed && surf.site.body == bay.body) syncShards();   // the explorer on that world: gone from the ruins
     guide.save(guidePath);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
+// the ship left the parking: the drones aboard with what they had found
 void Game::droneRecall() {
     for (int k = 0; k < DRONE_COUNT; k++) if (!bay.run[k].docked) { bay.run[k].dock = bay.clock; droneDock(k); }
     bay.recalled = true;
@@ -191,6 +196,7 @@ void Game::droneRecall() {
     droneTripEnd();
 }
 
+// the last docked: the log, the status
 void Game::droneTripEnd() {
     bay.out = false; bay.back = bay.clock;   // the charge from now
     int n[DF_COUNT] = {}, total = 0;
@@ -208,12 +214,15 @@ void Game::droneTripEnd() {
     std::string list;
     for (size_t i = 0; i < parts.size(); i++) list += (i ? (i + 1 == parts.size() ? " AND " : ", ") : "") + parts[i];
     if (list.empty()) list = "NOTHING";
-    logEvent("DRONES", fmt("THE DRONES CAME BACK FROM %s%s WITH %s FROM %d PLACE%s SEARCHED", bay.worldName.c_str(), bay.recalled ? " AS THE SHIP LEFT" : "", list.c_str(), (int)where.size(), where.size() == 1 ? "" : "S"));
+    logEvent("DRONES",
+            fmt("THE DRONES CAME BACK FROM %s%s WITH %s FROM %d PLACE%s SEARCHED", bay.worldName.c_str(), bay.recalled ? " AS THE SHIP LEFT" : "", list.c_str(), (int)where.size(),
+                    where.size() == 1 ? "" : "S"));
     if (bay.recalled) status(fmt("THE DRONES CAME BACK AS THE SHIP LEFT: %d FINDS", total), 6);
     else status(total ? fmt("THE DRONES ARE BACK WITH %d FINDS", total) : std::string("THE DRONES ARE BACK WITH NOTHING"), 5);
     if (total) { std::string s; for (size_t i = 0; i < parts.size(); i++) s += (i ? ", " : "") + parts[i]; statusNext = s; statusNextSecs = 5; }
 }
 
+// the thread's result taken (once it is done)
 void Game::droneCollect() {
     if (droneJobBusy || !droneJob.joinable()) return;
     droneJob.join();
@@ -221,6 +230,7 @@ void Game::droneCollect() {
     bay.worldValid = true; bay.worldStar = droneJobStar; bay.worldBody = droneJobBody;
 }
 
+// every simulating frame: the thread's result, the clock, the docks, the recall
 void Game::updateDrones(double realDt) {
     droneCollect();   // the world's items, read on the thread
     if (bay.clock < 0) return;
@@ -238,6 +248,7 @@ void Game::updateDrones(double realDt) {
 
 // ---- where each is and what it does ---------------------------------------------------------------------------------------------------
 
+// where on the world the drone is (false: aboard or in the bay's hatch)
 bool Game::dronePosition(int k, double& lat, double& lon) const {
     lat = bay.subLat; lon = bay.subLon;
     if (!bay.out || k < 0 || k >= DRONE_COUNT) return false;
@@ -261,6 +272,7 @@ bool Game::dronePosition(int k, double& lat, double& lon) const {
     return true;
 }
 
+// its arms, its hands, its fans now
 DronePose Game::dronePoseAt(int k) const {
     DronePose p;
     p.number = k + 1; p.blink = realTime + k * 0.43; p.spin = realTime * 7.5 * (1 + 0.13 * k);
@@ -281,6 +293,7 @@ DronePose Game::dronePoseAt(int k) const {
     return p;
 }
 
+// "DESCENDING 4,200 KM", "SEARCHING A CITY", "ABOARD"
 std::string Game::droneStateLine(int k) const {
     if (k < 0 || k >= DRONE_COUNT) return std::string();
     const DroneRun& R = bay.run[k];
@@ -298,9 +311,10 @@ std::string Game::droneStateLine(int k) const {
 
 // ---- the screen ------------------------------------------------------------------------------------------------------------------
 
+// the body the screen shows: the trip's, else the one the ship is parked at (-1 none)
 int Game::droneBayWorld() const { return bay.out ? bay.body : (sys.valid && ship.mode == ShipState::PARKED && ship.parkedBelt < 0 ? ship.parkedBody : -1); }
 
-void Game::openDroneBay() {
+void Game::droneBayEnter() {
     radarOff(); if (tele.on) telescopeOff();
     const int b = droneBayWorld();
     if (sys.valid && b >= 0 && b < (int)sys.bodies.size()) {
@@ -308,7 +322,7 @@ void Game::openDroneBay() {
         if (worldHadCivilisation(spaceR.genFor(sys.bodies[b]))) droneWorldAsk(b);
     }
     bay.listTop = 0;
-    state = GameState::DRONES; audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // R-414 (2026-10-11): a trip's finds go from the rack once its screen has shown them (the user: "all the findings should be cleared after you
@@ -321,20 +335,23 @@ void Game::droneFindsSeen() {
     bay.listTop = 0;
 }
 
-void Game::updateDroneBay(const Input& in, double realDt) {
+void Game::updateDroneBay(const Input& in, double dt, double realDt) {
     {   // F-02: the world's map once its thread has made it (the screen opens at once: THE MAP IS BEING DRAWN until then)
         const int b = droneBayWorld();
         if (sys.valid && b >= 0 && b < (int)sys.bodies.size() && bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);
     }
-    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl())) { droneFindsSeen(); state = GameState::SPACE; audio.beep = 4; return; }
-    if (in.wasPressed(KEY_UP)) { bay.listTop = std::max(0, bay.listTop - 1); audio.beep = 4; }
-    if (in.wasPressed(KEY_DOWN)) { bay.listTop++; audio.beep = 4; }
+    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl())) { droneFindsSeen(); closeScreen(); audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_UP)) { bay.listTop = std::max(0, bay.listTop - 1); audio.beep = BEEP_UI; }
+    if (in.wasPressed(KEY_DOWN)) { bay.listTop++; audio.beep = BEEP_UI; }
     if (enterKey(in)) {
         const bool was = bay.out;
         droneBayLaunch();
-        if (!was && bay.out) state = GameState::SPACE;   // back at the rack to see them go
+        if (!was && bay.out) closeScreen();   // back at the rack to see them go
     }
 }
+
+// U-04: the drone bay's commands (the controller's first page)
+void Game::droneBayPad(PadMenu& m) const { m.title = "THE DRONE BAY"; m.item("SEND THE DRONES", KEY_ENTER); m.item("BACK TO THE CABIN", KEY_ESCAPE); }
 
 void Game::renderDroneBay() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
@@ -376,7 +393,8 @@ void Game::renderDroneBay() {
         drawRectRGB(canvas, x0 - 1, y0 - 1, x0 + w, y0 + h, rgb(40, 52, 40));
         const bool aboard = bay.clock < 0 || !bay.out || R.docked;
         const DronePose pose = dronePoseAt(k);
-        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && !droneBayReady() ? rgb(150, 140, 80) : rgb(255, 240, 140));   // out: its face three-quarters on
+        // out: its face three-quarters on
+        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && !droneBayReady() ? rgb(150, 140, 80) : rgb(255, 240, 140));
         drawText(canvas, x0 + 2, y0 + 2, fmt("%d", k + 1).c_str(), DRONE_COL[k]);
         std::string right;
         int found = 0; for (const DroneFindRec& f : R.finds) if (f.t <= bay.clock || f.aboard) found++;
@@ -399,9 +417,21 @@ void Game::renderDroneBay() {
             const int sy = std::min(bay.mapH - 1, (y - my * S) * bay.mapH / (mh * S));
             for (int x = mx * S; x < (mx + mw) * S; x++) canvas.px[(size_t)y * canvas.w + x] = bay.map[(size_t)sy * bay.mapW + std::min(bay.mapW - 1, (x - mx * S) * bay.mapW / (mw * S))];
         }
-        auto toMap = [&](double lat, double lon, int& x, int& y) { x = mx + (int)(wrap2pi(lon + PI) / TAU * mw); y = my + (int)((0.5 - lat / PI) * mh); x = clampi(x, mx, mx + mw - 1); y = clampi(y, my, my + mh - 1); };
+        auto toMap = [&](double lat, double lon, int& x, int& y) {
+            x = mx + (int)(wrap2pi(lon + PI) / TAU * mw);
+            y = my + (int)((0.5 - lat / PI) * mh);
+            x = clampi(x, mx, mx + mw - 1);
+            y = clampi(y, my, my + mh - 1);
+        };
         auto dotted = [&](double lat0, double lon0, double lat1, double lon1, uint32_t col) {
-            for (int i = 0; i <= 24; i++) { if (i % 2) continue; double la, lo; lerpLatLon(lat0, lon0, lat1, lon1, i / 24.0, la, lo); int x, y; toMap(la, lo, x, y); fillRectRGB(canvas, x, y, x, y, col); }
+            for (int i = 0; i <= 24; i++) {
+                if (i % 2) continue;
+                double la, lo;
+                lerpLatLon(lat0, lon0, lat1, lon1, i / 24.0, la, lo);
+                int x, y;
+                toMap(la, lo, x, y);
+                fillRectRGB(canvas, x, y, x, y, col);
+            }
         };
         double sLat = bay.subLat, sLon = bay.subLon;
         if (!bay.out && ship.mode == ShipState::PARKED && ship.parkedBody == b) StarSystem::latLonFromBody(normalize(sys.bodyFrame(b, t) * ship.parkDir), sLat, sLon);
@@ -455,7 +485,7 @@ void Game::renderDroneBay() {
     std::sort(order.begin(), order.end(), [&](int a, int c) { return finds[a]->t > finds[c]->t; });
     const int rows = 4, y0 = my + mh + 24;
     if (finds.empty()) {
-        static const char* help[] = {"EACH DRONE BRINGS 2 TO 8 OF WHAT", "THE SHIP LACKS, FROM THE PLACES", "THAT KEEP THEM: 2 MINUTES DOWN", "THERE, THEN 5 MINUTES TO CHARGE"};
+        static const char* const help[] = {"EACH DRONE BRINGS 2 TO 8 OF WHAT", "THE SHIP LACKS, FROM THE PLACES", "THAT KEEP THEM: 2 MINUTES DOWN", "THERE, THEN 5 MINUTES TO CHARGE"};
         for (int i = 0; i < rows; i++) drawText(canvas, mx, y0 + i * 9, help[i], HUD_DIM);
     } else {
         bay.listTop = std::max(0, std::min(bay.listTop, (int)finds.size() - rows));
@@ -477,59 +507,4 @@ void Game::renderDroneBay() {
     }
     const bool can = droneBayReady() && world && people;
     if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 10, can ? "ENTER SENDS THE DRONES  UP/DOWN THE FINDS  ESC" : "UP/DOWN THE FINDS  ESC BACK", HUD_DIM);
-}
-
-// ---- the harness ---------------------------------------------------------------------------------------------------------------------
-
-bool Game::testDronesLaunch() { const bool was = bay.out; droneBayLaunch(); return !was && bay.out; }
-
-void Game::testDronesSettle() {
-    while (droneJobBusy) std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    droneCollect();
-    if (bay.out && !bay.planned) dronePlanTrip();
-}
-
-void Game::testDronesSkip(double clock) {
-    while (bay.clock >= 0 && bay.clock < clock) updateDrones(std::min(0.25, clock - bay.clock + 1e-9));
-}
-
-int Game::testDronesFinds(int kind) const {
-    int n = 0;
-    for (const DroneRun& R : bay.run) for (const DroneFindRec& f : R.finds) if (kind < 0 || f.kind == kind) n++;
-    return n;
-}
-int Game::testDronesAboard() const {
-    int n = 0;
-    for (const DroneRun& R : bay.run) for (const DroneFindRec& f : R.finds) if (f.aboard) n++;
-    return n;
-}
-std::string Game::testDronesFindKey(int k, int i) const {
-    if (k < 0 || k >= DRONE_COUNT || i < 0 || i >= (int)bay.run[k].finds.size()) return std::string();
-    return droneFindKey(bay.run[k].finds[i]);
-}
-
-int Game::testDronesWorldItems(int kind, bool unheld) {
-    if (!sys.valid || ship.parkedBody < 0) return -1;
-    droneWorldAsk(ship.parkedBody);
-    testDronesSettle();
-    if (!droneWorldHere(sys.star.seed, ship.parkedBody)) return -1;
-    const std::string wk = worldKeyOf(ship.parkedBody);
-    int n = 0;
-    for (const DroneItem& it : bay.world.items) {
-        if (kind >= 0 && it.kind != kind) continue;
-        const std::string key = findKeyOf(wk, it.kind, it.index);
-        if (unheld && (it.kind == DF_INSTRUMENT ? guide.instruments.count(key) : guide.shards.count(key))) continue;
-        n++;
-    }
-    return n;
-}
-
-std::string Game::testDronesInfo() const {
-    std::string s = fmt("the bay: clock %.1f, %s%s, cooldown %.0f s; ", bay.clock, bay.out ? "out" : (droneBayReady() ? "ready" : "charging"), bay.planned ? ", planned" : "", droneCooldownLeft());
-    if (bay.worldValid) s += fmt("the world's items %d (%d places, homes %s, read in %.0f ms); ", (int)bay.world.items.size(), (int)bay.world.places.size(), bay.world.homes ? "yes" : "no", bay.world.buildMs);
-    for (int k = 0; k < DRONE_COUNT; k++) {
-        const DroneRun& R = bay.run[k];
-        s += fmt("drone %d: %s, wanted %d, %d finds, %d stops (out %.1f down %.1f up %.1f dock %.1f)%s", k + 1, droneStateLine(k).c_str(), R.wanted, (int)R.finds.size(), (int)R.stops.size(), R.out, R.down, R.up, R.dock, k + 1 < DRONE_COUNT ? "; " : "");
-    }
-    return s;
 }

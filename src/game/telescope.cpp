@@ -36,8 +36,8 @@ Proj Game::telescopeProj() const {
 double Game::telescopeFieldDeg() const { return 2 * std::atan(std::tan(settings.fovDeg * 0.5 * DEG) / telescopeZoom()) / DEG; }
 
 void Game::telescopeToggle() {
-    if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); audio.beep = 4; return; }
-    if (ship.mode == ShipState::VIMANA) { status("NOTHING TO SEE IN THE FLIGHT - THE TELESCOPE WAITS", 4); audio.beep = 3; return; }
+    if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); audio.beep = BEEP_UI; return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING TO SEE IN THE FLIGHT - THE TELESCOPE WAITS"); return; }
     if (radar.on) radarOff();
     tele.on = true; tele.track = TELE_NONE; tele.offYaw = 0; tele.offPitch = 0;
     cabin.yaw = 0; cabin.pitch = 0;   // the eye is at the eyepiece: the view is the ship's attitude
@@ -45,19 +45,17 @@ void Game::telescopeToggle() {
     telescopeFindTarget();            // what the ship points at is followed from the start: the parked body where the reticle rests (the side faced), another body on its centre
     if (tele.target >= 0 || tele.target == TELE_SUN) { telescopeTrack(tele.target, !(telescopeStabilised() && tele.target == tele.frameBody)); statusNext = statusMsg; statusNextSecs = 3; }
     status("TELESCOPE: +/- ZOOM  ENTER TRACKS  N NAMES  Z STOWS", 4);   // under 52 characters: the line's width (the HUD reads the power)
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::telescopeOff() { tele.on = false; tele.track = TELE_NONE; tele.target = TELE_NONE; tele.frameBody = -1; }
 
 void Game::telescopeZoomStep(int dir) {
     int s = clampi(tele.step + dir, 1, TELE_MAX_STEP);
-    if (s == tele.step) { audio.beep = 3; return; }
+    if (s == tele.step) { audio.beep = BEEP_ERROR; return; }
     tele.step = s;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
-
-namespace { inline Vec3 forwardOf(double yaw, double pitch) { return Vec3(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch)); } }
 
 // Enter (and the opening) tracks a body: its centre brought under the reticle (`recentre`), or, under the stabiliser on the
 // parked body, the view kept where it is and held
@@ -67,7 +65,7 @@ void Game::telescopeTrack(int id, bool recentre) {
     if (recentre || !held) telescopeAim();
     if (held) telescopeHoldView();
     status(fmt(held ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(id), 26).c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // R-405: the stabiliser. A ship parked at a body holds its parking direction and the view's axis in the body's frame while
@@ -78,6 +76,7 @@ bool Game::telescopeStabilised() const {
     return tele.on && tele.frameBody >= 0 && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody == tele.frameBody && ship.parkedBelt < 0 && tele.frameBody < (int)sys.bodies.size();
 }
 
+// R-405: the stabiliser (the parking and the view held in the parked body's frame while the eye is at the eyepiece)
 void Game::telescopeHoldFrame() {
     tele.frameBody = -1;
     if (!tele.on || !sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) return;
@@ -122,7 +121,7 @@ void Game::telescopeFindTarget() {
     };
     if (sys.valid && ship.mode != ShipState::VIMANA) {
         for (int i = 0; i < (int)sys.bodies.size(); i++) consider(i, sys.bodyPos(i, t), sys.bodies[i].radiusKm);
-        consider(TELE_SUN, sys.star.pos, sys.star.radiusKm);
+        if (!sys.sunless()) consider(TELE_SUN, sys.star.pos, sys.star.radiusKm);   // D-01: a drifter's place has no sun to aim at
     }
     if (tele.target != TELE_NONE) return;
     bestD = 14 * S;
@@ -135,6 +134,7 @@ void Game::telescopeFindTarget() {
     }
 }
 
+// `plain`: for a text file (DEG for the glyph)
 std::string Game::telescopeTargetName(int id) const {
     if (id >= 0 && sys.valid && id < (int)sys.bodies.size()) return upper(bodyNameOf(id));
     if (id == TELE_SUN && sys.valid) return upper(starNameOf(sys.star));
@@ -147,10 +147,13 @@ std::string Game::telescopeTargetLine(bool plain) const {
     int id = tele.target;
     if (id >= 0 && sys.valid && id < (int)sys.bodies.size()) {
         const Body& b = sys.bodies[id];
-        std::string kind = b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : std::string(shortType(b.type)) + (b.parent >= 0 ? " MOON" : "");
+        std::string kind =
+                b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : std::string(shortType(b.type)) + (b.parent >= 0 ? " MOON" : "");
         return fmt("%s  %s  %s  %s", trunc(telescopeTargetName(id), 18).c_str(), kind.c_str(), distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
     }
-    if (id == TELE_SUN && sys.valid) return fmt("%s  %s %s  %s  %s", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[sys.star.cls].code, STAR_CLASSES[sys.star.cls].name, distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
+    if (id == TELE_SUN && sys.valid)
+        return fmt("%s  %s %s  %s  %s", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[sys.star.cls].code, STAR_CLASSES[sys.star.cls].name,
+                distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
     if (id == TELE_STAR) {
         Star full; starInSector(tele.targetStar.sx, tele.targetStar.sy, tele.targetStar.sz, full, true);
         return fmt("%s  %s %s  %.2f LY", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, tele.targetRangeKm / SECTOR_KM);
@@ -161,15 +164,15 @@ std::string Game::telescopeTargetLine(bool plain) const {
 // N: the target named through the guide, as the guide menu names a world or the star; a star of the neighbourhood gets a name
 // of its own (text entry kind 8)
 void Game::telescopeName() {
-    guideReturn = GameState::SPACE; returnState = GameState::SPACE;
+    returnState = GameState::SPACE;
     if (tele.target >= 0 && sys.valid) {
         const Body& b = sys.bodies[tele.target];
         textBody = tele.target;
         const char* what = b.type == PT_COMPANION ? "NAME THE SECOND SUN" : (b.type == PT_COMET ? "NAME THE COMET" : (b.parent >= 0 ? "NAME THIS MOON" : "NAME THIS WORLD"));
-        beginTextEntry(what, 2, bodyNamed(tele.target) ? upper(bodyNameOf(tele.target)) : std::string());
-    } else if (tele.target == TELE_SUN && sys.valid) beginTextEntry("NAME THIS STAR", 1, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
-    else if (tele.target == TELE_STAR) { textStar = tele.targetStar; beginTextEntry("NAME THE STAR", 8, starNamed(textStar) ? upper(starNameOf(textStar)) : std::string()); }
-    else { status("NOTHING UNDER THE RETICLE TO NAME", 3); audio.beep = 3; }
+        beginTextEntry(what, TEXT_WORLD, bodyNamed(tele.target) ? upper(bodyNameOf(tele.target)) : std::string());
+    } else if (tele.target == TELE_SUN && sys.valid) beginTextEntry("NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
+    else if (tele.target == TELE_STAR) { textStar = tele.targetStar; beginTextEntry("NAME THE STAR", TEXT_SKY_STAR, starNamed(textStar) ? upper(starNameOf(textStar)) : std::string()); }
+    else { refuse("NOTHING UNDER THE RETICLE TO NAME", 3); }
 }
 
 // the eyepiece's controls: steering at a rate that falls with the magnification (the offset from the tracked body's centre
@@ -201,13 +204,14 @@ void Game::updateTelescope(const Input& in, double realDt) {
     if (held) telescopeHoldView();
     telescopeFindTarget();
     if (enterKey(in) && !ship.targeting) {
-        if (tele.track != TELE_NONE) { tele.track = TELE_NONE; status("TRACKING OFF", 2); audio.beep = 4; }
+        if (tele.track != TELE_NONE) { tele.track = TELE_NONE; status("TRACKING OFF", 2); audio.beep = BEEP_UI; }
         else if (tele.target >= 0 || tele.target == TELE_SUN) telescopeTrack(tele.target);
-        else { status("NOTHING UNDER THE RETICLE TO TRACK", 3); audio.beep = 3; }
+        else { refuse("NOTHING UNDER THE RETICLE TO TRACK", 3); }
     }
     if (in.wasPressed(KEY_N) && !in.ctrl() && !ship.targeting) telescopeName();
 }
 
+// the tracked body, else the one under the reticle, else -1
 int Game::telescopePlateBody() const {
     if (!tele.on || !sys.valid || ship.mode == ShipState::VIMANA) return -1;
     if (tele.track >= 0 && tele.track < (int)sys.bodies.size()) return tele.track;
@@ -264,60 +268,22 @@ void Game::renderTelescopeHUD() {
         std::string lab = distanceString(km);
         drawTextShadow(canvas, UW - 18 - textWidth(lab.c_str()), by - 10, lab.c_str(), fc, HUD_SHADOW);
     }
-    if (tele.track != TELE_NONE) drawTextShadow(canvas, 18, UH - 34, fmt(telescopeStabilised() && tele.track == tele.frameBody ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(tele.track), 22).c_str()).c_str(), HUD_CYAN, HUD_SHADOW);
+    if (tele.track != TELE_NONE)
+        drawTextShadow(canvas, 18, UH - 34, fmt(telescopeStabilised() && tele.track == tele.frameBody ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(tele.track), 22).c_str()).c_str(),
+                HUD_CYAN, HUD_SHADOW);
     else if (tele.target >= 0 || tele.target == TELE_SUN) drawTextShadow(canvas, 18, UH - 34, "ENTER TRACKS THE TARGET", fd, HUD_SHADOW);
     {   // X-01: parked at a giant, the reticle is where a probe goes
         double plat, plon;
-        if (!probe.active && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type) && viewGround(ship.parkedBody, plat, plon))
-            drawTextShadow(canvas, 18, UH - 42, fmt("C SENDS A PROBE TO %.1f%c %s %.1f%c %s", std::fabs(plat / DEG), CH_DEGREE, plat >= 0 ? "N" : "S", std::fabs(plon / DEG), CH_DEGREE, plon >= 0 ? "E" : "W").c_str(), HUD_AMBER, HUD_SHADOW);
+        if (!probe.active && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type) &&
+                viewGround(ship.parkedBody, plat, plon))
+            drawTextShadow(canvas, 18, UH - 42,
+                    fmt("C SENDS A PROBE TO %.1f%c %s %.1f%c %s", std::fabs(plat / DEG), CH_DEGREE, plat >= 0 ? "N" : "S", std::fabs(plon / DEG), CH_DEGREE, plon >= 0 ? "E" : "W").c_str(), HUD_AMBER,
+                    HUD_SHADOW);
     }
     drawTextShadow(canvas, 18, UH - 26, "+/- ZOOM  N NAMES  P PHOTO  Z / ESC STOWS", fd, HUD_SHADOW);
 }
 
-void Game::testTelescopeSettle() { Input in; telePlateFinish = true; frame(in, 1.0 / 30); }
-std::string Game::testTelescopePlate() const { return spaceR.plateInfo(); }
-double Game::testTelescopePlateProgress() const { int pb = telescopePlateBody(); return pb >= 0 && spaceR.plate().body == pb ? spaceR.plateProgress() : -1; }
-
-// the plate's own cells (ones that hold their own sample) against the planet function sampled again at the cell's centre
-// and the plate's detail: the same function with the same arguments must give the same numbers
-void Game::testPlateCheck(int n, double& maxAlb, int& matMiss, double& maxH) {
-    const DetailPlate& p = spaceR.plate();
-    maxAlb = 0; matMiss = 0; maxH = 0;
-    if (!p.valid() || p.body < 0 || !sys.valid || p.body >= (int)sys.bodies.size()) { matMiss = -1; return; }
-    const BodyGen& g = spaceR.genFor(sys.bodies[p.body]);
-    DrainageOff off(p.noDrainage);
-    int checked = 0;
-    for (int k = 0; k < n * 8 && checked < n; k++) {
-        int i = (k * 37 + 11) % p.W, j = (k * 53 + 7) % p.H;
-        size_t o = (size_t)j * p.W + i;
-        if (!p.exact[o] || p.material[o] == 255) continue;
-        Vec3 u = SpaceRenderer::plateCellUnit(p, i, j);
-        SurfaceSample ss = sampleSurface(g, u, p.texelM);
-        double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
-        double alb = ss.albedo;
-        if (g.type == PT_GASGIANT && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));
-        maxAlb = std::max(maxAlb, std::fabs(alb - p.albedo[o] / 255.0));
-        if (ss.material != p.material[o]) matMiss++;
-        maxH = std::max(maxH, std::fabs(ss.height - p.height[o]));
-        checked++;
-    }
-    if (!checked) matMiss = -1;
-}
-
-std::string Game::testTelescopeInfo() const {
-    if (!tele.on) return "stowed";
-    return fmt("x%.0f, field %.3f deg, target %d '%s', tracking %d%s, offsets %.5f/%.5f rad, yaw %.4f pitch %.4f", telescopeZoom(), telescopeFieldDeg(), tele.target, telescopeTargetLine().c_str(), tele.track, telescopeStabilised() ? " (stabilised)" : "", tele.offYaw, tele.offPitch, ship.yaw, ship.pitch);
-}
-
-long Game::testPlateBegun() const { return spaceR.plateBegun; }
-
-// the ground under the reticle of the parked body: the central ray's point on its sphere, in the body's frame
-bool Game::testTelescopeGround(double& lat, double& lon) const {
-    int b = ship.parkedBody;
-    if (!sys.valid || ship.mode != ShipState::PARKED || b < 0 || b >= (int)sys.bodies.size()) return false;
-    return viewGround(b, lat, lon);
-}
-
+// the body's ground under the view's centre (W-06's reticle), false when the ray misses
 // the ground of a body under the view's centre (the central ray's first point on its sphere, in the body's frame); false when
 // the ray misses it. X-01 aims the probe with it
 bool Game::viewGround(int b, double& lat, double& lon) const {
@@ -330,39 +296,4 @@ bool Game::viewGround(int b, double& lat, double& lon) const {
     Vec3 u = normalize(sys.bodyFrame(b, t) * (cam.transposed() * ((Vec3(0, 0, tHit) - cv) / R)));
     StarSystem::latLonFromBody(u, lat, lon);
     return true;
-}
-
-bool Game::testGroundScreen(int body, double lat, double lon, double& sx, double& sy) const {
-    if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return false;
-    Vec3 at = sys.bodyPos(body, t) + sys.bodyFrame(body, t).transposed() * StarSystem::bodyFromLatLon(lat, lon) * sys.bodies[body].radiusKm;
-    Vec3 v = viewBasis() * (at - ship.pos);
-    if (v.z <= 0) return false;
-    Proj pj = tele.on ? telescopeProj() : spaceR.proj;
-    sx = pj.cx + pj.f * v.x / v.z; sy = pj.cy - pj.f * v.y / v.z;
-    return true;
-}
-
-bool Game::testSubShip(double& lat, double& lon) const {
-    int b = ship.parkedBody;
-    if (!sys.valid || ship.mode != ShipState::PARKED || b < 0 || b >= (int)sys.bodies.size() || ship.parkedBelt >= 0) return false;
-    StarSystem::latLonFromBody(normalize(sys.bodyFrame(b, t) * ship.parkDir), lat, lon);
-    return true;
-}
-
-bool Game::testBodyScreen(int body, double& sx, double& sy, double& rpx) const {
-    if (body < 0 || body >= (int)spaceR.bodyInfo.size() || spaceR.bodyInfo[body].body != body) return false;
-    const BodyScreenInfo& bi = spaceR.bodyInfo[body];
-    sx = bi.sx; sy = bi.sy; rpx = bi.radiusPx;
-    return bi.inFront;
-}
-
-int Game::testTelescopePick() const {
-    int best = -1; double bestAng = 0;
-    if (!sys.valid) return -1;
-    for (int i = 0; i < (int)sys.bodies.size(); i++) {
-        if (i == ship.parkedBody) continue;
-        double ang = sys.bodies[i].radiusKm / std::max(1.0, length(sys.bodyPos(i, t) - ship.pos));
-        if (ang > bestAng) { bestAng = ang; best = i; }
-    }
-    return best;
 }

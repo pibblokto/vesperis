@@ -51,9 +51,6 @@ struct Mat3 {
         r.m[2][0] = r2.x; r.m[2][1] = r2.y; r.m[2][2] = r2.z;
         return r;
     }
-    static Mat3 fromColumns(const Vec3& c0, const Vec3& c1, const Vec3& c2) {
-        return fromRows(c0, c1, c2).transposed();
-    }
     static Mat3 axisAngle(const Vec3& axisIn, double a) {
         Vec3 u = normalize(axisIn);
         double c = std::cos(a), s = std::sin(a), t = 1 - c;
@@ -94,8 +91,8 @@ inline Mat3 cameraBasis(double yaw, double pitch) {
 
 struct RGB {
     float r = 0, g = 0, b = 0;
-    RGB() {}
-    RGB(float R, float G, float B) : r(R), g(G), b(B) {}
+    constexpr RGB() {}
+    constexpr RGB(float R, float G, float B) : r(R), g(G), b(B) {}   // P-00: constexpr, for the kind table
     RGB operator*(float s) const { return {r * s, g * s, b * s}; }
     RGB operator*(const RGB& o) const { return {r * o.r, g * o.g, b * o.b}; }
     RGB operator+(const RGB& o) const { return {r + o.r, g + o.g, b + o.b}; }

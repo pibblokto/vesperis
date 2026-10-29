@@ -135,14 +135,17 @@ void SurfaceView::updateDrone(double dt, const Input& in, double t) {
         // the downwash: dust, snow or spray thrown up from soft ground or water under a low hover
         if (d.altAboveGround < 8) {
             int mat = site.lod0.at((int)std::floor(d.x / 16), (int)std::floor(d.z / 16)).material;
-            bool wet = site.waterAt(d.x, d.z) > -1e8 && site.groundHeight(d.x, d.z) < site.waterAt(d.x, d.z) - 0.2;
+            bool wet = site.waterNowAt(d.x, d.z) > -1e8 && site.groundHeight(d.x, d.z) < site.waterNowAt(d.x, d.z) - 0.2;   // the tide's
             int kind = wet ? 1 : ((mat == MAT_SAND || mat == MAT_DUST) ? 0 : (mat == MAT_SNOW ? 1 : (mat == MAT_GRASS && env.rain > 0.1 ? 2 : -1)));
             d.puffAccum += dt;
             if (kind >= 0 && d.puffAccum > 0.08) {
                 d.puffAccum = 0;
                 Rng rr((uint64_t)(t * 1000) ^ 0xD20E);
                 double gy = surfaceN;
-                for (int i = 0; i < 3; i++) { double a = rr.range(0, TAU), r = rr.range(1.5, 4.5) * (1 + 0.3 * (8 - d.altAboveGround)); d.puffs.push_back({(float)(d.x + std::cos(a) * r), (float)(gy + 0.2), (float)(d.z + std::sin(a) * r), 0.f, (uint8_t)kind}); }
+                for (int i = 0; i < 3; i++) {
+                    double a = rr.range(0, TAU), r = rr.range(1.5, 4.5) * (1 + 0.3 * (8 - d.altAboveGround));
+                    d.puffs.push_back({(float)(d.x + std::cos(a) * r), (float)(gy + 0.2), (float)(d.z + std::sin(a) * r), 0.f, (uint8_t)kind});
+                }
             }
         }
     }
@@ -165,7 +168,7 @@ void SurfaceView::updateDrone(double dt, const Input& in, double t) {
 // was left, is scrapped (as the buggy, R-204)
 bool SurfaceView::deployDrone() {
     if (inVehicle()) return false;
-    if (site.escapeVelocity < 30) return false;   // O4: on a comet 320 km/h is an escape
+    if (site.escapeVelocity < 30) return false;   // on a comet 320 km/h is an escape
     double dx = capsuleX - player.x, dz = capsuleZ - player.z;
     if (dx * dx + dz * dz > 10.0 * 10.0) return false;
     double ax = player.x - capsuleX, az = player.z - capsuleZ;
@@ -216,9 +219,11 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     RasterParams rpBody; rpBody.bank = 6; rpBody.grain = &grain; rpBody.grainScale = 3.0 * FB_SCALE;
     RasterParams rpDark; rpDark.bank = 0;   // the blacked-out sensor band, the lens, the fans
     double headGlow = d.lights ? 0.25 : 0.0;
+    const Vec3 lampP = base + upT * (0.6 * sc);   // the explorer's lamp on its hull (one point: it is a few metres long)
     auto shadeN = [&](const Vec3& n, double tint) {
         double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
         double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp;
+        if (nLamps) light += (1 - amb) * lampAt(lampP, &n);
         light = std::max(light, 0.16 + headGlow * std::max(0.0, dot(n, fwdT) + 0.5));
         double s = 48 * std::pow(light, 0.6) * tint;
         return s + (63 - s) * fog;
@@ -226,7 +231,16 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     auto poly = [&](const Vec3* pts, int n, const Vec3& nrm, double tint, RasterParams& rp) {
         double shade = shadeN(nrm, tint);
         RVert q[8];
-        for (int k = 0; k < n; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); if (v.z < NEAR_Z) return; q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y; q[k].v = pts[k].z; }
+        for (int k = 0; k < n; k++) {
+            Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z);
+            if (v.z < NEAR_Z) return;
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].y;
+            q[k].v = pts[k].z;
+        }
         rasterPolygon(fb, q, n, rp, proj);
     };
     auto quad = [&](Vec3 a, Vec3 bq, Vec3 c, Vec3 dq, const Vec3& n, double tint, RasterParams& rp) { Vec3 p4[4] = {a, bq, c, dq}; poly(p4, 4, n, tint, rp); };
@@ -258,9 +272,11 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
         quad(at(NOSE_F, s * NOSE_W, NOSE_B), at(SHO_F, s * SHO_W, FLOOR), at(SHO_F, s * SHO_W, BELT), at(NOSE_F, s * NOSE_W, NOSE_T), normalize(nS * 0.8 + fwdT * 0.6), 0.9, rpBody);   // nose flank
         quad(at(SHO_F, s * SHO_W, FLOOR), at(TAIL_F, s * TAIL_W, TAIL_B), at(TAIL_F, s * TAIL_W, BELT), at(SHO_F, s * SHO_W, BELT), nS, 0.92, rpBody);                             // the belt
         Vec3 upper[5] = {at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), at(TAIL_F, s * TAIL_W, TAIL_T), at(CABR_F, s * CAB_W, ROOF), at(CABF_F, s * CAB_W, ROOF)};
-        poly(upper, 5, nS, 0.95, rpBody);                                                                                                                                                 // the cabin side
+        // the cabin side
+        poly(upper, 5, nS, 0.95, rpBody);
         Vec3 off = nS * 0.012;
-        quad(at(SHO_F - 0.05, s * SHO_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.24) + off, at(SHO_F - 0.05, s * SHO_W, 1.24) + off, nS, 0.3, rpDark);   // the sensor band round the cabin
+        // the sensor band round the cabin
+        quad(at(SHO_F - 0.05, s * SHO_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.24) + off, at(SHO_F - 0.05, s * SHO_W, 1.24) + off, nS, 0.3, rpDark);
         tube(at(NOSE_F, s * NOSE_W, NOSE_T), at(SHO_F, s * SHO_W, BELT), 0.02, 7, chrome * 0.9);   // chrome trim: the shoulder line and the roof edge
         tube(at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), 0.02, 7, chrome * 0.9);
         tube(at(CABF_F, s * CAB_W, ROOF), at(CABR_F, s * CAB_W, ROOF), 0.02, 7, chrome * 0.85);
@@ -294,7 +310,10 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
         if (ok) rasterPolygon(fb, disc, 12, rpDark, proj);
         if (ok && d.rotor < 0.75) {
             double spin = d.fanSpin * ((k & 1) ? 1 : -1);
-            for (int b = 0; b < 3; b++) { double a = spin + b * TAU / 3; tube(c + upT * (0.02 * sc), c + upT * (0.02 * sc) + fwdT * (std::cos(a) * POD_R * 0.82 * sc) + sideT * (std::sin(a) * POD_R * 0.82 * sc), 0.03, 7, chrome * 0.8); }
+            for (int b = 0; b < 3; b++) {
+                double a = spin + b * TAU / 3;
+                tube(c + upT * (0.02 * sc), c + upT * (0.02 * sc) + fwdT * (std::cos(a) * POD_R * 0.82 * sc) + sideT * (std::sin(a) * POD_R * 0.82 * sc), 0.03, 7, chrome * 0.8);
+            }
         }
         point(c + upT * (0.03 * sc), 7, chrome * 0.7, dist < 10 ? 2 : 1);
         if (!d.landed || d.rotor > 0.5) point(c - upT * (0.2 * sc), 1, 42 + 20 * d.rotor, dist < 25 ? 2 : 1);
@@ -311,7 +330,16 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     // ---- the lidar puck on the roof and the sensor mast at the rear with its blinking light
     {
         RVert puck[6]; bool ok = true;
-        for (int k = 0; k < 6; k++) { double a = k * TAU / 6; Vec3 pp = at(-0.35 + std::cos(a) * 0.14, std::sin(a) * 0.14, ROOF + 0.05); Vec3 v = toView(pp.x, pp.y, pp.z); puck[k].x = v.x; puck[k].y = v.y; puck[k].z = v.z; puck[k].shade = chrome; if (v.z < NEAR_Z) ok = false; }
+        for (int k = 0; k < 6; k++) {
+            double a = k * TAU / 6;
+            Vec3 pp = at(-0.35 + std::cos(a) * 0.14, std::sin(a) * 0.14, ROOF + 0.05);
+            Vec3 v = toView(pp.x, pp.y, pp.z);
+            puck[k].x = v.x;
+            puck[k].y = v.y;
+            puck[k].z = v.z;
+            puck[k].shade = chrome;
+            if (v.z < NEAR_Z) ok = false;
+        }
         RasterParams rd; rd.bank = 7;
         if (ok) rasterPolygon(fb, puck, 6, rd, proj);
         Vec3 ant0 = at(-0.9, 0.5, ROOF - 0.05), ant1 = at(-0.95, 0.54, ROOF + 0.6 * d.unfold);

@@ -7,40 +7,37 @@
 #include <cmath>
 
 const StarClassInfo STAR_CLASSES[STAR_CLASS_COUNT] = {
-    {"S00", "YELLOW STAR", "medium size, yellow star, suitable for planets having indigenous lifeforms.",
-     RGB(1.00f, 0.93f, 0.72f), 7.0e5, 0.25, 1.0, 1.0, 10, 30, 20, 8.0e6},
-    {"S01", "ORANGE DWARF", "small, warm, long-lived orange star; compact systems, temperate worlds close in.",
-     RGB(1.00f, 0.72f, 0.42f), 4.6e5, 0.25, 0.35, 0.7, 8, 28, 16, 5.0e6},
-    {"S02", "BLUE GIANT", "very large, blue giant star, high energy radiations around; wide systems.",
-     RGB(0.66f, 0.78f, 1.00f), 4.5e6, 0.35, 60.0, 12.0, 16, 8, 14, 5.0e7},
-    {"S03", "RED GIANT", "very large, ancient, red giant star; inner planets consumed long ago.",
-     RGB(1.00f, 0.45f, 0.25f), 3.5e7, 0.40, 22.0, 1.4, 6, 12, 6, 2.0e8},
-    {"S04", "WHITE DWARF", "white dwarf star, tiny and dense remnant; cold, dead worlds; possible harmful radiations.",
-     RGB(0.86f, 0.90f, 1.00f), 9.0e3, 0.30, 0.02, 0.8, 4, 14, 1, 6.0e6},
-    {"S05", "PULSAR", "tiny pulsar object, unsafe, high radiation, strong gravity; pulsing light.",
-     RGB(0.62f, 0.62f, 1.00f), 2.0e4, 0.20, 0.05, 1.6, 3, 8, 1, 1.0e7},
-    // S-01: the varieties, rarity 0 (each takes a share of its family through starVariety, not a weight of its own)
-    {"S06", "RED DWARF", "small, dim red star, the commonest kind; near worlds keep one face to it; flares.",
-     RGB(1.00f, 0.50f, 0.32f), 2.6e5, 0.30, 0.06, 0.4, 6, 0, 12, 3.0e6},
-    {"S07", "BLUE-WHITE STAR", "hot, bright, short-lived star; wide systems of bare rock and ice; hard ultraviolet.",
-     RGB(0.82f, 0.87f, 1.00f), 1.3e6, 0.30, 8.0, 2.0, 12, 0, 16, 1.6e7},
-    {"S08", "ORANGE GIANT", "old star grown large, warm amber light; inner worlds scorched, temperate ones among the ice.",
-     RGB(1.00f, 0.66f, 0.34f), 8.0e6, 0.35, 12.0, 1.2, 7, 0, 6, 5.0e7},
-    {"S09", "CARBON STAR", "dim ruby giant in its own soot; ember light, a hazy sky; carbon worlds.",
-     RGB(1.00f, 0.38f, 0.20f), 3.0e7, 0.40, 9.0, 1.3, 5, 0, 6, 1.8e8},
-    // S-03: the neutron star, a share of the pulsar family; its light is a point, its hazard the x-rays, its worlds the survivors
-    {"S10", "NEUTRON STAR", "collapsed star, a point of white light; x-ray glare; only survivors: bare cores, captured rocks, worlds of glass.",
-     RGB(0.72f, 0.80f, 1.00f), 1.4e4, 0.20, 0.03, 1.5, 3, 0, 1, 1.5e7},
-    // S-04: the protostar, a share of the yellow family where stars form; a soft orange star in its cloud, a disc of dust, belts
-    {"S11", "PROTOSTAR", "young star still condensing from its cloud; a dusty disc seen edge-on, belts and a few molten worlds; the nebula's glow all over the sky.",
-     RGB(1.00f, 0.60f, 0.36f), 2.0e6, 0.30, 1.5, 0.8, 2, 0, 12, 1.5e7},
-    // S-05: the Wolf-Rayet star, a share of the blue giants that stayed: blinding inside the shell it has shed, a wind that strips its worlds, radiation everywhere
-    {"S12", "WOLF-RAYET STAR", "massive star blowing off its outer layers; blinding blue-white inside a ring of shed gas; a wind that strips atmospheres, radiation everywhere; few bare and bombarded worlds.",
-     RGB(0.78f, 0.84f, 1.00f), 3.5e6, 0.35, 180.0, 16.0, 4, 0, 14, 7.0e7},
-    // S-06: the black hole, a share of the pulsars that stayed: no light but its disc's (the radius is the stylised Schwarzschild radius the
-    // renderer draws from, the mass is the real thing), its worlds the survivors, a companion drawn out
-    {"S13", "BLACK HOLE", "collapsed star of no light at all: a hole in the sky ringed by the bent light of the stars behind it, a glowing disc where it feeds; survivors only: wandering rocks, a companion drawn out.",
-     RGB(1.00f, 0.88f, 0.70f), 3.0e5, 0.30, 0.03, 40.0, 3, 0, 40, 2.0e7},
+        {"S00", "YELLOW STAR", "medium size, yellow star, suitable for planets having indigenous lifeforms.", RGB(1.00f, 0.93f, 0.72f), 7.0e5, 0.25, 1.0, 1.0, 10, 30, 20, 8.0e6},
+        {"S01", "ORANGE DWARF", "small, warm, long-lived orange star; compact systems, temperate worlds close in.", RGB(1.00f, 0.72f, 0.42f), 4.6e5, 0.25, 0.35, 0.7, 8, 28, 16, 5.0e6},
+        {"S02", "BLUE GIANT", "very large, blue giant star, high energy radiations around; wide systems.", RGB(0.66f, 0.78f, 1.00f), 4.5e6, 0.35, 60.0, 12.0, 16, 8, 14, 5.0e7},
+        {"S03", "RED GIANT", "very large, ancient, red giant star; inner planets consumed long ago.", RGB(1.00f, 0.45f, 0.25f), 3.5e7, 0.40, 22.0, 1.4, 6, 12, 6, 2.0e8},
+        {"S04", "WHITE DWARF", "white dwarf star, tiny and dense remnant; cold, dead worlds; possible harmful radiations.", RGB(0.86f, 0.90f, 1.00f), 9.0e3, 0.30, 0.02, 0.8, 4, 14, 1, 6.0e6},
+        {"S05", "PULSAR", "tiny pulsar object, unsafe, high radiation, strong gravity; pulsing light.", RGB(0.62f, 0.62f, 1.00f), 2.0e4, 0.20, 0.05, 1.6, 3, 8, 1, 1.0e7},
+        // S-01: the varieties, rarity 0 (each takes a share of its family through starVariety, not a weight of its own)
+        {"S06", "RED DWARF", "small, dim red star, the commonest kind; near worlds keep one face to it; flares.", RGB(1.00f, 0.50f, 0.32f), 2.6e5, 0.30, 0.06, 0.4, 6, 0, 12, 3.0e6},
+        {"S07", "BLUE-WHITE STAR", "hot, bright, short-lived star; wide systems of bare rock and ice; hard ultraviolet.", RGB(0.82f, 0.87f, 1.00f), 1.3e6, 0.30, 8.0, 2.0, 12, 0, 16, 1.6e7},
+        {"S08", "ORANGE GIANT", "old star grown large, warm amber light; inner worlds scorched, temperate ones among the ice.", RGB(1.00f, 0.66f, 0.34f), 8.0e6, 0.35, 12.0, 1.2, 7, 0, 6, 5.0e7},
+        {"S09", "CARBON STAR", "dim ruby giant in its own soot; ember light, a hazy sky; carbon worlds.", RGB(1.00f, 0.38f, 0.20f), 3.0e7, 0.40, 9.0, 1.3, 5, 0, 6, 1.8e8},
+        // the neutron star, a share of the pulsar family; its light is a point, its hazard the x-rays, its worlds the survivors
+        {"S10", "NEUTRON STAR", "collapsed star, a point of white light; x-ray glare; only survivors: bare cores, captured rocks, worlds of glass.", RGB(0.72f, 0.80f, 1.00f), 1.4e4, 0.20, 0.03, 1.5,
+                3, 0, 1, 1.5e7},
+        // the protostar, a share of the yellow family where stars form; a soft orange star in its cloud, a disc of dust, belts
+        {"S11", "PROTOSTAR", "young star still condensing from its cloud; a dusty disc seen edge-on, belts and a few molten worlds; the nebula's glow all over the sky.", RGB(1.00f, 0.60f, 0.36f),
+                2.0e6, 0.30, 1.5, 0.8, 2, 0, 12, 1.5e7},
+        // the Wolf-Rayet star, a share of the blue giants that stayed: blinding inside the shell it has shed, a wind that strips its worlds, radiation everywhere
+        {"S12", "WOLF-RAYET STAR",
+                "massive star blowing off its outer layers; blinding blue-white inside a ring of shed gas; a wind that strips atmospheres, radiation everywhere; few bare and bombarded worlds.",
+                RGB(0.78f, 0.84f, 1.00f), 3.5e6, 0.35, 180.0, 16.0, 4, 0, 14, 7.0e7},
+        // the black hole, a share of the pulsars that stayed: no light but its disc's (the radius is the stylised Schwarzschild radius the
+        // renderer draws from, the mass is the real thing), its worlds the survivors, a companion drawn out
+        {"S13", "BLACK HOLE",
+                "collapsed star of no light at all: a hole in the sky ringed by the bent light of the stars behind it, a glowing disc where it feeds; survivors only: wandering rocks, a companion "
+                "drawn out.",
+                RGB(1.00f, 0.88f, 0.70f), 3.0e5, 0.30, 0.03, 40.0, 3, 0, 40, 2.0e7},
+        // no star. A drifter's place: no light, no radius, no mass (nothing orbits its anchor but the drifter, which sits on it), a
+        // neutral colour; never drawn (`STAR_DRAWN_COUNT`), only placed (`galaxy/drifters.h`)
+        {"S14", "NO STAR", "no star: a world adrift in the dark between the stars, warmed by nothing but its own heat; found by its radio alone.", RGB(0.55f, 0.56f, 0.60f), 0.0, 0.0, 0.0, 0.0, 0, 0,
+                0, 0.0},
 };
 
 // G-03: the dust. A thinner disc than the stars' (two fifths of their scale height), denser in the arms, in clouds of
@@ -136,7 +133,32 @@ double sampleGalaxyBand(const std::vector<float>& map, const Vec3& d) {
     return (at(xa, ya) * (1 - tx) + at(xb, ya) * tx) * (1 - ty) + (at(xa, yb) * (1 - tx) + at(xb, yb) * tx) * ty;
 }
 
-const char* REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
+void galaxyBandLight(const std::vector<float>& map, double sh[9]) {
+    for (int k = 0; k < 9; k++) sh[k] = 0;
+    if ((int)map.size() != BAND_MAP_W * BAND_MAP_H) return;
+    for (int j = 0; j < BAND_MAP_H; j++) {
+        const double l0 = bandRowLat((double)j / BAND_MAP_H), l1 = bandRowLat((double)(j + 1) / BAND_MAP_H), lat = bandRowLat((j + 0.5) / BAND_MAP_H);
+        const double dOmega = (std::sin(l1) - std::sin(l0)) * TAU / BAND_MAP_W;
+        for (int i = 0; i < BAND_MAP_W; i++) {
+            const double lon = (i + 0.5) / BAND_MAP_W * TAU;
+            const double x = std::cos(lat) * std::cos(lon), y = std::sin(lat), z = std::cos(lat) * std::sin(lon);
+            const double L = std::pow((double)map[(size_t)j * BAND_MAP_W + i], 1.0 / BAND_GAMMA) * dOmega;
+            sh[0] += L * 0.282095;
+            sh[1] += L * 0.488603 * y; sh[2] += L * 0.488603 * z; sh[3] += L * 0.488603 * x;
+            sh[4] += L * 1.092548 * x * y; sh[5] += L * 1.092548 * y * z; sh[6] += L * 0.315392 * (3 * z * z - 1);
+            sh[7] += L * 1.092548 * x * z; sh[8] += L * 0.546274 * (x * x - y * y);
+        }
+    }
+}
+
+double galaxyBandIrradiance(const double sh[9], const Vec3& n) {
+    const double c1 = 0.429043, c2 = 0.511664, c3 = 0.743125, c4 = 0.886227, c5 = 0.247708, x = n.x, y = n.y, z = n.z;
+    const double E = c1 * sh[8] * (x * x - y * y) + c3 * sh[6] * z * z + c4 * sh[0] - c5 * sh[6]
+                   + 2 * c1 * (sh[4] * x * y + sh[7] * x * z + sh[5] * y * z) + 2 * c2 * (sh[3] * x + sh[1] * y + sh[2] * z);
+    return std::max(0.0, E) / PI;
+}
+
+const char* const REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
 
 // G-03: a star-forming complex: one in a NEBULA_CELL column of the arms with probability NEBULA_RATE, its centre inside
 // the cell near the plane (the cell test first: it is asked per density call of the region and per frame of the sky).
@@ -145,7 +167,8 @@ bool nebulaInCell(int64_t cx, int64_t cz, Vec3& centre) {
     if (unitFromHash(h) >= NEBULA_RATE) return false;
     double x = (cx + 0.5) * NEBULA_CELL, z = (cz + 0.5) * NEBULA_CELL;
     if (galaxyTerms(x, 0, z).arm <= 0.45) return false;   // only in the arms
-    centre = Vec3(cx * NEBULA_CELL + NEBULA_CELL * (0.3 + 0.4 * unitFromHash(mix64(h + 1))), (unitFromHash(mix64(h + 2)) - 0.5) * 4.0, cz * NEBULA_CELL + NEBULA_CELL * (0.3 + 0.4 * unitFromHash(mix64(h + 3))));
+    centre = Vec3(cx * NEBULA_CELL + NEBULA_CELL * (0.3 + 0.4 * unitFromHash(mix64(h + 1))), (unitFromHash(mix64(h + 2)) - 0.5) * 4.0,
+            cz * NEBULA_CELL + NEBULA_CELL * (0.3 + 0.4 * unitFromHash(mix64(h + 3))));
     return true;
 }
 
@@ -258,7 +281,8 @@ int clusterAt(double sx, double sy, double sz, double& dens) {
     double x = sx - GALAXY_CENTRE_SX, z = sz - GALAXY_CENTRE_SZ;
     if (globularInCell((int64_t)std::floor(x / GLOBULAR_CELL), (int64_t)std::floor(sy / GLOBULAR_CELL), (int64_t)std::floor(z / GLOBULAR_CELL), c, R)) {
         double d = length(Vec3(sx, sy, sz) - c);
-        if (d < R) { double q = d / (R / 2); dens = GALAXY_CAP / ((1 + q * q) * (1 + q * q)); return 2; }   // a Plummer-like profile, the core half the radius: solid stars inside, a fifth of the cap at the edge, ~1.2 R^3 stars
+        // a Plummer-like profile, the core half the radius: solid stars inside, a fifth of the cap at the edge, ~1.2 R^3 stars
+        if (d < R) { double q = d / (R / 2); dens = GALAXY_CAP / ((1 + q * q) * (1 + q * q)); return 2; }
     }
     if (openClusterInCell((int64_t)std::floor(x / OPEN_CLUSTER_CELL), (int64_t)std::floor(sy / OPEN_CLUSTER_CELL), (int64_t)std::floor(z / OPEN_CLUSTER_CELL), c, R)) {
         double d = length(Vec3(sx, sy, sz) - c);
@@ -304,7 +328,7 @@ int galaxyRegion(int64_t sx, int64_t sy, int64_t sz) {
     if (ck == 2) return REGION_CLUSTER;
     if (ck == 1) return REGION_OPEN;
     if (std::fabs(y) > 2.5 * g.h) return REGION_HALO;
-    if (g.arm > 0.45) {   // G-03: within a star-forming complex
+    if (g.arm > 0.45) {   // within a star-forming complex
         Vec3 c; if (nebulaInCell((int64_t)std::floor(x / NEBULA_CELL), (int64_t)std::floor(z / NEBULA_CELL), c) && length(Vec3(x, y, z) - c) < NEBULA_RADIUS) return REGION_NEBULA;
     }
     if (g.arm > 0.4) return REGION_ARM;   // the arm's bright two fifths of the cycle (the density above the disc's mean)
@@ -326,15 +350,16 @@ int starVariety(int family, int region, uint64_t hash) {
         case STAR_ORANGE: return u < (old ? 0.85 : (young ? 0.65 : 0.75)) ? STAR_RED_DWARF : family;
         case STAR_BLUE_GIANT: {
             if (u < (old ? 0.3 : (young ? 0.65 : (region == REGION_ARM ? 0.6 : 0.5)))) return STAR_BLUE_WHITE;
-            // S-05: the Wolf-Rayet stars, out of the blue giants that stayed, by a hash of their own: a fifth along the arms and where
+            // the Wolf-Rayet stars, out of the blue giants that stayed, by a hash of their own: a fifth along the arms and where
             // stars form, a tenth in the core, one in twenty in the bulge and the disc, none in the halo or a globular (no massive star is old)
-            double ws = (region == REGION_ARM || region == REGION_NEBULA || region == REGION_OPEN) ? 0.2 : (region == REGION_CORE ? 0.1 : ((region == REGION_BULGE || region == REGION_DISK) ? 0.05 : 0.0));
+            double ws =
+                    (region == REGION_ARM || region == REGION_NEBULA || region == REGION_OPEN) ? 0.2 : (region == REGION_CORE ? 0.1 : ((region == REGION_BULGE || region == REGION_DISK) ? 0.05 : 0.0));
             return ws > 0 && unitFromHash(mix64(hash ^ 0x3E5FULL)) < ws ? STAR_WOLF_RAYET : family;
         }
         case STAR_RED_GIANT: { double og = old ? 0.4 : 0.3, cs = old ? 0.2 : 0.1; return u < og ? STAR_ORANGE_GIANT : (u < og + cs ? STAR_CARBON : family); }
         case STAR_PULSAR: {
-            if (u < (old ? 0.55 : 0.35)) return STAR_NEUTRON;   // S-03: the quiet remnants, more among the old stars of the core, the bulge and the globulars
-            // S-06: the black holes, out of the pulsars that stayed, by a hash of their own: a quarter in the core, a fifth in the bulge,
+            if (u < (old ? 0.55 : 0.35)) return STAR_NEUTRON;   // the quiet remnants, more among the old stars of the core, the bulge and the globulars
+            // the black holes, out of the pulsars that stayed, by a hash of their own: a quarter in the core, a fifth in the bulge,
             // one in seven in a globular, one in ten in the halo, one in sixteen in the arms and the disc, one in thirty where stars form
             double bs = region == REGION_CORE ? 0.25 : (region == REGION_BULGE ? 0.2 : (region == REGION_CLUSTER ? 0.15 : (region == REGION_HALO ? 0.1 : (young ? 0.03 : 0.06))));
             return unitFromHash(mix64(hash ^ 0x8B1EULL)) < bs ? STAR_BLACK_HOLE : family;
@@ -361,7 +386,7 @@ double starFlare(const Star& s, double t) {
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) {
     uint64_t seed = sectorSeed(sx, sy, sz);
     double d = galaxyDensity((double)sx, (double)sy, (double)sz);
-    if (unitFromHash(seed) >= d) { out.valid = false; return false; }
+    if (!sectorHoldsStar(sx, sy, sz, d)) { out.valid = false; return false; }
     Rng rng(seed ^ 0x1234ABCDULL);
     out.sx = sx; out.sy = sy; out.sz = sz;
     out.pos = Vec3((sx + 0.1 + 0.8 * rng.uni()) * SECTOR_KM, (sy + 0.1 + 0.8 * rng.uni()) * SECTOR_KM,
@@ -369,19 +394,21 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
     // class weights by region (M9-13): remnants and giants in the core, bulge and halo, young blue
     // giants where stars form, old red giants in clusters
     int region = galaxyRegion(sx, sy, sz);
-    double w[STAR_CLASS_COUNT];
-    for (int i = 0; i < STAR_CLASS_COUNT; i++) w[i] = STAR_CLASSES[i].rarity;
+    double w[STAR_DRAWN_COUNT];
+    for (int i = 0; i < STAR_DRAWN_COUNT; i++) w[i] = STAR_CLASSES[i].rarity;
     switch (region) {
         case REGION_CORE: w[STAR_PULSAR] *= 3.0; w[STAR_RED_GIANT] *= 2.0; w[STAR_WHITE_DWARF] *= 1.5; w[STAR_BLUE_GIANT] *= 1.5; break;
         case REGION_BULGE: w[STAR_RED_GIANT] *= 2.2; w[STAR_WHITE_DWARF] *= 1.6; w[STAR_BLUE_GIANT] *= 0.5; break;
         case REGION_HALO: w[STAR_WHITE_DWARF] *= 2.5; w[STAR_RED_GIANT] *= 2.0; w[STAR_BLUE_GIANT] *= 0.2; w[STAR_YELLOW] *= 0.6; break;
-        case REGION_CLUSTER: w[STAR_RED_GIANT] *= 2.5; w[STAR_ORANGE] *= 1.3; w[STAR_WHITE_DWARF] *= 1.5; w[STAR_YELLOW] *= 0.7; w[STAR_BLUE_GIANT] *= 0.1; w[STAR_PULSAR] *= 0.5; break;   // G-02: a globular is old
-        case REGION_OPEN: w[STAR_BLUE_GIANT] *= 3.0; w[STAR_YELLOW] *= 1.3; w[STAR_RED_GIANT] *= 0.6; w[STAR_WHITE_DWARF] *= 0.2; w[STAR_PULSAR] *= 0.5; break;   // G-02: an open cluster is young
+        // a globular is old
+        case REGION_CLUSTER: w[STAR_RED_GIANT] *= 2.5; w[STAR_ORANGE] *= 1.3; w[STAR_WHITE_DWARF] *= 1.5; w[STAR_YELLOW] *= 0.7; w[STAR_BLUE_GIANT] *= 0.1; w[STAR_PULSAR] *= 0.5; break;
+        case REGION_OPEN: w[STAR_BLUE_GIANT] *= 3.0; w[STAR_YELLOW] *= 1.3; w[STAR_RED_GIANT] *= 0.6; w[STAR_WHITE_DWARF] *= 0.2; w[STAR_PULSAR] *= 0.5; break;   // an open cluster is young
         case REGION_NEBULA: w[STAR_BLUE_GIANT] *= 3.5; w[STAR_YELLOW] *= 1.2; w[STAR_WHITE_DWARF] *= 0.4; break;
         case REGION_ARM: w[STAR_BLUE_GIANT] *= 1.6; break;
         default: break;
     }
-    out.cls = starVariety(rng.pick(w, STAR_CLASS_COUNT), region, mix64(seed ^ 0x5A11E7ULL));   // S-01: the family by weight, then its variety by a hash of its own (mixed: the seed's own uniform is the existence test, under the density)
+    // the family by weight, then its variety by a hash of its own (mixed: the seed's own uniform is the existence test, under the density)
+    out.cls = starVariety(rng.pick(w, STAR_DRAWN_COUNT), region, mix64(seed ^ 0x5A11E7ULL));
     const StarClassInfo& ci = STAR_CLASSES[out.cls];
     double rv = 1.0 + rng.sym(ci.radiusVar);
     out.radiusKm = ci.radiusKm * rv;
@@ -392,26 +419,30 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
     float tv = (float)rng.sym(0.06);
     out.color = clampRGB(RGB(out.color.r + tv, out.color.g, out.color.b - tv));
     out.seed = seed;
-    out.name = withName ? generateName(seed, (region == REGION_CORE || region == REGION_HALO || region == REGION_BULGE || region == REGION_CLUSTER) ? 1 : ((region == REGION_NEBULA || region == REGION_ARM || region == REGION_OPEN) ? 2 : 0)) : std::string();   // G-02: hard names in the old globulars, flowing in the young open clusters
+    out.name = withName ? generateName(seed,
+                                  (region == REGION_CORE || region == REGION_HALO || region == REGION_BULGE || region == REGION_CLUSTER)
+                                          ? 1
+                                          : ((region == REGION_NEBULA || region == REGION_ARM || region == REGION_OPEN) ? 2 : 0))
+                        : std::string();   // hard names in the old globulars, flowing in the young open clusters
     out.pulseHz = out.cls == STAR_PULSAR ? 0.6 + 3.0 * rng.uni() : 0.0;
     out.valid = true;
     return true;
 }
 
 std::string generateName(uint64_t seed, int style) {
-    static const char* onsets0[] = {"b", "bal", "br", "c", "cr", "d", "dr", "f", "fel", "g", "gr", "k", "kr", "l", "ly",
+    static const char* const onsets0[] = {"b", "bal", "br", "c", "cr", "d", "dr", "f", "fel", "g", "gr", "k", "kr", "l", "ly",
                                     "m", "n", "p", "r", "s", "st", "str", "t", "tr", "th", "v", "vr", "w", "y", "z",
                                     "zh", "sh", "ph", "kl", "gl", "sk", "ts", "x"};
-    static const char* nuclei0[] = {"a", "e", "i", "o", "u", "ai", "ea", "io", "ya", "ey", "oo", "ia", "au", "ei"};
-    static const char* codas0[] = {"", "", "", "", "n", "l", "r", "s", "st", "ck", "sk", "th", "m", "nd", "x", "ng", "rn",
+    static const char* const nuclei0[] = {"a", "e", "i", "o", "u", "ai", "ea", "io", "ya", "ey", "oo", "ia", "au", "ei"};
+    static const char* const codas0[] = {"", "", "", "", "n", "l", "r", "s", "st", "ck", "sk", "th", "m", "nd", "x", "ng", "rn",
                                    "lt", "ss"};
     // hard names of the old core and halo; flowing names of the young arms
-    static const char* onsets1[] = {"k", "kr", "g", "gr", "th", "z", "x", "sk", "d", "dr", "t", "tr", "kh", "gh", "br", "vr"};
-    static const char* nuclei1[] = {"a", "o", "u", "ei", "aa", "au", "o", "u"};
-    static const char* codas1[] = {"k", "r", "n", "x", "th", "rk", "rt", "", "g", "d"};
-    static const char* onsets2[] = {"l", "ly", "m", "n", "s", "sh", "v", "f", "y", "r", "el", "al", "ph", "th", "w", "h"};
-    static const char* nuclei2[] = {"ia", "ea", "ai", "io", "ya", "e", "i", "a", "ie", "ei", "ee"};
-    static const char* codas2[] = {"l", "n", "s", "", "", "", "la", "ne", "ri", "sh", "th"};
+    static const char* const onsets1[] = {"k", "kr", "g", "gr", "th", "z", "x", "sk", "d", "dr", "t", "tr", "kh", "gh", "br", "vr"};
+    static const char* const nuclei1[] = {"a", "o", "u", "ei", "aa", "au", "o", "u"};
+    static const char* const codas1[] = {"k", "r", "n", "x", "th", "rk", "rt", "", "g", "d"};
+    static const char* const onsets2[] = {"l", "ly", "m", "n", "s", "sh", "v", "f", "y", "r", "el", "al", "ph", "th", "w", "h"};
+    static const char* const nuclei2[] = {"ia", "ea", "ai", "io", "ya", "e", "i", "a", "ie", "ei", "ee"};
+    static const char* const codas2[] = {"l", "n", "s", "", "", "", "la", "ne", "ri", "sh", "th"};
     const char* const* onsets = style == 1 ? onsets1 : (style == 2 ? onsets2 : onsets0);
     const char* const* nuclei = style == 1 ? nuclei1 : (style == 2 ? nuclei2 : nuclei0);
     const char* const* codas = style == 1 ? codas1 : (style == 2 ? codas2 : codas0);
@@ -442,7 +473,7 @@ std::string generateName(uint64_t seed, int style) {
 
 std::string romanNumeral(int n) {
     static const int v[] = {10, 9, 5, 4, 1};
-    static const char* s[] = {"X", "IX", "V", "IV", "I"};
+    static const char* const s[] = {"X", "IX", "V", "IV", "I"};
     std::string r;
     if (n <= 0) return "0";
     for (int i = 0; i < 5; i++) while (n >= v[i]) { r += s[i]; n -= v[i]; }

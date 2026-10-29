@@ -1,0 +1,293 @@
+R"VG(
+# annal_works.vg (H-04's second pass): the annal's register (annal.vg's leads and codas): what the people made and found, their feasts,
+# their troubles, the other people, the collapse and the deaths. `$e.work` is a work's name ("a great temple", "the walls"): its verb
+# agrees through `ann.work.be`.
+
+# =====================================================================================================================
+# what they made and found
+# =====================================================================================================================
+
+ann.work.be
+  ($e.workkey!=walls $e.workkey!=holy) was
+  ($e.workkey=holy holy!=tombs) was
+  ($e.workkey=walls) were
+  ($e.workkey=holy holy=tombs) were
+
+annal.built
+  {ann.lead} {ann.built.m}{ann.built.t}
+  {ann.lead} {ann.built.m}{ann.built.t}
+ann.built.m
+  {$e.work} {ann.work.be} finished at {$e.place}
+  work was finished on {$e.work} at {$e.place}
+  ($e.value>=10) {$e.work} at {$e.place} {ann.work.be} finished at last
+  the last stone of {$e.work} at {$e.place} was set
+  {$e.place} had {$e.work} at last
+  the scaffolds came down from {$e.work} at {$e.place}
+  ($e.workkey!=walls $e.workkey!=holy) {$e.work} was raised at {$e.place}
+  ($e.workkey=bridge) the bridge at {$e.place} was opened to carts
+  ($e.workkey=harbour) the new harbour at {$e.place} took its first boats
+  ($e.workkey=granary) the granary at {$e.place} was filled for the first time
+  ($e.workkey=mill) the mill at {$e.place} turned for the first time
+  ($e.workkey=library) the library at {$e.place} was opened, with its shelves half empty
+  ($e.workkey=lighthouse) the light on the point at {$e.place} was lit
+  ($e.workkey=observatory) the watchers' house at {$e.place} was finished, and the watchers moved in
+ann.built.t
+  , after {#$e.value|year} of work.
+  (has:$e.a) , the work of {$e.a:name}.
+  (5) .
+  ; it was opened with speeches.
+  (faith!=philosophy faith!=machine) ; the priests of {god} blessed it.
+  ; it was built of {material}, and {motif.over} were cut over its door.
+  ; the builders were given {food} and {drink} and sent home.
+  ; {#n|man} had died in the building of it.
+  ; its door was painted {colour.holy}.
+  ; they played {instrument} on its steps for {#n|day}.
+  ; people came from {$seat} to look at it.
+  {ann.after}
+
+annal.way
+  ($e.out<=1) {ann.lead} the road between {$e.place} and {$e.place2} was finished{ann.way.t}
+  ($e.out<=1) {ann.lead} {$e.place} and {$e.place2} were joined by a road{ann.way.t}
+  ($e.out<=1) {ann.lead} a paved way was laid from {$e.place} to {$e.place2}{ann.way.t}
+  ($e.out=2) {ann.lead} the railway reached {$e.place2} from {$e.place}{ann.way.t}
+  ($e.out=2) {ann.lead} the line between {$e.place} and {$e.place2} was opened{ann.way.t}
+  ($e.out=3) {ann.lead} the canal between {$e.place} and {$e.place2} was dug through{ann.way.t}
+  ($e.out=3) {ann.lead} water ran in the new cut from {$e.place} to {$e.place2}{ann.way.t}
+  ($e.out=4) {ann.lead} the highway between {$e.place} and {$e.place2} was opened{ann.way.t}
+  ($e.out=5) {ann.lead} the transit line between {$e.place} and {$e.place2} was opened{ann.way.t}
+  ($e.out=6) {ann.lead} ships began to run between {$e.place} and {$e.place2}{ann.way.t}
+  {ann.lead} the way between {$e.place} and {$e.place2} was opened{ann.way.t}
+ann.way.t
+  (6) .
+  ; the journey was a day shorter.
+  ; the {herd} were the first on it, driven to market.
+  ; tolls were set at the bridges.
+  ; the people of {$e.place2} came to look at the people of {$e.place}, and went home again.
+  ($e.out<=1) ; it was made of {material}, and it held.
+  {ann.after}
+
+annal.festival
+  {ann.lead} {$e.place} kept the {#$e.value:ord} year of its founding{ann.fest.t}
+  {ann.lead} the {#$e.value:ord} year of {$e.place} was kept{ann.fest.t}
+  {ann.lead} {$e.place} was {#$e.value|year} old, and kept the day{ann.fest.t}
+  {ann.lead} there was a great feast at {$e.place} for its {#$e.value:ord} year{ann.fest.t}
+ann.fest.t
+  , with fires on {mountain}.
+  , with three days of feasting.
+  ; there was {feast.custom}, and {drink} for all.
+  ; the {herd} were raced through the streets.
+  ; {pastime} were played in {town.open} until dark.
+  ; they played {instrument} all night.
+  ; the streets were hung with {colour.holy}.
+  ; {ruler.the} came, and was late.
+  (4) .
+
+annal.invention
+  (!has:$e.a) {ann.lead} {$e.invention} was first made at {$e.place}{ann.inv.t}
+  (!has:$e.a) {ann.lead} at {$e.place}, someone whose name is not kept made {$e.invention}{ann.inv.t}
+  (has:$e.a) {ann.lead} {$e.a:name} of {$e.place} made {$e.invention}{ann.inv.t}
+  (has:$e.a) {ann.lead} at {$e.place}, {$e.a:name} gave the people {$e.invention}{ann.inv.t}
+  (has:$e.a) {ann.lead} {$e.invention} was first made at {$e.place}, by {$e.a:name}{ann.inv.t}
+  (has:$e.a) {ann.lead} {$e.a:name} showed {$e.invention} at {$e.place}{ann.inv.t}
+ann.inv.t
+  (6) .
+  ; nobody understood it, and then everybody wanted it.
+  ; the {craft} of {$e.place} were the first to use it.
+  ; the priests did not know what to say about it.
+  {ann.after}
+
+annal.discovery
+  (!has:$e.a) {ann.lead} {ann.disc.anon}{ann.disc.t}
+  ($e.discovery=farshore has:$e.a) {ann.lead} {$e.a:name} found the far shore{ann.disc.t}
+  ($e.discovery=farshore has:$e.a) {ann.lead} {$e.a:name} came back from beyond the sea{ann.disc.t}
+  ($e.discovery=source has:$e.a) {ann.lead} {$e.a:name} found the source of {river}{ann.disc.t}
+  ($e.discovery=pass has:$e.a) {ann.lead} {$e.a:name} found the pass over {mountain}{ann.disc.t}
+  ($e.discovery=round has:$e.a) {ann.lead} {$e.a:name} showed that the world is round{ann.disc.t}
+  ($e.discovery=farside has:$e.a) {ann.lead} {$e.a:name} reached the far side of the world{ann.disc.t}
+  ($e.discovery=poles has:$e.a) {ann.lead} {$e.a:name} reached the poles{ann.disc.t}
+  ($e.discovery=orbit has:$e.a) {ann.lead} {$e.a:name} found the way to orbit{ann.disc.t}
+  ($e.discovery=moon has:$e.a) {ann.lead} {$e.a:name} reached the moon{ann.disc.t}
+  ($e.discovery=worlds has:$e.a) {ann.lead} {$e.a:name} reached the other worlds of the sun{ann.disc.t}
+ann.disc.t
+  (6) .
+  (has:$e.a) ; {$e.a:name} came back thinner, and would not talk about it.
+  ; it was set down on the maps.
+  (has:$e.a) ; {$e.a:name} brought back {ann.disc.thing}.
+  {ann.after}
+ann.disc.thing
+  a stone nobody could name
+  seeds of a plant nobody had seen
+  a story nobody believed
+  nothing but the news
+
+annal.faith
+  (!has:$e.a $e.faith=preached) {ann.lead} a new faith was preached at {$e.place}{ann.faith.t}
+  (!has:$e.a $e.faith=reformed) {ann.lead} the rites were reformed{ann.faith.t}
+  ($e.faith=preached has:$e.a) {ann.lead} {$e.a:name} preached the new faith at {$e.place}{ann.faith.t}
+  ($e.faith=preached has:$e.a) {ann.lead} a new teaching was heard at {$e.place}, from {$e.a:name}{ann.faith.t}
+  ($e.faith=schism) {ann.lead} the faith was split at {$e.place}{ann.faith.t}
+  ($e.faith=schism) {ann.lead} the priests of {$e.place} would not pray with the priests of {$seat}{ann.faith.t}
+  ($e.faith=reformed has:$e.a) {ann.lead} {$e.a:name} reformed the rites{ann.faith.t}
+  ($e.faith=reformed) {ann.lead} the old words were changed at {holyplace}{ann.faith.t}
+  ($e.faith=closed) {ann.lead} the temples were closed{ann.faith.t}
+  ($e.faith=persecution) {ann.lead} the faithful were hunted at {$e.place}{ann.faith.t}
+ann.faith.t
+  (6) .
+  ; there were fights in the street over a word.
+  ; the old ones kept the old way at home.
+  ; they {rite.do} the new way, and nobody was struck down.
+  {ann.after}
+
+annal.institution
+  {ann.lead} {$e.instname} was founded{ann.inst.t}
+  (has:$e.a) {ann.lead} {$e.a:name} founded {$e.instname}{ann.inst.t}
+  {ann.lead} {$e.instname} met for the first time{ann.inst.t}
+ann.inst.t
+  (6) .
+  ; nobody knew yet what it was for.
+  ; it sat in a borrowed room at first.
+  {ann.after}
+
+annal.deed
+  (!has:$e.a) {ann.lead} {ann.deed.anon}{ann.deed.t}
+  ($e.deed=song has:$e.a) {ann.lead} {$e.a:name} made a song that is still sung{ann.deed.t}
+  ($e.deed=song has:$e.a) {ann.lead} {$e.a:name} sang the new song at {$e.place}, and everyone learned it{ann.deed.t}
+  ($e.deed=chronicle has:$e.a) {ann.lead} {$e.a:name} began the chronicle of the years{ann.deed.t}
+  ($e.deed=laws has:$e.a) {ann.lead} {$e.a:name} gave the laws{ann.deed.t}
+  ($e.deed=laws has:$e.a) {ann.lead} the laws of {$e.a:name} were read out at {$e.place}{ann.deed.t}
+  ($e.deed=map has:$e.a) {ann.lead} {$e.a:name} drew the map of the land{ann.deed.t}
+  ($e.deed=hunt has:$e.a) {ann.lead} {$e.a:name} led the great hunt{ann.deed.t}
+  ($e.deed=hunt has:$e.a) {ann.lead} {$e.a:name} brought down the great {game.one}{ann.deed.t}
+  ($e.deed=sailed has:$e.a) {ann.lead} {$e.a:name} sailed beyond the known coasts{ann.deed.t}
+  ($e.deed=healed has:$e.a) {ann.lead} {$e.a:name} healed the sick of {$e.place}{ann.deed.t}
+  ($e.deed=frieze has:$e.a) {ann.lead} {$e.a:name} carved the great frieze at {$e.place}{ann.deed.t}
+  ($e.deed=frieze has:$e.a) {ann.lead} {$e.a:name} cut {motif.over} round the walls at {$e.place}{ann.deed.t}
+  ($e.deed=taught has:$e.a) {ann.lead} {$e.a:name} taught at {$e.place}{ann.deed.t}
+  ($e.deed=book has:$e.a) {ann.lead} {$e.a:name} wrote a book that everyone read{ann.deed.t}
+  ($e.deed=theory has:$e.a) {ann.lead} {$e.a:name} set out a new account of the world{ann.deed.t}
+  ($e.deed=pictures has:$e.a) {ann.lead} {$e.a:name} made the pictures that move{ann.deed.t}
+  ($e.deed=gardens has:$e.a) {ann.lead} {$e.a:name} made the gardens of {$e.place}{ann.deed.t}
+ann.deed.t
+  (6) .
+  ; people came from far off to see it.
+  (has:$e.a) ; {$e.a:name} was {#$e.a.age} years old.
+  ; it is talked of still.
+  {ann.after}
+
+# =====================================================================================================================
+# the people's troubles and movings
+# =====================================================================================================================
+
+annal.unrest
+  ($e.unrest=bread) {ann.lead} a riot over bread at {$e.place}{ann.unrest.t}
+  ($e.unrest=bread) {ann.lead} the hungry of {$e.place} broke open the stores{ann.unrest.t}
+  ($e.unrest=strike) {ann.lead} the workers of {$e.place} stopped work{ann.unrest.t}
+  ($e.unrest=strike) {ann.lead} the {craft} of {$e.place} downed tools{ann.unrest.t}
+  ($e.unrest=rising) {ann.lead} a rising at {$e.place}{ann.unrest.t}
+  ($e.unrest=rising) {ann.lead} {$e.place} rose against {ruler.the}{ann.unrest.t}
+  ($e.unrest=riot) {ann.lead} a riot at {$e.place}{ann.unrest.t}
+  ($e.unrest=riot) {ann.lead} there was fighting in {town.open} at {$e.place}{ann.unrest.t}
+ann.unrest.t
+  ($e.value>0) ; {#$e.value:about} died.
+  , put down by the guard.
+  ; it began over a little thing and ended over a great one.
+  ; {ruler.the} sent soldiers, then bread.
+  ; the {craft} sheds were burned.
+  (5) .
+
+annal.migration
+  (has:$e.place has:$e.place2) {ann.lead} {#$e.value:about} moved from {$e.place} to {$e.place2}{ann.mig.t}
+  (!has:$e.place has:$e.place2) {ann.lead} {#$e.value:about} came in from the countryside to {$e.place2}{ann.mig.t}
+  (!has:$e.place has:$e.place2) {ann.lead} the villages emptied into {$e.place2}{ann.mig.t}
+  (!has:$e.place2) {ann.lead} {#$e.value:about} left the countryside for the cities{ann.mig.t}
+ann.mig.t
+  (5) .
+  ; the {herd} were sold, and the {ann.houses} left to the {bird}.
+  ; the new streets of {$e.place2} were full of people who did not know each other.
+  ; the old fields went back to {tree}.
+
+annal.abandoned
+  {ann.lead} {ann.left.m}{ann.left.t}
+  {ann.lead} {ann.left.m}{ann.left.t}
+ann.left.m
+  {$e.place} was left
+  the last families left {$e.place}
+  {$e.place} was given up
+  nobody lived at {$e.place} any more
+  {$e.place} was emptied
+  the last fire went out at {$e.place}
+ann.left.t
+  ($e.left=river) : the river had changed its course.
+  ($e.left=wells) : its water had failed.
+  ($e.left=mine) : the mine was worked out.
+  ($e.left=soil) : the soil was spent.
+  ($e.left=cities) : its people had gone to the cities.
+  ($e.left=taken) : it had been taken.
+  ($e.left=band) : the band had moved on.
+  ($e.left=cause|$e.left=collapse|$e.left=band|$e.left=cleared) .
+  ($e.left=cause|$e.left=collapse) ; the gate was left open.
+  ($e.left=cause|$e.left=collapse) ; the {herd} were turned loose.
+  ($e.left=cause|$e.left=collapse) ; they took the {vessel} and the seed, and left the rest.
+
+# =====================================================================================================================
+# the other people
+# =====================================================================================================================
+
+annal.contact
+  {ann.lead} the {other} were met at {$e.place}{ann.cont.t}
+  {ann.lead} strangers came to {$e.place}: the {other}{ann.cont.t}
+  {ann.lead} people of another kind were seen near {$e.place}, and spoken to{ann.cont.t}
+ann.cont.t
+  , for the first time.
+  ; their speech was strange.
+  ; they wanted {crop2}, and had {trade} to give for it.
+  ; they would not eat {food}, and nobody knew why.
+  (has:$e.a) ; {$e.a:name} went out to them.
+  (4) .
+
+annal.treaty
+  ($e.treaty=friendship) {ann.lead} a pact of friendship was sworn with the {other}{ann.treaty.t}
+  ($e.treaty=friendship) {ann.lead} the {other} and the {people} swore to be friends{ann.treaty.t}
+  ($e.treaty=trade) {ann.lead} a treaty of trade was made with the {other}{ann.treaty.t}
+  ($e.treaty=trade) {ann.lead} the markets were opened to the {other}{ann.treaty.t}
+  ($e.treaty=border) {ann.lead} the border with the {other} was agreed{ann.treaty.t}
+  ($e.treaty=border) {ann.lead} stones were set between our land and the {other}'s{ann.treaty.t}
+ann.treaty.t
+  (5) .
+  ; both sides swore {oath}.
+  ; it was cut on a stone at the border.
+  ; the {other} gave {trade}, and we gave {crop}.
+
+annal.otherend
+  {ann.lead} word came that the {other} were gone{ann.oe.t}
+  {ann.lead} no traders came from the {other} that year, or after{ann.oe.t}
+  {ann.lead} the {other} were not seen again{ann.oe.t}
+ann.oe.t
+  (5) .
+  ; nobody went to look.
+  ; the border stones stood for nothing now.
+ann.disc.anon
+  ($e.discovery=farshore) the far shore was found
+  ($e.discovery=source) the source of {river} was found
+  ($e.discovery=pass) the pass over {mountain} was found
+  ($e.discovery=round) it was shown that the world is round
+  ($e.discovery=farside) the far side of the world was reached
+  ($e.discovery=poles) the poles were reached
+  ($e.discovery=orbit) the way to orbit was found
+  ($e.discovery=moon) the moon was reached
+  ($e.discovery=worlds) the other worlds of the sun were reached
+ann.deed.anon
+  ($e.deed=song) a song was made at {$e.place} that is still sung
+  ($e.deed=chronicle) the chronicle of the years was begun
+  ($e.deed=laws) the laws were given
+  ($e.deed=map) the map of the land was drawn
+  ($e.deed=hunt) the great hunt was held
+  ($e.deed=sailed) a boat sailed beyond the known coasts
+  ($e.deed=healed) the sick of {$e.place} were healed
+  ($e.deed=frieze) the great frieze was carved at {$e.place}
+  ($e.deed=taught) a school was kept at {$e.place}
+  ($e.deed=book) a book was written that everyone read
+  ($e.deed=theory) a new account of the world was set out
+  ($e.deed=pictures) the pictures that move were made
+  ($e.deed=gardens) the gardens of {$e.place} were made
+)VG"

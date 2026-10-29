@@ -1,6 +1,6 @@
 # R-414: the HUD and the screens pared down
 
-status: done 2026-10-11 (uncommitted)
+status: done 2026-10-11 (released in 1.3.0)
 milestone: 1.3.0 (after R-413; the same message's last part, the landing map's peoples, is R-415)
 
 ## Request

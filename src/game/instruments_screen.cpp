@@ -1,16 +1,16 @@
-// C-11 (2026-10-10): the instruments' case on the cabin's left wall (galaxy/instruments.h). The instruments taken from the ruins
+// C-11 (2026-10-10): the instruments' case on the cabin's left wall (peoples/instruments.h). The instruments taken from the ruins
 // (`Guide::instruments`) are kept here and played: the one on the screen is drawn from its own numbers (game/instrument_draw.cpp) and sounds
 // with its people's timbre on its people's scale through the synth's instrument voices (`AudioState::instrument`, `instrumentHits`): the keys
 // 1 to 9 and 0 play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is
 // down; Left and Right move the register a period down or up; Up and Down take another from the case. The gramophone plays its disc instead
 // (Enter winds it): a piece of its people's age, heard through its horn. The ship's player plays on under an instrument (one may play along).
-// C-18 (2026-10-11): the case opens on its worlds, a folder each as the decoder's shards are kept (the user: "make it so that instruments are
+// the case opens on its worlds, a folder each as the decoder's shards are kept (the user: "make it so that instruments are
 // also separated by planet/world as shards are so you open specific planet as a folder"): Enter opens a world and its instruments are the
 // list (Up and Down within it), Esc closes the world and Esc again the case. A world of two peoples is a folder each people, named on its
 // line as the decoder names them (the user: "in instruments case split instruments by civilization as a decoder does").
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -28,7 +28,7 @@ struct KeyRead { BodyGen g; Lore lore; Tradition T; PeopleInstruments set; Instr
 bool readInstrumentKey(const std::string& key, KeyRead& out) {
     const std::string wk = worldOfKey(key); const int id = idOfKey(key);
     int64_t sx, sy, sz; Star st;
-    if (id < 0 || !Guide::parseStarKey(wk, sx, sy, sz) || !starInSector(sx, sy, sz, st, true)) return false;
+    if (id < 0 || !Guide::parseStarKey(wk, sx, sy, sz) || !placeInSector(sx, sy, sz, st, true)) return false;
     StarSystem wsys; wsys.generate(st);
     const int bi = bodyOfKeyI(wk);
     if (bi < 0 || bi >= (int)wsys.bodies.size()) return false;
@@ -44,7 +44,7 @@ bool readInstrumentKey(const std::string& key, KeyRead& out) {
 }
 }
 
-void Game::openInstruments() {
+void Game::instrumentsEnter() {
     radarOff(); if (tele.on) telescopeOff();
     stopInstrument();
     // C-18: the worlds, a folder each (a world of two peoples a folder each people, named as the decoder names them): how many of each
@@ -62,7 +62,7 @@ void Game::openInstruments() {
         if (wk != read) {
             read = wk; peoples = 1;
             int64_t sx, sy, sz; Star st;
-            if (Guide::parseStarKey(wk, sx, sy, sz) && starInSector(sx, sy, sz, st, true)) {
+            if (Guide::parseStarKey(wk, sx, sy, sz) && placeInSector(sx, sy, sz, st, true)) {
                 StarSystem wsys; wsys.generate(st);
                 const int bi = bodyOfKeyI(wk);
                 if (bi >= 0 && bi < (int)wsys.bodies.size()) {
@@ -82,7 +82,7 @@ void Game::openInstruments() {
     icase.level = 0; icase.keys.clear(); icase.names.clear(); icase.valid = false;
     icase.notes = 0;
     audio.hum = std::min(audio.hum, 0.2);   // the ship's hum low under what is played (the space view's frames raise it again)
-    state = GameState::INSTRUMENTS; audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // C-18: a world's instruments onto the case's list (a world of two peoples: the folder's people's), the first (or the one last played
@@ -100,7 +100,7 @@ void Game::openCaseWorld(int w) {
     for (size_t i = 0; i < icase.keys.size(); i++) if (icase.keys[i] == was) sel = (int)i;
     icase.valid = false;
     if (!icase.keys.empty()) loadInstrument(sel);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 bool Game::loadInstrument(int sel) {
@@ -122,6 +122,9 @@ bool Game::loadInstrument(int sel) {
     return true;
 }
 
+// U-02: an instrument is played at its case only
+void Game::instrumentsAway() { if (audio.instrument || icase.discOn) stopInstrument(); }
+
 void Game::stopInstrument() {
     audio.instrument = nullptr; audio.instrumentHits.clear(); audio.instrumentUps.clear();
     if (icase.discOn && audio.piece == &icase.disc) { audio.piece = nullptr; audio.tradition = nullptr; audio.medium = -1; audio.pieceStart = false; audio.pieceBeat = -1; }
@@ -129,6 +132,7 @@ void Game::stopInstrument() {
     for (bool& h : icase.held) h = false;
 }
 
+// a note of the one on the screen (`key` holds it; 0 a note of its own length)
 void Game::playInstrumentDegree(int degree, int key) {
     if (!icase.valid || instrumentPlaysDisc(icase.inst) || !audio.instrument) return;
     AudioState::InstrumentNote nt;
@@ -142,22 +146,21 @@ void Game::playInstrumentDegree(int degree, int key) {
     if (icase.played.size() > 28) icase.played.erase(icase.played.begin());
 }
 
-void Game::updateInstruments(const Input& in, double realDt) {
+void Game::updateInstruments(const Input& in, double dt, double realDt) {
     for (double& g : icase.glow) g = std::max(0.0, g - realDt * 1.4);
     if (icase.level == 0) {   // C-18: the worlds
         const int nw = (int)icase.worlds.size();
-        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; audio.beep = 4; return; }
+        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); audio.beep = BEEP_UI; return; }
         if (nw == 0) return;
-        if (in.wasPressed(KEY_UP)) { icase.worldSel = (icase.worldSel + nw - 1) % nw; audio.beep = 4; }
-        if (in.wasPressed(KEY_DOWN)) { icase.worldSel = (icase.worldSel + 1) % nw; audio.beep = 4; }
+        if (menuStep(in, icase.worldSel, nw)) audio.beep = BEEP_UI;
         if (enterKey(in)) openCaseWorld(icase.worldSel);
         return;
     }
-    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = 4; return; }   // C-18: back to the worlds
+    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = BEEP_UI; return; }   // back to the worlds
     const int n = (int)icase.keys.size();
     if (n == 0) return;
-    if (in.wasPressed(KEY_UP)) { loadInstrument((icase.sel + n - 1) % n); audio.beep = 4; return; }
-    if (in.wasPressed(KEY_DOWN)) { loadInstrument((icase.sel + 1) % n); audio.beep = 4; return; }
+    if (in.wasPressed(KEY_UP)) { loadInstrument((icase.sel + n - 1) % n); audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_DOWN)) { loadInstrument((icase.sel + 1) % n); audio.beep = BEEP_UI; return; }
     if (!icase.valid) return;
     if (instrumentPlaysDisc(icase.inst)) {   // the gramophone: Enter winds it and the disc plays through its horn; again stops it
         const bool mine = icase.discOn && audio.piece == &icase.disc;
@@ -174,18 +177,30 @@ void Game::updateInstruments(const Input& in, double realDt) {
         if (icase.discOn) {
             if (mine && audio.pieceBeat >= 0) icase.discT = audio.pieceBeat * 60.0 / std::max(1.0, icase.disc.bpm); else icase.discT += realDt;
             const double beat = icase.discT * icase.disc.bpm / 60.0;   // its notes light the picture as they sound
-            for (const Note& nt : icase.disc.notes) if (nt.voice >= 0 && nt.t <= beat && nt.t > beat - realDt * icase.disc.bpm / 60.0 && !icase.glow.empty()) icase.glow[(nt.degree % (int)icase.glow.size() + (int)icase.glow.size()) % (int)icase.glow.size()] = 1.0;
+            for (const Note& nt : icase.disc.notes)
+                if (nt.voice >= 0 && nt.t <= beat && nt.t > beat - realDt * icase.disc.bpm / 60.0 && !icase.glow.empty())
+                    icase.glow[(nt.degree % (int)icase.glow.size() + (int)icase.glow.size()) % (int)icase.glow.size()] = 1.0;
             if (icase.discT > icase.disc.seconds + 1.0 || (mine && audio.pieceDone && icase.discT > 0.5) || !mine) stopInstrument();
         }
         return;
     }
-    if (in.wasPressed(KEY_LEFT)) { icase.regShift = std::max(-1, icase.regShift - 1); audio.beep = 4; }
-    if (in.wasPressed(KEY_RIGHT)) { icase.regShift = std::min(1, icase.regShift + 1); audio.beep = 4; }
+    if (in.wasPressed(KEY_LEFT)) { icase.regShift = std::max(-1, icase.regShift - 1); audio.beep = BEEP_UI; }
+    if (in.wasPressed(KEY_RIGHT)) { icase.regShift = std::min(1, icase.regShift + 1); audio.beep = BEEP_UI; }
     for (int d = 0; d < 10; d++) {
         const int k = DIGIT_KEYS[d];
         if (in.wasPressed(k)) { playInstrumentDegree(d, k); icase.held[d] = true; }
         else if (icase.held[d] && !in.isDown(k)) { icase.held[d] = false; audio.instrumentUps.push_back(k); }
     }
+}
+
+// U-04: the case's commands (the controller's first page; an instrument played is its context's, THE INSTRUMENT)
+void Game::instrumentsPad(PadMenu& m) const {
+    m.title = "THE CASE";
+    if (icase.level == 0) { if (!icase.worlds.empty()) m.item("OPEN THE FOLDER", KEY_ENTER); m.item("CLOSE THE CASE", KEY_ESCAPE); return; }
+    if (icase.valid && instrumentPlaysDisc(icase.inst)) m.item(icase.discOn ? "STOP THE MACHINE" : "WIND THE MACHINE", KEY_ENTER);
+    else if (icase.valid) { m.item("LOWER", KEY_LEFT); m.item("HIGHER", KEY_RIGHT); m.item("THE NINTH NOTE", KEY_9); m.item("THE TENTH NOTE", KEY_0); }
+    m.item("THE NEXT INSTRUMENT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP);
+    m.item("BACK TO THE FOLDERS", KEY_ESCAPE);
 }
 
 // C-18: the case's worlds, a folder each: the world's name and where it is (a world of two peoples: the folder's people, as the decoder's
@@ -223,7 +238,7 @@ void Game::renderCaseWorlds() {
 
 void Game::renderInstruments() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
-    if (icase.level == 0) { renderCaseWorlds(); return; }   // C-18
+    if (icase.level == 0) { renderCaseWorlds(); return; }
     const int n = (int)icase.keys.size();
     const bool inRange = icase.worldSel >= 0 && icase.worldSel < (int)icase.worlds.size();
     const std::string wname = inRange ? upper(worldNameOfKey(icase.worlds[icase.worldSel])) : std::string("?");
@@ -247,7 +262,7 @@ void Game::renderInstruments() {
     const Instrument& I = icase.inst;
     const bool disc = instrumentPlaysDisc(I);
     drawInstrumentPicture(122, 16, 192, 104, I, icase.tradition, icase.palette, icase.glow, realTime);
-    // R-414: the instrument's name alone (the user: "On the right you again see that it's 'From <planet>' and coordinates. No need for that -
+    // the instrument's name alone (the user: "On the right you again see that it's 'From <planet>' and coordinates. No need for that -
     // you already know where it is from when you open a name of the planet/civilization in instruments case"): C-11's "OF THE ..." and
     // C-17's "FROM <world> (<sector> / <body>)" went to the title, the folder's own
     drawText(canvas, 124, 124, trunc(instrumentName(icase.tradition, I), 31).c_str(), HUD_WHITE);
@@ -260,7 +275,7 @@ void Game::renderInstruments() {
         drawTextCentered(canvas, UW / 2, UH - 10, "ENTER WINDS IT  UP/DOWN ANOTHER  ESC THE WORLDS", HUD_DIM);
         return;
     }
-    drawText(canvas, 124, 135, trunc(traditionLine(icase.tradition), showReg ? 23 : 31).c_str(), HUD_GREEN);   // C-17: room for the register's word
+    drawText(canvas, 124, 135, trunc(traditionLine(icase.tradition), showReg ? 23 : 31).c_str(), HUD_GREEN);   // room for the register's word
     if (showReg) drawText(canvas, UW - 6 - textWidth(reg), 135, reg, HUD_CYAN);
     // the keys: a bar a degree, as high as its pitch over the register's first note (the scale's own steps), lit while it sounds
     const int sc = std::max(1, (int)icase.tradition.scale.size());
@@ -272,14 +287,5 @@ void Game::renderInstruments() {
         fillRectRGB(canvas, x, 174 - h, x + 9, 174, col);
         drawText(canvas, x + 2, 177, fmt("%d", (d + 1) % 10).c_str(), g > 0.05 ? HUD_AMBER : HUD_DIM);
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, "1-9 AND 0 PLAY  LEFT/RIGHT REGISTER  UP/DOWN  ESC", HUD_DIM);   // C-18: Esc to the worlds
-}
-
-std::string Game::testInstrumentInfo() const {
-    if (!icase.valid) return fmt("the case: %d instruments, none on the screen", (int)icase.keys.size());
-    const Timbre* tb = instrumentTimbre(icase.tradition, icase.inst);
-    return fmt("the case: %d instruments; on the screen %s (id %d, people %d, age %s, voice %d, %s), %d courses, register %+d, %d notes played, the synth's timbre %s%s",
-               (int)icase.keys.size(), instrumentName(icase.tradition, icase.inst).c_str(), icase.inst.id, icase.inst.people, AGE_NAMES[std::max(0, std::min(AGE_COUNT - 1, icase.inst.age))], icase.inst.voice,
-               tb ? (tb->name + ", " + TIMBRE_FAMILY_NAMES[std::max(0, std::min(TF_COUNT - 1, tb->family))]).c_str() : "its disc", (int)icase.glow.size(), icase.inst.reg + icase.regShift, icase.notes,
-               audio.instrument == tb && tb ? "set" : (audio.instrument ? "another's" : "none"), icase.discOn ? ", the disc turning" : "");
+    drawTextCentered(canvas, UW / 2, UH - 10, "1-9 AND 0 PLAY  LEFT/RIGHT REGISTER  UP/DOWN  ESC", HUD_DIM);   // Esc to the worlds
 }

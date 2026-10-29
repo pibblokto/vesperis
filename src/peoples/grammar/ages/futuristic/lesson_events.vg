@@ -1,0 +1,201 @@
+R"VG(
+# lesson_events.vg (H-04's second pass): the lesson's history: an event of the people's own past as a teacher tells it to children
+# (`lesson.<kind>`, `@event ... lesson`): when it was (a year, how long ago, whose time), what happened, plainly, and why it is
+# remembered. Every kind several ways, the openers and the endings shared.
+
+# when it was
+ls.when
+  Long ago, in the year {#$e.year:digits},
+  In the year {#$e.year:digits},
+  {#$e.ago:about} years ago,
+  In the {#$e.year:ord} year of {city},
+  (has:$e.ruler) In the time of {$e.ruler:name},
+  ($e.ago<400) When your grandparents' grandparents were young,
+  ($e.ago>=1000) So long ago that the records are only a few lines,
+  (seasons=4 has:$e.season) One {$e.season}, {#$e.ago:about} years ago,
+
+# why it is remembered
+ls.then
+  (0.6) {ls.then.plain}
+  (2) {ls.then.own}
+ls.then.own (share=0.8)
+  At {festival} we still {ls.keepit}.
+  It is why {ls.why}.
+  There is a song about it, with {instrument}; some of you can play it.
+  We keep a day for it, the {#n:ord} of {season.now}.
+  The old ones still say {exclaim} when it comes up.
+  The {craft} workshop made a piece about it; it is in the {fut.common}.
+  Our grandparents wore {colour.mourn} for it, once a year, until they forgot why.
+  They say the {herd} were never the same afterwards, which may be true.
+  It is painted over the {fut.gate}, among {motif.over}; look up on your way home.
+  The old ones still bake {food} on the day, without saying why.
+ls.then.plain (share=0.3)
+  That is why we remember it.
+  We have the records from that year; some of them are in the archive here.
+  There is a song about it, which some of you know.
+  The place is still there, if you want to see it.
+  Nobody alive remembers it, but everyone in the {fut.block} has heard of it.
+  We still have the records, if you want to read them.
+  Ask your grandparents about it; their grandparents were there.
+  It seems a long time ago, and it was.
+  Some of you have family who came from there.
+  There is a picture of it in the {fut.common}; look at it on your way out.
+  The archive has {#nbig} pages about it, and most of them disagree.
+  I have told it the way my teacher told me. She told it better.
+ls.keepit
+  light a lamp for it
+  say the names, with {food} after
+  sing the song about it
+  leave the {fut.gate} open all night
+ls.why
+  nothing is built below the old flood marks
+  we never build near the water
+  the {herd} are kept close
+  we count the stores twice a year
+  there is a stone by the {fut.gate} with nothing written on it
+
+lesson.founding
+  {ls.when} {$e.a:name} founded {$e.place}. {ls.then}
+  (has:$e.place2) {ls.when} people from {$e.place2} went out and built {$e.place}. {ls.then}
+  {ls.when} {$e.place} was a field, and then it was a town. {$e.a:name} chose the spot. {ls.then}
+lesson.built
+  {ls.when} the people built {$e.work} at {$e.place}. It took {#$e.value|year}. {ls.then}
+  {ls.when} {$e.work} at {$e.place} was finished, after {#$e.value|year} of work, much of it by hand. {ls.then}
+  (has:$e.a) {ls.when} {$e.a:name} saw {$e.work} at {$e.place} finished. {ls.then}
+lesson.invention
+  {ls.when} {$e.a:name} of {$e.place} gave us {$e.invention}. {ls.then}
+  {ls.when} {$e.invention} was first made at {$e.place}, and nobody but the {craft} workshop believed in it for years. {ls.then}
+  {ls.when} {$e.a:name} worked out {$e.invention}, and then spent the rest of a life explaining it. {ls.then}
+lesson.discovery
+  {ls.when} {$e.a:name} went where nobody had gone, and came back. {ls.then}
+  {ls.when} {$e.a:name} found {ls.found}, and the maps had to be drawn again. {ls.then}
+ls.found
+  ($e.discovery=farshore) the far shore
+  ($e.discovery=source) where {river} begins
+  ($e.discovery=pass) the way over {mountain}
+  ($e.discovery=round) that the world is round
+  ($e.discovery=farside) the far side of the world
+  ($e.discovery=poles) the poles
+  ($e.discovery=orbit) the way to orbit
+  ($e.discovery=moon) the way to the moon
+  ($e.discovery=worlds) the other worlds of {sun.first}
+lesson.war
+  {ls.when} the {people} went to war, the one they call {$e.war}, and the {herd} were driven into the hills. {ls.war} {ls.then}
+  {ls.when} {$e.war} began. {ls.war} {ls.then}
+lesson.battle
+  {ls.when} there was a battle at {$e.place}, in {$e.war}. {#$e.value:about} died there. {ls.then}
+  {ls.when} people fought at {$e.place}. {ls.war} {ls.then}
+lesson.siege
+  {ls.when} {$e.place} was besieged, in {$e.war}. The people inside ate their {herd}, then their boots. {ls.then}
+lesson.sack
+  {ls.when} {$e.place} was sacked, in {$e.war}. We do not tell the rest to children. {ls.then}
+lesson.peace
+  {ls.when} {$e.war} ended. Everyone was very tired. {ls.then}
+  {ls.when} the fighting stopped, and {$e.war} was over. People went home and found the {herd} gone wild. {ls.then}
+ls.war (share=0.5)
+  People killed each other then, over land and {crop}.
+  It is hard to understand now, with the {fut.green} full, but they believed in it.
+  Both sides said they were defending their {herd} and their children.
+  It lasted longer than anyone expected, as they always did, and longer than the {herd} could wait.
+  The {herd} went hungry, and so did the people.
+  The {craft} workshops made weapons instead, and were ashamed of it after.
+  Nobody kept {festival} for the whole of it.
+  The children were sent to {city2}, and some of them stayed there.
+  They fought over {ls.over}, which is hard to believe now.
+  Both sides prayed to {god} for it over the same {fruit}, which must have been confusing for {god}.
+ls.over
+  the water
+  the {crop}
+  a road
+  the {fut.green}, or what was there before them
+  an insult nobody can now repeat
+lesson.sickness
+  {ls.when} {$e.sickness} came to {$e.place}. There were no machines to help, and many died. {ls.then}
+  {ls.when} {$e.sickness} went through {$e.place}. {#$e.value:about} died of it. {ls.then}
+lesson.famine
+  {ls.when} the harvest failed and there was a famine. People went hungry; that does not happen now. {ls.then}
+  {ls.when} there was no {crop}, and then there was no {food}. {ls.then}
+lesson.flood
+  {ls.when} the water came over {$e.place}. {ls.then}
+  {ls.when} {$e.place} flooded. They kept the high-water mark; it is above your heads. {ls.then}
+lesson.drought
+  {ls.when} it did not rain for {#$e.value|year}. {ls.then}
+lesson.quake
+  {ls.when} the ground shook at {$e.place}. {ls.then}
+  {ls.when} {$e.place} fell down in an afternoon, when the ground moved. {ls.then}
+lesson.eruption
+  {ls.when} a mountain opened near {$e.place}. The sky was dark for a season. {ls.then}
+lesson.impact
+  {ls.when} a stone fell from the sky. {ls.then}
+  {ls.when} a stone from the sky fell near {$e.place}, and everything nearby was gone. {ls.then}
+lesson.flare
+  {ls.when} the sun flared, and people burned who were out under it. {ls.then}
+lesson.winter
+  {ls.when} a long winter began, and the summer did not come. {ls.then}
+  {ls.when} the cold lasted {#$e.value|year}. The {herd} died first. {ls.then}
+lesson.institution
+  {ls.when} {$e.instname} was founded. {ls.then}
+  (has:$e.a) {ls.when} {$e.a:name} founded {$e.instname}. {ls.then}
+lesson.government
+  {ls.when} the way we are ruled changed. {ls.then}
+  {ls.when} the old rule ended and a new kind began. Some people cheered; some hid. {ls.then}
+lesson.accession
+  {ls.when} {$e.a:name} came to rule. {ls.then}
+  {ls.when} {$e.a:name} was given the rule. {ls.then}
+lesson.rulerdeath
+  {ls.when} {$e.a:name} died, who had ruled for a long time. {ls.then}
+lesson.death
+  {ls.when} {$e.a:name} died. People still talk about {$e.a:obj}. {ls.then}
+lesson.faith
+  {ls.when} the faith changed. Some people were very angry about it. {ls.then}
+  (has:$e.a) {ls.when} {$e.a:name} preached a new way at {$e.place}. {ls.then}
+lesson.deed
+  {ls.when} {$e.a:name} did something people still talk about, at {$e.place}. {ls.then}
+lesson.unrest
+  {ls.when} the people of {$e.place} rose up. They had reasons. {ls.then}
+  {ls.when} there was trouble at {$e.place}: people in the streets, and windows broken. {ls.then}
+lesson.migration
+  {ls.when} {#$e.value:about} people left the land for the cities. {ls.then}
+lesson.abandoned
+  {ls.when} the people left {$e.place}, and did not come back. {ls.then}
+  {ls.when} {$e.place} was left empty. It is still there, if you want to see it, or what is left. {ls.then}
+lesson.contact
+  {ls.when} our people first met the {other}. {ls.then}
+  {ls.when} the {other} came, or we came to them; both stories are told. {ls.then}
+lesson.treaty
+  {ls.when} we made a treaty with the {other}. {ls.then}
+lesson.otherend
+  {ls.when} word came that the {other} were gone. {ls.then}
+lesson.omen
+  {ls.when} people saw a sign in the sky over {$e.place}, and were afraid of it. We know now what it was. {ls.then}
+lesson.way
+  {ls.when} the way between {$e.place} and {$e.place2} was opened. Before that it took {#n|day}. {ls.then}
+lesson.fire
+  {ls.when} {$e.place} burned. {#$e.value:about} houses were lost. {ls.then}
+lesson.storm
+  {ls.when} there was a storm of {$e.what} over {$e.place} that people still measure others by. {ls.then}
+lesson.accident
+  {ls.when} there was a disaster at {$e.place}. {#$e.value:about} died. We build differently now because of it. {ls.then}
+lesson.wonder
+  {ls.when} people at {$e.place} saw a wonder, and wrote it down. We still do not know what to make of it. {ls.then}
+lesson.games
+  {ls.when} there were games at {$e.place}, the first anyone wrote down. {ls.then}
+  (has:$e.a) {ls.when} {$e.a:name} won the games at {$e.place}, and was famous for a season. {ls.then}
+lesson.law
+  {ls.when} a law was made about {$e.what}. We still keep it, mostly. {ls.then}
+lesson.trial
+  {ls.when} there was a trial at {$e.place} for {$e.what}. Everybody had an opinion. {ls.then}
+lesson.embassy
+  {ls.when} envoys came to {$e.place}. People lined the streets to look at them. {ls.then}
+lesson.show
+  {ls.when} a new {$e.what} was given at {$e.place}, and people talked of nothing else for a year. {ls.then}
+lesson.stones
+  Before the years were counted, the {people} raised the stones. {ls.then}
+lesson.coming
+  Before the years were counted, the {people} came into this land. {ls.then}
+lesson.first
+  Before the years were counted, the {people} learned something new, and kept it. {ls.then}
+lesson.none
+  Long ago, before the machines, people did everything by hand. It took them all day. {ls.then}
+  Long ago the {people} were many, and busy, and they wrote everything down. That is why we can know them. {ls.then}
+)VG"

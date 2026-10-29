@@ -9,6 +9,18 @@ std::string fmt(const char* f, ...) {
     va_list ap; va_start(ap, f); vsnprintf(buf, sizeof(buf), f, ap); va_end(ap);
     return buf;
 }
+void drawPanel(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t fill, int alpha, uint32_t edge) {
+    blendRectRGB(c, x0, y0, x1, y1, fill, alpha);
+    drawRectRGB(c, x0, y0, x1, y1, edge);
+}
+
+bool menuStep(const Input& in, int& sel, int n, bool sideways) {
+    const bool up = in.wasPressed(KEY_UP) || (sideways && in.wasPressed(KEY_LEFT)), down = in.wasPressed(KEY_DOWN) || (sideways && in.wasPressed(KEY_RIGHT));
+    if (up) sel = (sel + n - 1) % n;
+    if (down) sel = (sel + 1) % n;
+    return up || down;
+}
+
 std::string upper(std::string s) { for (char& c : s) c = (char)toupper((unsigned char)c); return s; }
 std::string thousands(double v) {   // 13050 -> "13,050" (G-05; C-15's radar)
     const long long n = std::llround(std::fabs(v));
@@ -50,13 +62,9 @@ void setHudScheme(int scheme) {
     HUD_SHADOW = rgb(0, 0, 0);
 }
 
-const char* shortType(int type) {
-    static const char* n[PT_COUNT] = {"MOLTEN", "CRATERED", "VENUSIAN", "FELISIAN", "ROCKY", "THIN ATMOS", "GAS GIANT", "ICY", "QUARTZ", "OCEAN", "METAL", "VOLCANIC", "CARBON", "SUBSTELLAR", "COMET", "COMPANION",
-                                      "EUROPAN", "TECTONIC", "DESERT", "HYDROCARB", "BOMBARDED", "ACIDIC"};
-    return n[type];
-}
+const char* shortType(int type) { return type >= 0 && type < PT_COUNT ? KINDS[type].shortName : "?"; }   // P-00: the kind's short name (ten characters)
 const char* compassName(double azRad) {
-    static const char* names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+    static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     int i = (int)std::floor(wrap2pi(azRad) / TAU * 8 + 0.5) & 7;
     return names[i];
 }

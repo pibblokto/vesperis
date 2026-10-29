@@ -12,7 +12,7 @@ struct SV { double sx, sy, iz, shade, u, v, w; };
     if (rp.blend == BLEND_DARKEN) {
         Pix& q = fb.idx[o];
         const int behind = (int)(intenOf(q) * rp.darken);
-        const int si = rp.sheen ? toInten(std::min(std::max(shade + grainOff, rp.shadeMin), rp.shadeMax)) : -1;   // B-411: the glass's sheen
+        const int si = rp.sheen ? toInten(std::min(std::max(shade + grainOff, rp.shadeMin), rp.shadeMax)) : -1;   // the glass's sheen
         q = si > behind ? pixI(bank, si) : pixI(bankOf(q), behind);
         if (rp.zwrite) fb.invz[o] = (float)izb;
         return;
@@ -52,10 +52,10 @@ inline void emitPixel(Framebuffer& fb, int x, int y, double iz, double shade, co
 }
 
 // B-311: a texel of a world-mapped tile that spans more than about two and a half pixels on screen is read bilinearly, so the
-// ground close to the camera is soft mottling instead of a mosaic of texel squares (the mush no longer melts 30-pixel
+// ground close to the camera is soft mottling instead of a mosaic of texel squares (the mush cannot melt 30-pixel
 // squares at 2x and above); farther away, where texels are sub-pixel, the nearest texel is enough
 void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, const RasterParams& rp, const Proj& pj) {
-    const SV* pa = &a0; const SV* pb = &b0; const SV* pc = &c0;   // F-07: sorted by reference
+    const SV* pa = &a0; const SV* pb = &b0; const SV* pc = &c0;   // sorted by reference
     if (pa->sy > pb->sy) std::swap(pa, pb);
     if (pb->sy > pc->sy) std::swap(pb, pc);
     if (pa->sy > pb->sy) std::swap(pa, pb);
@@ -98,10 +98,10 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
             const double eAmp = rp.edgeAmp / 64.0;
             const bool ztest = rp.ztest;
             const float* zrow = &fb.invz[(size_t)y * FBW];
-            const bool flatZ = diz == 0.0;           // F-07: a span at one depth (a leaf cluster, a pad, a blob shadow): its 1/z once
+            const bool flatZ = diz == 0.0;           // a span at one depth (a leaf cluster, a pad, a blob shadow): its 1/z once
             const double zFlat = flatZ ? 1.0 / iz : 0.0;
             for (int x = xStart; x <= xEnd; x++) {
-                // B-315: a pixel hidden by the depth buffer costs nothing more (the texture reads come after the test)
+                // a pixel hidden by the depth buffer costs nothing more (the texture reads come after the test)
                 if (ztest && (float)(iz * rp.zbias) <= zrow[x]) { iz += diz; sh += dsh; u += du; v += dv; w += dw; continue; }
                 double z = flatZ ? zFlat : 1.0 / iz;
                 double uu = u * z, vv = v * z;
@@ -120,9 +120,9 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                 if (rp.grain) go += z < lerpZ1 ? rp.grain->atLerp(uu * gs - 0.5, vv * gs - 0.5) : (double)rp.grain->at((int)std::floor(uu * gs), (int)std::floor(vv * gs));
                 if (g2) go += (z < lerpZ2 || g2s < 1.0) ? g2->atLerp(uu * g2s - 0.5, vv * g2s - 0.5) : (double)g2->at((int)std::floor(uu * g2s), (int)std::floor(vv * g2s));
                 go *= gw;
-                if (rp.pattern) {   // A-02: the windows
+                if (rp.pattern) {   // the windows
                     const FacePattern& P = *rp.pattern;
-                    if (P.stripe > 0 || P.dado > 0) {   // R-412: the wall's courses and its dado, faded to their mean where a course is under two pixels
+                    if (P.stripe > 0 || P.dado > 0) {   // the wall's courses and its dado, faded to their mean where a course is under two pixels
                         const double coursePx = P.stripe > 0 ? pj.f * P.stripe * iz / FB_SCALE : 1e9;
                         if (P.dado > 0 && vv < P.dado) go += P.dadoShade;
                         else if (P.stripe > 0) {
@@ -140,10 +140,16 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                             double fu = uu / P.bay, fv = vv / P.storey;
                             const double iu = std::floor(fu), iv = std::floor(fv);
                             fu -= iu; fv -= iv;
-                            if ((P.frame > 0 || P.shutter > 0) && !(fu >= P.x0 && fu < P.x1 && fv >= P.y0 && fv < P.y1)) {   // R-412: the surround, the shutters
+                            if ((P.frame > 0 || P.shutter > 0) && !(fu >= P.x0 && fu < P.x1 && fv >= P.y0 && fv < P.y1)) {   // the surround, the shutters
                                 const double fvh = P.frame * P.bay / P.storey;   // the surround as many metres up as across
                                 bool blank = false;
-                                if (P.scatter > 0) { uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663); h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15; blank = (h & 1023) < (uint32_t)(P.scatter * 1024); }
+                                if (P.scatter > 0) {
+                                    uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663);
+                                    h ^= h >> 13;
+                                    h *= 0x5bd1e995u;
+                                    h ^= h >> 15;
+                                    blank = (h & 1023) < (uint32_t)(P.scatter * 1024);
+                                }
                                 if (!blank) {
                                     if (P.shutter > 0 && fv >= P.y0 && fv < P.y1 && ((fu >= P.x0 - P.shutter && fu < P.x0) || (fu >= P.x1 && fu < P.x1 + P.shutter))) dress = P.shutterShade;
                                     else if (P.frame > 0 && fu >= P.x0 - P.frame && fu < P.x1 + P.frame && fv >= P.y0 - fvh && fv < P.y1 + fvh) dress = P.frameShade;
@@ -152,7 +158,7 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                             if (fu >= P.x0 && fu < P.x1 && fv >= P.y0 && fv < P.y1) {
                                 in = true;
                                 double cx = (fu - P.x0) / (P.x1 - P.x0), cy = (fv - P.y0) / (P.y1 - P.y0);
-                                if (P.group > 1) {   // A-04: the lights of a pair or a group, their mullions between
+                                if (P.group > 1) {   // the lights of a pair or a group, their mullions between
                                     const double gx = cx * P.group, fr = gx - std::floor(gx);
                                     if (fr < 0.1 || fr > 0.9) in = false;
                                     cx = (fr - 0.1) / 0.8;
@@ -160,20 +166,27 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                                 cx = cx * 2 - 1;
                                 if (P.shape == 1 && cy > 0.7) { double q = (cy - 0.7) / 0.3; in = in && cx * cx + q * q < 1.0; }   // an arched head
                                 else if (P.shape == 3) { double q = cy * 2 - 1; in = in && cx * cx + q * q < 1.0; }                 // round
-                                else if (P.shape == 5) in = in && std::fabs(cx) < 1.0 - cy;                                         // A-04: a triangle
-                                else if (P.shape == 6) { double q = (cy - 0.72) / 0.28; in = in && (cy > 0.44 ? cx * cx + q * q < 1.0 : std::fabs(cx) < 0.42 + 0.3 * cy); }   // A-04: a keyhole
-                                if (in && P.scatter > 0) {   // A-04: a cell left blank by its hash
+                                else if (P.shape == 5) in = in && std::fabs(cx) < 1.0 - cy;                                         // a triangle
+                                else if (P.shape == 6) { double q = (cy - 0.72) / 0.28; in = in && (cy > 0.44 ? cx * cx + q * q < 1.0 : std::fabs(cx) < 0.42 + 0.3 * cy); }   // a keyhole
+                                if (in && P.scatter > 0) {   // a cell left blank by its hash
                                     uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663);
                                     h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
                                     if ((h & 1023) < (uint32_t)(P.scatter * 1024)) in = false;
                                 }
                             }
                         }
-                        if (in && fade > 0.5 && P.litBank >= 0) { bank = P.litBank; s2 = P.litShade; go = 0; }
+                        bool lit = in && fade > 0.5 && P.litBank >= 0;
+                        if (P.litShare > 0) {   // a share of the window cells lit, each cell by its own hash; far off a scatter of points, as many as the lit windows' share of the face
+                            uint32_t h = (uint32_t)((int64_t)std::floor(uu / P.bay) * 83492791) ^ (uint32_t)((int64_t)std::floor(vv / P.storey) * 2971215073u);
+                            h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
+                            lit = (lit && (h & 1023) < (uint32_t)(P.litShare * 1024))
+                               || (fade <= 0.5 && (h & 1023) < (uint32_t)(P.litShare * std::min(1.0, 1.4 * P.meanShare) * 1024));
+                        }
+                        if (lit) { bank = P.litBank; s2 = P.litShade; go = 0; }
                         else go += -P.dark * (fade * (in ? 1.0 : 0.0) + (1 - fade) * P.meanShare) + fade * dress + (1 - fade) * P.meanDress;
                     }
                 }
-                // F-07: the depth test above passed (a float under the stored one: the double is too), so the pixel is written as it is
+                // the depth test above passed (a float under the stored one: the double is too), so the pixel is written as it is
                 emitPassed(fb, y * FBW + x, iz * rp.zbias, s2, rp, go, bank);
                 iz += diz; sh += dsh; u += du; v += dv; w += dw;
             }
@@ -213,7 +226,7 @@ void rasterPolygon(Framebuffer& fb, const RVert* v, int n, const RasterParams& r
     int m = 0;
     bool allIn = true;
     for (int i = 0; i < n && allIn; i++) allIn = v[i].z >= NEAR_Z;
-    if (allIn) { src = v; m = std::min(n, 15); }   // F-07: every vertex in front: read in place, the first 15 as the clip keeps them
+    if (allIn) { src = v; m = std::min(n, 15); }   // every vertex in front: read in place, the first 15 as the clip keeps them
     else
         for (int i = 0; i < n; i++) {
             const RVert& a = v[i];
@@ -291,8 +304,8 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
     int steps = (int)std::ceil(std::max(std::fabs(dx), std::fabs(dy)));
     if (steps > 4000) return;
     if (steps < 1) steps = 1;
-    // B-310: walk only the steps whose rows fall into this thread's band (and the frame); a band thread used to walk
-    // every trunk and branch of a forest in full and reject per pixel, which was most of a forest frame
+    // B-310: walk only the steps whose rows fall into this thread's band (and the frame): walking every trunk and branch of a
+    // forest in full and rejecting per pixel would be most of a forest frame
     int y0 = std::max(0, g_bandY0), y1 = std::min(FBH, g_bandY1);
     if (y0 >= y1) return;
     int i0 = 0, i1 = steps;
@@ -322,31 +335,5 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
                 row[px] = pv; zrow[px] = fiz;
             }
         }
-    }
-}
-
-void fillRect(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value) {
-    x0 = std::max(0, x0); y0 = std::max(0, y0); x1 = std::min(FBW - 1, x1); y1 = std::min(FBH - 1, y1);
-    for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) fb.idx[y * FBW + x] = value;
-}
-
-void fillDisc(Framebuffer& fb, double cx, double cy, double r, Pix value) {
-    int x0 = std::max(0, (int)std::floor(cx - r)), x1 = std::min(FBW - 1, (int)std::ceil(cx + r));
-    int y0 = std::max(0, (int)std::floor(cy - r)), y1 = std::min(FBH - 1, (int)std::ceil(cy + r));
-    double r2 = r * r;
-    for (int y = y0; y <= y1; y++)
-        for (int x = x0; x <= x1; x++) {
-            double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
-            if (dx * dx + dy * dy <= r2) fb.idx[y * FBW + x] = value;
-        }
-}
-
-void drawLine2D(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value) {
-    int dx = std::abs(x1 - x0), dy = std::abs(y1 - y0);
-    int steps = std::max(dx, dy);
-    if (steps == 0) { if (x0 >= 0 && y0 >= 0 && x0 < FBW && y0 < FBH) fb.idx[y0 * FBW + x0] = value; return; }
-    for (int i = 0; i <= steps; i++) {
-        int x = x0 + (x1 - x0) * i / steps, y = y0 + (y1 - y0) * i / steps;
-        if (x >= 0 && y >= 0 && x < FBW && y < FBH) fb.idx[y * FBW + x] = value;
     }
 }

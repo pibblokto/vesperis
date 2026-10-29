@@ -4,6 +4,11 @@
 // landmark and name it", and "some sort of echo locator or scanner ... in different modes so you can tune it for ruins or for water
 // to find lakes or for peaks", which can leave the sights already marked out. The sights stay what the terrain makes them
 // (galaxy/landmarks.h); the scanner hears them and the maps show only what the explorer marked
+// the explorer's marks (Guide::marks) and the surface scanner. `R` on the ground cycles the scanner
+// through the kinds the world can hold (off, ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals), Shift+R leaves
+// the marked sights out or takes them in; `L` marks what the crosshair rests on; the sector map's cursor places, names and
+// removes marks (B-412: and shows one over the view). A sight is no marker: it is an echo of the scanner
+// until the explorer marks it
 #include "game.h"
 #include "ui.h"
 #include "galaxy/drainage.h"
@@ -18,9 +23,15 @@ static_assert(MARK_PLACE == LM_COUNT, "a mark of a place is the kind after the s
 
 namespace {
 // the scanner's modes in the order R cycles them, and their names (by LandmarkKind)
-const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};   // T-03: the works after the ruins
-const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
-const char* RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
+const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS,   // T-03: the works after the ruins
+                                  LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,
+                                  LM_METEORITES};
+}
+const char* const SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS",
+                                         "CALDERAS", "TESSERAE", "LABYRINTHS", "HOLLOWS", "CHAINS", "PENITENTES", "COLONNADES", "MUD VOLCANOS", "RIDGES", "PINGOS", "MAARS",   // Q-01: the HUD's too
+                                         "METEORITES"};
+namespace {
+const char* const RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
 }
 
 // B-422: a mark's ground at the map's 64 m, with the rivers only where their drainage tiles are built already: a mark far off reads
@@ -35,6 +46,7 @@ static bool markGround(const SurfaceSite& site, const SurfaceMark& m, Game::Site
     return dry;
 }
 
+// the surface's world's marks (rebuilt when the marks, the landing or the frame change)
 const std::vector<Game::SiteMark>& Game::marksHere() {
     if (!surf.valid) { siteMarks.clear(); siteMarksVersion = -1; return siteMarks; }
     if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) {
@@ -58,12 +70,14 @@ const std::vector<Game::SiteMark>& Game::marksHere() {
     return siteMarks;
 }
 
+// the mark of this world nearest a point within a radius (its index in Guide::marks), -1 none
 int Game::markNear(double x, double z, double radiusM) {
     int best = -1; double bd = radiusM * radiusM;
     for (const SiteMark& m : marksHere()) { double d2 = (m.x - x) * (m.x - x) + (m.z - z) * (m.z - z); if (d2 < bd) { bd = d2; best = m.index; } }
     return best;
 }
 
+// its name, else "A MARK" / "A MARK: RUINS"
 std::string Game::markLabel(int mi) const {
     if (mi < 0 || mi >= (int)guide.marks.size()) return "";
     const SurfaceMark& m = guide.marks[mi];
@@ -78,6 +92,7 @@ bool Game::echoMarked(const SurfaceView::ScanEcho& e) {
     return false;
 }
 
+// where the scanner hears it: off by up to 8% of its distance
 // an echo is heard off its place by up to 8% of its distance (3 km at most) in a direction of its own: far, a hint of the way;
 // near, where it is
 void Game::echoHeardAt(const SurfaceView::ScanEcho& e, double& x, double& z) const {
@@ -87,6 +102,7 @@ void Game::echoHeardAt(const SurfaceView::ScanEcho& e, double& x, double& z) con
     x = e.x + std::cos(a) * off * r; z = e.z + std::sin(a) * off * r;
 }
 
+// the nearest sight of the mode (the marked left out, unless taken in), heard at
 const SurfaceView::ScanEcho* Game::scanNearest(double& hx, double& hz) {
     if (scanMode < 0 || !surf.valid) return nullptr;
     const SurfaceView::ScanEcho* best = nullptr; double bd = 1e300;
@@ -99,27 +115,35 @@ const SurfaceView::ScanEcho* Game::scanNearest(double& hx, double& hz) {
     return best;
 }
 
+// the world can hold that kind
 bool Game::scanModeHere(int mode) const { return surf.valid && mode >= 0 && mode < LM_COUNT && ((sightKindsOf(surf.site.gen) >> mode) & 1); }
 
 void Game::scanCycle() {
     if (!surf.valid) return;
     const unsigned kinds = sightKindsOf(surf.site.gen);
-    if (!kinds) { scanMode = -1; surf.scanWanted = false; status("THE SCANNER HAS NOTHING TO READ ON THIS WORLD", 4); audio.beep = 3; return; }
+    if (!kinds) { scanMode = -1; surf.scanWanted = false; refuse("THE SCANNER HAS NOTHING TO READ ON THIS WORLD"); return; }
     int pos = -1;
     for (int i = 0; i < LM_COUNT; i++) if (SCAN_ORDER[i] == scanMode) pos = i;
     int next = -1;
     for (int i = pos + 1; i < LM_COUNT && next < 0; i++) if ((kinds >> SCAN_ORDER[i]) & 1) next = SCAN_ORDER[i];
     scanMode = next; surf.scanWanted = next >= 0;
     status(next < 0 ? "SCANNER OFF" : fmt("SCANNER: %s - R NEXT, SHIFT+R THE MARKED %s", SCAN_MODE_NAMES[next], scanSkipMarked ? "IN" : "OUT"), 4);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::scanToggleSkip() {
     scanSkipMarked = !scanSkipMarked;
     status(scanSkipMarked ? "SCANNER: THE SIGHTS YOU MARKED ARE LEFT OUT" : "SCANNER*: THE SIGHTS YOU MARKED ARE HEARD TOO", 4);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
+// U-04: the scanner's two lines in the controller's commands (the ground's and the sector map's)
+void Game::scannerPad(PadMenu& m) const {
+    m.item(scanMode < 0 ? "THE SCANNER ON" : "THE SCANNER'S NEXT KIND", KEY_R);
+    m.item(scanSkipMarked ? "THE SCANNER: MARKED SIGHTS IN" : "THE SCANNER: MARKED SIGHTS OUT", KEY_R, MOD_SHIFT);
+}
+
+// "A TOWN", "1240 M HIGH", "2.3 KM ACROSS"
 std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     const Landmark& L = e.lm;
     switch (L.kind) {
@@ -129,7 +153,12 @@ std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
         case LM_MESA: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_CANYON: return fmt("%.0f M DEEP", L.prominenceM);
         case LM_CRYSTALS: return "SPIRES";
-        default: return fmt("%.1f KM ACROSS", 2 * L.radiusM / 1000.0);   // a lake, a crater, a geyser field
+        case LM_CALDERA: case LM_LABYRINTH: return fmt("%.0f M DEEP", L.prominenceM);
+        case LM_TESSERA: case LM_COLUMNS: case LM_RIDGE: case LM_MUD: case LM_PINGO: return fmt("%.0f M HIGH", L.prominenceM);
+        case LM_PENITENTES: return "BLADES OF ICE";
+        case LM_HOLLOWS: return "BRIGHT PITS";
+        case LM_METEORITES: return fmt("IRON STONES, %.1f KM", 2 * L.radiusM / 1000.0);
+        default: return fmt("%.1f KM ACROSS", 2 * L.radiusM / 1000.0);   // a lake, a crater, a geyser field (Q-01: a chain's crater, a maar)
     }
 }
 
@@ -163,7 +192,13 @@ void Game::drawCompassMark(double bearing, uint32_t col, bool filled) {
     const double off = wrapAngle(bearing - surf.player.yaw) / DEG;
     if (std::fabs(off) <= 60) {
         const int x = cx + (int)std::lround(off);
-        for (int r = 3; r >= 2; r--) { const uint32_t c = r == 3 ? HUD_SHADOW : col; drawLineRGB(canvas, x - r, y, x, y - r, c); drawLineRGB(canvas, x, y - r, x + r, y, c); drawLineRGB(canvas, x + r, y, x, y + r, c); drawLineRGB(canvas, x, y + r, x - r, y, c); }
+        for (int r = 3; r >= 2; r--) {
+            const uint32_t c = r == 3 ? HUD_SHADOW : col;
+            drawLineRGB(canvas, x - r, y, x, y - r, c);
+            drawLineRGB(canvas, x, y - r, x + r, y, c);
+            drawLineRGB(canvas, x + r, y, x, y + r, c);
+            drawLineRGB(canvas, x, y + r, x - r, y, c);
+        }
         if (filled) fillRectRGB(canvas, x - 1, y - 1, x + 1, y + 1, col);
     } else {
         char glyph[2] = {off < 0 ? CH_LEFT : CH_RIGHT, 0};
@@ -171,19 +206,23 @@ void Game::drawCompassMark(double bearing, uint32_t col, bool filled) {
     }
 }
 
+// B-412: one mark at a time over the view, none until the explorer picks it (the sector map's Shift+Enter or Shift+click on a
+// mark, again to hide it): the user found every mark within 25 km drawn over the view, their names run into one another
+// the shown mark (Guide::shownMark) when it stands on the surface's world
 const Game::SiteMark* Game::shownMarkHere() {
     if (guide.shownMark < 0) return nullptr;
     for (const SiteMark& m : marksHere()) if (m.index == guide.shownMark) return &m;
     return nullptr;
 }
 
+// that mark shown over the view in place of any other; the shown one hidden
 void Game::showMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     const bool hide = guide.shownMark == mi;
     guide.shownMark = hide ? -1 : mi;
     guide.save(guidePath);
     status(hide ? std::string("NO MARK SHOWN OVER THE VIEW") : fmt("SHOWN OVER THE VIEW: %s", trunc(markLabel(mi), 26).c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // B-412: the shown mark over the view, at any distance (the explorer chose it): where it stands in front a diamond over the ground
@@ -199,7 +238,10 @@ void Game::drawShownMark() {
     if (!surf.projectPoint(m->x, m->y + 6, m->z, sx, sy)) return;
     const int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
     if (lx < 6 || ly < 44 || lx > UW - 6 || ly > UH - 52) return;
-    drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col); drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col); drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col); drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
+    drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col);
+    drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col);
+    drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col);
+    drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
     std::string lab = trunc(markLabel(m->index), 18) + " " + metresString(d);
     int tx = lx + 6;
     if (tx + textWidth(lab.c_str()) > UW - 4) tx = lx - 6 - textWidth(lab.c_str());
@@ -218,19 +260,18 @@ void Game::beginMark(double x, double z) {
         const double score = d - (e.lm.kind == scanMode ? 1e6 : 0);
         if (d < reach && score < best) { best = score; textMarkKind = e.lm.kind; }
     }
-    guideReturn = state == GameState::SECTOR_MAP ? GameState::SECTOR_MAP : GameState::SURFACE;
     returnState = GameState::SURFACE;   // the entry is drawn over the ground (and the map)
-    beginTextEntry("NAME THE MARK", 6, "");
+    beginTextEntry("NAME THE MARK", TEXT_MARK, "");
 }
 
 void Game::beginRenameMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     textMark = mi; textMarkKind = guide.marks[mi].kind;
-    guideReturn = state == GameState::SECTOR_MAP ? GameState::SECTOR_MAP : GameState::SURFACE;
     returnState = GameState::SURFACE;
-    beginTextEntry("RENAME THE MARK", 6, upper(guide.marks[mi].name));
+    beginTextEntry("RENAME THE MARK", TEXT_MARK, upper(guide.marks[mi].name));
 }
 
+// the entry's Enter
 void Game::finishMark(const std::string& name) {
     if (textMark >= 0) {   // a rename (a friend's mark renamed is the explorer's own)
         if (textMark >= (int)guide.marks.size()) return;
@@ -250,19 +291,20 @@ void Game::finishMark(const std::string& name) {
     logEvent("MARK", fmt("%s%s ON %s AT %.2f%s %.2f%s", name.empty() ? "A MARK" : name.c_str(), what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(),
                          std::fabs(m.lat / DEG), m.lat >= 0 ? "N" : "S", std::fabs(wrapAngle(m.lon) / DEG), wrapAngle(m.lon) >= 0 ? "E" : "W"));   // saves the guide
     status(name.empty() ? "A MARK PLACED - ENTER ON IT IN THE MAP NAMES IT" : fmt("MARKED: %s", name.c_str()), 4);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 void Game::removeMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     const std::string label = markLabel(mi);
     guide.marks.erase(guide.marks.begin() + mi);
-    if (guide.shownMark == mi) guide.shownMark = -1; else if (guide.shownMark > mi) guide.shownMark--;   // B-412
+    if (guide.shownMark == mi) guide.shownMark = -1; else if (guide.shownMark > mi) guide.shownMark--;
     marksVersion++; guide.save(guidePath);
     status(fmt("MARK REMOVED: %s", trunc(label, 30).c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
+// R-408: the sights the explorer named before become marks where they stand (this system's worlds), found on a thread
 // the sights the explorer named under O6-06 (`<world>/L<id>` names, the explorer's and the inbox's) become marks where they stand,
 // with their names and kinds, for this system's worlds; a name whose sight is not found again stays as it was. The cells are found
 // on a thread of their own (a system's dozen names asked a dozen cells and their drainage tiles: seconds on a cold start, which
@@ -298,11 +340,13 @@ void Game::migrateLandmarkNames() {
                 out->push_back(j);
             }
         }
-        if (std::getenv("VESPERIS_TRACE")) fprintf(stderr, "  landmark names to marks: %zu asked in %.0f ms\n", out->size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+        if (std::getenv("VESPERIS_TRACE"))
+            fprintf(stderr, "  landmark names to marks: %zu asked in %.0f ms\n", out->size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
         busy->store(false, std::memory_order_release);
     });
 }
 
+// the main thread puts the found ones in the guide (every frame)
 void Game::collectMigration() {
     if (!migrateThread.joinable() || migrateBusy.load(std::memory_order_acquire)) return;
     migrateThread.join();
@@ -326,24 +370,4 @@ void Game::collectMigration() {
         status(fmt("YOUR %d NAMED SIGHT%s HERE %s NOW MARKS ON THE MAPS", moved, moved == 1 ? "" : "S", moved == 1 ? "IS" : "ARE"), 6);
     }
     migrateLandmarkNames();   // the ship may be at another system's names by now
-}
-
-std::string Game::testScanInfo() {
-    std::string s = fmt("scan mode %d skip %d scanned %d (%.0f ms), %zu echoes", scanMode, scanSkipMarked ? 1 : 0, surf.scanned ? 1 : 0, surf.scanMs, surf.echoes.size());
-    int kinds[LM_COUNT] = {0};
-    for (const auto& e : surf.echoes) if (e.lm.kind >= 0 && e.lm.kind < LM_COUNT) kinds[e.lm.kind]++;
-    for (int k = 0; k < LM_COUNT; k++) if (kinds[k]) s += fmt(" %s %d", LANDMARK_KIND_NAMES[k], kinds[k]);
-    double hx, hz;
-    if (const SurfaceView::ScanEcho* e = scanNearest(hx, hz))
-        s += fmt("; nearest at %.0f %.0f (%.0f m, %s), heard at %.0f %.0f", e->x, e->z, std::hypot(e->x - surf.player.x, e->z - surf.player.z), echoDetail(*e).c_str(), hx, hz);
-    s += fmt("; %zu marks here", marksHere().size());
-    return s;
-}
-
-bool Game::testEchoTrue(double& x, double& z, double& radius) {
-    double hx, hz;
-    const SurfaceView::ScanEcho* e = scanNearest(hx, hz);
-    if (!e) return false;
-    x = e->x; z = e->z; radius = e->lm.radiusM;
-    return true;
 }

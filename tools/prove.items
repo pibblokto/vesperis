@@ -1,0 +1,40 @@
+# tools/prove's battery (E-02): one item a line, `name | command | expect | options`.
+#   command   zsh (no |), run in a scratch working directory: src/, tests/ and music/ linked in, an empty shots/tests, $V the binary
+#   expect    outputs the item must write, `glob=count` relative to the scratch directory, checked at every run
+#   options   `twice`: the snapshot runs the item twice and keeps what moved between its runs as noise, skipped by compare;
+#             `mask=<regex>` (Python's, no spaces): what of its text moves between runs, replaced by # before comparing
+#             `noise=<glob>` (under shots/): its files known to move between runs, skipped like NOISE (say why below)
+# The unit's noise: its R-408, B-412 and T-03 frames are drawn after it runs frames until a thread has found the cells or the
+# scan (the unit's waits), so their trees and grass sway by a clock that the threads' pace sets, and its autosave's
+# clock ends where those waits leave it.
+# Every file an item writes under shots/ is compared (tools/provecmp.py), and its printouts, exit code and file count with them.
+fp_bodies | $V fingerprint bodies | shots/tests/fingerprint_bodies.txt=1 | 
+fp_stream | $V fingerprint stream | shots/tests/fingerprint_stream.txt=1 | 
+fp_peoples | $V fingerprint peoples | shots/tests/fingerprint_peoples.txt=1 | 
+fp_modules | $V fingerprint modules | shots/tests/fingerprint_modules.txt=1 | 
+salt | $V salt scan |  | 
+regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
+regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
+screens | $V screens | shots/tests/screens/*.png=96 | 
+scenes | for s in $($V scene list); do $V scene $s; done | shots/tests/scene_*.png=111 shots/tests/scene_*.wav=3 | 
+scenes_4x | for s in rogue_lamp rogue_embers rogue_frozen_air dark_ocean; do $V scene $s 4; done | shots/tests/*.png=5 | 
+sweeps | for m in surface maps space landmaps consistency traits; do $V $m; done | shots/tests/*.png=504 | 
+datasheet | $V datasheet 6 | shots/tests/datasheet_*.png=24 | 
+signals | $V signals; $V signals wav | shots/tests/radar_*.wav=59 | 
+rogues | $V rogues heard; $V rogues voices; $V rogues dark | shots/tests/*.png=16 shots/tests/*.wav=14 | 
+rogues_lore | $V charts rogues; $V peoples rogues; $V shards drifters | shots/tests/*.png=18 | 
+music | $V music ages wav | shots/tests/*.wav=21 | 
+voice | $V voice 151 25 1 wav | shots/tests/*.wav=1 | 
+media | $V decoder wav | shots/tests/*.wav=30 | 
+instruments | $V instruments wav | shots/tests/*.wav=19 | 
+sounds | $V sounds | shots/tests/*.wav=9 | 
+tape | $V tape | shots/tests/*.png=7 shots/tests/*.wav=12 | 
+probe | $V probe wav | shots/tests/*.png=15 shots/tests/*.wav=15 shots/*.png=1 | 
+audio | $V audio | shots/tests/audio_test.wav=1 | 
+almanac | $V almanac; $V showers |  | 
+climate | $V climate |  | 
+settings | $V settings | shots/tests/*.txt=2 | 
+input | $V input | shots/tests/*.png=15 shots/tests/*.txt=8 | twice
+unit | $V unit | shots/tests/*.png=47 shots/tests/*.txt=15 shots/*.png=2 | twice noise=tests/unit_r408_*.png noise=tests/unit_b412_*.png noise=tests/unit_t03_scan.png noise=tests/test_save_auto.txt mask=\(the\sworst\s\d+\) mask=\(\d+(?:\.\d+)?\sat\smost\) mask=\d+(?:\.\d+)?\sfresh mask=steps\s\d+\s\(window\s\d+\),\sthe\sfastest\sturn\s\d+\sdeg/s mask=\(\d+(?:\.\d+)?\ss\sto\sfind\) mask=,\s\d+(?:\.\d+)?\ss$ mask=\d+(?:\.\d+)?\ss\sin\sall mask=checks\s\d+(?:\.\d+)?\ss\) mask=slowest\slaid\sout\s[^;]* mask=\(the\sslowest\s[^)]*\)
+flow | $V flow | shots/tests/*.png=164 shots/tests/test_gallery/*.png=3 | twice
+tour | $V tour | shots/tests/tour/*.png=410 shots/tests/tour/*.txt=81 shots/tests/tour/*/*.png=4 shots/tests/tour/*/*.txt=4 | twice

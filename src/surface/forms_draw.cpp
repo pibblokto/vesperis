@@ -1,4 +1,4 @@
-// A-02: the settlements' forms drawn (galaxy/forms.h). The cells in reach are gathered building by building, each at its own
+// A-02: the settlements' forms drawn (peoples/forms.h). The cells in reach are gathered building by building, each at its own
 // level of detail by its distance; the forms are built, lit and fogged in chunks on the workers, then drawn in bands of rows,
 // every band walking the same polygons in the same order, so the frame is the serial loop's (B-310). C-01's boxes and domes
 // keep their arithmetic and their light, and draw as they did; the peoples' colours are their banks (`FORM_BANKS`).
@@ -10,7 +10,7 @@
 
 void SurfaceView::groupPieces(RuinCell& c) {
     const int nb = (int)c.spec.buildings.size();
-    // B-420: how far its pieces reach (a capital's harbour stood 650 m out on a radius of 473: its hall without colliders, a boulder in it)
+    // how far its pieces reach (a capital's harbour stood 650 m out on a radius of 473: its hall without colliders, a boulder in it)
     c.r.reach = c.spec.size;
     for (const Form& e : c.elems[0]) c.r.reach = std::max(c.r.reach, std::hypot(e.x, e.z) + formReach(e));
     for (const Building& b : c.spec.buildings) c.r.reach = std::max(c.r.reach, std::hypot(b.x, b.z) + std::hypot(b.hw, b.hd));
@@ -62,12 +62,12 @@ bool SurfaceView::pieceFootNear(const Form& e, double ex, double ez, double& gy,
     const double w = site.waterAt(ex, ez);
     double lo = gy, hi = gy;
     if (big && e.y0 < 0.01) footPoints(e, ex, ez, [&](double x, double z) { double h = site.groundHeight(x, z); lo = std::min(lo, h); hi = std::max(hi, h); });
-    if (w > -1e8 && gy < w) { if (e.part != 6) return false; gy = w; }   // C-08: the harbour works stand in the water, their foot at its level
+    if (w > -1e8 && gy < w) { if (e.part != 6) return false; gy = w; }   // the harbour works stand in the water, their foot at its level
     skirt = 0;
     if (e.y0 < 0.01) {
-        skirt = 1.0;   // C-01: a piece on the ground is sunk a metre
-        if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // A-02: a big form stands on the highest ground under it, its foot reaching down to the lowest
-        if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // R-412 (B-420): earth on the lowest, sunk into the slope above (lifted, a hill fort's bank stood a cliff downhill)
+        skirt = 1.0;   // a piece on the ground is sunk a metre
+        if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // a big form stands on the highest ground under it, its foot reaching down to the lowest
+        if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // earth on the lowest, sunk into the slope above (lifted, a hill fort's bank stood a cliff downhill)
     }
     return true;
 }
@@ -104,7 +104,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 if ((formTop(e) - (e.absolute ? e.y0 : 0.0)) * proj.f / std::max(1.0, d) < 1.2 || e.kind == FK_CABLE) continue;
             } else if (d > 5 && ext / d * proj.f < 1.2) continue;
             if (d > ext + 2 && ddx * fwx + ddz * fwz < -ext) continue;   // behind the camera
-            if (e.absolute) {   // T-03: heights over the reference level (a dam's wall, an aqueduct's arches): where they are, whatever the ground does
+            if (e.absolute) {   // heights over the reference level (a dam's wall, an aqueduct's arches): where they are, whatever the ground does
                 const double fog = 1 - std::exp(-d / env.fogDistance);
                 if (lod == 3 && fog > 0.985) continue;
                 formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people});
@@ -126,18 +126,25 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 if (F.ring != ring) {
                     double wq; int r1; double g0 = drawnGround(ex, ez, d, wq, r1);
                     F.ring = ring; F.y = (float)g0; F.water = (float)wq; F.lo = F.hi = (float)g0;
-                    if (big && e.y0 < 0.01) footPoints(e, ex, ez, [&](double x, double z) { double w2; int r2; double h = drawnGround(x, z, d, w2, r2); F.lo = std::min(F.lo, (float)h); F.hi = std::max(F.hi, (float)h); });
+                    if (big && e.y0 < 0.01)
+                        footPoints(e, ex, ez, [&](double x, double z) {
+                            double w2;
+                            int r2;
+                            double h = drawnGround(x, z, d, w2, r2);
+                            F.lo = std::min(F.lo, (float)h);
+                            F.hi = std::max(F.hi, (float)h);
+                        });
                 }
                 gy = F.y; w = F.water; lo = F.lo; hi = F.hi;
             }
-            if (w > -1e8 && gy < w) { if (e.part != 6) continue; gy = w; }   // C-08: the harbour works stand in the water, their foot at its level
+            if (w > -1e8 && gy < w) { if (e.part != 6) continue; gy = w; }   // the harbour works stand in the water, their foot at its level
             double fog = 1 - std::exp(-d / env.fogDistance);
             if (lod == 3 && fog > 0.985) continue;
             double skirt = 0;
             if (e.y0 < 0.01) {
-                skirt = 1.0;   // C-01: a piece on the ground is sunk a metre
-                if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // A-02: a big form stands on the highest ground under it, its foot reaching down to the lowest
-                if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // R-412: earth on the lowest (`pieceFootNear`)
+                skirt = 1.0;   // a piece on the ground is sunk a metre
+                if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // a big form stands on the highest ground under it, its foot reaching down to the lowest
+                if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // earth on the lowest (`pieceFootNear`)
                 if (lod > 0 && !c01) skirt += 0.004 * d;   // the far rings' ground is coarser than the 64 m samples
             }
             formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people});
@@ -157,12 +164,14 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     // a people's slot plain (the silhouettes: no grain far off, where it would only shimmer); [49] A-03's earth (a mound, a bank, a
     // spoil heap): the ground's own soil, the grass of a living world or a desert's sand
     formRps.assign(58, RasterParams());
-    formRps[0].bank = 9;
-    formRps[49].bank = site.gen.type == PT_DESERT ? 9 : 10;
-    formRps[50].bank = 2;    // A-04: a pool's water (the water's bank)
-    formRps[51].bank = 16;   // A-04: a great tree's bark and its leaves (the vegetation's banks)
+    const bool frozen = KINDS[site.gen.type].cover == DC_FROZEN;   // a frozen world's drifts are snow, its earthworks under frost
+    formRps[0].bank = frozen ? 8 : 9;
+    formRps[49].bank = frozen ? 8 : (kindHas(site.gen.type, KT_FLORA) ? 10 : 9);
+    formRps[50].bank = 2;    // a pool's water (the water's bank)
+    formRps[51].bank = 16;   // a great tree's bark and its leaves (the vegetation's banks)
     formRps[52].bank = 3;
-    formRps[53].bank = 29; formRps[54].bank = 30; formRps[55].bank = 31; formRps[56].bank = 17; formRps[57].bank = 7;   // T-04: a record's pale, dark, ochre, clay, metal
+    formRps[53].bank = 29; formRps[54].bank = 30; formRps[55].bank = 31; formRps[56].bank = 17; formRps[57].bank = 7;   // a record's pale, dark, ochre, clay, metal
+    const bool leftOn = site.gen.hasTrait(TR_LIGHTS_LEFT_ON);   // every window lit (a people's own light where it glows, else the lamps' bank 15)
     for (int p = 0; p < 2; p++) {
         const Culture& cu = cultures[p];
         const FormPalette& pal = palettes[p];
@@ -173,11 +182,12 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             double ww = clampd(W.w, 0.05, 1.0), hh = clampd(W.h, 0.05, 1.0);
             P.x0 = W.shape == 4 ? 0.0 : 0.5 - ww * 0.5; P.x1 = W.shape == 4 ? 1.0001 : 0.5 + ww * 0.5;
             P.y0 = clampd(W.sill, 0, 0.95); P.y1 = std::min(0.995, P.y0 + hh);
-            P.shape = W.shape; P.dark = W.dark; P.litBank = W.lit ? FORM_BANKS[p][3] : -1; P.litShade = 50; P.fromV = W.fromY;
+            P.shape = W.shape; P.dark = W.dark; P.litBank = W.lit ? FORM_BANKS[p][3] : (leftOn ? (pal.glow ? FORM_BANKS[p][3] : 15) : -1); P.litShade = 50; P.fromV = W.fromY;
+            P.litShare = leftOn && !W.lit ? 0.3 : 0.0;   // a third of a dead people's windows still lit (the far future's own all)
             P.group = std::max(1, W.group); P.scatter = clampd(W.scatter, 0, 0.9);
             P.meanShare = (P.x1 - P.x0) * (P.y1 - P.y0) * (W.shape == 3 ? 0.785 : (W.shape == 1 ? 0.93 : (W.shape == 5 ? 0.5 : (W.shape == 6 ? 0.62 : 1.0))))
                         * (P.group > 1 ? 0.8 : 1.0) * (1 - P.scatter);
-            // R-412: the dress round the windows and up the wall
+            // the dress round the windows and up the wall
             P.frame = W.frame; P.frameShade = W.frameShade; P.shutter = W.shutter; P.shutterShade = W.shutterShade;
             P.stripe = W.stripe; P.stripeShade = W.stripeShade; P.dado = W.dado; P.dadoShade = W.dadoShade;
             {
@@ -190,7 +200,8 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             for (int w = 0; w < 5; w++) {
                 RasterParams& rp = formRps[formRpIndex(p, s, w)];
                 rp.bank = FORM_BANKS[p][s];
-                if (cu.style == 1 && s == 0 && pal.own[0]) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }   // C-01: walls cut from the striated rock
+                // walls cut from the striated rock
+                if (cu.style == 1 && s == 0 && pal.own[0]) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }
                 if (w > 0) rp.pattern = &formPatterns[p][w - 1];
             }
             formRps[formPlainRp(p, s)].bank = FORM_BANKS[p][s];
@@ -200,8 +211,15 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     const double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
     const double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
     // C-01's light on a face: the sky's share by how much it looks up, the sun's by the cosine, toward the fog colour by the distance
-    auto lightOf = [&](const Vec3& n) { double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y)); return amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf; };
-    auto insideOf = [&](const Vec3& n) { double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y)); return amb * 0.85 + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf * 0.4; };
+    // the explorer's lamp on a face at p (`lampAt`)
+    auto lightOf = [&](const Vec3& n, const Vec3& p) {
+        double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y));
+        return amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0);
+    };
+    auto insideOf = [&](const Vec3& n, const Vec3& p) {
+        double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y));
+        return amb * 0.85 + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf * 0.4 + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0);
+    };
     auto shadeOf = [&](double light, double fog) { double sh = 46 * std::pow(light, 0.6); sh += (63 - sh) * fog; return sh; };
     const int N = (int)formItems.size();
     const int K = clampi(N / 16 + 1, 1, 64);
@@ -226,7 +244,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                 const FormItem& I = formItems[it];
                 const Form& e = *I.f;
                 const int slot = clampi(e.slot, 0, 3);
-                const bool lit = slot == 3 && palettes[I.people].glow;   // A-04: slot 3 is light only where the people's palette glows
+                const bool lit = slot == 3 && palettes[I.people].glow;   // slot 3 is light only where the people's palette glows
                 if (I.lod == 3) {   // a silhouette across the line of sight, its profile up its height
                     Vec3 dd(I.foot.x - camPos.x, 0, I.foot.z - camPos.z);
                     double hdg = std::atan2(dd.x, dd.z), hw = formHalfWidth(e, hdg);
@@ -234,7 +252,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     Vec3 right(std::cos(hdg), 0, -std::sin(hdg));
                     if (e.kind == FK_TRUSS) hw *= 0.5;   // a lattice shows the sky through it: a narrower shape
                     if (hw * proj.f / I.d < 0.5) hw = 0.5 * I.d / proj.f;   // at least a pixel of the framebuffer wide; the mush averages it into its neighbours
-                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(lightOf(normalize(dd * -1.0)), I.fog) + e.tone * (1 - I.fog);
+                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(lightOf(normalize(dd * -1.0), I.foot), I.fog) + e.tone * (1 - I.fog);
                     const bool profiled = !(e.kind == FK_BOX || e.kind == FK_ARCH || e.kind == FK_SWEEP || e.kind == FK_VAULT || e.kind == FK_SHELL || (e.kind == FK_LATHE && e.sub == 0));
                     const int Kp = profiled ? 4 : 1;
                     const double top = formTop(e), yb = e.y0 - (5 + 0.003 * I.d);
@@ -242,19 +260,43 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                         double t0 = (double)k / Kp, t1 = (double)(k + 1) / Kp;
                         double w0 = hw * formProfile(e, t0), w1 = hw * formProfile(e, t1);
                         double ya = I.foot.y + (k == 0 ? yb : e.y0 + (top - e.y0) * t0), ybb = I.foot.y + e.y0 + (top - e.y0) * t1;
-                        Vec3 pts[4] = {I.foot - right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w1 + Vec3(0, ybb - I.foot.y, 0), I.foot - right * w1 + Vec3(0, ybb - I.foot.y, 0)};
+                        Vec3 pts[4] = {I.foot - right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w1 + Vec3(0, ybb - I.foot.y, 0),
+                                I.foot - right * w1 + Vec3(0, ybb - I.foot.y, 0)};
                         RVert q[4];
                         for (int j = 0; j < 4; j++) { Vec3 v = toView(pts[j].x, pts[j].y, pts[j].z); q[j].x = v.x; q[j].y = v.y; q[j].z = v.z; q[j].shade = sh; }
                         int y0, y1; rowsOf(q, 4, y0, y1);
                         ch.polys.push_back({(int)ch.v.size(), 4, formPlainRp(I.people, slot), y0, y1});
                         for (int j = 0; j < 4; j++) ch.v.push_back(q[j]);
                     }
+                    if (leftOn && e.kind != FK_TRUSS) {   // its lit windows from afar, a point of light for every eight metres of its height
+                        const uint64_t hf = mix64((uint64_t)(int64_t)std::llround(I.foot.x * 4) * 0x9E3779B97F4A7C15ULL ^ (uint64_t)(int64_t)std::llround(I.foot.z * 4));
+                        const int nl = clampi((int)((top - e.y0) / 8.0), 1, 12);
+                        const Vec3 toward = normalize(dd * -1.0);
+                        for (int k = 0; k < nl; k++) {
+                            const double fy = (k + 0.5) / nl, fx = 2 * unitFromHash(mix64(hf + 3 * (uint64_t)k)) - 1;
+                            if (unitFromHash(mix64(hf + 3 * (uint64_t)k + 1)) < 0.35) continue;   // a dark window
+                            const Vec3 at = I.foot + Vec3(0, e.y0 + (top - e.y0) * fy, 0) + right * (0.8 * fx * hw * formProfile(e, fy)) + toward * 0.5;
+                            const Vec3 va = toView(at.x, at.y, at.z);
+                            if (va.z < NEAR_Z) continue;
+                            FormLineOut L; L.a.x = va.x; L.a.y = va.y; L.a.z = va.z; L.a.shade = 56 + 6 * unitFromHash(mix64(hf + 3 * (uint64_t)k + 2)); L.b = L.a;
+                            L.bank = palettes[I.people].glow ? FORM_BANKS[I.people][3] : 15; L.thick = 1;
+                            RVert ab[2] = {L.a, L.b}; rowsOf(ab, 2, L.y0, L.y1); L.y1 += FB_SCALE;
+                            ch.lines.push_back(L);
+                        }
+                    }
                     ch.silhouettes++;
                     continue;
                 }
                 formMesh(e, I.lod, I.foot, I.skirt, mesh, proj.f / FB_SCALE / std::max(1.0, I.d));
-                const int partRp = e.part == 7 ? 0 : (e.part == 8 ? 49 : (e.part == 9 ? 50 : (e.part == 10 ? 51 : (e.part == 11 ? 52 : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL ? 53 + e.part - FORM_PART_PALE : -1)))));   // the ground's and the world's own banks; T-04 the records
-                const double tone = lit ? 0.0 : e.tone * (1 - I.fog);   // R-412: a house painted lighter or darker than its neighbours
+                const int partRp = e.part == 7 ? 0
+                                               : (e.part == 8 ? 49
+                                                              : (e.part == 9 ? 50
+                                                                             : (e.part == 10 ? 51
+                                                                                             : (e.part == 11 ? 52
+                                                                                                             : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL
+                                                                                                                               ? 53 + e.part - FORM_PART_PALE
+                                                                                                                               : -1)))));   // the ground's and the world's own banks; T-04 the records
+                const double tone = lit ? 0.0 : e.tone * (1 - I.fog);   // a house painted lighter or darker than its neighbours
                 const int rpBase = partRp >= 0 ? partRp : formRpIndex(I.people, slot, 0), rpPat = partRp >= 0 ? partRp : formRpIndex(I.people, slot, e.pattern);
                 for (const FormMesh::Poly& P : mesh.polys) {
                     const FormMesh::V* vs = &mesh.v[P.first];
@@ -264,12 +306,12 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     const double sgn = back ? -1.0 : 1.0;
                     RVert q[8];
                     double flatShade = 0;
-                    if (!(P.flags & FormMesh::SMOOTH)) flatShade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(n * sgn) : lightOf(n), I.fog) + tone;
+                    if (!(P.flags & FormMesh::SMOOTH)) flatShade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(n * sgn, vs[0].p) : lightOf(n, vs[0].p), I.fog) + tone;
                     for (int k = 0; k < P.n; k++) {
                         const Vec3& p = vs[k].p;
                         Vec3 v = toView(p.x, p.y, p.z);
                         q[k].x = v.x; q[k].y = v.y; q[k].z = v.z;
-                        if (P.flags & FormMesh::SMOOTH) q[k].shade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(vs[k].n * sgn) : lightOf(vs[k].n), I.fog) + tone;
+                        if (P.flags & FormMesh::SMOOTH) q[k].shade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(vs[k].n * sgn, p) : lightOf(vs[k].n, p), I.fog) + tone;
                         else q[k].shade = flatShade;
                         if (P.flags & FormMesh::FACE_UV) { q[k].u = vs[k].u; q[k].v = vs[k].v; }
                         else { q[k].u = p.x + p.y * 0.5; q[k].v = p.z + p.y * 0.5; }
@@ -280,7 +322,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                 }
                 if (!mesh.lines.empty()) {   // members and cables: lines a pixel or more thick; under a fifth of a pixel only the legs, chords and cables
                     Vec3 side = normalize(Vec3(sd.x, 0, sd.z));
-                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(0.5 * (lightOf(side) + ambient), I.fog) + tone;
+                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(0.5 * (lightOf(side, I.foot) + ambient), I.fog) + tone;
                     for (const FormMesh::Line& l : mesh.lines) {
                         Vec3 va = toView(l.a.x, l.a.y, l.a.z), vb = toView(l.b.x, l.b.y, l.b.z);
                         if (va.z < NEAR_Z && vb.z < NEAR_Z) continue;
@@ -290,12 +332,12 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                         int thick = clampi((int)std::lround(px), 1, 4);
                         FormLineOut L; L.a.x = va.x; L.a.y = va.y; L.a.z = va.z; L.b.x = vb.x; L.b.y = vb.y; L.b.z = vb.z;
                         L.a.shade = L.b.shade = sh;
-                        L.bank = partRp >= 0 ? formRps[partRp].bank : FORM_BANKS[I.people][slot]; L.thick = thick;   // C-17: an instrument's strings in their part's bank
+                        L.bank = partRp >= 0 ? formRps[partRp].bank : FORM_BANKS[I.people][slot]; L.thick = thick;   // an instrument's strings in their part's bank
                         RVert ab[2] = {L.a, L.b}; rowsOf(ab, 2, L.y0, L.y1); L.y1 += thick * FB_SCALE;
                         ch.lines.push_back(L);
                     }
                 }
-                if (e.glyphs && I.d < 70 && I.lod == 0 && e.kind == FK_BOX) {   // C-01: a line of glyphs cut into the front face: the three low bits of each letter of the star's name as strokes
+                if (e.glyphs && I.d < 70 && I.lod == 0 && e.kind == FK_BOX) {   // a line of glyphs cut into the front face: the three low bits of each letter of the star's name as strokes
                     const double gy = I.foot.y;
                     Vec3 f(std::sin(e.heading), 0, std::cos(e.heading)), s(std::cos(e.heading), 0, -std::sin(e.heading));
                     double wall = e.y1 - e.y0, width = 2 * e.hx * 0.8, rowY = gy + e.y0 + std::min(wall * 0.55, 1.6), gh = std::min(0.12 * wall, 0.35);

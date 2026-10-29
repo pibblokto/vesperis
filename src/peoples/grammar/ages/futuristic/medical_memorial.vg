@@ -1,0 +1,205 @@
+R"VG(
+# medical_memorial.vg (H-04's second pass): the medical log (a clinic's day: who came, with what, what was done; births and deaths; the
+# people's own ills and remedies) and the memorial (`@event ... memorial`: the dead of a disaster, a war, a fire, kept by name).
+
+# ---- the medical log ------------------------------------------------------------------------------------------------------------
+
+genre.medical (words=24..120)
+  {md.head}\n{log.t1} {md.line}\n{log.t2} {md.line}\n{log.t3} {md.line}\n{log.t5} {md.line}
+  {md.head}\n{log.t1} {md.line}\n{log.t3} {md.line}\n{log.t4} {md.line}
+  {md.head}\n{log.t2} {md.line}\n{log.t3} {md.line}\n{log.t4} {md.line}\n{log.t5} {md.line}
+
+md.head (formula people=3)
+  Medical log, {$home} clinic, cycle {#year:digits}.
+  The clinic at {$home}: the day's cases.
+  Clinic, {$home}, {season.now}, cycle {#year:digits}.
+  (has:$home.quarter) The clinic of {$home.quarter}, {$home}: the day.
+  Day book of the clinic at {$home}. Cycle {#year:digits}.
+
+md.line
+  (4 once) {md.who}, {md.ill}. {md.treat}
+  (3 once) {md.who}, {md.ill}. {md.treat}
+  (1 once) {md.who}, {md.well}. {md.talk}
+  (1 once !has:.nobirth) {md.birth} {=.birth}
+  (1 once) {md.death}
+  (1 once) {md.note}
+  (1 once sick=1) Further cases of the sickness. Isolation ward full.
+  (1 once stage>=1 !has:.birth) No births this cycle. {=.nobirth}
+  (1 once stage>=2) The last nurse at the clinic has gone. The machines are tending the sick.
+
+md.who (people=12)
+  A patient of [thirty-four|forty|fifty-one|sixty-six|seventy|eighty-two]
+  A child of [two|four|six|seven|nine|eleven]
+  An old man from the {fut.block}
+  A woman from {city2}
+  A worker from the {fut.green}
+  A girl from the school
+  Someone from the {craft} workshop
+  A keeper of the {herd}
+  The watchman at the {fut.gate}
+  (has:$home.quarter) A woman from {$home.quarter}
+  A boy of {n} from the {fut.block}
+  A singer, the week before {festival}
+  One of the players of {instrument}
+  A man of a hundred and four, who is proud of it
+  Twins of {n}, one ill and one sympathetic
+  A runner from the games
+  A woman expecting her {nth} child
+  A newcomer from {city2}, homesick and polite
+
+md.ill (share=0.7)
+  fever
+  a broken wrist from a fall
+  a cough that will not go
+  a burn from the light towers
+  a cut hand from the {fut.green}
+  pains in the chest
+  a bite from a {beast}
+  headaches since {festival}
+  too much {drink} at {festival}
+  a splinter of {material} in the eye
+  (seasons=4) the {season.now} cough
+  sleeplessness, three weeks of it
+  a rash from the {crop2}
+  stung by something in the {fut.green}
+  earache from {instrument}
+  swallowed a piece from {fut.game}
+  a twisted ankle on the long stair
+  light-blindness from the observation deck
+  sick from {weather.now}
+  an old wound aching in {weather.now}
+  kicked by one of the {herd}
+  a nosebleed that would not stop
+  a burn from {fuel}
+  a fish bone, stuck
+  dizziness in the lifts
+  a fall from a ladder in the {fut.green}
+
+md.treat (share=0.8)
+  Treated. Discharged.
+  Kept overnight.
+  Sent home with instructions about {food} that they will not follow.
+  Referred to {city}.
+  Better by evening.
+  Treated the old way, with {drink} and patience, at the family's request.
+  Treated; the {~remedy} given as well, because the grandmother insisted.
+  Set, splinted and lectured.
+  Nothing to be done but wait. Waiting.
+  Treated, and told to stay away from the {herd} for a week.
+  Cleaned, closed, and given a {colour.holy} ribbon for bravery.
+  Treated. Will be back; they always are.
+  Machines did the work; I held the hand and talked about {fut.game}.
+  Treated, and given {drink} with honey, which is not medicine and works anyway.
+  Bound in {colour.holy} cloth, as the old ones bound wounds, at the patient's request.
+  Treated. The patient swore {oath} through all of it.
+
+md.well
+  tired, wants to talk
+  nothing wrong, and worried
+  lonely; says it is the knee
+  well, and came to say so
+  wants a second opinion on a first opinion nobody gave
+md.talk (share=0.85)
+  Talked to for an hour. Better.
+  Sent home with {drink}.
+  Told to come back if it gets worse, and to keep away from the {herd} meanwhile.
+  Given a chair, {drink} and the news, and left happier.
+  Walked back to the {fut.block} with them; it was on my way, more or less.
+
+md.birth
+  Birth, healthy. Mother well.
+  A girl, {fut.when.past}. To be named on the third day, as is the custom.
+  Twins. The family asked for {colour.holy} cloths for them; done.
+  A boy, small and loud. The grandmother has already sworn {oath} over him.
+  A birth in the {fut.green}, which was not planned. Mother and child well; the {crop2} less so.
+  A daughter, after a long night. The father fainted, which the mother will never let him forget.
+md.death (share=0.7)
+  A death, expected: the oldest hand in the {craft} workshop, in the night. The family have sent for {colour.mourn} cloth.
+  A death: a patient of {nbig} years, peacefully, with the {festival} songs playing.
+  A death we did not expect, in the {fut.block}. The family have asked for {colour.mourn} and silence.
+  A death, after a long illness; the family sang the {festival} songs at the end, with {instrument}, all of them.
+  An old keeper of the {herd} died this morning. The {herd} were brought to the window. It was what was asked.
+md.note (share=0.7)
+  Supplies of the {~remedy} low again.
+  {#n} injuries from {pastime}. All of them deny it.
+  {weather.now} brought in {#n|case}.
+  Clinic closed {fut.when.past} for cleaning, to complaints.
+  {#n|child} in for checks before {festival}. All well, one bored.
+  The {herd} got into the clinic garden. No injuries, except to the garden.
+
+# ---- the memorial -----------------------------------------------------------------------------------------------------------
+
+genre.memorial (words=10..70)
+  {mem.head}\n{@event sickness,famine,flood,quake,battle,sack,siege,impact,flare,eruption,winter,exodus,death,fire,storm,accident,drought,abandoned,unrest,war memorial 80}\n{mem.end}
+
+mem.head (formula people=3)
+  In memory.
+  This memorial was raised at {$home} by those who remained.
+  Read this aloud, once a year, on this day.
+  For the archive, and for the wall of the {fut.common}.
+  Kept at {holyplace}. Touch the names; they are cut deep enough.
+
+memorial.sickness
+  Of those who died of {$e.sickness} at {$e.place}, {#$e.value:about} of them. We say their names here, every year, on this day.
+  Of those {$e.sickness} took at {$e.place}, in the {#$e.year:ord} year. The names follow.
+  Of those {$e.sickness} took, and of the ones who nursed them, with {drink} and with their hands.
+memorial.famine
+  Of those who died in the hunger at {$e.place}. There was food in the world, and not where they were.
+  Of those who starved, in the {#$e.year:ord} year, while the {crop} failed.
+memorial.flood
+  Of those the water took at {$e.place}.
+  Of those drowned at {$e.place} when the water came over the marks, {#$e.value:about} of them.
+  Of those {river} took at {$e.place}, with the {herd} and the {crop} and the houses.
+memorial.quake
+  Of those who died when the ground moved under {$e.place}.
+memorial.battle
+  Of those who fell at {$e.place}, on both sides, {#$e.value:about} of them.
+  Of those who fought at {$e.place} in {$e.war}, and did not come home to the {herd}.
+  Of the dead of {$e.place}, ours and theirs, under the same {colour.mourn}.
+memorial.sack
+  Of the people of {$e.place}, who were not given the chance to leave.
+memorial.siege
+  Of those who held {$e.place} in {$e.war}, and those who starved there.
+memorial.war
+  Of everyone {$e.war} took, whatever side they stood on.
+memorial.impact
+  Of those who were under the stone when it fell.
+memorial.flare
+  Of those who were out under the sun when it burned.
+memorial.eruption
+  Of those {mountain} buried.
+memorial.winter
+  Of those the long winter took.
+memorial.drought
+  Of those the dry years took, a few at a time, so that nobody counted until the end.
+memorial.exodus
+  Of those who left {$e.place} and were not heard of again, {#$e.value:about} of them.
+memorial.abandoned
+  Of {$e.place}, and everyone who lived there, when it was still lived in.
+memorial.unrest
+  Of those who died in the streets of {$e.place}, for reasons that were good enough then.
+memorial.fire
+  Of those the fire took at {$e.place}, and of the houses, {#$e.value:about} of them.
+  Of {$e.place}, which burned, and of those who carried water from {watersrc} all night.
+memorial.storm
+  Of those the storm took at {$e.place}.
+memorial.accident
+  Of those who died at {$e.place}, {#$e.value:about} of them, in the disaster nobody would call an accident.
+  Of those who were working at {$e.place} that day, and those who went in after them.
+  Of the dead of {$e.place}, {#$e.value:about} of them, whose names are cut here in {colour.holy}.
+memorial.death
+  Of {$e.a:full}, who was ours.
+  Of {$e.a:full}. {death.went}, they say; we say: missed.
+  Of {$e.a:full}, for whom the {colour.mourn} cloths were hung at {holyplace}.
+  Of {$e.a:full}, who kept {craft} alive, and the {herd}, and us.
+memorial.none
+  Of all who lived here, in every age, whatever they called themselves.
+  Of everyone the records forgot to name, and everyone they named wrongly.
+  Of the {people} of {$home}, the ones before us and the ones before them.
+
+mem.end (formula)
+  We remember.
+  The names are kept in the archive. Ask for them.
+  Say one of the names before you go.
+  {blessing}.
+)VG"

@@ -1,0 +1,284 @@
+R"VG(
+# manual.vg (H-04, the second pass): the manual: the people's own machines (their stoves burn their fuel, their mills grind their crop,
+# their machines do their crafts), step by step, and the warnings. A step is built from parts (the action, the part, the manner), each
+# people's makers with their own few ways of saying each, so two peoples' manuals for one stove read apart.
+
+genre.manual (words=29..85)
+  {man.head}\n{man.step}\n{man.step}\n{man.step}\n{man.step}\n{man.warn}
+  {man.head}\n{man.intro}\n{man.step}\n{man.step}\n{man.step}\n{man.warn}
+  {man.head}\n{man.step}\n{man.step}\n{man.step}\n{man.fault}\n{man.warn}
+
+man.head (formula people=3)
+  Instructions for the use of the {man.thing}. Read before use.
+  The {man.thing}: operating instructions.
+  How to use your {man.thing}.
+  The {man.thing}. Keep these instructions with the unit.
+  Your new {man.thing}, and how to look after it.
+
+man.thing (keep people=4)
+  water purifier{=.mt:water}
+  generator{=.mt:fuel}
+  stove{=.mt:fuel}
+  pump{=.mt:water}
+  heater{=.mt:fuel}
+  sewing machine{=.mt:none}
+  bicycle{=.mt:none}
+  washing machine{=.mt:water}
+  cold box{=.mt:none}
+  water heater{=.mt:water}
+  {fuel} heater{=.mt:fuel}
+  {craft} machine{=.mt:none}
+  {crop} mill{=.mt:grain}
+  (inv.radio=1) radio receiver{=.mt:none}
+  (inv.computer=1) terminal{=.mt:none}
+  (inv.telephone=1) telephone{=.mt:none}
+
+man.intro (share=0.8)
+  Thank you for choosing this {man.thing}, made in {$home}.
+  This {man.thing} was made at the {craft} works in {$home} and should last a lifetime.
+  Please read all of this before you begin, {man.intro2}.
+  Your {man.thing} has been tested at the works {man.intro3}.
+man.intro2 (people=3)
+  including the warnings
+  even if you have used one before
+  slowly
+  and keep it somewhere dry
+  with someone who has used one
+  and keep it for the next owner
+man.intro3 (people=2)
+  and passed
+  by hand
+  three times
+  and found sound
+
+man.step
+  (once) {man.v.check} the {man.part} {man.when}.
+  (once) Turn the {man.knob} {man.dir} until {man.until}.
+  (once .mt=water|.mt=fuel|.mt=grain) Fill the {man.tank} with {man.fill} {man.fillto}.
+  (once) Clean the {man.filter} {man.with} once a {man.period}{man.more}.
+  (once) If the unit {man.noise}, {man.react}.
+  (once) Keep the unit {man.keep}{man.keep2}.
+  (once .mt!=none) Never put {man.never} in the {man.part2}.
+  (once) Wait {#n|minute} before you {man.next}.
+  (once) Oil the {man.part} with {man.oil} every {man.period}.
+  (once) Stand the unit on {man.surface}, away from {man.away}.
+  (once) The {man.part} must face {man.face}.
+  (once) Do not leave the {man.thing} {man.leave}.
+  (once) {man.firstw}, make sure the unit is {man.first}.
+
+man.v.check (people=3)
+  Check
+  Inspect
+  Look at
+  Feel
+  Test
+  Tighten
+  Wipe
+man.when (people=3)
+  before each use
+  every {man.period}
+  when the unit is cold
+  after {season.now}
+  once the light is out
+  when you first unpack it
+man.knob (people=3)
+  dial
+  handle
+  lever
+  wheel
+  red knob
+  brass key
+man.dir (people=2)
+  to the right
+  to the left
+  a quarter turn
+  slowly, one notch at a time
+man.until (people=3)
+  the light comes on
+  it clicks
+  the needle reaches the mark
+  the hum stops
+  you feel it catch
+man.tank (people=2)
+  tank
+  reservoir
+  drum
+  bowl
+  hopper
+man.fill
+  (.mt=water) clean water
+  (.mt=water) water from the {watersrc.n}
+  (.mt=fuel) {fuel}
+  (.mt=grain) {crop}
+man.fillto (people=2)
+  to the line, and no further
+  until it is half full
+  a little at a time
+  through the funnel provided
+man.filter (people=2)
+  filter
+  grate
+  screen
+  outlet
+  sieve
+man.with (people=2)
+  with a dry cloth
+  with warm water
+  with a soft brush
+  with {drink}, if nothing else is to hand
+man.more (people=3)
+  (2)
+  , or more often in {season.now}
+  , or when it smells
+  , whether it needs it or not
+man.period
+  month
+  week
+  season
+  year
+man.noise (people=3)
+  makes a noise
+  smells of burning
+  shakes
+  stops for no reason
+  runs hot
+  sings
+man.react (people=3)
+  switch it off and {man.call}
+  stand back and wait
+  do not hit it
+  open the window
+  {man.call}
+man.call (people=2)
+  call the service number
+  ask at the works
+  call a qualified engineer
+  send for the makers
+  wait for it to cool before you touch anything
+man.keep (people=3)
+  dry
+  clean
+  away from children
+  out of the sun
+  away from {herd}
+man.keep2 (people=2)
+  (2)
+  , and the cover on
+  , and the door shut
+  , and its instructions with it
+man.part (people=4)
+  belt
+  hose
+  seal
+  plug
+  chain
+  valve
+  lid
+  spring
+  gasket
+  drive wheel
+man.part2 (people=2)
+  tank
+  filter
+  outlet
+  drum
+man.never
+  (.mt!=fuel) {fuel}
+  (.mt!=water) water from the {watersrc.n}
+  anything sharp
+  {drink}
+  {food}
+  your fingers
+man.next (people=4)
+  open the cover
+  touch the {man.part}
+  switch it on again
+  (.mt=fuel) add more {fuel}
+  call the works
+  move it
+  empty the {man.tank}
+man.oil (people=2)
+  a little grease
+  lamp oil
+  a drop of fat
+  the oil supplied
+  a feather dipped in oil
+man.surface (people=2)
+  a flat floor
+  a stone slab
+  a level table
+  the stand provided
+man.away (people=3)
+  the curtains
+  the {herd}
+  the stove
+  children
+  the bed
+  anything made of {material}
+man.face (people=2)
+  the wall
+  the window
+  the north
+  the door
+man.leave (people=3)
+  running overnight
+  in the rain
+  where children can reach it
+  full
+  with the cover off
+man.firstw (people=2)
+  First
+  Before anything else
+  To begin
+  Always
+  Each time
+man.first (people=3)
+  switched off
+  cold
+  standing level
+  empty
+  unplugged
+  out of the sun
+
+man.fault (share=0.7)
+  If it will not start, check the {man.part} first; it is nearly always the {man.part}.
+  If the light flashes, the {man.tank} is empty, or the {man.part} is loose.
+  If it hums but nothing happens, wait, then try again, then call the works.
+  If it {man.noise}, the {man.part} has worn; a new one costs {#n} {coin} at the works.
+
+man.warn
+  Warning: {man.danger}.
+  Keep these instructions. {man.warn2}
+  The makers accept no responsibility for {man.misuse}.
+  Spare parts from {man.spare} only{man.spare2}.
+  The guarantee does not cover {weather}, or {man.misuse}.
+man.spare2
+  (2)
+  , and only with the receipt
+  , whatever the market says
+  , or the guarantee is void
+man.spare (people=2)
+  the works at {$home}
+  the {craft} guild's shops
+  an approved dealer
+  the makers
+man.danger (people=4)
+  do not use near water
+  hot surfaces
+  do not run it indoors
+  this is not a toy
+  keep it away from {fuel}
+  do not open the cover while it runs
+  dangerous to {herd}
+  do not use it in {weather.now}
+man.warn2 (people=2)
+  Nobody does, but keep them.
+  You will want them in {season.next}.
+  They are the only copy the works will send.
+man.misuse (people=3)
+  misuse
+  use by children
+  use with {fuel}
+  damage by {herd}
+  a hammer
+)VG"

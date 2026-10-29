@@ -1,0 +1,37 @@
+R"VG(
+# lexicon.vg: the words of an age (H-03). A record of an earlier age that has one of them fails the anachronism check
+# (`vgCheck`): the grammar must keep it behind a guard (`(age>=industrial)`). The words are listed as written (their forms),
+# not as stems, so a word of another meaning that shares a stem is not caught ("bore" is not the industrial "bores").
+# H-04: the words of an invention (`@lexicon inv.railway railway ...`): a record may write them only once the history has made it
+# (the model's `inv.<key>` facts), so a railway does not run in the industrial age's first years; and writing itself is medieval
+# (a people without it leaves marks, not words on a page).
+
+@lexicon medieval iron coin coins ink book books codex codices scroll scrolls parchment sword swords steel castle castles cathedral
+@lexicon medieval knight knights abbey monastery scribe scribes horseshoe horseshoes stela stelae lintel lintels
+@lexicon medieval write writes wrote written writing letter letters page pages
+
+@lexicon industrial railway railways railroad locomotive locomotives train trains factory factories steamer
+@lexicon industrial steamship telegraph telegraphs telegram telegrams gaslight gaslamp gasworks ironworks newspaper newspapers gazette
+@lexicon industrial photograph photographs camera cameras rifle rifles revolver revolvers phonograph phonographs dynamite boiler boilers
+@lexicon industrial station stations penny census
+
+@lexicon modern television televisions phone phones car cars motorcar motorcars truck trucks
+@lexicon modern aeroplane aeroplanes airplane airplanes airport airports computer computers plastic rocket rockets
+@lexicon modern satellite satellites transistor transistors reactor reactors atomic nuclear highway motorway
+@lexicon modern frequency transmitter generator grid
+
+@lexicon futuristic robot robots android androids fusion starship starships hologram holograms maglev arcology arcologies orbital
+@lexicon futuristic spaceport spaceports cyborg cyborgs terraform terraformed terraforming nanite nanites habitat habitats
+
+@lexicon farfuture ringworld megastructure megastructures uploaded dyson
+
+@lexicon inv.railway railway railways train trains locomotive locomotives timetable
+@lexicon inv.steam engine engines
+@lexicon inv.telegraph telegraph telegraphs telegram telegrams
+@lexicon inv.photography photograph photographs camera cameras
+@lexicon inv.electric electric electricity
+@lexicon inv.telephone telephone telephones
+@lexicon inv.radio radio radios transmitter broadcast broadcasts
+@lexicon inv.computer computer computers terminal terminals
+@lexicon inv.press printed newspaper newspapers
+)VG"

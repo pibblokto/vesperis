@@ -1,0 +1,269 @@
+R"VG(
+# vote_law.vg (H-04's second pass): the assembly's vote (the question, the debate, the reasons on both sides, the result: each a
+# people's own: what they quarrel about is their feasts, their herds, their crafts, their colours) and the code of law (its sections
+# composed, the people's values and faith in them).
+
+# ---- the assembly's vote: its parts --------------------------------------------------------------------------------------------
+
+vt.question
+  The question: whether to {vt.what}.
+  Put to the assembly: whether to {vt.what}.
+  The motion: to {vt.what}.
+  The proposal, brought by {#n|family}: to {vt.what}.
+vt.what (share=0.6)
+  open the {fut.block} again, the empty ones
+  let the machines choose the weather
+  build a second {fut.green}
+  close the transit line at night
+  send a ship to {vt.where}
+  give the archive a voice in the assembly
+  keep {festival} for a whole cycle
+  let the {herd} out of the pens and into the hills
+  teach {craft} in the schools again
+  paint the {fut.gate} {colour.any}
+  move {festival} to {season.next}
+  take down the old {fut.sys.n}
+  let children vote at fifteen
+  rename the {fut.common} after {founder}
+  plant {tree} along {streets.of}
+  forbid {pastime} in the {fut.common} after midnight
+  ask the machines to stop greeting people by name
+  keep a {beast} in the school
+  allow fires of {fuel} in the courts at {festival}
+  stop counting the cycles, and count something else
+  make {drink} again, the old way
+  let the {fut.green} go wild for a year
+  build a model of {focusword} for the children
+  open {holyplace} at night
+  bring back {instrument} for the evening bells
+  serve {food} at every assembly, to shorten the speeches
+  hang {colour.holy} lamps along {streets.of}
+  keep the old word {~home} on the signs
+  (has:$home.landmark) clear the ground round {$home.landmark}
+  (contact=1 othergone=0) send envoys to the {other}
+  (stage>=1) leave {$home} for {city}
+  (stage>=1 inv.sleep=1) join the sleepers
+  (stage>=1) close the {fut.block}
+  (stage>=1) send the children to {city2}
+vt.where
+  (moons>0) {moon}
+  the dark rocks
+  (giant=1) the wanderer
+  the other worlds of {sun.first}
+  (rings=1) the ring
+  (companion=1) the second sun
+  the far side of {sun.first}
+
+vt.debate (share=0.7)
+  {#n} spoke. The longest speech was about {vt.topic}.
+  The debate began {fut.when.past} and went on long after, and most of it was about {vt.topic}.
+  {vt.someone} spoke for an hour about {vt.topic}, and changed nobody's mind.
+  There was shouting, briefly, about {vt.topic}. Then {food} was brought in.
+  Nobody spoke for a long time. Then everyone did.
+  The {craft} workshop spoke as one, which has never happened before.
+  Someone brought the {herd} into the hall to make a point. The point was made.
+  It was argued in the old way, standing, with {drink} for the speakers.
+vt.topic
+  the {herd}
+  what {founder} would have wanted
+  the cost
+  the children
+  the last time this was asked
+  {festival}
+  the colour of the {fut.gate}
+  the old records
+  the {fut.green}
+vt.someone
+  The oldest resident
+  Someone from the {craft} workshop
+  One of the young ones
+  A woman from the {fut.block}
+  A man who keeps the {herd}
+  The keeper of the archive
+
+vt.for
+  For: {vt.reason}. {=.short}
+  Those for it said that {vt.reason}.
+  {vt.someone} spoke for it: {vt.reason}.
+vt.against
+  (.short=1) Against: {vt.reason2}.
+  (!has:.short) Those against it said that {vt.reason2}.
+  (!has:.short) The other side: {vt.reason2}.
+vt.reason
+  (1) {vt.reason.plain}
+  {vt.reason.own}
+  {vt.reason.own}
+  {vt.reason.own}
+vt.reason.plain (share=0.3)
+  we have the time and the means
+  our grandparents would have done it
+  the young want it
+  nothing else is working
+  it would be beautiful
+  it costs nothing but effort
+vt.reason.own (share=0.85)
+  it is what {founder} would have done, with the {herd} and the {crop} as they were
+  the children asked, at {feast.custom}, and nobody could say why not
+  it has been done at {city2}, and their {fut.green} are still standing
+  it would make {festival} better, and {food} easier to come by
+  it is a matter of {virtue}
+  we promised it at the last vote, over {drink}
+  the {herd} would like it
+  the old saying is right: {proverb}
+  the {craft} workshop has offered to do it for nothing
+  the {herd} have done without it long enough
+  {festival} was better when we did it, with {instrument}
+  it would put {colour.holy} back on the {fut.gate}
+vt.reason2
+  (1) {vt.reason2.plain}
+  {vt.reason2.own}
+  {vt.reason2.own}
+  {vt.reason2.own}
+
+vt.reason2.plain (share=0.3)
+  we do not need it
+  it was tried before
+  the machines are against it
+  it would change nothing
+  it is too soon
+  nobody would look after it
+vt.reason2.own (share=0.85)
+  it would upset the {herd}
+  it is {vice}, dressed up as {virtue}
+  the old ones in the {fut.block} would hate it
+  it would cost us {festival}, or the {food} at it
+  it is what {city2} did, and look at their {fut.green}
+  the water will not stretch to it, not with the {crop} to think of
+  {proverb}, and that settles it
+  the {herd} would not stand for it
+  the {craft} workshop would have to stop for a season
+  it would mean less {food} at {festival}
+  the old ones swore {oath} against it once, and an oath is an oath
+  the {bird} nest there, and always have
+vt.result
+  (1) {vt.result.plain}
+  (2) {vt.result.own}
+vt.result.own (share=0.8)
+  Carried, and {instrument} was played in the {fut.common} until late.
+  Lost. The {craft} workshop has promised to bring it back next {festival}.
+  Carried; the {herd} were the first to be told, by tradition.
+  Tied. Settled the old way, by {fut.game}; the motion won.
+  Carried, and the {colour.holy} lamps lit over the {fut.gate} to say so.
+  Lost, and {food} was served anyway, as the custom is.
+  Carried after a recount, done by hand, by the children, twice.
+vt.result.plain (share=0.5)
+  The vote: for, by {#nbig}. It will be done.
+  The vote: against, by {#nbig}. It will not be done, this cycle.
+  The vote was tied. It will be asked again at {festival}.
+  The vote: for, by one. Nobody is happy.
+  Carried, with {#n} abstaining, all of them asleep.
+  Lost. Its friends have gone to the {fut.common} to sulk.
+  Carried. Work begins in {season.next}.
+  Withdrawn before the vote, to everyone's relief.
+  Carried by acclamation; nobody counted.
+  Lost by {#n}. It will come back; it always does.
+  Deferred until the {herd} are in.
+  Carried; the machines have been told, and have no objection.
+  Lost, and the hall emptied in silence.
+  Carried, and {instrument} was played in the {fut.common} until late.
+
+# ---- the code of law ----------------------------------------------------------------------------------------------------------
+
+genre.law (words=36..140)
+  {law.head}\n{law.art}\n{law.art}\n{law.art}\n{law.art}\n{law.end}
+  {law.head}\n{law.art}\n{law.art}\n{law.art}\n{law.end}
+  {law.head}\n{law.art}\n{law.art}\n{law.art}\n{law.art}\n{law.art}\n{law.end}
+
+law.head (formula people=3)
+  The code of {$seat}, as revised in cycle {#year:digits}. Part {n}.
+  Laws of {$seat}, the section on {law.topic}.
+  From the laws of {$seat}, as the assembly last agreed them.
+  The law of {$home}, {law.topic}, as read at {festival}.
+law.topic
+  the gardens
+  the machines
+  the archive
+  leaving and returning
+  the water
+  the children
+  the herds
+  the dead
+  the feasts
+
+law.art
+  (3 once) Section {n}: {law.who} {law.may} {law.what}{law.unless}.
+  (3 once) Section {n}: {law.who} {law.may} {law.what}{law.unless}.
+  (2 once) Section {n}: {law.who} {law.may} {law.what}{law.unless}.
+  (2 once) Section {n}: {law.custom}
+  (1 once) Section {n}: {law.custom}
+  (1 once) Section {n}: {law.value}
+law.who (people=8)
+  no person
+  every person
+  a child
+  a machine
+  the assembly
+  a stranger
+  the keepers of the archive
+  anyone who leaves the habitat
+  the keepers of the {herd}
+  a person in mourning
+  the watch at the {fut.gate}
+  a guest at {festival}
+law.may
+  may
+  may not
+  must
+  must not
+  may at any time
+law.what (share=0.7)
+  be held without the assembly's leave
+  alter the archive, only add to it
+  close the {fut.green} while any person is hungry
+  harm a person, or allow harm it could stop
+  refuse the machines' teaching, and be taught by a person instead
+  enter a home without being asked
+  take more water than the season allows
+  leave in the dark season without telling the watch
+  decide for a person what the person can decide
+  speak at the assembly, once each season
+  paint over {motif.over} on another's door
+  keep a {beast} in the {fut.green}
+  light fires of {fuel} inside the walls
+  sell {food} at {festival}
+  wear {colour.mourn} except for the dead
+  play {fut.game} for anything but small stakes
+  take one of the {herd} from the pens without the keeper
+  turn away a stranger at the {fut.gate}
+law.unless
+  (2)
+  , unless the assembly agrees
+  , except in danger to life
+  , for any reason
+  , and the reason is to be recorded
+  , except at {festival}
+  , unless the {herd} need it
+law.custom (share=0.7)
+  the names of the dead are kept, and read at {festival}.
+  no record may be destroyed, even by the one it is about.
+  {festival} is kept by all; no work is asked of anyone that day.
+  the {herd} in the pens belong to all, and their keepers are owed {food} and thanks.
+  every child is taught {craft} until they can do it, or until they can say why not.
+  the old word {~law} is kept at the head of this code, though nobody can say it well.
+  a dispute about the {fut.green} is settled in the {fut.green}, standing up.
+  the dead are carried to {deadplace} by their neighbours, not by machines.
+law.value
+  (value=trade) every exchange is recorded, and every record is public.
+  (value=learning) every person may read every record, except their neighbours' letters.
+  (value=art) no wall may stay bare for more than a cycle.
+  (value=war) every adult keeps a weapon, and none may carry it into {town.open}.
+  (value=piety) {holyplace} is open to all, at all hours.
+  (faith=machine) no person may be asked to obey a machine they do not understand.
+  (faith!=machine) the machines may advise on the {fut.green} and on everything else; they may not decide.
+
+law.end (formula)
+  So agreed.
+  Recorded at {$seat}.
+  Revised at the {#number:ord} reading; to be read again in ten cycles.
+  Agreed, after {#n} sittings. Recorded by the archive.
+)VG"

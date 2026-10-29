@@ -1,24 +1,16 @@
----
-id: R-NNN
-title: short title
-status: proposed
-requested: YYYY-MM-DD
-related: (roadmap ids or bug ids, if any)
----
+# R-NNN: short title
 
-## What
-One paragraph: what you want to see, hear or be able to do.
+status: proposed | planned YYYY-MM-DD (where: the milestones) | done YYYY-MM-DD (the release)
+milestone: the release or the milestones that do it
 
-## Why
-What it adds to the exploration experience, or what is annoying now.
+## Request
 
-## Must / should / could
-- must:
-- should:
-- could:
+The request as given, quoted, with its screenshots or examples.
 
-## References
-Screenshots, links, memories of the original, examples from other games.
+## Plan
 
-## My notes (filled by Claude)
-Approach, affected modules, size, questions, acceptance criteria.
+How it is cut into milestones and what was settled, when it needs planning.
+
+## Done
+
+What was built and where, how it was verified, and what stays open (a KNOWN-ISSUES row).

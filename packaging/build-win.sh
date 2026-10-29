@@ -11,7 +11,7 @@ TC=${VESPERIS_TC:-$PWD/build/toolchains}
 CXX=$TC/llvm-mingw-20260922-ucrt-macos-universal/bin/$A-w64-mingw32-clang++
 FLAGS="-O2 -flto=thin"
 rm -f "$OUT"/obj/*.o
-{ find src/core src/galaxy src/space src/surface src/game -name '*.cpp' | sort; echo src/main_raylib.cpp; echo src/platform_raylib.cpp; } > "$OUT/sources.txt"
+{ find src/core src/galaxy src/peoples src/space src/surface src/game -name '*.cpp' | sort; echo src/main_raylib.cpp; echo src/platform_raylib.cpp; } > "$OUT/sources.txt"
 export CXX FLAGS TC OUT
 xargs -n 1 -P 8 sh -c 'exec $CXX -std=c++17 $FLAGS -Wall -Wshorten-64-to-32 -Wno-unused-parameter -Wno-sign-compare -Isrc \
     -I$TC/raylib-5.5/src -c "$0" -o "$OUT/obj/$(echo "$0" | tr / _ | sed "s/\.cpp\$/.o/")"' < "$OUT/sources.txt"

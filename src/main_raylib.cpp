@@ -2,7 +2,7 @@
 // scales it to the window with nearest-neighbour filtering.
 #include "platform.h"
 #include "game/game.h"
-#include "galaxy/plan.h"
+#include "peoples/plan.h"
 #include "core/png.h"
 #include "core/fs.h"
 #include <cstdio>
@@ -16,13 +16,21 @@
 #include <emscripten/emscripten.h>
 #endif
 
+// E-05: the platform's frame (platform.h, which keeps clear of core/input.h's key names) is copied into Input and PadState by index
+static_assert(sizeof(PlatformFrameInput::down) == KEY_MAX && sizeof(PlatformFrameInput::pressed) == KEY_MAX &&
+              sizeof(PlatformFrameInput::mouseDown) == sizeof(Input::mouseDown), "the platform's key and mouse states are Input's");
+static_assert(sizeof(PlatformPad::buttons) == PAD_BUTTONS * sizeof(bool) && sizeof(PlatformPad::axes) == PAD_AXES * sizeof(float) &&
+              sizeof(PlatformPad::rawButtons) == PAD_RAW_BUTTONS * sizeof(bool) && sizeof(PlatformPad::rawAxes) == PAD_RAW_AXES * sizeof(float) &&
+              sizeof(PlatformPad::rawHats) == PAD_RAW_HATS && sizeof(PlatformPad::name) == sizeof(PadState::name) &&
+              sizeof(PlatformPad::guid) == sizeof(PadState::guid), "the platform's controller is PadState's");
+
 namespace {
 // F-01: VESPERIS_TRACE=1 times the parts of the real game's frame, which the headless bench never runs (the window's upload and
 // swap, the synth's blocks, the files): once a second the mean and the worst of each on stderr, and at the quit the percentiles
 // of the frames' intervals and of their work without the hold and the swap (F-08: the pacing's wait and the vsync's)
 struct FrameTrace {
     enum { POLL, GAME, AUDIO, SYNTH, SHOT, REC, UPLOAD, DRAW, HOLD, SWAP, WORK, INTERVAL, N };
-    const char* names[N] = {"poll", "game", "audio", "synth", "shot", "rec", "upload", "draw", "hold", "swap", "work", "interval"};
+    const char* const names[N] = {"poll", "game", "audio", "synth", "shot", "rec", "upload", "draw", "hold", "swap", "work", "interval"};
     double sum[N] = {}, worst[N] = {}, v[N] = {};
     int frames = 0, blocks = 0;
     double lastReport = -1;
@@ -44,9 +52,10 @@ struct FrameTrace {
             if (s.empty()) return;
             std::sort(s.begin(), s.end());
             auto at = [&](double p) { return s[std::min(s.size() - 1, (size_t)(p * s.size()))]; };
-            int over17 = 0, over20 = 0, over33 = 0;   // F-08: 17.5, as paced frames sit at 16.67 give or take the swap's wake
+            int over17 = 0, over20 = 0, over33 = 0;   // 17.5, as paced frames sit at 16.67 give or take the swap's wake
             for (float x : s) { over17 += x > 17.5f; over20 += x > 20.0f; over33 += x > 33.4f; }
-            fprintf(stderr, "%s over %zu frames: p50 %.2f, p90 %.2f, p99 %.2f, max %.2f ms; over 17.5 ms %d, over 20 ms %d, over 33.4 ms %d\n", what, s.size(), at(0.5), at(0.9), at(0.99), s.back(), over17, over20, over33);
+            fprintf(stderr, "%s over %zu frames: p50 %.2f, p90 %.2f, p99 %.2f, max %.2f ms; over 17.5 ms %d, over 20 ms %d, over 33.4 ms %d\n", what, s.size(), at(0.5), at(0.9), at(0.99), s.back(),
+                    over17, over20, over33);
         };
         pct(intervals, "frame intervals");
         pct(works, "frame work without the swap");
@@ -63,7 +72,7 @@ int main(int argc, char** argv) {
     int autoFrames = -1;
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--frames") && i + 1 < argc) autoFrames = atoi(argv[++i]);
-    std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still running at the quit is waited for before the caches it writes are destroyed
+    std::atexit(worldPlanThreadsJoin);   // a plan's prefetch still running at the quit is waited for before the caches it writes are destroyed
     makeDir("shots");
     Game game;
 #ifdef __APPLE__
@@ -71,20 +80,20 @@ int main(int argc, char** argv) {
 #endif
     game.loadFromDisk();
     if (!platformInit(320 * game.settings.windowScale, 200 * game.settings.windowScale, "VESPERIS")) { fprintf(stderr, "could not open a window\n"); return 1; }
-    game.tapeGameDirs(platformAppDir());   // R-420: where the game's own tape lies
+    game.tapeGameDirs(platformAppDir());   // where the game's own tape lies
     AudioSynth synth;
     Input in;
     PlatformFrameInput pin;
-    KeyMap keymap;                 // M6-02: optional physical-to-logical remap
+    KeyMap keymap;                 // optional physical-to-logical remap
     if (keymap.load("vesperis_keys.txt")) printf("key map loaded from vesperis_keys.txt\n");
-    game.keymap = &keymap;         // N5-05: the key bindings screen edits and saves it
+    game.keymap = &keymap;         // the key bindings screen edits and saves it
     bool captured = false;
     int shotCounter = 0, frames = 0;
     while (fileExists("shots/screenshot_" + std::to_string(shotCounter) + ".png")) shotCounter++;
     int panoCounter = 0;
     while (fileExists("shots/panorama_" + std::to_string(panoCounter) + ".png")) panoCounter++;
     double lastTime = platformTime();
-    // one frame of the desktop loop; also the callback of the browser's animation loop (M6-04)
+    // one frame of the desktop loop; also the callback of the browser's animation loop
     auto step = [&]() {
         using Clock = std::chrono::steady_clock;
         const Clock::time_point c0 = trace ? Clock::now() : Clock::time_point();
@@ -102,7 +111,7 @@ int main(int argc, char** argv) {
         game.rawKey = -1;
         for (int k = 32; k < 400; k++) if (pin.pressed[k]) { game.rawKey = k; break; }
         keymap.apply(in);
-        {   // R-418: the controller as read; the game translates it (game/pad.cpp)
+        {   // the controller as read; the game translates it (game/pad.cpp)
             const PlatformPad& pp = pin.pad;
             PadState& ps = in.pad;
             ps.present = pp.present; ps.mapped = pp.mapped;
@@ -128,12 +137,12 @@ int main(int argc, char** argv) {
         if (game.wantsScreenshot || (autoFrames > 0 && frames == autoFrames - 1)) {
             game.wantsScreenshot = false;
             std::string fn = "shots/screenshot_" + std::to_string(shotCounter++) + ".png";
-            writePNGAsync(fn.c_str(), game.output(), FBW, FBH);   // F-02: encoded and written by the PNG writer's thread
+            writePNGAsync(fn.c_str(), game.output(), FBW, FBH);   // encoded and written by the PNG writer's thread
             { FILE* sc = fopen((fn.substr(0, fn.size() - 4) + ".txt").c_str(), "w"); if (sc) { fprintf(sc, "%s\n", game.screenshotCaption().c_str()); fclose(sc); } }
             game.noteScreenshot();
             printf("saved %s\n", fn.c_str());
         }
-        if (game.wantsPanorama) {   // M6-05
+        if (game.wantsPanorama) {
             std::vector<uint32_t> pano; int pw, ph;
             game.renderPanorama(pano, pw, ph);
             std::string fn = "shots/panorama_" + std::to_string(panoCounter++) + ".png";
@@ -145,7 +154,7 @@ int main(int argc, char** argv) {
         const Clock::time_point c6 = trace ? Clock::now() : Clock::time_point();
         platformPresent(game.output(), FBW, FBH, game.settings.scanlines, game.settings.crt ? 1.0 : 0.0, game.settings.bloom ? 1.0 : 0.0, game.settings.aspect);
         frames++;
-        if (trace) {   // F-01
+        if (trace) {
             const Clock::time_point c7 = Clock::now();
             const PlatformAudioTimes at = platformAudioTimes();
             const PlatformPresentTimes pt = platformPresentTimes();
@@ -167,7 +176,7 @@ int main(int argc, char** argv) {
     if (trace) ft.summary();
     game.autosave();
     game.settings.save(game.settingsPath);
-    pngFlush();   // F-02: the photographs and the recording's last frames on disk before the window goes
+    pngFlush();   // the photographs and the recording's last frames on disk before the window goes
     platformShutdown();
     return 0;
 }

@@ -1,5 +1,17 @@
 # Coordinates, frames and units
 
+<!-- contents -->
+Contents:
+- World axes and camera
+- Sectors
+- Body frames
+- Orbits
+- Landing site frame (`SurfaceSite`)
+- Sun and time of day (`SurfaceSite::sun(t)`)
+- Units summary
+- Ship and transitions
+<!-- /contents -->
+
 ## World axes and camera
 
 * World is right-handed with **y up**. Galactic positions are in kilometres (doubles).

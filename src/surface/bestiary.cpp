@@ -3,32 +3,58 @@
 #include "core/rng.h"
 #include <cmath>
 
-const char* PLAN_NAMES[PLAN_COUNT] = {"QUADRUPED", "LONG-NECKED BROWSER", "HEXAPOD CRAWLER", "HOPPER", "BIPED STRIDER", "GIANT WALKER", "FLYER", "SWIMMER"};
-const char* ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
-const char* TEMPERAMENT_NAMES[3] = {"SHY", "CURIOUS", "INDIFFERENT"};
+const char* const PLAN_NAMES[PLAN_COUNT] = {"QUADRUPED", "LONG-NECKED BROWSER", "HEXAPOD CRAWLER", "HOPPER", "BIPED STRIDER", "GIANT WALKER", "FLYER", "SWIMMER"};
+const char* const ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
+const char* const TEMPERAMENT_NAMES[3] = {"SHY", "CURIOUS", "INDIFFERENT"};
 
 Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
     Bestiary B;
-    if (b.type != PT_FELISIAN && b.type != PT_OCEAN) return B;
+    if (!kindHas(b.type, KT_FAUNA)) return B;
     Rng r(b.seed ^ 0xBE57ULL);
-    int nLand = b.type == PT_FELISIAN ? 2 + r.irange(3) : 0;
+    int nLand = kindHas(b.type, KT_FLORA) ? 2 + r.irange(3) : 0;   // land animals where there are plants
     int nFly = 1 + r.irange(2);
     int nSwim = 1;
     bool giantDone = false;
     int nocturnal = r.chance(0.5) ? r.irange(std::max(1, nLand)) : -1;
-    static const int habitats[8] = {0, BIO_GRASSLAND, BIO_SAVANNA, BIO_TEMPERATE, BIO_TROPICAL, BIO_WETLAND, BIO_DESERT, BIO_TUNDRA};
+    // P-02: the kind's style of land animal (the draws are the felisian's, read through the style's tables): cold grazers, big and
+    // short-tailed in herds on the tundra, the taiga and the cold grass, a giant walker among them more often (a mammoth's); the open
+    // grass's herds, grazers in their hundreds on the grassland and the savanna
+    const int fa = KINDS[b.type].fauna;
+    static const int habitats[3][8] = {{0, BIO_GRASSLAND, BIO_SAVANNA, BIO_TEMPERATE, BIO_TROPICAL, BIO_WETLAND, BIO_DESERT, BIO_TUNDRA},
+                                       {0, BIO_TUNDRA, BIO_TAIGA, BIO_GRASSLAND, BIO_TUNDRA, BIO_TAIGA, BIO_TUNDRA, BIO_GRASSLAND},
+                                       {0, BIO_GRASSLAND, BIO_SAVANNA, BIO_GRASSLAND, BIO_SAVANNA, BIO_TEMPERATE, BIO_DESERT, BIO_GRASSLAND}};
+    static const double planW[3][6] = {{30, 15, 15, 15, 15, 10}, {45, 8, 6, 6, 10, 25}, {45, 20, 5, 15, 10, 5}};
     for (int i = 0; i < nLand; i++) {
         Species s;
         s.seed = r.next();
-        double w[6] = {30, 15, 15, 15, 15, giantDone ? 0.0 : 10};
+        double w[6] = {planW[fa][0], planW[fa][1], planW[fa][2], planW[fa][3], planW[fa][4], giantDone ? 0.0 : planW[fa][5]};
         s.plan = r.pick(w, 6);
         if (s.plan == PLAN_GIANT) giantDone = true;
         switch (s.plan) {
-            case PLAN_QUADRUPED: s.size = 0.6 + 1.2 * r.uni(); s.gait = r.chance(0.5) ? GAIT_WALK : GAIT_TROT; s.runGait = GAIT_GALLOP; s.walkSpeed = 0.8 + 0.6 * r.uni(); s.runSpeed = 4 + 3 * r.uni(); s.herdMin = 4; s.herdMax = 9;
-                s.bodyLen = s.size * (1.4 + 0.5 * r.uni()); s.neckLen = s.size * (0.35 + 0.3 * r.uni()); s.headLen = s.size * 0.4; s.tailLen = s.size * (0.3 + 0.6 * r.uni()); s.legLen = s.size * 0.95; break;
+            case PLAN_QUADRUPED:
+                s.size = 0.6 + 1.2 * r.uni();
+                s.gait = r.chance(0.5) ? GAIT_WALK : GAIT_TROT;
+                s.runGait = GAIT_GALLOP;
+                s.walkSpeed = 0.8 + 0.6 * r.uni();
+                s.runSpeed = 4 + 3 * r.uni();
+                s.herdMin = 4;
+                s.herdMax = 9;
+                s.bodyLen = s.size * (1.4 + 0.5 * r.uni());
+                s.neckLen = s.size * (0.35 + 0.3 * r.uni());
+                s.headLen = s.size * 0.4;
+                s.tailLen = s.size * (0.3 + 0.6 * r.uni());
+                s.legLen = s.size * 0.95;
+                break;
             case PLAN_LONGNECK: s.size = 1.5 + 2.0 * r.uni(); s.gait = GAIT_WALK; s.runGait = GAIT_TROT; s.walkSpeed = 0.7 + 0.4 * r.uni(); s.runSpeed = 3 + 2 * r.uni(); s.herdMin = 2; s.herdMax = 4;
                 s.bodyLen = s.size * 1.3; s.neckLen = s.size * (0.9 + 0.6 * r.uni()); s.headLen = s.size * 0.3; s.tailLen = s.size * 0.7; s.legLen = s.size * 1.0; break;
-            case PLAN_HEXAPOD: s.size = 0.3 + 0.5 * r.uni(); s.gait = GAIT_CRAWL; s.runGait = GAIT_CRAWL; s.walkSpeed = 0.3 + 0.4 * r.uni(); s.runSpeed = 1.5 + 1.0 * r.uni(); s.herdMin = 3; s.herdMax = 8;
+            case PLAN_HEXAPOD:
+                s.size = 0.3 + 0.5 * r.uni();
+                s.gait = GAIT_CRAWL;
+                s.runGait = GAIT_CRAWL;
+                s.walkSpeed = 0.3 + 0.4 * r.uni();
+                s.runSpeed = 1.5 + 1.0 * r.uni();
+                s.herdMin = 3;
+                s.herdMax = 8;
                 s.bodyLen = s.size * 3.0; s.neckLen = s.size * 0.2; s.headLen = s.size * 0.5; s.tailLen = s.size * 1.2; s.legLen = s.size * 0.5; break;
             case PLAN_HOPPER: s.size = 0.4 + 0.8 * r.uni(); s.gait = GAIT_HOP; s.runGait = GAIT_HOP; s.walkSpeed = 1.0 + 0.5 * r.uni(); s.runSpeed = 5 + 3 * r.uni(); s.herdMin = 3; s.herdMax = 6;
                 s.bodyLen = s.size * 1.1; s.neckLen = s.size * 0.35; s.headLen = s.size * 0.35; s.tailLen = s.size * (0.8 + 0.5 * r.uni()); s.legLen = s.size * 0.9; break;
@@ -37,13 +63,19 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
             default: s.size = 4 + 4 * r.uni(); s.gait = GAIT_WALK; s.runGait = GAIT_WALK; s.walkSpeed = 0.6 + 0.3 * r.uni(); s.runSpeed = 1.5; s.herdMin = 1; s.herdMax = 2;
                 s.bodyLen = s.size * 1.6; s.neckLen = s.size * (0.4 + 0.5 * r.uni()); s.headLen = s.size * 0.35; s.tailLen = s.size * 0.9; s.legLen = s.size * 1.0; break;
         }
-        s.habitat = habitats[r.irange(8)];
+        if (fa == FA_COLD && s.plan != PLAN_HEXAPOD) {   // bigger, the neck and the tail short against the cold
+            s.size *= 1.3; s.bodyLen *= 1.3; s.headLen *= 1.3; s.legLen *= 1.2; s.neckLen *= 1.05; s.tailLen *= 0.6;
+            s.herdMin += 2; s.herdMax += 6;
+        }
+        if (fa == FA_HERDS && s.plan != PLAN_GIANT) { s.herdMin += 4; s.herdMax += 12; }
+        s.habitat = habitats[fa][r.irange(8)];
         double wb[5] = {3, 3, 2, 2, 1};   // banks 3 forest, 10 straw, 9 sand, 0 rock, 5 flora2
         if (s.habitat == BIO_GRASSLAND || s.habitat == BIO_SAVANNA) { wb[1] = 5; wb[2] = 4; }
         if (s.habitat == BIO_DESERT) { wb[2] = 8; wb[0] = 1; }
         if (s.habitat == BIO_TEMPERATE || s.habitat == BIO_TROPICAL || s.habitat == BIO_WETLAND) { wb[0] = 5; wb[3] = 3; }
         static const int banks[5] = {3, 10, 9, 0, 5};
-        s.bank = banks[r.pick(wb, 5)];
+        static const int coldBanks[5] = {8, 10, 9, 0, 3};   // a white coat in place of the second flora's
+        s.bank = (fa == FA_COLD ? coldBanks : banks)[r.pick(wb, 5)];
         s.tone = 0.45 + 0.5 * r.uni();
         s.pattern = r.irange(4);
         s.crest = r.irange(5);

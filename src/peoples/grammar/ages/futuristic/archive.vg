@@ -1,0 +1,306 @@
+R"VG(
+# archive.vg (H-04's second pass): the personal archive (a person's life told for whoever keeps it: `@cast archive`, `@life`: their
+# marriage, their children, their moves and every public thing they did: a deed, an invention, a work, a contest won, a trial, a play)
+# and its parts. A late people writes many: every part is composed and steered by the people's own ways (their crafts, their feasts,
+# their foods, their sayings about life and death).
+
+# ---- the personal archive ---------------------------------------------------------------------------------------------------
+
+genre.archive (words=53..270)
+  {@cast archive}{ar.open}\n{ar.youth}\n{@life ar.life 4}\n{ar.view}\n{ar.now}\n{ar.close}
+  {@cast archive}{ar.open}\n{@life ar.life 5}\n{ar.view}\n{ar.now}\n{ar.close}
+  {@cast archive}{ar.open}\n{ar.youth}\n{ar.work}\n{@life ar.life 3}\n{ar.now}\n{ar.close}
+  {@cast archive}{ar.open}\n{ar.youth}\n{@life ar.life 3}\n{ar.view}\n{ar.work}\n{ar.close}
+
+ar.open (formula people=4)
+  Personal archive of {$me:name}, {$me.home}. Recorded in my {#$me.age:ord} year, for whoever keeps these things.
+  This is {$me:name}. They asked us all to record something for the archive. Here is mine.
+  {$me:name}, {$me.trade}, for the archive of {$me.home}.
+  {$me:name} of {$me.home}, aged {#$me.age}, speaking for the record.
+  The archive asked me for my life. Here is the short of it. {$me:name}.
+  For my grandchildren, and for the archive: {$me:name}, {$me.trade}.
+  {$me:name}. I am {#$me.age} and I am told that is old enough to be interesting.
+  Recorded at {$me.home} by {$me:name}, who was asked, and said yes.
+
+ar.youth
+  (2) I was born at {$me.home}, {ar.born}. {ar.child}
+  (1) I grew up {ar.where}, {ar.child.lc}
+  (1) {ar.child} {ar.child2}
+  (1) My first memory is {ar.memory}. {ar.child2}
+ar.born (share=0.8)
+  in the year the {ar.yearthing}
+  on the night of {feast.custom}, which explains a great deal
+  in {weather}, which the old ones still talk about
+  in the room over the {craft} workshop, to the smell of it
+  under the {colour.holy} lamps, as the custom was
+  the same week as half the children of the {fut.block}
+  in the {fut.block}, which is gone now
+  during {feast.custom}, which my mother never forgave
+  in {season.now}, they tell me, though I have doubts
+  {fut.when.past}, in a hurry
+  in the {fut.green}, among the {fruit}
+ar.yearthing
+  growing halls were opened
+  transit line was finished
+  long night was longest
+  machines first spoke to us
+  {herd} were brought back to the pens
+  {fut.green} flooded
+  bells of {holyplace} were recast
+  {craft} workshop closed for a whole season
+  {fut.common} was rebuilt
+  (inv.elevator=1) elevator first ran
+  (inv.fusion=1) fusion core was lit
+ar.child (share=0.75)
+  I remember the light in the {fut.green}, and my mother singing the {festival} songs.
+  I was a quiet child, and stayed one.
+  I wanted to be a {fut.dream}, and I became a {$me.trade}, which is not far off.
+  We were poor in the way people were poor then: we had everything except time.
+  We spent our evenings at {pastime} on the stairs until the lights changed.
+  My grandmother taught me {craft}, and her hands were quicker than any machine.
+  I was afraid of the {herd} in the heritage pens, and they of me.
+  We ate {food} every {festival}, and I still cannot eat it without missing someone.
+  I was sent to learn {craft} and learned {pastime} instead.
+  The old ones told us the {people} had been many once; we counted the empty rooms to check.
+  I was the child who asked the machines why, until they asked me back.
+  Our door had {motif.over} on it, painted {colour.holy}; I traced them with my finger every night.
+  I spent my childhood in the {fut.green}, eating {fruit} I was told not to eat.
+  My father kept the {herd}, and I kept out of their way.
+  We had a {beast} called after {mountain}, which was too big a name for it.
+  I sang in the {festival} choir until my voice broke, and then I sang anyway.
+  I learned {instrument} from an old woman who hit my knuckles with it.
+  Every {festival} my mother made {food}, and every {festival} I pretended to like it.
+  The old ones in the {fut.block} taught us to swear {oath}; our mothers were not pleased.
+  I was afraid of the dark, and of {skynight}, and of nothing else at all.
+  We wore {garment} to school and tried to lose it on the way home.
+  I fell into {river} once and was fished out by someone from the {craft} workshop, who never let me forget it.
+  We were at {pastime} in the {fut.common} until the machines dimmed the lights to send us home.
+  My grandfather told me the dead have {death.went}; I went to look for them, once.
+  I was taught that {virtue} mattered most, and practised {vice} instead, as children do.
+  The first word of the old speech I learned was {~word}. I still do not know what it means.
+ar.child2 (share=0.8)
+  I have never been so happy since, and never needed to be.
+  I did not know we were poor, or rich; we were simply there, among the {herd}.
+  It all seemed very large then. It still does, some days.
+  If you ask my sister she will say I was a terror, worse than any {beast}. She was worse.
+  I think about it more now than I did at the time.
+  The {bird} still nest where they nested then, which comforts me.
+  We thought the {fut.block} was the whole world, and for us it was.
+  It was a better time than we knew.
+  Nobody told us anything was ending, because nothing was, yet.
+  I would not change a day of it, except one.
+  My brothers would tell it differently. Let them record their own.
+ar.where
+  by {river}
+  under {mountain}
+  in the {fut.block}
+  in the towers
+  on the {fut.green}
+  above {town.open}
+ar.child.lc
+  and I remember the light in the halls.
+  and I was a quiet child.
+  and I was always out of doors.
+  and I learned {craft} before I could read.
+  and we kept a {beast} nobody was supposed to keep.
+ar.memory (share=0.8)
+  the smell of {food} in the common kitchens
+  my mother's hands, white with {crop} flour
+  the {colour.holy} lamps at the {fut.gate} the night my brother was born
+  a {beast} asleep on my feet
+  the {herd} being driven past the window in the snow
+  {feast.custom}, from my father's shoulders
+  rain on {roofs}, and somebody singing
+  the old hand in the {craft} workshop who let me hold the {tool.n}
+  my father carrying me up to see {skynight}
+  the {herd} being led round the terraces at {festival}
+  a {colour.any} {garment.n} I was not allowed to touch
+  the sound of {instrument} through the wall
+  the day the {fut.sys.n} stopped and everyone went outside
+
+ar.why
+  the work there was better
+  the old place emptied
+  we were young and wanted to
+  (stage>=1) everyone else was going
+  the machines asked for volunteers
+  my mother needed me
+  I wanted to see {sea} every morning
+ar.why2
+  the {fut.green} there were finer, and I was tired of ours
+  my work went there, so I went after it
+  I followed someone, which is the usual reason
+
+ar.after
+  (1)
+  (1)
+  (1)
+  (1)
+  (0.5) {ar.after.plain}
+  {ar.after.own}
+  {ar.after.own}
+  {ar.after.own}
+  {ar.after.own}
+ar.after.plain (share=0.5)
+  I remember the light that day.
+  It was the best year.
+  I did not know then how much that would matter.
+  We were very happy, mostly.
+  Nobody else remembers it now, which is why I am telling you.
+  It seemed small then. It does not now.
+  I have told it so often that I no longer know which parts are true.
+ar.after.own (share=0.8)
+  I remember the light on {roofs} that day.
+  The machines recorded it; you can hear {instrument} in the background, if you ask.
+  I still have the {ar.keep} from that day.
+  My mother counted {luck.good} as luck, and that week we had it.
+  We ate {food} and drank {drink}, {fut.when.past} and long after.
+  The {bird} were back on the roofs that week. I always remember that.
+  It rained on the {fut.green}, which we took for luck.
+  Everyone wore {colour.any}, as the custom was then.
+  The {herd} got out of the pens the same day, which is what everyone remembers instead.
+  It was the year the {crop} came up twice, though nobody believed it.
+  That night we kept {feast.custom}, early, because we could not wait.
+  My father swore {oath} that he had never been so happy, and then he was, twice more.
+  We said the old blessing, {blessing}, and meant every word.
+  The {~word} for it is one I still cannot say without my voice going.
+  The {craft} workshop made us something for it; it is on the shelf still.
+  My grandmother said it was the finest thing since {festival} in her own youth.
+  We danced the {~dance} until the {herd} complained.
+  The children painted {motif.over} on the door to mark it, and nobody painted over them.
+  There was {drink} for everyone, and more than was wise.
+  We walked to {focusword} afterwards, the whole family, in the dark.
+  The {colour.holy} cloth from that day is folded in the chest; I take it out sometimes.
+  Somebody played {instrument}, and somebody else sang, and both of them were bad.
+  The machines logged it as an ordinary day. They were wrong.
+  I wore {garment}, borrowed, and returned it late.
+  We ate {fruit} from the {fut.green}, the first of the year.
+  It is in the archive, if you want to hear us laughing.
+  That was the season the {bird} nested in the {fut.gate}; we took it as a sign.
+  The old ones said it was {luck.good}, and nobody argued with the old ones.
+ar.keep (people=4)
+  ring
+  cup
+  drawing
+  recording
+  {colour.holy} ribbon
+  {vessel.one.n}
+
+# a working life
+ar.work
+  I was a {$me.trade} for {#n|year} and {ar.workhow}.
+  I worked as a {$me.trade} at {$me.home}. {ar.workcoda}
+  My trade was {$me.trade}, and my pleasure was {craft}. {ar.workcoda}
+  I was a {$me.trade}, like my mother, who was better at it. {ar.workcoda}
+  My work was {craft}, the slow way. {ar.workcoda}
+  I worked in the {fut.sys.n} until the machines took it over, and then I worked beside them.
+  For most of my life I kept the {fut.green}. {ar.workcoda}
+ar.workhow (share=0.8)
+  liked it more than I said
+  was paid in {food} as often as in anything else
+  never missed a {festival} for it, which I am proud of
+  trained {#n} of the young ones, two of them well
+  was good at it, I think
+  never once was late, which nobody noticed
+  taught {#n} others to do it
+ar.workcoda (share=0.8)
+  It is not needed now, any more than the {herd} are. I do it anyway.
+  The machines watched me do it for years before they tried it themselves, with {material}.
+  There is a piece of my work in the {fut.common}, under {motif.over}; I will not say which.
+  My hands still do it at night, when I am asleep, smelling of {material}.
+  I would do it again, the same way, and complain about the {herd} the same way.
+  The machines do it better, and with less {material}, but they do not do it the same.
+  The young ones think it is a game, like {pastime}. It was a living.
+
+# what the writer thinks now
+ar.view
+  {ar.view.l} {ar.view.l}
+ar.view.l
+  (0.4) {ar.view.plain}
+  {ar.view.own}
+  {ar.view.own}
+  {ar.view.own}
+  {ar.view.own}
+  (1 once stage>=1) Things are not as they were in the {fut.block}. Everyone says so, which is how you know.
+ar.view.plain (share=0.5)
+  I think we were lucky to live when we did.
+  The worst thing I ever did was nothing, when I should have done something. I will not say what.
+  The machines did most of the work, and we were left with the part that matters, if we could find it.
+  I have read the old records, from before. They worked so hard. {=.records}
+  If I could tell my younger self one thing, it would be: go outside more.
+  Everyone says the {people} were great once. We were also loud, and late, and kind.
+ar.view.own (share=0.85)
+  My grandmother told me about {ar.grandma}; I never believed half of it, and now I wish I had asked.
+  The best thing I ever did was {ar.best}.
+  (faith!=machine) I do not believe in {god}, but I go to {holyplace} at {festival} anyway, for the {food}.
+  My mother used to say: {proverb}, and my children say it now to their own, with the same face.
+  Life is {life.is}. My father told me that over the {herd} pens, and I laughed at him.
+  My parents have {death.went}. I find I am not afraid of following, only of {season.now} without them.
+  We were raised to prize {virtue} and to fear {vice}. I managed one of those.
+  {time.pass}, and I hardly noticed until the {fut.block} emptied.
+  (has:era) They call these years {era}. We never called them anything; we were in them, and in the {fut.green}.
+  I have kept {craft} all my life, and it has kept me.
+  I was never good at {fut.game}, and I played it every evening of my life.
+  When I am gone they will wear {colour.mourn} for a day and then go back to {festival}. That is right.
+  I have eaten {food} on every {festival} of my life but one, and I still remember that one.
+  The {bird} on the roof are the great-grandchildren of the ones I fed as a child. I like to think so.
+
+ar.grandma
+  the long winters
+  the old city before the towers
+  the days when people still drove themselves
+  the first machines that talked
+  the {herd} in the open fields
+  {festival} when it lasted a week
+ar.best (people=3)
+  plant the {tree} outside the east hall
+  learn the old songs on {instrument}
+  say yes, once, when everyone expected no
+  teach my children to swim where {fish} feed
+  keep {craft} alive for another generation
+  carry my father up to the {fut.green} when he could not walk
+  paint {motif.over} on my mother's door the year she died
+  keep the {herd} alive through the bad year
+
+ar.now
+  Now I live at {$me.home}, {ar.nowhow}.
+  These days I {ar.days}.
+  I am old now and I {ar.days}.
+ar.nowhow (share=0.8)
+  in a house with a garden I do not deserve
+  in a house with {roofs} and too many stairs
+  next to the {herd} pens, by choice
+  near the {craft} workshop, among people who are noisy and kind
+  alone, which suits me
+  (stage>=1) in a district that is half empty
+  with my {ar.withwhom}
+  above {town.open}, where I can hear everything
+  in the {fut.block}, among people who knew my parents
+ar.withwhom
+  sister, who is older than I am
+  oldest friend, who is older than I am
+  {beast>.b}, which is very old for a {.b}
+ar.days (share=0.8)
+  grow {crop2} on the roof and argue with the machines about the weather
+  (has:$me.home.landmark) sit at {$me.home.landmark}, which is the warmest place in the afternoon
+  carve {motif.over} for the children's doors, slowly
+  tell the young ones what {feast.custom} was like before, and exaggerate
+  keep the {colour.holy} lamps at {holyplace}, since nobody else will
+  walk to {focusword} and back, which takes longer every year
+  teach the children what the archive cannot
+  walk by {river} in the mornings
+  (!has:.records) read the old records and make notes nobody will read
+  sit in the {fut.green} and let the young ones tell me things I already know
+  keep the clocks in the east hall, which nobody else remembers to wind
+  play {fut.game} with the same three people every evening
+  practise {craft}, badly, for the pleasure of it
+  feed the {herd} in the pens, which do not need me and like me anyway
+
+ar.close (formula people=3)
+  That is enough. Whoever you are, I hope your days are as ordinary as mine were.
+  End of record. {$me:name}.
+  That is my life, or the part of it that fits.
+  {blessing}. {$me:name}.
+  That is all. Keep it somewhere dry.
+  Recorded, and I feel lighter for it. {$me:name}.
+)VG"

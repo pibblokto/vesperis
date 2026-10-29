@@ -33,5 +33,5 @@ slid, and the lower powers tracked the centre with the ground streaming across i
   is still held; stowed, the lap goes on; a second of Shift+Right turns the parking twenty degrees east with the world
   kept in the window, a second of Shift+Up raises the latitude twenty degrees; opened after the turn the telescope holds
   the side faced), the flow's `orbit_turn`.
-* Docs: 07 (the parking, the telescope bullet, the HUD line), 08, 10-decisions (a section of its own; the ground hold's
+* Docs: 07 (the parking, the telescope bullet, the HUD line), 08, the decisions log (a section of its own; the ground hold's
   bullet marked superseded), KI-356.

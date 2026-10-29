@@ -30,10 +30,11 @@ constexpr double SHOWER_MIN_STRENGTH = 0.08; // weaker streams make no shower
 // the showers of a body (a planet's, a moon's through its parent's orbit), strongest first; none for a comet, a companion
 // star or a body of a system without comets
 void meteorShowersOf(const StarSystem& sys, int body, std::vector<MeteorShower>& out);
+struct AlmanacPlace;
+struct AlmanacEvent;
+void findShowers(const AlmanacPlace& p, std::vector<AlmanacEvent>& out);   // the almanac's finder (almanac.cpp's registry())
 double showerActivity(const MeteorShower& s, double t);   // 0..strength: the share of the full rate at time t
 double showerPeakAfter(const MeteorShower& s, double t);  // the first peak at or after t
-// the least distance (km) from a point relative to the star to a body's orbit about the star (sampled, then refined)
-double orbitDistanceKm(const Body& b, const Vec3& relKm);
 // a body's position on its orbit about its parent at the true anomaly nu (km, relative to the parent)
 Vec3 orbitPointAt(const Body& b, double nu);
 
@@ -50,3 +51,7 @@ double zodiacalLight(const Vec3& dirW, const Vec3& sunW);
 // times its apparent size (5 degrees of radius a full measure), a substellar body's own glow where that is more; `lightFactor`
 // the sun's light there. The ground's planetshine at night and (W-04) the earthshine on a moon's night side read it
 double bodyShineAt(const StarSystem& sys, int bi, const Vec3& placeKm, double t, double lightFactor);
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// the least distance (km) from a point relative to the star to a body's orbit about the star (sampled, then refined)
+double orbitDistanceKm(const Body& b, const Vec3& relKm);

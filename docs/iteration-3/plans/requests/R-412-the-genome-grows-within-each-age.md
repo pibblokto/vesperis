@@ -1,6 +1,6 @@
 # R-412: the genome grows within each age
 
-status: done 2026-10-11 (uncommitted)
+status: done 2026-10-11 (released in 1.3.0)
 milestone: 1.3.0 (after C-17; with B-420 and B-421, the same request's checks)
 
 ## Request

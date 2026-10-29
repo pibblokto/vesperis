@@ -54,7 +54,10 @@ double timeAtTrueAnomaly(const Body& b, double nu) {
     return t;
 }
 
-// W-04's almanac finder: the next peak of every shower of the place's world within the window
+}   // namespace
+
+// W-04's almanac finder: the next peak of every shower of the place's world within the window (E-02: listed in almanac.cpp's
+// registry())
 void findShowers(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     if (!p.ground || !p.sys || p.body < 0 || p.body >= (int)p.sys->bodies.size()) return;
     std::vector<MeteorShower> sh;
@@ -66,8 +69,6 @@ void findShowers(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
         out.push_back(e);
     }
 }
-struct ShowerFinderRegistrar { ShowerFinderRegistrar() { addAlmanacFinder(findShowers); } } showerFinderRegistrar;
-}   // namespace
 
 Vec3 orbitPointAt(const Body& b, double nu) {
     double r = b.orbitRadiusKm * (1 - b.ecc * b.ecc) / (1 + b.ecc * std::cos(nu));
@@ -161,7 +162,7 @@ double showerPeakAfter(const MeteorShower& s, double t) {
 }
 
 double zodiacalDust(const StarSystem& sys, int body) {
-    if (body < 0 || body >= (int)sys.bodies.size()) return 0;
+    if (body < 0 || body >= (int)sys.bodies.size() || sys.sunless()) return 0;   // D-01: no sun lights a drifter's dust
     int wi = sys.bodies[body].parent >= 0 ? sys.bodies[body].parent : body;
     double r = sys.bodies[wi].orbitRadiusKm;
     double young = 0.1;
@@ -200,7 +201,7 @@ double bodyShineAt(const StarSystem& sys, int bi, const Vec3& placeKm, double t,
     double dist = length(bp - placeKm);
     double angR = std::asin(clampd(ob.radiusKm / dist, 0, 1));
     double phase = 0.5 * (1 + dot(normalize(sys.star.pos - bp), normalize(placeKm - bp)));
-    double illum = phase * PLANET_TYPES[ob.type].albedo * (angR / (5 * DEG)) * (angR / (5 * DEG)) * lightFactor;
-    if (ob.type == PT_SUBSTELLAR) illum = std::max(illum, 0.3 * clampd(ob.luminosity / 0.003, 0.55, 1.0) * (angR / (4 * DEG)) * (angR / (4 * DEG)));   // M5-02: warm light of its own
+    double illum = phase * KINDS[ob.type].albedo * (angR / (5 * DEG)) * (angR / (5 * DEG)) * lightFactor;
+    if (kindHas(ob.type, KT_GLOWS)) illum = std::max(illum, 0.3 * clampd(ob.luminosity / 0.003, 0.55, 1.0) * (angR / (4 * DEG)) * (angR / (4 * DEG)));   // M5-02: warm light of its own
     return std::min(0.5, illum);
 }

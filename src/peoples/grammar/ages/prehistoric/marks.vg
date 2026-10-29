@@ -1,0 +1,408 @@
+R"VG(
+# marks.vg (H-04): the records of a people without writing: marks read as counts and pictures (the ideas note's section 9). The
+# ship reads a bone's strokes, a painted wall's figures, a stone's signs: what is written here is its reading, a mark at a time,
+# a count and what it counts. A person is a sign the marks repeat (the ship keeps their name as it keeps a name); nothing here
+# writes, reads a page or cuts a lintel (the lexicon's medieval words). H-04's second pass: every people marks in its own way (the
+# kind of strokes it cut, how it grouped them, the sign it drew for a beast, a birth, a death: `pre.*` pools, `people=K`), and the
+# counts are of its own things (its game, its herd, its vessels, its crafts), so no two peoples' bones read alike.
+
+# ---- how a people marked: its strokes, its grouping (each people its own few) ------------------------------------------------
+
+pre.stroke (pl people=3)
+  (medium=bone) notches
+  (medium=bone) nicks
+  (medium=bone) short cuts
+  (medium=bone) deep cuts
+  (medium=bone) slanting cuts
+  (medium=bone) little crosses
+  (medium=bone) paired notches
+  (medium=stone) scratches
+  (medium=stone) pecked dots
+  (medium=stone) cup marks
+  (medium=stone) short grooves
+  (medium=stone) scratched crosses
+  (medium=stone) ground rings
+  (medium=painted) dots of paint
+  (medium=painted) finger marks
+  (medium=painted) painted strokes
+  (medium=painted) thumb prints
+  (medium=painted) short bars
+  (medium=painted) red ticks
+  strokes
+  chevrons
+  ticks
+
+pre.groupby (people=1)
+  grouped by {#number}, the way the {people} counted
+  in hands of five
+  each fifth one longer
+  in pairs, like footprints
+  with a gap after every {#number}
+  each {#number:ord} one crossed
+  in rows that turn back at the end
+  in a spiral from the middle out
+  in two rows, one above the other
+  with a dot after every ten
+
+# a group of marks, its number kept as .k for the line's meaning: `marks` leads a line (its grouping between commas), `marks.s` stands
+# inside one (no clause)
+marks
+  {n>.k} {pre.stroke}
+  (2) {n>.k} {pre.stroke}, set in a row,
+  a row of {n>.k} {pre.stroke}
+  {n>.k} {pre.stroke} in a row
+  {n>.k} {pre.stroke}, some worn faint,
+  {n>.k} {pre.stroke}, the last one deeper,
+marks.s
+  {n>.k} {pre.stroke}
+  (2) {n>.k} {pre.stroke}
+  a row of {n>.k} {pre.stroke}
+  {n>.k} {pre.stroke} in a row
+marksbig
+  {nbig>.k} {pre.stroke}
+  (2) {nbig>.k} {pre.stroke}, {pre.groupby},
+  {nbig>.k} {pre.stroke}, packed close,
+  {nbig>.k} {pre.stroke} in long rows
+marksbig.s
+  {nbig>.k} {pre.stroke}
+  {nbig>.k} {pre.stroke} in long rows
+  {nbig>.k} {pre.stroke} packed close
+
+# where the marks stand against the sign
+pre.by
+  beside
+  next to
+  under
+  over
+  after
+  around
+  along
+
+# ---- the signs a people drew for its things (each people its own two or three) ---------------------------------------------
+
+pre.sign.game (people=2)
+  a horned head
+  a hoof
+  an antler
+  a track of two toes
+  a running beast in three lines
+  a spear point
+  an eye with a line under it
+  the head of a {game.one}
+  a spear crossing a hoof
+  a {game.one} drawn very small
+pre.sign.fish (people=2)
+  a fish
+  a wavy line with a hook in it
+  two crossed curves
+  the diamond of a net
+  a fish's tail
+  a hook
+  a fish with its mouth open
+pre.sign.herd (people=2)
+  a pair of horns
+  a hoof
+  a beast drawn very small
+  a pen's circle with dots in it
+  a tail and a back
+  a {herd.sign}
+herd.sign
+  horned head
+  hoof print
+  young beast
+  beast with its head down
+pre.sign.moon (people=2)
+  a filled circle
+  a half circle
+  a circle with a dot
+  a ring of dots
+  a circle cut through
+  a crescent lying on its back
+pre.sign.dead (people=2)
+  a figure lying down
+  a crossed stroke
+  a closed eye
+  a bowl turned over
+  a hand with its fingers down
+  a stroke ringed in {colour.mourn}
+  a figure with its arms crossed
+pre.sign.born (people=2)
+  a small figure
+  a small figure held up
+  a circle inside a circle
+  two hands round a dot
+  a seed with a line from it
+  a figure with a small one on its back
+pre.sign.rain (people=2)
+  a wavy line
+  falling dots
+  a cloud with lines under it
+  a bowl filling
+  three hanging lines
+pre.sign.sun (people=2)
+  a sun with rays
+  a circle with long rays
+  a cracked line
+  an open hand turned up
+  a circle with a dot at its middle
+pre.sign.hunger (people=2)
+  an empty bowl
+  a closed hand
+  a belly drawn hollow
+  a bowl turned over
+  a figure with its ribs drawn
+pre.sign.band (people=2)
+  the sign of another band
+  a hand of a different shape
+  a figure with a strange head
+  two lines crossing
+  a circle with a line through it
+pre.sign.walk (people=2)
+  a line with a circle at each end
+  a line of footprints
+  a path drawn in dots
+  a line with knots in it
+  a line that bends round a hill
+
+# ---- the counts: the sign, the marks, what they count ----------------------------------------------------------------------
+
+# a count's shape: the marks by the sign, or the sign first; `.k` the count, kept for the meaning
+count.game
+  {marks} {pre.by} {pre.sign.game}: {pre.cnt.game}.
+  {pre.sign.game}, and {marks.s} after it: {pre.cnt.game}.
+  {marks.s}, then {pre.sign.game}: {pre.cnt.game}.
+  (medium!=painted) {pre.sign.game} with {marks.s} cut through it: {pre.cnt.game}.
+  Under {pre.sign.game}, {marks.s}: {pre.cnt.game}.
+pre.cnt.game
+  {.k} {game} {count.taken}
+  {.k} {game}, {count.taken} {count.when}
+  the hunt, {.k} {game}
+  {.k} {game} {count.taken}, and the meat shared
+  {.k} {game} {count.taken} {count.where.at}
+  {.k} {game}, and one more crossed out
+count.fish
+  {marks} {pre.by} {pre.sign.fish}: {pre.cnt.fish}.
+  {pre.sign.fish}, and {marks.s} after it: {pre.cnt.fish}.
+  {marks.s}, then {pre.sign.fish}: {pre.cnt.fish}.
+pre.cnt.fish
+  {.k} days of {fish}
+  the water gave {.k} {vessel} of {fish}
+  {.k} days at the water, {count.when}
+  {.k} {vessel} of {fish}, dried
+  {.k} {vessel} of {fish}, {count.when}
+count.herd
+  {marksbig} {pre.by} {pre.sign.herd}: {pre.cnt.herd}.
+  {pre.sign.herd}, and {marksbig.s} after it: {pre.cnt.herd}.
+  {marks} {pre.by} {pre.sign.herd}: {pre.cnt.herdyoung}.
+  {pre.sign.herd}, and {marks.s} after it: {pre.cnt.herdyoung}.
+pre.cnt.herd
+  the {herd}, {.k} of them
+  {.k} {herd}
+  the {herd} of {$home}, {.k}
+  {.k} {herd} taken up to the high ground
+  {.k} {herd} driven home {count.when}
+pre.cnt.herdyoung
+  {.k} young, born {count.when}
+  {.k} young ones, and two dead
+  {.k} {herd} born
+  the increase, {.k}
+count.hunger
+  {marks} {pre.by} {pre.sign.hunger}: {pre.cnt.hunger}.
+  {pre.sign.hunger}, and {marks.s} after it: {pre.cnt.hunger}.
+pre.cnt.hunger
+  {.k} days of hunger
+  {.k} days with nothing in the {vessel}
+  {.k} days on {fuel} smoke and water
+  {.k} days before the {game} came
+  {.k} days of eating the seed
+count.moon
+  {pre.sign.moon}, and {marks.s} after it: {pre.cnt.moon}.
+  {marks} {pre.by} {pre.sign.moon}: {pre.cnt.moon}.
+  {marks.s} between two of {pre.sign.moon.pl}: {pre.cnt.moon}.
+pre.sign.moon.pl
+  the filled circles
+  the half circles
+  the rings
+  the crescents
+pre.cnt.moon
+  {.k} full moons
+  {.k} turns of the moon {count.when}
+  the moon's turn, {.k} nights
+  {.k} nights from one full moon to the next
+  {.k} moons since the {herd} went up
+count.lost
+  {marks.s}, crossed through, {pre.by} {pre.sign.dead}: {pre.cnt.lost}.
+  {pre.sign.dead}, and {marks.s} after it: {pre.cnt.lost}.
+  {marks} {pre.by} {pre.sign.dead}: {pre.cnt.lost}.
+pre.cnt.lost
+  {.k} who did not come back
+  {.k} dead, {count.when}
+  {.k} gone {count.where.at}
+  (cold=1) {.k} lost on the ice
+  {.k} who went to {deadplace}
+count.born
+  {marks} {pre.by} {pre.sign.born}: {pre.cnt.born}.
+  {pre.sign.born}, and {marks.s} after it: {pre.cnt.born}.
+pre.cnt.born
+  {.k} children born
+  {.k} born, {count.when}
+  {.k} born and {.k} living, which is luck
+  {.k} children, the year's
+  {.k} born in {house.one}
+count.rain
+  {pre.sign.rain}, and {marks.s} after it: {.k} days of rain.
+  {marks} {pre.by} {pre.sign.rain}: {.k} days of rain {count.when}.
+  {pre.sign.sun}, and {marks.s} after it: {.k} days without rain.
+  {marks} {pre.by} {pre.sign.sun}: {.k} days of {weather.now}.
+count.trade
+  {marks} {pre.by} {pre.sign.band}: {pre.cnt.trade}.
+  {pre.sign.band}, and {marks.s} after it: {pre.cnt.trade}.
+  (3 contact=1) {marks} {pre.by} a sign that is not theirs, the {other}'s: {.k} {trade.thing} traded.
+pre.cnt.trade
+  {.k} {trade.thing} given to them, and a line drawn back for what came in return
+  {.k} {trade.thing} for their {material}
+  {.k} {trade.thing}, owed
+  {.k} {trade.thing} for a {beast} and its young
+  {.k} {trade.thing} given at the gathering
+count.walk
+  {marks.s} along {pre.sign.walk}: {.k} days' walk between {$home} and {count.where}.
+  {pre.sign.walk}, and {marks.s} along it: {.k} days to {count.where}.
+  {marks.s} along {pre.sign.walk}, and a fire drawn at the end: {.k} nights out, to {count.where}.
+count.make
+  {marks} {pre.by} the sign for {tool}: {.k} {pre.made}.
+  {marks} {pre.by} the sign for {vessel}: {.k} {pre.made}.
+  {marks.s} under a hand holding {tool}: {.k} days of {craft}.
+
+pre.made
+  made
+  made and given away
+  finished before the snow
+  made by one hand, by the look of them
+  made, two broken
+
+trade.thing (pl people=3)
+  skins
+  flints
+  {vessel}
+  shells
+  beads
+  furs
+  blades
+  baskets of salt
+  {fruit}
+  ochre cakes
+  fish hooks
+
+count.taken (people=4)
+  taken
+  brought home
+  killed
+  driven over the edge
+  taken with the nets
+  taken in the pits
+  run down by the dogs
+  speared
+  trapped
+  (cold=1) taken in the snow
+  (desert=1) taken at the dry pools
+  (coast=1) taken on the rocks
+
+count.when (people=5)
+  in {season.now}
+  after the long night
+  in the time of the {crop2}
+  when the {bird} came back
+  when {river} was low
+  at {festival}
+  before the {herd} went up
+  in the moon of the {game}
+  when the {tree} were bare
+  (cold=1) before the snow
+  (cold=1) in the deep cold
+  (desert=1) in the dry months
+  (desert=1) after the dust
+  (moons>0) under a new {moon}
+
+count.where
+  the water
+  the hills
+  {mountain}
+  {river}
+  the camp of the old ones
+  the flint place
+  (coast=1) the shore
+  (desert=1) the dry pools
+count.where.at
+  at the ford
+  in the hills
+  under {mountain}
+  by {river}
+  at the far water
+  (coast=1) on the shore
+  on the way back
+
+# ---- the object itself: its state, as the ship finds it ---------------------------------------------------------------------
+
+obj.state
+  {obj.part} {obj.how}.
+  {obj.part} {obj.how}; {obj.more}.
+  {obj.part} {obj.how}, and {obj.how2}.
+  {obj.more.cap}.
+pre.wrap (people=2)
+  hide
+  bark
+  reed matting
+  felt
+  a {garment.n}
+  {colour.holy} cloth
+obj.part
+  The end of it
+  The back
+  The last mark
+  The edge
+  The underside
+  One corner
+  The oldest mark
+  The middle
+  The flat side
+  The worn end
+obj.how
+  is worn smooth where it was held
+  is broken off
+  is stained with {colour.holy}
+  is scorched, as if it was kept near a fire
+  is cut over older marks
+  is polished, as if rubbed for luck
+  has a hole bored through it, for a cord
+  is chipped, and the chip is lost
+  is darker than the rest
+  is gnawed by something small
+  is cracked along the grain
+obj.how2
+  the cord is long gone
+  someone has tried to mend it
+  the rest is clean
+  the ship can read only half
+  it was put back where it was found
+obj.more
+  someone kept it in {vessel.one} for a long time
+  whoever cut the last marks meant to come back
+  a hand is pressed in {colour.holy} beside them
+  it lay under the floor of {house.one}
+  it was wrapped in {pre.wrap}, and the wrapping has rotted
+  someone cut a small face there, smiling, or the ship reads it so
+  the marks there are fresher
+  a child's marks are mixed in with the rest
+  the ship cannot say what the last sign means, a thing like {pre.eye.like}
+  it was found with {tool} and a string of beads
+  {motif.over} the {people} put on everything are cut along its back
+  it smells of {fuel} smoke still
+obj.more.cap
+  It was found with others like it, in a pit by the hearth, under {fuel} ash
+  It was found under the floor of {house.one}
+  It lay in {vessel.one} with {tool} and a handful of beads
+  It was buried with care, wrapped in {pre.wrap}
+  The {pre.stroke} at the end are fresher than the rest
+  The ship cannot say what the last sign means; it looks like {pre.eye.like}
+  A child has scratched {motif.over} along the edge
+)VG"

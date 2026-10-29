@@ -1,7 +1,7 @@
-// C-10 (2026-10-03): a shard that is a star chart (`galaxy/charts.h`) draws itself on the decoder beside its caption: the hemisphere of
+// C-10 (2026-10-03): a shard that is a star chart (`peoples/charts.h`) draws itself on the decoder beside its caption: the hemisphere of
 // the people's sky round the star they marked, their figures and their names (words of the language, resolving as it is learnt); a
 // first reading draws it over a few seconds; Enter targets the marked star and O holds the chart up to the sky (`drawChartOverlay`).
-// H-05 (2026-10-10): moved here from game/shards_screen.cpp, and drawn in the way of its record's age and medium (`StarChart::style`):
+// a star chart drawn in the way of its record's age and medium (`StarChart::style`):
 // ochre and soot on a cave's ceiling with the animals painted under the stars and the moon's days in a row of soot; the brightest
 // scratched on a bone with the moon's nights notched on its edge; a vault painted blue with gold stars; an astrolabe's brass plate with
 // its graduated limb, their equator, tropics and ecliptic engraved, the rete's pointers and the rule; a codex's page in brown and red
@@ -72,7 +72,11 @@ struct Painter {
         if (g < 0 || g >= CHART_GLYPHS) return;
         for (int r = 0; r < CHART_GLYPH_H; r++) for (int k = 0; k < CHART_GLYPH_W; k++) {
             if (CHART_GLYPH_ROWS[g][r][k] != '#') continue;
-            for (int sy = 0; sy < scale; sy++) for (int sx = 0; sx < scale; sx++) { if (a >= 255) px(x + k * scale + sx, y + r * scale + sy, col); else mix(x + k * scale + sx, y + r * scale + sy, col, a); }
+            for (int sy = 0; sy < scale; sy++)
+                for (int sx = 0; sx < scale; sx++) {
+                    if (a >= 255) px(x + k * scale + sx, y + r * scale + sy, col);
+                    else mix(x + k * scale + sx, y + r * scale + sy, col, a);
+                }
         }
     }
 };
@@ -271,6 +275,77 @@ bool starAt(const StarChart& C, const ChartStar& s, double& px, double& py) {
     return true;
 }
 
+// D-05: the sun's measure on the decoder, on the object its age and medium make (`baseStyle`'s backdrop): the disc year by year from the
+// onset (`sunCurve`): a row of suns painted or scratched smaller and smaller (their rays fewer, the years between them tallied under each), rings
+// inside rings with each measure's number (a page, an astrolabe's plate), a graph of the years against the disc in ink (an atlas's paper, a
+// print, a glass plate) or in light (a screen); `u` the reading's share (the measures appear one by one)
+std::string measureNum(double v) { return v >= 10 ? std::to_string((int)std::lround(v)) : fmt("%.1f", v); }
+void drawSunMeasure(Painter& P, const StarChart& C, double u, uint64_t hs) {
+    StarChart B = C; B.style = C.baseStyle >= 0 ? C.baseStyle : CHS_PAGE;
+    const uint64_t bkey = mix64(C.seed ^ (uint64_t)(B.style + 40) * 0x9E37ULL ^ (uint64_t)C.medium);
+    if (g_back.key != bkey) buildBackdrop(B, bkey);
+    drawBackdrop(P);
+    const int n = (int)C.sunCurve.size();
+    if (!n) return;
+    const int shown = u >= 0.75 ? n : std::max(1, (int)(n * u / 0.75));
+    const double first = std::max(1e-3, (double)C.sunCurve.front()[1]);
+    switch (B.style) {
+        case CHS_CEILING: case CHS_BONE: case CHS_VAULT: {
+            const bool bone = B.style == CHS_BONE, vault = B.style == CHS_VAULT;
+            const uint32_t sunCol = bone ? col3(84, 64, 44) : (vault ? col3(232, 192, 92) : col3(184, 74, 38)), mark = bone ? col3(70, 52, 36) : col3(36, 28, 22);
+            for (int i = 0; i < shown; i++) {
+                const double t = n == 1 ? 0.5 : (double)i / (n - 1);
+                const double x = BX0 + 20 + (BX1 - BX0 - 40) * t;
+                const double y = bone ? CY + 9 - 18 * t : CY - 20 + 26 * t * t;   // along the bone's axis; on the roof falling as they shrink
+                const double s = C.sunCurve[i][1] / first, r = bone ? 1.5 + 6 * s : 1.5 + 12 * s;
+                if (bone) P.ring(x, y, r, r, sunCol); else P.disc(x, y, r, sunCol, vault ? 255 : 220);
+                const int rays = std::max(0, (int)std::lround(9 * s));
+                for (int k = 0; k < rays; k++) {
+                    const double a = TAU * k / std::max(1, rays) + 0.3 * hashU(i, k, hs);
+                    P.line(x + (r + 1) * std::cos(a), y + (r + 1) * std::sin(a), x + (r + 3 + 2 * s) * std::cos(a), y + (r + 3 + 2 * s) * std::sin(a), sunCol, 200);
+                }
+                if (i > 0) {   // the years since the one before, a stroke for each (at most twelve)
+                    const int years = std::min(12, std::max(1, (int)std::lround(C.sunCurve[i][0] - C.sunCurve[i - 1][0])));
+                    for (int k = 0; k < years; k++) P.line(x - 6 + k, y + r + 6, x - 6 + k, y + r + 9, mark, 220);
+                }
+            }
+            break;
+        }
+        case CHS_ASTROLABE: case CHS_PAGE: {
+            const uint32_t ink = B.style == CHS_PAGE ? col3(70, 46, 30) : col3(80, 56, 20), red = col3(170, 52, 40);
+            for (int i = 0; i < shown; i++) {   // the rings, and their measures in a column at the middle, the last in red
+                const double r = 4 + 54 * C.sunCurve[i][1] / first;
+                P.ring(CX, CY, r, r, i == n - 1 ? red : ink, 230);
+                const std::string t = measureNum(C.sunCurve[i][1]);
+                drawText(P.c, CX - textWidth(t.c_str()) / 2, CY - 4 * n + 8 * i, t.c_str(), i == n - 1 ? red : ink);
+            }
+            break;
+        }
+        default: {   // a graph: the years along, the disc up
+            const bool scr = C.medium == RM_DRIVE || C.medium == RM_CRYSTAL || C.medium == RM_HUM || B.style == CHS_ROUTES || B.style == CHS_BEYOND;
+            const uint32_t ink = scr ? col3(110, 210, 230) : col3(30, 30, 30), grid = scr ? col3(28, 60, 70) : col3(176, 170, 160), dot = scr ? col3(230, 250, 255) : col3(150, 40, 34);
+            const int gx0 = BX0 + 24, gx1 = BX1 - 10, gy0 = BY0 + 16, gy1 = BY1 - 24;
+            for (int k = 0; k <= 4; k++) { const int y = gy0 + (gy1 - gy0) * k / 4; P.line(gx0, y, gx1, y, grid, 255, 1, 2); }
+            for (int k = 0; k <= 5; k++) { const int x = gx0 + (gx1 - gx0) * k / 5; P.line(x, gy0, x, gy1, grid, 255, 1, 2); }
+            P.line(gx0, gy0, gx0, gy1, ink); P.line(gx0, gy1, gx1, gy1, ink);
+            const double y0 = C.sunCurve.front()[0], y1 = std::max(y0 + 1, (double)C.sunCurve.back()[0]);
+            auto at = [&](int i, double& x, double& y) { x = gx0 + (gx1 - gx0) * (C.sunCurve[i][0] - y0) / (y1 - y0); y = gy1 - (gy1 - gy0) * C.sunCurve[i][1] / first; };
+            for (int i = 0; i < shown; i++) {
+                double x, y; at(i, x, y);
+                if (i > 0) { double px0, py0; at(i - 1, px0, py0); P.line(px0, py0, x, y, ink); if (scr) P.line(px0, py0 + 1, x, y + 1, scaled(ink, 0.5)); }
+                P.disc(x, y, 1.2, dot);
+            }
+            drawText(P.c, BX0 + 4, gy0 - 3, measureNum(first).c_str(), ink);
+            drawText(P.c, BX0 + 4, gy1 - 6, "0", ink);
+            const std::string ya = std::to_string((int)y0), yb = std::to_string((int)C.sunCurve.back()[0]);
+            drawText(P.c, gx0 - 2, gy1 + 4, ya.c_str(), ink);
+            drawText(P.c, gx1 - textWidth(yb.c_str()), gy1 + 4, yb.c_str(), ink);
+            if (shown == n) drawText(P.c, gx1 - textWidth(measureNum(C.sunCurve.back()[1]).c_str()) - 2, gy0 + 2, measureNum(C.sunCurve.back()[1]).c_str(), dot);
+            break;
+        }
+    }
+}
+
 // a 5 x 5 sign of the far future's own, from a hash (mirrored, so it reads as made)
 void farSign(Painter& P, uint64_t h, int x, int y, uint32_t col) {
     for (int r = 0; r < 5; r++) for (int k = 0; k < 3; k++) if ((h >> (r * 3 + k)) & 1) { P.px(x + k, y + r, col); P.px(x + 4 - k, y + r, col); }
@@ -286,14 +361,14 @@ std::string Game::figureLabel(const std::string& name, int held) const {
 }
 
 void Game::holdChart(bool up) {
-    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = 4; return; }
+    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = BEEP_UI; return; }
     if (!shardWorld.valid || !shardWorld.chart.valid || shardHeld.empty()) return;
     chartHeld = shardWorld.chart; chartHeldKey = shardWorld.key; chartHeldIndex = shardWorld.base + shardHeld[shardSel]; chartHeldPeople = shardWorld.lore.people;   // C-13: the world index
     chartHeldLabels.clear();
     for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, (int)shardHeld.size()));
     chartUp = true;
     status("THE CHART IS HELD UP - ITS FIGURES SHOW ON THE VIEW", 5);   // 50 characters
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // the chart on the decoder: its object (H-05: the age's way) with the stars, the figures' lines and the people's own marks on it, the
@@ -306,9 +381,9 @@ void Game::renderChart() {
     const Shard& s = shardWorld.shards[idx]; const StarChart& C = shardWorld.chart;
     std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
-    if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // C-14: a friend's, credited
+    if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // a friend's, credited
     drawText(canvas, 6, 13, fmt("YEAR %d OF %s", s.year, upper(shardWorld.lore.city).c_str()).c_str(), HUD_DIM);
-    {   // H-05: the way it was made
+    {   // the way it was made
         const std::string way = C.valid ? chartStyleLine(C.style, C.medium) : std::string();
         std::string line = fmt("A STAR CHART OF THE %s", upper(shardWorld.lore.people).c_str()) + (way.empty() ? "" : ", " + way);
         if (line.size() > 52) line = fmt("THE %s, ", trunc(upper(shardWorld.lore.people), 12).c_str()) + way;
@@ -320,6 +395,7 @@ void Game::renderChart() {
     bool held = chartUp && chartHeldKey == key && chartHeldIndex == shardWorld.base + idx;
     Painter P{canvas};
     if (!C.valid) drawTextCentered(canvas, CX, CY, "NO CHART", HUD_DIM);
+    else if (C.style == CHS_SUNMEASURE) drawSunMeasure(P, C, u, mix64(C.seed ^ 0xD4A3ULL));
     else {
         const uint64_t bkey = mix64(C.seed ^ (uint64_t)C.style * 0x9E37ULL ^ (uint64_t)C.medium);
         if (g_back.key != bkey) buildBackdrop(C, bkey);
@@ -483,9 +559,17 @@ void Game::renderChart() {
                     break;
                 case CHS_VAULT: {
                     const uint32_t gold = cs.mark ? col3(226, 230, 238) : col3(232, 192, 92), dim = scaled(gold, 0.7);
-                    if (b > 2) { P.line(ix - 3, iy, ix + 3, iy, gold); P.line(ix, iy - 3, ix, iy + 3, gold); P.px(ix - 1, iy - 1, dim); P.px(ix + 1, iy + 1, dim); P.px(ix - 1, iy + 1, dim); P.px(ix + 1, iy - 1, dim); }
-                    else if (b > 0.6) { P.line(ix - 1, iy, ix + 1, iy, gold); P.line(ix, iy - 1, ix, iy + 1, gold); }
-                    else P.px(ix, iy, dim);
+                    if (b > 2) {
+                        P.line(ix - 3, iy, ix + 3, iy, gold);
+                        P.line(ix, iy - 3, ix, iy + 3, gold);
+                        P.px(ix - 1, iy - 1, dim);
+                        P.px(ix + 1, iy + 1, dim);
+                        P.px(ix - 1, iy + 1, dim);
+                        P.px(ix + 1, iy - 1, dim);
+                    } else if (b > 0.6) {
+                        P.line(ix - 1, iy, ix + 1, iy, gold);
+                        P.line(ix, iy - 1, ix, iy + 1, gold);
+                    } else P.px(ix, iy, dim);
                     break;
                 }
                 case CHS_ASTROLABE:
@@ -501,8 +585,13 @@ void Game::renderChart() {
                     else P.px(ix, iy, col3(96, 70, 46));
                     break;
                 case CHS_ATLAS:
-                    if (b > 2) P.disc(x, y, 1.5, col3(24, 22, 20)); else if (b > 0.6) { P.px(ix, iy, col3(24, 22, 20)); P.px(ix + 1, iy, col3(24, 22, 20)); P.px(ix, iy + 1, col3(24, 22, 20)); P.px(ix + 1, iy + 1, col3(24, 22, 20)); }
-                    else P.px(ix, iy, col3(60, 56, 50));
+                    if (b > 2) P.disc(x, y, 1.5, col3(24, 22, 20));
+                    else if (b > 0.6) {
+                        P.px(ix, iy, col3(24, 22, 20));
+                        P.px(ix + 1, iy, col3(24, 22, 20));
+                        P.px(ix, iy + 1, col3(24, 22, 20));
+                        P.px(ix + 1, iy + 1, col3(24, 22, 20));
+                    } else P.px(ix, iy, col3(60, 56, 50));
                     if (cs.number > 0 && cs.number <= 12) { const std::string t = std::to_string(cs.number); drawText(canvas, ix + 2, iy + 2, t.c_str(), col3(70, 64, 56)); }
                     break;
                 case CHS_PLATE: {   // a negative: a star a dark blur, the bright ones larger
@@ -518,7 +607,11 @@ void Game::renderChart() {
                     if (cs.heard) {   // a people heard: ringed, the radio's arcs beside it
                         const uint32_t hc = scr ? col3(110, 210, 230) : col3(196, 40, 36);
                         P.ring(x, y, 5, 5, hc);
-                        for (int a = 0; a < 2; a++) for (int i = -3; i <= 3; i++) { const double an = i * 0.22; P.px((int)std::lround(x + (8 + 3 * a) * std::cos(an - 0.8)), (int)std::lround(y + (8 + 3 * a) * std::sin(an - 0.8)), hc); }
+                        for (int a = 0; a < 2; a++)
+                            for (int i = -3; i <= 3; i++) {
+                                const double an = i * 0.22;
+                                P.px((int)std::lround(x + (8 + 3 * a) * std::cos(an - 0.8)), (int)std::lround(y + (8 + 3 * a) * std::sin(an - 0.8)), hc);
+                            }
                     }
                     break;
                 }
@@ -544,7 +637,10 @@ void Game::renderChart() {
         }
         if (C.style == CHS_PLATE && u >= 0.4) {   // the plate's ink: the mark ringed by hand, its number on the label
             double x, y; starAt(C, C.stars[C.markStar], x, y);
-            for (int i = 0; i < 24; i++) { const double a = TAU * i / 24, r = 6 + 0.8 * std::sin(a * 3 + hs % 7); P.px((int)std::lround(x + r * std::cos(a)), (int)std::lround(y + r * std::sin(a)), col3(30, 40, 96)); }
+            for (int i = 0; i < 24; i++) {
+                const double a = TAU * i / 24, r = 6 + 0.8 * std::sin(a * 3 + hs % 7);
+                P.px((int)std::lround(x + r * std::cos(a)), (int)std::lround(y + r * std::sin(a)), col3(30, 40, 96));
+            }
             fillRectRGB(canvas, 16, 160, 62, 169, col3(226, 218, 190));
             const std::string t = fmt("N %d", C.plate); drawText(canvas, 19, 161, t.c_str(), col3(30, 40, 96));
         }
@@ -567,7 +663,9 @@ void Game::renderChart() {
         }
         if (C.style == CHS_ASTROLABE) {   // the rule across the face
             const double a = (hs % 360) * DEG;
-            for (int t = -CR + 4; t <= CR - 4; t++) for (int w = -1; w <= 1; w++) P.mix((int)std::lround(CX + t * std::cos(a) - w * std::sin(a)), (int)std::lround(CY + t * std::sin(a) + w * std::cos(a)), col3(122, 90, 38), w ? 120 : 190);
+            for (int t = -CR + 4; t <= CR - 4; t++)
+                for (int w = -1; w <= 1; w++)
+                    P.mix((int)std::lround(CX + t * std::cos(a) - w * std::sin(a)), (int)std::lround(CY + t * std::sin(a) + w * std::cos(a)), col3(122, 90, 38), w ? 120 : 190);
             P.disc(CX, CY, 2.2, col3(84, 60, 24));
         }
         if (u >= 0.4 && C.markStar >= 0) {   // the computer's mark
@@ -596,7 +694,10 @@ void Game::renderChart() {
             case CHS_ATLAS: placed.push_back({BX1 - 60, BY0 + 6, BX1 - 6, BY0 + 16}); break;
             case CHS_PLATE: placed.push_back({14, 158, 64, 171}); break;
             case CHS_SURVEY: placed.push_back({BX1 - 70, BY0 + 6, BX1 - 6, BY0 + 16}); placed.push_back({BX0 + 6, BY1 - 18, BX0 + 64, BY1 - 2}); break;
-            case CHS_ROUTES: placed.push_back({CX + (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 4, CY - (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 11, CX + (int)(CR * 0.7 * 10 / CHART_MAP_LY) + 30, CY - (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 1}); break;
+            case CHS_ROUTES:
+                placed.push_back({CX + (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 4, CY - (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 11, CX + (int)(CR * 0.7 * 10 / CHART_MAP_LY) + 30,
+                        CY - (int)(CR * 0.7 * 10 / CHART_MAP_LY) - 1});
+                break;
             default: break;
         }
         auto clear = [&](int x0, int y0, int x1, int y1) {
@@ -608,17 +709,40 @@ void Game::renderChart() {
         std::vector<int> order;   // the figure with the mark in it first, then by their brightest star; five names at most (the caption names them all)
         for (size_t i = 0; i < C.figures.size(); i++) order.push_back((int)i);
         auto hasMark = [&](int i) { for (int k : C.figures[i].stars) if (k == C.markStar) return true; return false; };
-        std::stable_sort(order.begin(), order.end(), [&](int a, int b) { if (hasMark(a) != hasMark(b)) return hasMark(a); return C.stars[C.figures[a].label].bright > C.stars[C.figures[b].label].bright; });
+        std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+            if (hasMark(a) != hasMark(b)) return hasMark(a);
+            return C.stars[C.figures[a].label].bright > C.stars[C.figures[b].label].bright;
+        });
         int labels = 0;
         if (u >= 0.75) for (int i : order) {
             if (labels >= 5) break;
             const ChartFigure& f = C.figures[i];
             std::string label = figureLabel(f.name, n);
-            bool known = true; { Shard tmp; tmp.text = f.name; std::vector<DecodedWord> w; decodeShard(tmp, shardWorld.lang, shardWorld.tongue, n, w); for (const DecodedWord& d : w) if (!d.known) known = false; }
+            bool known = true;
+            {
+                Shard tmp;
+                tmp.text = f.name;
+                std::vector<DecodedWord> w;
+                decodeShard(tmp, shardWorld.lang, shardWorld.tongue, n, w);
+                for (const DecodedWord& d : w)
+                    if (!d.known) known = false;
+            }
             if (reading && u < 1) for (char& c : label) if (c != ' ' && flick.chance(0.5)) c = (char)('A' + flick.irange(26));
             double x, y; const bool on = starAt(C, C.stars[f.label], x, y);
             if (!on && C.style != CHS_ROUTES) continue;
-            if (!on) { double sx, sy, bx, by; onMap(C.stars[f.label], sx, sy, bx, by); const double dx = sx - CX, dy = sy - CY; double t = 1; for (int it = 0; it < 40; it++) { const double ex = dx * t / CR, ey = dy * t / (CR * MAP_SQ); if (ex * ex + ey * ey <= 1) break; t *= 0.95; } x = CX + dx * t; y = CY + dy * t; }
+            if (!on) {
+                double sx, sy, bx, by;
+                onMap(C.stars[f.label], sx, sy, bx, by);
+                const double dx = sx - CX, dy = sy - CY;
+                double t = 1;
+                for (int it = 0; it < 40; it++) {
+                    const double ex = dx * t / CR, ey = dy * t / (CR * MAP_SQ);
+                    if (ex * ex + ey * ey <= 1) break;
+                    t *= 0.95;
+                }
+                x = CX + dx * t;
+                y = CY + dy * t;
+            }
             const int tw = textWidth(label.c_str()), ix = (int)std::lround(x), iy = (int)std::lround(y);
             const int glyphW = (C.style == CHS_PAGE || C.style == CHS_VAULT) && f.glyph >= 0 ? 9 : 0;
             int tries[4][2] = {{ix + 4 + glyphW, iy - 3}, {ix - 4 - tw, iy - 3}, {ix - tw / 2, iy - 11}, {ix - tw / 2, iy + 5}};
@@ -651,7 +775,15 @@ void Game::renderChart() {
             at[i] = {x, y}; last = i; x += tw + FONT_ADV;
         }
         const bool cut = last + 1 < total;
-        if (cut) while (last >= 0 && at[last].x + textWidth(upper(shardWords[last].pre + (last < cursor ? (shardWords[last].known ? shardWords[last].ours : shardWords[last].theirs) : shardWords[last].theirs) + shardWords[last].post).c_str()) + 3 * FONT_ADV > maxX) last--;
+        if (cut)
+            while (last >= 0 &&
+                    at[last].x +
+                                    textWidth(upper(shardWords[last].pre + (last < cursor ? (shardWords[last].known ? shardWords[last].ours : shardWords[last].theirs) : shardWords[last].theirs) +
+                                            shardWords[last].post)
+                                                    .c_str()) +
+                                    3 * FONT_ADV >
+                            maxX)
+                last--;
         for (int i = 0; i <= last; i++) {
             const DecodedWord& w = shardWords[i];
             std::string shown; uint32_t col;
@@ -700,7 +832,7 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
     std::vector<double> sx(N), sy(N); std::vector<char> ok(N, 0); std::vector<Vec3> vv(N);
     for (size_t k = 0; k < N; k++) {
         Vec3 d = C.stars[k].star.pos - obs;
-        if (length2(d) < 1e-6) continue;   // H-05: the ship at a route's own star
+        if (length2(d) < 1e-6) continue;   // the ship at a route's own star
         if (localFrame) { Vec3 l = (*localFrame) * d; if (l.y < 0.01 * length(l)) continue; }
         Vec3 v = cam * d; vv[k] = v;
         if (v.z <= 1e-9) continue;
@@ -710,7 +842,18 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
     auto clip = [&](double& x0, double& y0, double& x1, double& y1) {   // Liang-Barsky against the screen with a margin
         const double L = -2, Rr = UW + 1, T = -2, B = UH + 1;
         double t0 = 0, t1 = 1, dx = x1 - x0, dy = y1 - y0;
-        auto edge = [&](double p, double q) { if (p == 0) return q >= 0; double r = q / p; if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; } return true; };
+        auto edge = [&](double p, double q) {
+            if (p == 0) return q >= 0;
+            double r = q / p;
+            if (p < 0) {
+                if (r > t1) return false;
+                if (r > t0) t0 = r;
+            } else {
+                if (r < t0) return false;
+                if (r < t1) t1 = r;
+            }
+            return true;
+        };
         if (!edge(-dx, x0 - L) || !edge(dx, Rr - x0) || !edge(-dy, y0 - T) || !edge(dy, B - y0)) return false;
         double nx0 = x0 + t0 * dx, ny0 = y0 + t0 * dy, nx1 = x0 + t1 * dx, ny1 = y0 + t1 * dy;
         x0 = nx0; y0 = ny0; x1 = nx1; y1 = ny1;
@@ -751,9 +894,12 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
             chartLinesDrawn++;
         }
         int lb = fg.label;
-        if (ok[lb] && sx[lb] > 2 && sy[lb] > 30 && sx[lb] < UW - 40 && sy[lb] < UH - 30 && i < chartHeldLabels.size()) { int tw = textWidth(chartHeldLabels[i].c_str()), lx = (int)sx[lb] + 4; drawText(canvas, lx, labelY(lx, (int)sy[lb] - 3, tw), chartHeldLabels[i].c_str(), HUD_DIM); }
+        if (ok[lb] && sx[lb] > 2 && sy[lb] > 30 && sx[lb] < UW - 40 && sy[lb] < UH - 30 && i < chartHeldLabels.size()) {
+            int tw = textWidth(chartHeldLabels[i].c_str()), lx = (int)sx[lb] + 4;
+            drawText(canvas, lx, labelY(lx, (int)sy[lb] - 3, tw), chartHeldLabels[i].c_str(), HUD_DIM);
+        }
     }
-    for (size_t k = 0; k < N; k++) {   // H-05: the far future's places where nothing is
+    for (size_t k = 0; k < N; k++) {   // the far future's places where nothing is
         if (!C.stars[k].sign || !ok[k]) continue;
         const int px = (int)std::lround(sx[k]), py = (int)std::lround(sy[k]);
         for (int i = 0; i < 16; i++) skyDot((int)std::lround(px + 4 * std::cos(TAU * i / 16)), (int)std::lround(py + 4 * std::sin(TAU * i / 16)), lineCol);
@@ -773,26 +919,4 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
     }
     std::string line = fmt("A CHART OF THE %s HELD UP", upper(chartHeldPeople).c_str());
     drawTextShadow(canvas, UW - 8 - textWidth(line.c_str()), 32, line.c_str(), HUD_DIM, HUD_SHADOW);
-}
-
-std::string Game::testChartInfo() const {
-    std::string s = fmt("chart: level %d", shardsLevel);
-    if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {
-        const StarChart& C = shardWorld.chart;
-        s += fmt(", on the screen S%d (chart %d of the %s, %s): %zu stars, %zu figures, the mark %s at %lld %lld %lld (how %d, %.0f ly, %s), %s", shardHeld[shardSel], C.which, shardWorld.lore.people.c_str(), CHART_STYLE_NAMES[std::max(0, std::min(CHS_COUNT - 1, C.style))], C.stars.size(), C.figures.size(),
-                 STAR_CLASSES[C.mark.star.cls].code, (long long)C.mark.star.sx, (long long)C.mark.star.sy, (long long)C.mark.star.sz, C.mark.how, C.mark.ly, C.mark.people.empty() ? "no people" : ("the " + C.mark.people).c_str(),
-                 chartT >= 0 ? fmt("reading %.0f%%", 100 * clampd(chartT / CHART_READ_S, 0, 1)).c_str() : (shardFresh ? "unread" : "read"));
-    }
-    s += chartUp ? fmt("; held up: S%d of %s (%zu stars, %zu figures), %d lines drawn", chartHeldIndex, chartHeldKey.c_str(), chartHeld.stars.size(), chartHeld.figures.size(), chartLinesDrawn) : "; none held up";
-    return s;
-}
-
-bool Game::testAimAtChartMark(int figure) {
-    if (!chartUp || !chartHeld.valid) return false;
-    if (figure >= (int)chartHeld.figures.size()) return false;
-    const Star& at = figure < 0 ? chartHeld.mark.star : chartHeld.stars[chartHeld.figures[figure].label].star;
-    Vec3 fwd = normalize(at.pos - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
-    cabin.yaw = 0; cabin.pitch = 0;
-    return true;
 }

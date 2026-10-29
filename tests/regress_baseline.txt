@@ -1,6 +1,6 @@
 # vesperis determinism baseline; regenerate with ./vesperis_test regress bless
 system_0 6e9c350a44f612a9  # Lathyari (3 bodies)
-map_0 6b71ea6101c638  # Lathyari I ICY
+map_0 1b45e9e078372004  # Lathyari I ICY
 site_0 a968707dc6d4cd73  # Lathyari I profile at 0.3 rad N 0.7 rad E
 map_1 d5f0374600e1f5ef  # Lathyari II METAL
 site_1 b9d31ab4d0eb34c1  # Lathyari II profile at 0.3 rad N 0.7 rad E
@@ -10,9 +10,9 @@ system_1 cbc794bcf84de5f2  # Seapheeseeri (6 bodies)
 map_3 ad0c8121e761c2a8  # Seapheeseeri I QUARTZ
 map_4 69f52a51b4ba5bb0  # Seapheeseeri II THIN ATMOSPHERE
 map_5 ce1468e99c1029c5  # Seapheeseeri III EUROPAN
-map_6 dbc642e3492e1b3  # Seapheeseeri IV ICY
+map_6 7c31b07d537f4e33  # Seapheeseeri IV ICY
 map_7 44c59a4ac984c7ba  # Seapheeseeri I-a THIN ATMOSPHERE
-map_8 f68fb7b17fc2ac69  # Seapheeseeri II-a ICY
+map_8 e52f8a326747a6e  # Seapheeseeri II-a ICY
 system_2 7140c2df87418233  # Wyariothmai (10 bodies)
 map_9 bd722cdd6d85c105  # Wyariothmai I FELISIAN
 system_3 1bb721f3dda82969  # Iaphiath (7 bodies)
@@ -21,5 +21,5 @@ scene_felisian_shore 311e5d51c487ed49  # frame of scene felisian_shore at 1x (Fe
 scene_cratered_noon c652b41ec17386f0  # frame of scene cratered_noon at 1x (Wyariothmai IV)
 scene_molten_night f4834e469f70761c  # frame of scene molten_night at 1x (Shiesaimiori I)
 space_S00 94d6e6d85e491996  # space frame from the first orbit of Salyiesesh
-scene_felisian_forest_4x a58dbd9849b29bee  # frame of scene felisian_forest at 4x (Feeyeithis IV)
+scene_felisian_forest_4x e99fe2aa57b7bdee  # frame of scene felisian_forest at 4x (Feeyeithis IV)
 cabin_1x 3c829d5fd83fb24b  # the cabin at 1x, the light on, parked at Heilya II

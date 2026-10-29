@@ -41,12 +41,12 @@ Front makeFront(const Body& b, int k, int64_t e, double P, double phase) {
     f.tempDrop = 3 + 8 * r.uni();
     f.bow = (r.uni() < 0.5 ? -1 : 1) * (200 + 400 * r.uni()) * 1e3;
     f.seed = b.seed ^ FRONT_SALT;
-    f.dust = b.type == PT_DESERT || b.type == PT_THINATMO;
+    f.dust = kindHas(b.type, KT_DUST);
     return f;
 }
 
 // the bearing (radians from north, clockwise) of a body-frame tangent direction at p
-double bearingOf(const Vec3& dir, const Vec3& p) {
+double bearingOfDir(const Vec3& dir, const Vec3& p) {
     Vec3 east = cross(Vec3(0, 0, 1), p);
     double L = length(east);
     if (L < 1e-9) return 0;
@@ -55,7 +55,10 @@ double bearingOf(const Vec3& dir, const Vec3& p) {
     return wrap2pi(std::atan2(dot(dir, east), dot(dir, north)));
 }
 
-// W-03's almanac finder: the arrival and the clearing of every front that reaches the place within the window
+}   // namespace
+
+// W-03's almanac finder: the arrival and the clearing of every front that reaches the place within the window (E-02: listed in
+// almanac.cpp's registry())
 void findFronts(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     if (!p.ground || !p.sys || p.body < 0 || p.body >= (int)p.sys->bodies.size()) return;
     const Body& b = p.sys->bodies[p.body];
@@ -67,8 +70,6 @@ void findFronts(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
         AlmanacEvent e2; e2.kind = AL_FRONT_CLEAR; e2.t = f.tClear; e2.body = p.body; e2.value = f.fromBearing; out.push_back(e2);
     }
 }
-struct FrontFinderRegistrar { FrontFinderRegistrar() { addAlmanacFinder(findFronts); } } frontFinderRegistrar;
-}   // namespace
 
 double frontCloudProfile(double x) { return smoothstep(280e3, 180e3, x) * smoothstep(-330e3, -200e3, x); }
 double frontCloudCore(double x) { return smoothstep(100e3, 90e3, x) * smoothstep(-260e3, -130e3, x); }
@@ -78,8 +79,8 @@ double frontWindProfile(double x) { return x >= 0 ? smoothstep(350e3, 30e3, x) :
 double frontColdProfile(double x) { return smoothstep(20e3, -80e3, x) * smoothstep(-900e3, -500e3, x); }
 
 bool worldHasFronts(const Body& b) {
-    if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) return false;
-    return b.type == PT_FELISIAN || b.type == PT_OCEAN || b.type == PT_DESERT || b.type == PT_THINATMO || b.type == PT_ACIDIC || b.type == PT_QUARTZ;
+    if (!bodyHasAir(b) || hasOpaqueDeck(b.type)) return false;   // D-04: an air fallen as snow in the dark carries none
+    return kindHas(b.type, KT_FRONTS);
 }
 
 int frontSlots(const Body& b) {
@@ -188,7 +189,7 @@ void frontsAhead(const Body& b, const Vec3& p, double t, double window, std::vec
         fc.tArrive = Ta; fc.strength = f.strength; fc.gain = life * lat; fc.dust = f.dust; fc.slot = f.slot; fc.epoch = f.epoch;
         Vec3 c, n; frontAt(f, Ta, c, n);
         Vec3 from = (n - p * dot(n, p)) * -1.0;
-        fc.fromBearing = bearingOf(from, p);
+        fc.fromBearing = bearingOfDir(from, p);
         // the rain ends where the line is 150 km past the place (times the width), or when the front dies
         double endAt = FRONT_RAIN_END * f.width, Tc = f.dies;
         for (double T2 = Ta + h; T2 < f.dies; T2 += h) {
@@ -264,6 +265,6 @@ double frontMapAt(const std::vector<uint8_t>& m, int W, int H, double lon, doubl
 }
 
 const char* frontCompass(double bearing) {
-    static const char* names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+    static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     return names[(int)std::floor(wrap2pi(bearing) / TAU * 8 + 0.5) & 7];
 }
