@@ -19,13 +19,16 @@ Contents:
 ```
 src/core      <- nothing (math, hashing, noise, framebuffer, raster, font, png, input)
 src/galaxy    <- core      (the worlds: starfield, system, planetmap; landmarks and planet_bodygen alone read src/peoples)
+src/life      <- galaxy    (Z-01, the living small: biota, a world's stage, chemistry and species; lineages, the geneses; Z-02, the forms
+                            and the slide: morphs, morph_draw and the shape, plans, acts and mesh behind it)
 src/peoples   <- galaxy    (the peoples: history, plan, towns, works, buildings, ruins, records and the grammar, music, signals)
 src/space     <- peoples   (space_view: stars, the band, render; space_sun, space_globe, space_bodies)
 src/surface   <- space     (site, surface_view: the frame; surface_env, _places, _walk, _palette, _terrain, _sky, _effects)
 src/game      <- surface   (game.cpp the frame; a file per state, screen or device: autopilot.cpp the ship, scene_draw.cpp
                             the scenes, hud.cpp the HUDs, surface_play.cpp the ground, menus.cpp, landing_map*.cpp, the
                             GUIDE's names.cpp, guide_screens.cpp and star_map.cpp (M3), probe*.cpp, radar*.cpp, autoexplore*.cpp
-                            (R-419); persistence.cpp saves; ui.*, settings.*; audio*.cpp the synth; src/game/CLAUDE.md the map)
+                            (R-419); ship_plan.cpp the ship's rows (I-01), cabin.cpp their walk and draw; persistence.cpp
+                            saves; ui.*, settings.*; audio*.cpp the synth; src/game/CLAUDE.md the map)
 src/platform.h + platform_raylib.cpp  <- game/audio only (never included by game code)
 src/main_raylib.cpp        entry point for the window build
 src/harness/               vesperis_test: the modes, the unit, the proofs (no raylib; src/harness/CLAUDE.md)
@@ -48,6 +51,10 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `Body`, `StarSystem` | galaxy/system.h | system generation, `bodyPos(i,t)`, `bodyFrame(i,t)` |
 | `placeInSector`, `driftersNear`, `DARK_KINDS` | galaxy/drifters.h | D-01: the drifters, worlds with no sun in sectors without a star; the one resolver from a key to its place (a star, else a drifter) |
 | `KINDS`, `KindDef`, `TRAITS` | galaxy/kinds.h | P-00: the kinds of body and the traits as rows; the tags the code paths read |
+| `BIOTA`, `Biota`, `Microbe`, `lifeOf`, `biotaOf` | life/biota.h | Z-01: a kind's row of life; a world's stage, chemistry, genesis and species, a system's drawn together and cached |
+| `Genesis`, `systemGenesis`, `homeGenesis` | life/lineages.h | Z-01: the origins of life: a system's own, its kin cell's, a wanderer's; home's pinned |
+| `Morph`, `morphOf`, `morphsOf`, `morphDistance` | life/morphs.h | Z-02: a species' form, about forty values; a world's kept apart; how far two are |
+| `Slide`, `Specimen`, `drawSlide`, `slidePalette` | life/morph_draw.h | Z-02: a slide in one of six ways of seeing, its specimens' acts closed-form in its clock |
 | `BodyGen`, `sampleSurface`, `PlanetMap` | galaxy/planetmap.h | the planet function and its coarse map |
 | `GeyserVent`, `landformFeatures`, the finders | galaxy/planet_features.h | E-07: what stands near a point, from the features the ground builds |
 | `SpaceRenderer`, `SpaceContext`, `BodyScreenInfo` | space/space_view.h | space scene; also draws bodies into planetary skies |
@@ -58,6 +65,8 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `GameState` + its traits, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game` |
 | `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02), its controller's page (`padMenu`, U-04), its `enter`, `back` and save lines (U-05; `openScreen`, `closeScreen`) |
 | `Game::escMenu`, `guideMenu`, `shipPages`, `settingRows`, `cabinDevices` | game/*.cpp, each its screen's | the ways in as rows (U-03) |
+| `ShipRoom`, `ShipOpening`, `ShipFixture`, `ShipCollider`, `ShipLamp`, `ShipView`, `ShipMesh` | game/ship_plan.h | the ship as rows, the mesh built once from them, the walk (I-01) |
+| `ShapeList`, `ShapeSink` | core/raster.h | shapes projected once, filled band by band (I-01: the cabin's frame) |
 | `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
 | `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
 | `AudioSynth`, `AudioState` | game/audio.h | procedural audio |

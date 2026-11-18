@@ -9,7 +9,7 @@
 
 // Bumped whenever a generator changes what a star, system or surface looks like (M9-17).
 // Star positions are integer hashes and never move; saves and guides record the version.
-constexpr int GEN_VERSION = 16;   // what each bump changed: docs/decisions/generations.md
+constexpr int GEN_VERSION = 17;   // what each bump changed: docs/decisions/generations.md (17: the biota, life/biota.h)
 
 // P-00: the kinds of body are rows of KINDS (galaxy/kinds.h): the enum, what each kind is and how it is drawn, made and shown
 // an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves (P-07: a gas

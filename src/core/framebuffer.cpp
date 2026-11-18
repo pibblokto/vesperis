@@ -1,5 +1,6 @@
 #include "framebuffer.h"
 #include "parallel.h"
+#include <atomic>
 #include <cstring>
 #include <cmath>
 #include <algorithm>
@@ -18,6 +19,7 @@ void setFramebufferScale(int scale) {
 
 Framebuffer::Framebuffer() : idx((size_t)FBW * FBH, 0), invz((size_t)FBW * FBH, 0.f) {
     memset(pal, 0, sizeof(pal));
+    memset(underPal, 0, sizeof(underPal));
 }
 void Framebuffer::clear(Pix v) { std::fill(idx.begin(), idx.end(), v); }
 void Framebuffer::clearDepth() { std::fill(invz.begin(), invz.end(), 0.f); }
@@ -89,6 +91,9 @@ void Framebuffer::mush(int passes) {
             });
         }
         idx.swap(back);
+        // B-437: the layer's banks are read where the pass took each pixel's bank from, a row below (`underRow`: the last two rows kept
+        // by the 2x2 kernel, the last one by the box)
+        if (underBank >= 0) { underShift++; underKeep = k == 2 ? 2 : 1; }
     }
 }
 
@@ -125,26 +130,58 @@ void Framebuffer::glowDisc(double cx, double cy, double radius, double coreRadiu
 }
 
 void Framebuffer::toRGB(uint32_t* out, double gain, bool dither) const {
-    static std::vector<uint32_t> lut;
-    lut.resize(BANKS * 256);
-    for (int b = 0; b < BANKS; b++) {
-        for (int j = 0; j < 256; j++) {
-            int s0 = j >> 2, s1 = std::min(63, s0 + 1);
-            double t = (j & 3) * 0.25;
-            const uint8_t* c0 = pal + (b * 64 + s0) * 3;
-            const uint8_t* c1 = pal + (b * 64 + s1) * 3;
-            int r = (int)((c0[0] + (c1[0] - c0[0]) * t) * gain + 0.5);
-            int g = (int)((c0[1] + (c1[1] - c0[1]) * t) * gain + 0.5);
-            int bl = (int)((c0[2] + (c1[2] - c0[2]) * t) * gain + 0.5);
-            r = std::min(255, r); g = std::min(255, g); bl = std::min(255, bl);
-            lut[b * 256 + j] = 0xFF000000u | ((uint32_t)bl << 16) | ((uint32_t)g << 8) | (uint32_t)r;
+    static std::vector<uint32_t> lut, lutUnder;
+    auto build = [&](const uint8_t* p, std::vector<uint32_t>& lt, uint32_t banks) {
+        lt.resize(BANKS * 256);
+        for (int b = 0; b < BANKS; b++) {
+            if (!((banks >> b) & 1u)) continue;
+            for (int j = 0; j < 256; j++) {
+                int s0 = j >> 2, s1 = std::min(63, s0 + 1);
+                double t = (j & 3) * 0.25;
+                const uint8_t* c0 = p + (b * 64 + s0) * 3;
+                const uint8_t* c1 = p + (b * 64 + s1) * 3;
+                int r = (int)((c0[0] + (c1[0] - c0[0]) * t) * gain + 0.5);
+                int g = (int)((c0[1] + (c1[1] - c0[1]) * t) * gain + 0.5);
+                int bl = (int)((c0[2] + (c1[2] - c0[2]) * t) * gain + 0.5);
+                r = std::min(255, r); g = std::min(255, g); bl = std::min(255, bl);
+                lt[b * 256 + j] = 0xFF000000u | ((uint32_t)bl << 16) | ((uint32_t)g << 8) | (uint32_t)r;
+            }
         }
+    };
+    build(pal, lut, ~0u);
+    // B-437: a pixel of the layer's bank, within its box, is read through the layer's palette at its own bank (`under`, at `underRow`);
+    // that palette's table is made again only when it, the gain or the banks the layer holds change (the space view's, frame to frame)
+    const bool layered = underBank >= 0 && under.size() == idx.size() && underX1 > underX0 && underY1 > underY0;
+    static uint8_t madePal[BANKS * 64 * 3];
+    static double madeGain = -1;
+    static uint32_t madeHeld = 0;
+    if (layered && (gain != madeGain || (underHeld & ~madeHeld) || memcmp(madePal, underPal, sizeof(underPal)) != 0)) {
+        build(underPal, lutUnder, underHeld);
+        memcpy(madePal, underPal, sizeof(underPal)); madeGain = gain; madeHeld = underHeld;
     }
     const Pix* s = idx.data();
     const uint32_t* L = lut.data();
+    const uint32_t* LU = lutUnder.data();
+    const unsigned ub = (unsigned)underBank;
+    auto inLayer = [&](int y) { return layered && underRowIn(y); };
     if (!dither) {
         parallelFor(FBH, 100, [&](int yb, int ye) {
-            for (size_t i = (size_t)yb * FBW, e = (size_t)ye * FBW; i < e; i++) out[i] = L[(s[i] >> BANK_SHIFT) * 256 + ((s[i] & INTEN_MASK) >> 3)];   // 2048 levels -> 256
+            if (!layered) {
+                for (size_t i = (size_t)yb * FBW, e = (size_t)ye * FBW; i < e; i++) out[i] = L[(s[i] >> BANK_SHIFT) * 256 + ((s[i] & INTEN_MASK) >> 3)];   // 2048 levels -> 256
+                return;
+            }
+            for (int y = yb; y < ye; y++) {
+                const Pix* r = s + (size_t)y * FBW;
+                uint32_t* o = out + (size_t)y * FBW;
+                if (!inLayer(y)) { for (int x = 0; x < FBW; x++) o[x] = L[(r[x] >> BANK_SHIFT) * 256 + ((r[x] & INTEN_MASK) >> 3)]; continue; }
+                const uint8_t* u = under.data() + (size_t)underRow(y) * FBW;
+                for (int x = 0; x < underX0; x++) o[x] = L[(r[x] >> BANK_SHIFT) * 256 + ((r[x] & INTEN_MASK) >> 3)];
+                for (int x = underX0; x < underX1; x++) {
+                    const unsigned b = r[x] >> BANK_SHIFT;
+                    o[x] = (b == ub ? LU + u[x] * 256 : L + b * 256)[(r[x] & INTEN_MASK) >> 3];
+                }
+                for (int x = underX1; x < FBW; x++) o[x] = L[(r[x] >> BANK_SHIFT) * 256 + ((r[x] & INTEN_MASK) >> 3)];
+            }
         });
         return;
     }
@@ -152,14 +189,61 @@ void Framebuffer::toRGB(uint32_t* out, double gain, bool dither) const {
     // stop per cell, so gradients break into the original's chequered steps instead of smooth ramps
     static const int BAYER[4] = {-12, 4, 12, -4};   // in intensity units (32 per stop)
     parallelFor(FBH, 100, [&](int yb, int ye) {
-        for (int y = yb; y < ye; y++)
+        for (int y = yb; y < ye; y++) {
+            const bool lay = inLayer(y);
+            const uint8_t* u = lay ? under.data() + (size_t)underRow(y) * FBW : nullptr;
             for (int x = 0; x < FBW; x++) {
                 size_t i = (size_t)y * FBW + x;
                 int inten = (int)(s[i] & INTEN_MASK) + BAYER[((y >> (FB_SCALE > 1 ? 1 : 0)) & 1) * 2 + ((x >> (FB_SCALE > 1 ? 1 : 0)) & 1)];
                 inten = inten < 0 ? 0 : (inten > (int)INTEN_MASK ? (int)INTEN_MASK : inten);
-                out[i] = L[(s[i] >> BANK_SHIFT) * 256 + (((inten >> 5) << 2))];   // snap to whole stops: the dither replaces the interpolation
+                const unsigned b = s[i] >> BANK_SHIFT;
+                out[i] = (lay && b == ub && x >= underX0 && x < underX1 ? LU + u[x] * 256 : L + b * 256)[((inten >> 5) << 2)];   // snap to whole stops: the dither replaces the interpolation
             }
+        }
     });
+}
+
+uint32_t Framebuffer::sinkUnder(int bank, int x0, int y0, int x1, int y1) {
+    x0 = std::max(0, x0); y0 = std::max(0, y0); x1 = std::min(FBW, x1); y1 = std::min(FBH, y1);
+    if (x1 <= x0 || y1 <= y0) return 0;   // nothing sunk: no layer
+    under.resize(idx.size());
+    memcpy(underPal, pal, sizeof(pal));
+    underBank = bank;
+    underX0 = x0; underX1 = x1; underY0 = y0; underY1 = y1; underShift = 0; underKeep = 1;
+    std::atomic<uint32_t> seen{0};
+    parallelFor(y1 - y0, 64, [&](int a, int b) {
+        uint32_t m = 0;
+        for (int y = y0 + a; y < y0 + b; y++) {
+            Pix* row = idx.data() + (size_t)y * FBW;
+            uint8_t* ur = under.data() + (size_t)y * FBW;
+            for (int x = x0; x < x1; x++) {
+                const unsigned k = row[x] >> BANK_SHIFT;
+                m |= 1u << k;
+                if (k) { ur[x] = (uint8_t)k; row[x] = (Pix)((bank << BANK_SHIFT) | (row[x] & INTEN_MASK)); }
+            }
+        }
+        seen.fetch_or(m);
+    });
+    underHeld = seen.load();
+    return underHeld;
+}
+
+void Framebuffer::raiseUnder() {
+    if (underBank < 0) return;
+    const int top = std::max(0, underY0 - underShift);   // the rows that took their banks from the box's
+    if (under.size() == idx.size() && underY1 > top) {
+        const unsigned ub = (unsigned)underBank;
+        parallelFor(underY1 - top, 64, [&](int a, int b) {
+            for (int y = top + a; y < top + b; y++) {
+                if (!underRowIn(y)) continue;
+                Pix* row = idx.data() + (size_t)y * FBW;
+                const uint8_t* u = under.data() + (size_t)underRow(y) * FBW;
+                for (int x = underX0; x < underX1; x++)
+                    if ((unsigned)(row[x] >> BANK_SHIFT) == ub) row[x] = (Pix)((u[x] << BANK_SHIFT) | (row[x] & INTEN_MASK));
+            }
+        });
+    }
+    underBank = -1;
 }
 
 void setRampFromVector(uint8_t* pal, int bank, const std::vector<std::pair<double, RGB>>& stops) {

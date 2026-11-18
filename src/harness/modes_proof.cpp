@@ -151,7 +151,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
                 break;
             }
         }
-        {   // the cabin at 1x through the game: the start's parking, the light on and the hull polarised (`screens`' cabin), every
+        {   // the bridge at 1x through the game (I-02; the 5 m cabin before it): the start's parking, the light on and the hull polarised (`screens`' cabin), every
             // map of the system made; the game's picture (the RGB with the HUD) at one instant once it holds still, then by one thread
             TestGame game;
             game.savePrefix = "shots/tests/regress_save";
@@ -184,7 +184,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
             parallelThreadsOverride() = 1; game.frame(gi, 0); const uint64_t s = out(); parallelThreadsOverride() = 0;
             const int pb = game.testParkedBody();
             lines.push_back({"cabin_1x", h});
-            notes.push_back("the cabin at 1x, the light on, parked at " + (pb >= 0 ? gs.bodies[pb].name : std::string("nothing")));
+            notes.push_back("the bridge at 1x, the light on, parked at " + (pb >= 0 ? gs.bodies[pb].name : std::string("nothing")));
             if (s != h) differs.push_back("cabin_1x");
             if (still < 10) differs.push_back("cabin_1x (never held still)");
         }
@@ -321,7 +321,7 @@ int runSunCone() {
 }
 
 // F-05: `screens [scale ...]`: the game's frames the regress never hashes, as pictures at each scale (1 2 3 4 by default): the cabin (the
-// light on and off, the hull glass, the roof, the decoder's desk, the case, the drones' rack), the console, the ship's screen, the help, the
+// light on and off, the hull glass, the dome, the decoder's desk, the case, the drones' rack), the console, the ship's screen, the help, the
 // guide, the radar camera, the landing map whole and zoomed, and on the home world the descent, the ground, the menu, the sector map near
 // and wide and the nose camera. Each is drawn at one instant (`frame(in, 0)`) once it has held still for half a second (a world's map or a
 // tile arriving changes it), by the workers and by one thread: the workers' frames go to shots/tests/screens/<name>_<scale>x.png, for
@@ -381,14 +381,14 @@ int runScreens(int argc, char** argv) {
     press(KEY_Y); run(1.5); capture("cabin_glass_dark");
     press(KEY_U); run(1.5); capture("cabin_glass");
     press(KEY_Y); run(0.5);
-    press(KEY_PAGE_UP); run(0.5); capture("roof"); press(KEY_PAGE_DOWN); run(0.3);
-    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); capture("cabin_decoder");   // the flow's: looking down at the decoder's desk
-    game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); capture("cabin_case");
-    game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2); capture("cabin_rack");
-    game.testCabinGoto(-1.2, 0.0, -PI / 2); run(0.2);   // at the GOES console
+    press(KEY_PAGE_UP); run(0.5); capture("dome"); press(KEY_PAGE_DOWN); run(0.3);   // I-02: the lift to the observatory
+    game.testCabinAtDevice(FACE_DECODER); run(0.2); capture("cabin_decoder");   // the flow's: looking down at the decoder's desk
+    game.testCabinAtDevice(FACE_CASE); run(0.2); capture("cabin_case");
+    game.testCabinAtDevice(FACE_BAY); run(0.2); capture("cabin_rack");
+    game.testCabinAtDevice(FACE_GOES); run(0.2);   // at the GOES console
     press(KEY_E); run(0.1); game.testTypeText("SL 4"); run(0.1); capture("console"); press(KEY_ESCAPE); run(0.1);
-    game.testCabinGoto(0.0, 1.3, 0.0); run(0.2); press(KEY_E); run(0.1); capture("shipscreen"); press(KEY_ESCAPE); run(0.1);
-    game.testCabinGoto(0.0, 0.0, 0.0); run(0.2);
+    game.testCabinAtDevice(FACE_FLIGHT); run(0.2); press(KEY_E); run(0.1); capture("shipscreen"); press(KEY_ESCAPE); run(0.1);
+    game.testCabinView("BY THE STAIR"); run(0.2);
     press(KEY_H); run(0.1); capture("help"); press(KEY_ESCAPE); run(0.1);
     press(KEY_G); run(0.1); capture("guide"); press(KEY_ESCAPE); run(0.1);
     press(KEY_B); run(0.5); capture("radar"); press(KEY_B); run(0.2);
@@ -398,13 +398,13 @@ int runScreens(int argc, char** argv) {
         game.testParkAt(st, W.body); run(0.5); capture("landmap");
         if (game.testLandableBody() >= 0) { press(KEY_Z); waitDrainage(); run(0.3); capture("landzoom"); press(KEY_Z); }
         game.setState(GameState::SPACE); run(0.3);
-        game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);   // the drone bay (C-18's harness): its screen, the drones leaving the rack, outside the window
+        game.testCabinAtDevice(FACE_BAY); run(0.2);   // the drone bay (C-18's harness): its screen, the drones leaving the rack, outside the window
         press(KEY_E); run(0.1);
         if (game.state == GameState::DRONES) {
             game.testDronesSettle(); run(0.2); capture("bay");
             press(KEY_ENTER); game.testDronesSettle();
-            game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(1.1); capture("rack_out");
-            game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05); game.testDronesSkip(4.0); run(0.05); capture("drones_window");
+            game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_BAY); run(1.1); capture("rack_out");
+            game.testAimAtBody(W.body); game.testCabinView("OUT TO THE DRONES' WAY"); run(0.05); game.testDronesSkip(4.0); run(0.05); capture("drones_window");
         } else printf("screens: the drone bay not opened (state %d)\n", (int)game.state);
     }
     Star hs;

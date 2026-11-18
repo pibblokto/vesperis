@@ -136,7 +136,7 @@ void renderSpace() {
             int second = -1; double sd = 1e300;
             for (int j = 0; j < (int)sys.bodies.size(); j++) if (j != bi) { double dd = length2(sys.bodyPos(j, t) - shipPos); if (dd < sd) { sd = dd; second = j; } }
             c.bankBodyB = second;
-            warmMaps(sr, sys, bi); if (second >= 0) warmMaps(sr, sys, second);
+            warmMaps(sr, sys, bi, t); if (second >= 0) warmMaps(sr, sys, second, t);
             sr.setupPalette(fb, &sys, bi, second, 1.0);
             sr.render(fb, c);
             fb.mush(2);
@@ -247,7 +247,7 @@ void renderSpace() {
                 c2.sys = &sys; c2.stars = &nb.stars; c2.t = t; c2.shipPos = sp;
                 c2.cam = cameraBasis(std::atan2(f2.x, f2.z), std::asin(f2.y));
                 c2.bankBodyA = bi;
-                warmMaps(sr, sys, bi);
+                warmMaps(sr, sys, bi, t);
                 sr.setupPalette(fb2, &sys, bi, -1, 1.0);
                 sr.render(fb2, c2);
                 fb2.mush(2);
@@ -310,7 +310,7 @@ void renderSpace() {
                     nb.update(sp);
                     Framebuffer fbc; SpaceContext cc;
                     cc.sys = &sys; cc.stars = &nb.stars; cc.t = t; cc.shipPos = sp; cc.cam = cameraBasis(std::atan2(f2.x, f2.z), std::asin(f2.y)); cc.bankBodyA = bi;
-                    warmMaps(sr, sys, bi);
+                    warmMaps(sr, sys, bi, t);
                     sr.setupPalette(fbc, &sys, bi, -1, 1.0); sr.render(fbc, cc); fbc.mush(2);
                     saveFB(fbc, "shots/tests/space_comet_close.png");
                     uint64_t hc0 = fnv(FNV0, fbc.idx.data(), fbc.idx.size() * sizeof(Pix));
@@ -344,8 +344,8 @@ double telescopeFrame(
     c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)));
     c.bankBodyA = bankA; c.bankBodyB = bankB; c.starIntensity = 1.5;
     c.detailBody = plate ? bankA : -1; c.detailBudget = 0;
-    if (bankA >= 0) warmMaps(sr, sys, bankA);
-    if (bankB >= 0) warmMaps(sr, sys, bankB);
+    if (bankA >= 0) warmMaps(sr, sys, bankA, t);
+    if (bankB >= 0) warmMaps(sr, sys, bankB, t);
     Proj saved = sr.proj; sr.proj = Proj::fromHFov(70); sr.proj.f *= zoom;
     sr.setupPalette(fb, &sys, bankA, bankB, 1.0);
     double t0 = nowSec(); sr.render(fb, c); double ms = (nowSec() - t0) * 1000;
@@ -359,6 +359,7 @@ double telescopeFrame(
 // sub-ship point, the nearer the better
 static bool telescopeGroundPoint(SpaceRenderer& sr, const StarSystem& sys, int bi, double t, const Vec3& ship, double& latOut, double& lonOut) {
     const Body& b = sys.bodies[bi];
+    sr.setSeason(sys, t);
     const PlanetMap& m = sr.mapFor(b);
     Mat3 frame = sys.bodyFrame(bi, t);
     Vec3 sub = normalize(frame * (ship - sys.bodyPos(bi, t)));
@@ -589,7 +590,7 @@ void renderMoonSky() {
             double lat = clampd(plat, -60 * DEG, 60 * DEG), lon = plon - 55 * DEG;
             SurfaceView sv;
             sv.init(&sys, bi, lat, lon, t);
-            warmMaps(sr, sys, b.parent);
+            warmMaps(sr, sys, b.parent, t);
             // aim at the parent
             Mat3 L = sv.site.localFrame(t);
             Vec3 obs = sv.site.worldPos(t, 0, 0, 0.002);
@@ -657,7 +658,7 @@ void renderMoonSky() {
             double t = tBest;
             SurfaceView sv;
             sv.init(&sys, bi, latB, lonB, t);
-            warmMaps(sr, sys, b.parent);
+            warmMaps(sr, sys, b.parent, t);
             Mat3 L = sv.site.localFrame(t);
             Vec3 obs = sv.site.worldPos(t, 0, 0, 0.002);
             Vec3 dl = L * normalize(sys.bodyPos(b.parent, t) - obs);

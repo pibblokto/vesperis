@@ -1273,3 +1273,30 @@ void writeRecordTexts(const StarSystem& sys0, const Body& b0, const BodyGen& g, 
     }
     if (getenv("VESPERIS_TRACE")) fprintf(stderr, "records: history %.1f ms, texts %.1f ms (%d)\n", tHist - t0, nowMs() - tHist, (int)out.items.size());
 }
+
+// Z-06: a made species' watermark (peoples/made.h): written outside the catalogue at its year, as a chart's caption is (nothing of the
+// catalogue's memory, nothing of its events told moves), by a maker alive where it was made (`@cast writer`), the species' facts beside
+// the record's (`madeway`, `madeplace`, `madeglow`); the grammar's root `watermark` (core/watermark.vg)
+bool writeWatermark(const StarSystem& sys0, const Body& b0, const BodyGen& g, const Lore& L, const VgGrammar& G, int year, int way, int where, bool glow,
+                    uint64_t seed, VgRecord& out) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
+    std::shared_ptr<const History> Hp = historyOf(sys, b, g, L.which);
+    if (!Hp) return false;
+    const History& H = *Hp;
+    RecordModel M(H, L);
+    recordWorldFacts(sys, b, g, L, &H, M);
+    const Culture cult = cultureOf(g, L.which);
+    M.culture0 = &cult;
+    M.culture = mix64(L.seed ^ 0xC0170E5ULL);
+    const int age = recordAgeAt(H.profile, year);
+    const int season = (int)(mix64(seed ^ 0x5EA50ULL) % (uint64_t)std::max(1, H.seasons));
+    M.beginRecord(year, season, age, RM_DRIVE, historySeat(H, year), false, ST_ORDINARY, seed, 0, 0);
+    M.facts[F_MADEWAY] = MADE_WAY_KEYS[std::max(0, std::min(4, way))];
+    M.facts[F_MADEPLACE] = MADE_PLACE_KEYS[std::max(0, std::min(5, where))];
+    M.setFlag(F_MADEGLOW, glow);
+    out = VgRecord();
+    out.seed = mix64(seed ^ 0x3A7E2A4CULL); out.tense = VG_PRESENT;
+    vgRecord(G, "watermark", M, nullptr, out);
+    return !out.text.empty();
+}

@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-42 groups, 406 checks in their order; a group's heading gives its file, its function, the render scale it
+46 groups, 456 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -98,7 +98,25 @@ starts at and its count.
 - works: a people that lost its sun's works of the end, its last recording in the last shelter alone (D-05)
 - radar: a drifter's beacon, a radio people's last broadcast under its voice, heard (D-05)
 
-## basics (`unit_basics.cpp`, `unitBasics`, 4x): 74
+## life (`unit_life.cpp`, `unitLife`, 1x): 15
+
+- life: a row a kind, every landable kind's habitats and stages (Z-01)
+- life: the same twice and by the workers (Z-01)
+- life: the furnaces sterile, no giant with a biota (Z-01)
+- life: nothing fed by light in the dark or under ice (Z-01)
+- life: a world whose life shows on its ground lives (Z-01)
+- life: something on every landable kind but the furnaces (Z-01)
+- life: a living world's species 3-16, a dead world's spores 1-4 (Z-01)
+- life: a carried spore its living neighbour's, of one genesis (Z-01)
+- life: a system's living worlds of one chemistry, one genesis (Z-01)
+- life: a drifter's life the star's it left (Z-01)
+- life: home's genesis pinned, the ship's species of it (Z-01)
+- life: forms the same twice, none of a world alike (Z-02)
+- life: a slide's frame however reached (Z-02)
+- life: every form within its bounds at every zoom (Z-02)
+- life: a way of seeing's banks its own (Z-02)
+
+## basics (`unit_basics.cpp`, `unitBasics`, 4x): 78
 
 - lat/lon round trip
 - a landable planet found
@@ -148,6 +166,10 @@ starts at and its count.
 - the same globe in a sky shows its limb
 - sky bodies lie beyond the far ring
 - a small body close by lies beyond the far ring too
+- Heilya III-a and III-c found
+- a moon near a globe's size shows wherever the view turns (B-436)
+- a world's season is its own whatever system was drawn between (B-438)
+- a frame's layer under its banks reads as the frame whole (B-437)
 - the mountain review site set up
 - (made by `(std::string("rings meet: ") + names[k]).c_str()`)
 - a grassland herd site set up
@@ -473,7 +495,7 @@ starts at and its count.
 - telescope: the plate's cells are the planet function's own numbers
 - telescope: a zoom step begins a finer plate and keeps the last as the fallback
 - telescope: P reads the plate out whole for the photo
-- cabin: the telescope's set on the back wall, E looks through it
+- cabin: the telescope's set in the observatory, E looks through it
 - cabin: every computer in a colour of its own
 - cabin: a glass hull shows the outside, what stands in the room stays solid (B-411)
 - cabin: the light works through a glass hull, and U says the hull is glass (B-411)
@@ -538,3 +560,43 @@ starts at and its count.
 - the cabin's screens over the scene they open from: after help at the title, and after the ground (B-431)
 - the title keeps the game's place through its help and credits: a save there, and Enter (B-432)
 - a new expedition and a load note the system they put the ship in (B-433)
+
+## ship (`unit_ship.cpp`, `unitShip`, 1x): 13
+
+- ship: every room reachable from the bridge
+- ship: every device in a room and reachable
+- ship: the lift up to the observatory and down to the bridge
+- ship: no collider in an arch
+- ship: the stair's floor continuous from the hangar to the observatory
+- ship: the banks dealt, home first, the farthest dimmed past the pool
+- ship: every view's banks whole
+- ship: no finish or screen dimmed from any view (B-435)
+- ship: nothing dimmed whatever the outside shows (B-437)
+- ship: the lamps' pools and the sun's patches
+- ship: no patch of the sun over an arch, a window or a hole (B-434)
+- ship: life aboard: the rooms' sounds, the garden, the explorer's things
+- ship: a save keeps the room and the place; the 5 m room's at the bridge's start
+
+## search (`unit_search.cpp`, `unitSearch`, 1x): 4
+
+- search: a sample a pure function of its place (Z-03)
+- search: a sterile world's samples hold nothing alive (Z-03)
+- search: the lamp's ultraviolet absent to the bit when off (Z-03)
+- search: the kit's count, its refusals, the cold store and its lines (Z-03)
+
+## lab (`unit_lab.cpp`, `unitLab`, 1x): 14
+
+- lab: a slide's frame closed-form in its clock, the same at any thread count (Z-04)
+- lab: a sheet's lines only by what was seen (Z-04)
+- lab: the guide's save byte-stable with its species (Z-04)
+- lab: Backspace on the list empties a vial, a bloom kept in a vial's line (Z-04)
+- lab: a culture's state closed-form from its events (Z-05)
+- lab: the lab's save round-trip (Z-05)
+- lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
+- lab: two in a flask, the four ways (Z-05)
+- lab: a species' genome a pure function of it and its genesis (Z-06)
+- lab: the distances rank as the lineages: a world's, a system's, a cell's (Z-06)
+- lab: no common ancestor across geneses (Z-06)
+- lab: mirrored species ignore each other in a flask (Z-06)
+- lab: the sequencer told at its reading's end; home's species at the tree's root (Z-06)
+- lab: a friend's sheets lent, in cyan and no count; the record's lines byte-stable (Z-07)

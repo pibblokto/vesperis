@@ -45,6 +45,9 @@ enum RecordFact {
     // years since the last sunrise (`darkyears`), how they lost it (`sunway`: wanderer, intruder, dark, dance; empty for every other people)
     F_DARK, F_DARKYEARS, F_SUNWAY,
     F_SUNSIZE, F_SUNFROM,   // the sun's disc in a row of the observatory's table (`@suntable`) and at its first measure, in the people's own parts
+    // Z-06: a made species' watermark (`writeWatermark`, peoples/made.h): how the species lives (`madeway`: light, chemical, dead, grazer,
+    // predator), where (`madeplace`: water, soil, rock, ice, salt, spring), whether its crowd glows (`madeglow`)
+    F_MADEWAY, F_MADEPLACE, F_MADEGLOW,
     F_FIXED_COUNT
 };
 const char* const FACT_NAMES[F_FIXED_COUNT] = {
@@ -61,7 +64,8 @@ const char* const FACT_NAMES[F_FIXED_COUNT] = {
     "plan", "roof", "ornament", "motif", "tops", "accent", "land", "streets", "public", "edge", "links", "light", "walls", "huts", "towers",
     "chartstyle", "tally", "tallykind", "wanderers", "numbered", "plate", "maglimit", "heard", "routes", "reached", "planned", "farly", "farkind", "signs",   // H-05 (CHARTS)
     "past",
-    "dark", "darkyears", "sunway", "sunsize", "sunfrom"};
+    "dark", "darkyears", "sunway", "sunsize", "sunfrom",
+    "madeway", "madeplace", "madeglow"};   // Z-06
 constexpr int NAME_FACTS = F_FOUNDERNAME + 1;
 
 // the inventions by the history's names (`historyInventionName`), each a fact while it exists: `inv.railway`
@@ -152,6 +156,8 @@ const char* const DEATH_KEYS[16] = {"old", "sickness", "childbirth", "battle", "
 const char* const OMEN_KEYS[10] = {"comet", "eclipse", "aurora", "falling", "newstar", "redmoon", "wanderer", "intruder", "bent", "dance"};   // D-05: the lost sun's four
 const char* const SUN_KEYS[6] = {"smaller", "noend", "seafrozen", "airsnow", "lastsunrise", "noonstars"};   // D-05: a HE_SUN event's (`$e.sun`)
 const char* const SUN_WAY_KEYS[SW_COUNT] = {"wanderer", "intruder", "dark", "dance"};   // D-05: how a drifter's people lost their sun (`sunway`)
+const char* const MADE_WAY_KEYS[5] = {"light", "chemical", "dead", "grazer", "predator"};        // Z-06: how a made species lives (`madeway`)
+const char* const MADE_PLACE_KEYS[6] = {"water", "soil", "rock", "ice", "salt", "spring"};      // Z-06: and where (`madeplace`)
 const char* const ACCESSION_KEYS[11] = {"founded", "inherited", "chosen", "elected", "seized", "appointed", "won", "ofage", "mind", "revolution", "again"};
 const char* const RULEEND_KEYS[7] = {"gaveover", "deposed", "steppeddown", "term", "overthrown", "fled", "ended"};
 const char* const GOVHOW_KEYS[9] = {"reform", "revolution", "kingdom", "priests", "companies", "machine", "coup", "elders", "assembly"};

@@ -365,7 +365,7 @@ void Game::holdChart(bool up) {
     if (!shardWorld.valid || !shardWorld.chart.valid || shardHeld.empty()) return;
     chartHeld = shardWorld.chart; chartHeldKey = shardWorld.key; chartHeldIndex = shardWorld.base + shardHeld[shardSel]; chartHeldPeople = shardWorld.lore.people;   // C-13: the world index
     chartHeldLabels.clear();
-    for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, (int)shardHeld.size()));
+    for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, recordsHeld()));
     chartUp = true;
     status("THE CHART IS HELD UP - ITS FIGURES SHOW ON THE VIEW", 5);   // 50 characters
     audio.beep = BEEP_UI;
@@ -377,7 +377,7 @@ void Game::holdChart(bool up) {
 // reading at this share the stars appear first, then the lines, then the names, over CHART_READ_S seconds
 void Game::renderChart() {
     const std::string& key = shardWorld.key;
-    int n = (int)shardHeld.size(), idx = shardHeld[shardSel], pct = (int)std::lround(100 * languageShare(n, shardWorld.lore.records));
+    int n = recordsHeld(), idx = shardHeld[shardSel], pct = (int)std::lround(100 * languageShare(n, shardWorld.lore.records));
     const Shard& s = shardWorld.shards[idx]; const StarChart& C = shardWorld.chart;
     std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);

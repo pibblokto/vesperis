@@ -144,7 +144,12 @@ bool Game::save(const std::string& path) {
     f << "park " << ship.parkDir.x << " " << ship.parkDir.y << " " << ship.parkDir.z << " " << ship.parkDist << "\n";
     f << "belt " << ship.targetBelt << " " << ship.parkedBelt << " " << ship.rockIr << " " << ship.rockIa << " " << ship.rockIy << " " << ship.rockM << " " << ship.rockDist << "\n";
     f << "remote " << (ship.hasRemote ? 1 : 0) << " " << ship.remote.sx << " " << ship.remote.sy << " " << ship.remote.sz << "\n";
-    f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (cabin.onRoof ? 1 : 0) << "\n";
+    {   // the cabin line keeps its fields (its last: up in the observatory); I-02: the room and the stair's angle a line of their own, which
+        // a save of the 5 m room has not (it loads at the bridge's start)
+        const bool up = cabin.room == shipLifter().to;
+        f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (up ? 1 : 0) << "\n";
+        f << "cabin_place " << cabin.room << " " << cabin.stairA << "\n";
+    }
     if (probe.active && probe.endClock < 0 && probeHere())   // a falling probe (a last frame held is not kept)
         f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " "
           << probe.startRel.y << " " << probe.startRel.z << " " << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw
@@ -186,6 +191,7 @@ bool Game::save(const std::string& path) {
         f << "waypoint " << (surf.hasWaypoint ? 1 : 0) << " " << surf.wpX << " " << surf.wpZ << "\n";
         f << "stamina " << surf.player.stamina << "\n";
     }
+    saveVials(f);   // Z-03: the kit's vials and the cold store's
     for (const StateRow& r : STATE_ROWS)   // U-05: a screen's own lines, after the save's
         if (r.save) { std::string lines; (this->*r.save)(lines); f << lines; }
     hasSave = true;
@@ -200,6 +206,7 @@ bool Game::load(const std::string& path) {
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
     resetExpedition(false);
     audio.surfaceOff();                                      // B-413: nor the ground's sounds (a ground loaded sets its own)
+    audio.aboardOff();                                       // I-04: nor the rooms aboard (the ship's frame sets them again)
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;
@@ -207,7 +214,7 @@ bool Game::load(const std::string& path) {
     int bugDep = 0, bugIn = 0, wpHas = 0; double bugX = 0, bugZ = 0, bugH = 0, bugOdo = 0, wpx = 0, wpz = 0, stam = 100;
     int drDep = 0, drIn = 0; double drX = 0, drZ = 0, drH = 0, drOdo = 0;
     int gen = 1;
-    Cabin cab; int cl = 1, cd = 0, cr = 0;
+    Cabin cab; int cl = 1, cd = 0, cr = 0, cabRoom = -1; double cabStair = 0;
     ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;
     ShipState ns;
     DroneBay nbay; bool nbayBack = false;
@@ -233,7 +240,8 @@ bool Game::load(const std::string& path) {
         else if (key == "waypoint") is >> wpHas >> wpx >> wpz;
         else if (key == "stamina") is >> stam;
         else if (key == "gen") is >> gen;
-        else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; cab.onRoof = cr != 0; }
+        else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; }
+        else if (key == "cabin_place") { is >> cabRoom >> cabStair; if (is.fail()) cabRoom = -1; }
         else if (key == "probe") {
             is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >>
                     np.flight.crushBar >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
@@ -269,6 +277,8 @@ bool Game::load(const std::string& path) {
             is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.timeTrack.push_back(v); }
             if (np.camTrack.size() % 3) np.camTrack.clear();
             if (np.timeTrack.size() % 2) np.timeTrack.clear();
+        } else if (key == "vial") {   // Z-03
+            loadVial(line);
         } else {   // U-05: a line of a screen's own (its row's `load`)
             for (const StateRow& r : STATE_ROWS) if (r.load && (this->*r.load)(line)) break;
         }
@@ -283,6 +293,12 @@ bool Game::load(const std::string& path) {
     sys.valid = valid != 0;
     ship = ns;
     cabin = cab; cabin.lightLevel = cabin.light ? 1 : 0;
+    if (cabRoom >= 0 && cabRoom < SHIP_ROOMS) { cabin.room = cabRoom; cabin.stairA = cabStair; }   // I-02: the room and the place
+    else {   // a save of the 5 m room (no place line): the bridge's start, the light and the hull as they were
+        const Cabin start;
+        cabin.x = start.x; cabin.z = start.z; cabin.yaw = start.yaw; cabin.pitch = start.pitch; cabin.room = start.room; cabin.stairA = 0;
+    }
+    (void)cr;
     ship.mode = (ShipState::Mode)mode;
     if (ship.mode == ShipState::VIMANA || ship.mode == ShipState::APPROACH) ship.mode = ShipState::STANDBY;
     ship.parkedBody = parked < (int)sys.bodies.size() ? parked : -1;

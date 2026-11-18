@@ -3,7 +3,8 @@
 The base everything draws on: 16-bit pixels in a `Framebuffer`, hashes of integer coordinates, a worker pool.
 
 ## Files
-- `framebuffer.h/.cpp`: `Pix` (bank in the top 5 bits, intensity in 11), `Framebuffer`: the mush, `glowDisc`, `toRGB`, `setRamp`
+- `framebuffer.h/.cpp`: `Pix` (bank in the top 5 bits, intensity in 11), `Framebuffer`: the mush, `glowDisc`, `toRGB`, `setRamp`, the
+  layer under the banks (`sinkUnder`, `raiseUnder`: B-437, the outside aboard)
 - `raster.h/.cpp`: `Proj`, `RVert`, `RasterParams`, `rasterTriangle`, `rasterLine3`, `setRasterBand`
 - `font.h/.cpp`: the 5x7 HUD font on an `RGBCanvas`: `drawText*`, `textWidth`, `fillRectRGB`, `blendRectRGB`
 - `noise.h/.cpp`: `gnoise2/3`, `fbm2/3`, `ridged3`, `worley3`, `GrainTexture`
@@ -27,6 +28,9 @@ The base everything draws on: 16-bit pixels in a `Framebuffer`, hashes of intege
 - The look: 32 banks (material ramps) of 2048 intensities, 64 classic shades of 32 each. The mush blends intensities, never
   across banks. A point of light survives the mush only as a size-2 point (3 x 3 at 1x) at 48+ shades; on the chrome bank 7
   (a mid grey by shade 20) a dark object needs shades under 14. `setFramebufferScale` re-makes the buffers.
+- While `underBank` is set, a pixel of that bank whose bank came from the sunk box is read through `underPal` at its `under` bank,
+  found where the mush took it from (`underRow`: the mush counts its passes); a pass that moves pixels another way must keep that
+  true. The layer's caller raises it after the frame's `toRGB` (B-437).
 - The font: 6 px a character, so 52 characters a line at 320 px; lowercase is drawn as capitals; a glyph is 7 px of a 9 px line
   (an underline goes at y+7). Count a footer's characters before trusting it.
 - `writePNGAsync` copies the pixels: `pngFlush` before a picture is read back, listed, or needed at exit.

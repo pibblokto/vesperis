@@ -78,6 +78,9 @@ struct SceneFind {
     bool twoFacedBoundary();
     bool twoFacedRidge();
     bool spongePits();
+    bool springBands();
+    bool redSnow();
+    bool mats();
     bool traitGround();
     bool neutronGlass();
     bool biome();
@@ -136,6 +139,57 @@ bool SceneFind::geysers() {   // a geyser basin
     if (!found) return false;
     placed = true;
     return true;
+}
+
+// Z-03: a terraced hot spring (TR_HOT_SPRINGS): the first vent's pool of the scan, the site 30 m south of it facing north over its bands
+bool SceneFind::springBands() {
+    const double Rm = b.radiusKm * 1000.0;
+    for (double la = -50; la <= 50; la += 1)
+        for (double lo = -180; lo < 180; lo += 1) {
+            std::vector<GeyserVent> vents;
+            hotSpringsNear(g, StarSystem::bodyFromLatLon(la * DEG, lo * DEG), vents);
+            for (const GeyserVent& v : vents) {
+                if (sampleSurface(g, v.unit, 4).material != MAT_BRINE) continue;
+                double vla, vlo; StarSystem::latLonFromBody(v.unit, vla, vlo);
+                latUse = vla - 30.0 / Rm; lon = vlo; faceYawOut = 0; placed = true;
+                return true;
+            }
+        }
+    return false;
+}
+// Z-03: red snow (TR_SNOW_ALGAE): on a 0.5-degree grid, the first red sample (16 m: its patches resolved) whose ground round it (nine points 30 m
+// apart) is red at four at least and level (within 8 m), the site on it
+bool SceneFind::redSnow() {
+    const double Rm = b.radiusKm * 1000.0;
+    for (double la = -80; la <= 80; la += 0.5)
+        for (double lo = -180; lo < 180; lo += 0.5) {
+            const SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, lo * DEG), 16);
+            if (ss.material != MAT_SNOW || ss.snowTint < 0.6) continue;
+            int red = 0; double hLo = 1e9, hHi = -1e9;
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++) {
+                    const double la2 = la * DEG + j * 30.0 / Rm, lo2 = lo * DEG + i * 30.0 / (Rm * std::max(0.1, std::cos(la * DEG)));
+                    const SurfaceSample s2 = sampleSurface(g, StarSystem::bodyFromLatLon(la2, lo2), 16);
+                    red += s2.material == MAT_SNOW && s2.snowTint > 0.5;
+                    hLo = std::min(hLo, s2.height); hHi = std::max(hHi, s2.height);
+                }
+            if (red < 4 || hHi - hLo > 8) continue;
+            latUse = la * DEG; lon = lo * DEG; placed = true;
+            return true;
+        }
+    return false;
+}
+// Z-03: a microbial mat on a wet flat (the archean's): its first sample from the latitude asked, the site on it
+bool SceneFind::mats() {
+    for (double la = latDeg; la < latDeg + 40; la += 0.5)
+        for (int k = 0; k < 720; k++) {
+            const double ln = k * TAU / 720;
+            const SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
+            if (ss.material != MAT_MATS || (ss.water > -1e8 && ss.height < ss.water + 0.2)) continue;
+            latUse = la * DEG; lon = ln; placed = true;
+            return true;
+        }
+    return false;
 }
 
 bool SceneFind::groundSounds() {   // Q-03: the dunes, the ice, the quakes
@@ -1170,6 +1224,7 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 if (wantMat == SCENE_AURORA_CURTAIN) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // the main curtain a degree poleward: overhead and across the sky
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == SCENE_GEYSERS && !g.hasTrait(TR_GEYSERS)) continue;
+                if ((wantMat == SCENE_SPRING_BANDS && !g.hasTrait(TR_HOT_SPRINGS)) || (wantMat == SCENE_RED_SNOW && !g.hasTrait(TR_SNOW_ALGAE))) continue;   // Z-03
                 if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) ||
                         (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES)))
                     continue;
@@ -1262,6 +1317,12 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     placed = true;
                 } else if (wantMat == SCENE_SPONGE_PITS) {
                     if (!f.spongePits()) continue;
+                } else if (wantMat == SCENE_SPRING_BANDS) {
+                    if (!f.springBands()) continue;
+                } else if (wantMat == SCENE_RED_SNOW) {
+                    if (!f.redSnow()) continue;
+                } else if (wantMat == SCENE_MATS) {
+                    if (!f.mats()) continue;
                 } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE &&
                         wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD &&
                         wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot

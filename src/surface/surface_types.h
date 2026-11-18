@@ -5,9 +5,11 @@
 #include "site.h"
 #include "galaxy/fronts.h"
 #include "peoples/ruins.h"
+#include "life/samples.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 struct Player {
@@ -206,10 +208,27 @@ struct TreeLook {
     double tone = 1;       // leaf brightness factor
     double droop = 0;      // 0..1, the clusters hang (weeping) or the fronds arch
 };
+// I-04: a silhouette's look on a planet of a seed (`SurfaceView::buildLooks`' hash) and its shape (its height's range, its canopy's radius
+// and middle as shares of the height; flora.cpp's), for the ship's garden of the home world's plants
+TreeLook treeLookOf(uint64_t seed, int fam);
+struct FloraShape { double h0, h1, r, cy; };
+FloraShape floraShapeOf(int fam);
 struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64_t seed = 0; bool stone = false; };   // Q-02: stone, a petrified forest's (its own bank)
 // C-01: a settlement's cell (`peoples/ruins.*`) in the view's metres (B-417: M4-07's monoliths of the old ones are gone)
 struct Ruin {
     double x, z, heading, size;
     const RuinSpec* spec = nullptr;   // the settlement's layout (the cell cache's)
     double reach = 0;                 // how far its pieces reach from its middle (its harbour, a fallen tower's top): past its radius at times
+};
+
+// Z-03: what a vial takes at a place of the ground (`SurfaceView::readSample`): its microhabitat (a function of the square metre: the planet
+// function, the springs' and vents' finders, the ruins' walls), its name as the HUD gives it ("WET SILT AT A LAKE'S EDGE"), the temperature read
+// at the take, and where it is on the body; `refusal` where nothing can be taken there (molten ground)
+struct SampleRead {
+    bool ok = false;
+    const char* refusal = nullptr;
+    Microhabitat hab;
+    std::string name;
+    double readingC = 0;
+    Vec3 unit;
 };

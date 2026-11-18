@@ -65,6 +65,7 @@ public:
     // frame's lights (`setupLamps`) are added into the ground's vertex light and every object's (`lampAt`), by night alone as the vehicles'
     // lights are, so on a dayside they add nothing
     bool lamp = false;
+    bool uvLamp = false;        // Z-03: the lamp's ultraviolet (Shift+U on foot): the living films glow within its reach where nothing outshines them
     bool floodlights = false;   // the capsule's floodlights lit (the game sets it while it comes down and goes up; a harness's raised camera has none)
     struct LampLight { Vec3 pos, dir; double cosIn = 1, cosOut = 1, cosSpill = 1, nearM = 1, reach0 = 0, reach = 0, power = 0; };
     LampLight lamps[2];
@@ -300,6 +301,16 @@ private:
     int tintBankW = -1, tintBankL = -1;
     int tintBankSprings = -1;   // the hot springs' mats (25: a world's water trait is the springs or a pink lake, never both)
     int tintBankStrata = -1;    // the rainbow strata's accent layers (27)
+    int tintBankSnow = -1;      // Z-03: red snow's algae (28)
+    // Z-03: the films under the lamp's ultraviolet: the world's biota (its systems' kept alive), each niche's density, the glow's colour; this
+    // frame's grid of the near ring's corners round the eye (their height and their films' glow), the luminance of every bank's shades
+    std::shared_ptr<const SystemLife> life;
+    double filmD[NI_COUNT] = {0};
+    Vec3 filmColour;
+    static constexpr int UV_GRID = 17;   // 4 m corners: 64 m across
+    int uvCx0 = 0, uvCz0 = 0;
+    float uvH[UV_GRID * UV_GRID], uvS[UV_GRID * UV_GRID];
+    bool uvFrame = false;   // the pass runs this frame (the lamp on, on foot, a film anywhere in the grid)
     double tintGlow = 0;   // the milky sea's glow tonight (0 by day)
     // the sun's screen position and radius this frame (framebuffer pixels) and the strength of the veiling glare
     // drawn over the finished picture (0 = none: below the horizon, eclipsed, behind the camera)
@@ -519,6 +530,17 @@ public:
 private:
     void setupPalette(Framebuffer& fb);
 
+public:
+    // ---- Z-03: what a vial takes at a place (its microhabitat, its name, the temperature read), the films under the lamp's ultraviolet (sampling.cpp)
+    SampleRead readSample(double x, double z, bool onWater);
+    double placeMeanC(double x, double z, double h) const;   // the place's own mean temperature the year round
+    const Biota& biota() const;                               // the site's world's
+    static int filmNicheOf(const TerrainVertex& v, bool springs, double sea, double& share);   // the films a vertex holds: their niche (-1 none) and its share
+    double seaLevelNow() const;
+private:
+    void setupFilmGlow();             // at the landing: the films' densities and colour
+    void prepareFilmGlow();           // a frame's grid (the main thread, before the pass)
+    void drawFilmGlow(Framebuffer& fb);   // the pass: after the old result, absent to the bit when off
 public:
     // ---- the terrain rings: the material tiles, the vertex, the warm, the bin and the draw, the reflections, the floor, the cached ground (surface_terrain.cpp)
     // O1 (B-302): the rangefinder: march the camera's line of sight over the terrain caches; returns the distance to the

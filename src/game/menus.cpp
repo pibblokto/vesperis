@@ -17,7 +17,7 @@ struct KeyAction { int key; const char* label; };
 static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"},
         {KEY_LEFT_SHIFT, "SPRINT"}, {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"},
         {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"}, {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"},
-        {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
+        {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / SAMPLE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
         {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 std::string onOff(bool on) { return on ? "ON" : "OFF"; }
@@ -82,6 +82,7 @@ const RowList<SettingRow>& Game::settingRows() {
 void Game::updateTitle(const Input& in, double dt, double realDt) {
     titleYaw += realDt * 0.04;
     titleIdle += realDt; attractT += realDt;
+    audio.aboardOff();   // I-04: the title hears none of the rooms aboard
     { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
     if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; openScreen(GameState::HELP); helpPage = 2; }   // credits
     updateShipMotion(realDt);
@@ -147,8 +148,8 @@ void Game::renderHelp() {
     static const char* const page0[] = {
         "STARDRIFTER - FLIGHT CONTROL", "",
         "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
-        "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER",
-        "(TAB: PLAYER), THE CASE, THE DRONES OR THE CAPSULE",   // C-18: the drone bay
+        "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER,",
+        "THE CASE, THE DRONES, THE LAB'S DEVICES, THE CAPSULE",   // C-18: the drone bay; Z-04, Z-05: the microscope, the incubator
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
         "R             AIM AT A STAR: N NEXT, ENTER LOCKS IT",
         "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG THE AIM",
@@ -178,9 +179,9 @@ void Game::renderHelp() {
         "  DRONE: SPACE LIFTS OFF  W/S THRUST  A/D TURN",
         "         SPACE / SHIFT CLIMB, DESCEND, LAND  V VIEW",
         "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
-        "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
+        "M WAYPOINT  L MARK  U LAMP  K CALL THE CAPSULE",   // Z-04: one line (Z-03's pushed the footer off the page)
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
-        "L / U         MARK AT THE CROSSHAIR / THE LAMP",
+        "O / SHIFT+U   A SAMPLE (8 VIALS) / THE LAMP'S UV",   // Z-03
         "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
         "TAB           THE READINGS: TIME, SUN, AIR, GROUND",
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",

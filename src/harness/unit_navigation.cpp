@@ -977,7 +977,7 @@ void unitStates(const Check& check) {
         auto press = [&](int key) { pressKey(g, bi, key); };
         auto run = [&](double secs) { runFrames(g, bi, secs); };
         int consoles = 0;   // the console opened (its scene read), or the state it left the explorer in
-        auto console = [&]() { g.testCabinGoto(-1.2, 0.0, -PI / 2, 0.0); press(KEY_E); if (g.state != S::CONSOLE) return g.state; consoles++; return g.testScene(); };
+        auto console = [&]() { g.testCabinAtDevice(FACE_GOES); press(KEY_E); if (g.state != S::CONSOLE) return g.state; consoles++; return g.testScene(); };
         press(KEY_H); press(KEY_ESCAPE); press(KEY_ENTER); run(0.3);
         const S titleConsole = console();
         press(KEY_ESCAPE); run(0.2);
@@ -991,7 +991,7 @@ void unitStates(const Check& check) {
         std::string surface = "none";
         { std::ifstream f(pre + "save_3.txt"); std::string line; while (std::getline(f, line)) if (line.rfind("surface ", 0) == 0) surface = line; }
         press(KEY_ESCAPE); run(0.2);
-        g.testCabinGoto(0.0, 1.3, 0.0, 0.0); press(KEY_E);
+        g.testCabinAtDevice(FACE_FLIGHT); press(KEY_E);
         const bool bayRow = g.state == S::SHIPSCREEN && g.testShipScreenRow("THE DRONE BAY");
         press(KEY_ENTER);
         const bool bayOpen = g.state == S::DRONES;

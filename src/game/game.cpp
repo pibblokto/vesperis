@@ -26,6 +26,7 @@ Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH;
     spaceR.proj = Proj::fromHFov(70);
     cabinGrain.generate(0x5A1D, 5, 1);
+    leafGrain.generate(0x1EAF, 14, 0);   // I-04: the garden's leaves
     newGame();
     applySettings();
     openScreen(GameState::TITLE);   // B-432: opened from the game it resumes
@@ -142,14 +143,16 @@ void Game::resetExpedition(bool freshTelescope) {
     chartUp = false; chartHeld = StarChart(); chartT = -1;
     probe = ProbeState();
     bay = DroneBay();
+    kit.clear(); coldStore.clear(); scooped = false;   // Z-03
     for (const StateRow& r : STATE_ROWS) if (r.reset) (this->*r.reset)();   // U-05: a screen's own, last
 }
 
 void Game::newGame() {
-    t = 3.6e6;
+    t = EXPEDITION_T0;
     timeWarp = 1;
     almanacRunning = false;
     resetExpedition(true);
+    cabin = Cabin();   // I-02: a new expedition starts on the bridge, facing the great window
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -304,6 +307,7 @@ void Game::frame(const Input& inRaw, double realDt) {
     probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // Shift held on the probe's screen, this frame's clock x8
     if (simulating) updateProbe(realDt);   // the probe falls on the relay's clock (real time) wherever the explorer is aboard
     if (simulating) updateDrones(realDt);  // the drones' trip and the bay's cooldown on real time, wherever the explorer is
+    if (simulating) updateLab(realDt);     // Z-05: the lab's clock (its flasks' cultures, its jars) the drones' kind
     // the state's update; the ship moves on where its row says, the row taken before (a screen that closes still moves it)
     const StateRow& current = STATE_ROWS[(int)state];
     (this->*current.update)(in, dt, realDt);

@@ -53,10 +53,20 @@ Contents:
   sources with the newest harness), keeping the old arithmetic. A generation change is proven by stream and per-body fingerprint
   diffs against the old sources: the draws identical and the peoples' worlds unchanged.
 - Keep an old formula exact when a new term is zero: add the term after the old sum, never inside it.
+- A drawing's new knobs with defaults that reproduce the old (Z-04: a specimen's `still`, `wander`, drift and blur; the slide's `lod`
+  and `step`) let one compare of the old outputs (`life_look`) prove the old drawing untouched while the new caller uses them.
+- Drawing code moved into rows keeps each expression's shape: clang fuses a multiply into an add within one expression, so a
+  place made at build time and a clock added in the frame (a screen's `v`) is an ulp off one made in a single expression. A
+  centre added to a place the old code took from the origin is exact (an `fma` with 0 rounds once, as the product did) but for
+  the sign of a zero. A constant folded at compile time and the same sum made from a row at run time agree (I-01: the cabin
+  drawn from its rows, every picture the same).
 - A scratch oracle (the old code verbatim against the new, on random inputs) proves a rewritten integer pass. Prove a cone or edge
   test with a sweep where the effect shows (near a glow's edge an added term rounds to 0).
 - `regress` hashes few frames and no HUD: prove the HUD, the cabin, forms and screens with `flow`, `screens` and harness frames;
   anything animated with `stability <scene>`.
+- A picture measure over a mostly empty frame counts the field: C-17's mean difference called thin and faint forms alike in a
+  bright field (Z-02's microbes: 4.9% of pairs) that a dark field told apart (0.61%). Fit the frame to the form's first look and
+  say which way the pictures were drawn; check what is compared on a sample sheet (Z-02's first thumbnails were empty).
 - Timings: `unit` 3-6 min, `flow` 35-45 s, `bench check` about 40 s, `regress` seconds.
 - A run far slower with identical output is the environment (sleep, load, battery): run it again alone, beside back-to-back
   control runs of the previous binary.
@@ -74,6 +84,13 @@ Contents:
 - raylib's `GetTime` stops in sleep and `steady_clock` does not: set aside runs that slept. Tag every run uniquely: a repeated
   tag overwrites its CSVs and log. `rot.sh` resolves its binaries before its `cd`.
 - The buggy 2x bench row is noisy (drainage work). Isolate a pool change with the old pool behind the new interface.
+- A bench row added before others must not move the game's clock: the rows after it read the sun's place. I-02's ship rows,
+  stepped a sixtieth of a second each, put the later rows five seconds on and `buggy 2x` read 6.1-6.8 ms against 4.0, twice;
+  timed at one instant (`frame(in, 0)`) it read 4.0 again.
+- An early-out or a clip of a whole frame (I-02: the ship's rooms filled only in their arches' rows, the space view skipped with no
+  window in view) is proven by the frame drawn again without it and the pixels counted (`ship rooms`: none differ). It holds only
+  while what is in front covers every pixel: walls between rooms are slabs (two faces in one plane would fight), and every piece
+  along a curve shares its points (the well's sixteen with the landings, the dome's base with the parapet).
 - `tools/prove` (E-02) is the proof: a snapshot of the binary, the objects and every item's outputs, compared item by item. Run
   it alone: D-05's `trait_ice_halos` sweep frame differed from today's in 18 px by one step, and three runs alone all matched
   today's (D-05's was drawn beside other jobs).
@@ -149,11 +166,25 @@ Contents:
   function's IR at -O0 and without exceptions (`tools/samecode.py`): with exceptions, clang's `invoke`s and inferred `nounwind`
   follow the order it emits functions in, which a split changes. A chunk keeps the comments above it, so a comment the file
   had already cut off from its function travels with the wrong one (E-03: formsChecks' and agesChecks' sat above roomOpenness).
-- A unit check's fixed start point can lie in an ocean. The flow's `testCabinGoto` takes a pitch (a desk under the window band
-  needs -0.65 from 1.5 m).
+- A unit check's fixed start point can lie in an ocean. A cabin view takes a pitch (a desk's screen 1.1 m ahead and a metre under
+  the eye needs -0.6): the harness stands the explorer by the ship's plan (I-01: `testCabinView`, `testCabinAtDevice`), never by
+  numbers of its own, so a new plan moves its views with it (I-02: one check still held the old rack's place; it reads the plan's).
+- What a frame reports is the whole frame's: I-03's patches, kept a room at a time, were emptied by the next room drawn (the hall
+  through the library's arch) and the library's read none.
+- A walker round a ring with a way through it (I-02: the stair's well) must walk straight out of the way before it turns: a step
+  back into the way re-enters the stair, and auto-explore went round and round between the stair and the hangar. Steer round a
+  circle at the walker's own distance (never nearer than its edge), not toward a point beside it, whose straight line cuts it.
 - Pictures that print a time differ between runs by design: the landforms sheets' "COST N US", the town map's "IN N MS".
 - `charts rogues` named a drifter's chart's wanderers from the drifter's own system, but their indices are its former system's
   (`peoplesWorldOf`): it read past `sys.bodies` and printed freed memory, a different line each run (E-02 fixed the printout).
+- The harness includes every module's headers, so a new one's names meet all the others': Z-05's `Culture` met the peoples' (ruins.h),
+  its stages' `CS_COUNT` the probe's clouds and its pairs' `PR_COUNT` the pad's roles. Grep a new header's exact names first.
+- A test's pair must be able to live together: Z-05's first pairs, picked across worlds, came out mirrored or too warm for one of them.
+  Take both of one world (one genesis, one hand) and a medium where the slower of them grows best.
+- A site found on the planet function's 16 m samples is not the ground the landing makes (its finer relief, its tide): Z-07's coast
+  site 80 m inland landed the explorer in the sea. Land well clear (200 m) and let the game's own walk find the edge.
+- A test's picture of what the game writes is written as the game writes it: a micrograph is P's frame, its HUD and its caption beside
+  it; Z-07's first one turned photo mode on, which the game never does there.
 
 ## Pixels and the look
 
@@ -166,13 +197,18 @@ Contents:
   its own bank.
 - The mush averages shades across bank edges: two banks meet cleanly only where their ramps agree in light and colour over the
   shades both reach.
+- A per-pixel pass at 4x whose mush spans five pixels can evaluate a pixel in four and fill its 2 x 2 block (Z-04's slide: 45 ms to
+  12); a mesh's cost is its vertices, not its pixels, once it hits its cap (the electron's took half its 4x time at 1x), and drawn in
+  row bands it gains only where each band skips the rows of triangles it misses (147 ms to 40).
 - A scene's darkness scales the ramps' colours, not the shades; a lamp or a flash raises the frame's light itself
   (L = max(day, lamp, flash)). Colour-mixing layers (fog, haze, flash) composite in RGB with RGB ramp tables: a bank holds one
   colour per shade.
 - A sub-pixel silhouette is one framebuffer pixel at its own shade: paling it toward the fog makes ghosts. A point on a globe must
   outlive the mush: FB_SCALE+2 wide.
 - The banks are allocated per view (`docs/reference/02-rendering.md`'s table for each scene), each one thing within it: the
-  globe's 31 is body A's, the surface's 25-27 the peoples' (skipped when test-staged).
+  globe's 31 is body A's, the surface's 25-27 the peoples' (skipped when test-staged); a slide's 32 are its way of seeing's.
+- A part placed in a part's own frame needs that part's centre and axis: Z-02's colony cells all put their insides at the colony's
+  centre (one black blob) until a cell's frame carried where the cell lies.
 - Per-frame visuals get their own cheap noise (a gradient table at 4 ns against `gnoise2`'s 40 ns). Anchor sampling grids in
   world angle and distance (no shimmer); blend noise values, never coordinates, between frames; noise round a centre uses
   (cos, sin) times the arc's radius.
@@ -180,6 +216,25 @@ Contents:
   Judge a libm replacement in the frame, on the renderer's own input order, never by a micro-benchmark.
 - The pool: progressive work goes in slices inside the frame (worker timing depends on the machine). Decide pool changes at 4x;
   a pool on every core starves the game's own threads; one `notify_all` beats several `notify_one`; a row's cost counts pixels.
+- Light in the shades wants ramps that keep their hue at the top: I-03's sun patches on a dark floor came out grey while the
+  finishes' ramps ended in white; they end at 1.55 times the colour with a little white, and the lamps' powers were set by a model
+  of the floor's light first (four lamps of 4.6 summed to 2.7 under the hall's: clamped white).
+- Cutting surfaces into a light grid costs little when faces turned away are culled: I-03's ship has several times I-02's
+  polygons and draws its spaces no slower. A shape on a plane (a patch) lies there by `BLEND_ADD` with its depth a hair nearer and
+  unwritten: what is in front, or a hole behind, keeps it off.
+- A glow under tinted glass loses to the glass's sheen (the face's own shade wherever it outshines the pixel darkened): I-04's core
+  at 20 vanished under a sheen of 17, and a sheen over a grainy pit mottled the glass. Glass over a light darkens only. A thing that
+  slides under a floor sinks as it goes: 3 mm under it fought the floor's depth at a grazing angle. Z-05's jars vanished the same way
+  under their shelf's glass at a sheen of 30: a glass in front of lit things keeps a faint sheen (an eighth of the room's light).
+- A room seen asks for every colour in it, what stands behind the eye too: Z-05's jars' bands took the banks the stern bench's screens
+  needed. Ask only for what is drawn and in front of the eye, and rank a room's many small things after the screens near them. Z-06's two
+  screens behind the stern bench's eye took a flask's red the same way: a device behind the eye now asks none (the hall's sofa got its
+  red back too).
+- A device's home is a key: two devices asking one keep one colour (Z-06's sequencer first took 30, the drones' paint). Its colour keeps
+  R-404's 0.3 in RGB from every other screen's: the pastel middle is taken, so search the space (a saturated magenta and a deep green fit).
+- A fixture that only carries what the frame draws still needs a few millimetres of depth: its front is its corners' difference
+  (Z-06's tree on its wall). Which way a wall's t runs depends on the wall's yaw: look before trusting left from right (its tree came
+  out mirrored).
 
 ## Space
 
@@ -206,6 +261,13 @@ Contents:
 - A slope shadows only when steeper than the light; full-signal snow reads as stars. A cloud edge needs ~10 km and a horizon fade;
   heightfields seen from any pitch march per azimuth; expose for the subject.
 - Terrain fog sets how far cities show (a haze that thins with height is the user's call).
+- What must be a function of a place reads only what the world fixes: the rocks, the domes and the trees are dealt on the landing's
+  own grid, and a continuous field (a spring's heat) differs in its last digits from another landing's frame: quantise it (Z-03).
+- A light added over the frame changes bank where it beats the pixel's and adds within it where it does not: a switch alone made a
+  hard-edged disc of glow (Z-03).
+- A sea's beach carries no water in its vertices: its wet edge is the sea's level (and the tide) against the height (Z-03).
+- The capsule's screen draws no status: a line it must show is its caption's own (the scoop's), or every status of the moment would
+  take the caption (Z-03).
 
 ## Generation: the worlds
 
@@ -241,6 +303,16 @@ Contents:
   every row's arrays first, in order. It also copies a constexpr variable whole at each read (6.6 GB for
   `kindsOk(BUILT_KINDS)`): a `static_assert` reads a table built for it. After a change to how a table is built, compare its
   bytes between the compilers in the container (`build/b430/kdump.cpp`).
+- A new module's names meet every header in the harness: a global another module has fails at the link (`STAGE_NAMES` the
+  peoples', `PLAN_NAMES` the bestiary's), a type in the compile (`Species`, `BodyPlan`). Grep `src/` for a name before giving it
+  (Z-01: `Microbe`, `MicrobePlan`, `LIFE_STAGE_NAMES`).
+- A habitat a world has is not where its life lives: a venusian's ground is at 450 C under its living clouds, an ice moon's dust
+  is not its sea's. Z-01 draws species only in the livable habitats (the niches with a warmth of their own, the ground where the
+  mean lets the liquid be).
+- A pinned salt for home is found, not guessed: a scratch program against the build's objects steps the salt until home's facts
+  are the ones wanted (its water life its cell's oldest, ours, four letters), and the unit holds the id it gives.
+- `unitFromHash(h >> n)` spans [0, 2^-n) alone (it reads the top 53 bits): mix a shifted hash again before making it a share.
+  Z-02's first drawing made every grain of the section's rock pyrite and put every granule on one side of its cell.
 
 ## Generation: the peoples
 
@@ -302,6 +374,9 @@ Contents:
   byte-identical.
 - The user's targets: about 5% repeats at 100 texts, no generic "jars, wells, chiefs", distinct names, every civilisation its own.
   Catalogue dryness 4 cut the repeats at fifty from 41% to 28%.
+- A genre measured across a hundred peoples (Z-06's watermarks, one a people) has no catalogue's memory to vary it: every long
+  sentence needs three or four parts (some two thousand frames each) carrying the people's own words. Sentences from fixed pools
+  repeated 55% at a hundred; composed, 3.1%. A short sentence (under six words) is free: the measure leaves it out.
 
 ## Game, screens and sound
 
@@ -316,7 +391,17 @@ Contents:
 - Overlay and page states (STAR_MAP, the galaxy page) skip `drawCommonHUD` and the scene: check that statuses show there;
   render-tied work stops while they are open.
 - A key-scheme change needs a marker line in the save, not a generation bump.
-- The HUD's room: the decoder's column 23 characters; the key line from x 18 to 49; help 51 a line and 21 lines; key labels 15;
+- A pure function's input is saved whole: Z-03's vial line left out the bloom, so a vial loaded held a crowd thirty times thinner;
+  a flag added to a field's bits keeps the older lines readable.
+- A tile, a cap or a clamp of a place's size keeps its count with it: a species' tile clamped to its longest kept its 160 cells and
+  packed them 178 times too densely (53 s for a sheet of frames).
+- A `thread_local` named inside a pool's lambda is each worker's own (empty): bind it to a reference outside (Z-04's crash).
+- A tree drawn from its leaves' neighbours: sort the leaves so every clade is a run (`treeBefore`), keep each pair of neighbours' join;
+  the node of a run is its highest join, its two sides the runs either side of it (a Cartesian tree), drawn by recursion (Z-06's tree).
+- `%.2g` of a number of three figures prints it as an exponent (Z-06: "2.3E+02 MILLION YEARS"): two figures through the rounding to
+  whole tens, not the format.
+- The HUD's room: the decoder's column 23 characters; the key line from x 18 to 49; help 51 a line and 21 lines (Z-03's 22nd line
+  pushed the surface page's footer off the frame, found in Z-04); key labels 15;
   a 320 px line 53 (52 with the margins); the warp line owns y 24 on the right. Never truncate a label or a HUD line: drop a part,
   or place it.
 - Map labels need overlap avoidance (dy 0, ±9, ±18) and priorities (YOU and the cursor first); knots stay dimmer than markers;
@@ -331,7 +416,15 @@ Contents:
   A cabin facing spot reaches where the device shows whole.
 - Sound: hold levels by rendering (check the rms after adding effects: a hum and a 0.78 echo stacked to 0.165). Gate new receiver
   effects by the gain (0 at x1): the gain lifts the noise, not the loudness. Keep a meter's level and an overload's drive as two
-  readings. A synth peak of exactly 0.80 is the master clamp, which `RenderStats::clip` misses.
+  readings. A synth peak of exactly 0.80 is the master clamp, which `RenderStats::clip` misses. A sound made fuller by adding to it
+  is louder: I-04's library music clipped at 0.80 until its fullness took a share of its level (0.7 kept), the rms held and the
+  low end's share (58% to 68%) told it. A new sound draws its own noise (`aboardNoise`), so the old renders keep their bytes.
+- A walk's goals in a fixed order leave routes unwalked: I-04's bunk walked from the hangar up the stair and round to the quarters
+  first, and found auto-explore's rounding of a rail penned the walker in (one hard by the rail outside was taken for one inside it,
+  rounded from there it cut back in across the way off). A new goal is a new route: read `ship walk` whole.
+- An act's prelude breaks every harness timed in seconds after it (`run(7.5)` after the landing map's `Enter`): I-04's hatch's
+  drop came only with a boarding at the capsule (the plan's own words), so `C`'s landings kept their time. A harness reading a
+  directory clears what an earlier run left (the quarters' wall printed last run's photograph).
 - "On the air" is `audio.radio`: a machine programme has no speech or piece pointer.
 - A table of `Game`'s methods is a static member declared `const` in the class, defined `constexpr` in its own file (U-02): clang
   reads that definition as an inline variable (weak, emitted only where it is used), GCC as a plain one, so the file reads it out

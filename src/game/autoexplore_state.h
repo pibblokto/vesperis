@@ -50,4 +50,5 @@ struct AutoState {
     // the walk's way (its legs round what stands in it), the drive's and the flight's state, the unsticking
     std::vector<std::pair<double, double>> way; size_t wayI = 0; double goX = 1e18, goZ = 1e18, bestD = 1e18, stillT = 0, jetT = 0; int unstick = 0;
     double driveOff = 0, driveEvalT = 0, reverseT = 0; int circleDir = 1; bool chase = false;
+    bool sampleTapped = false; int samples = 0;   // Z-07: a sample step's O pressed; the samples it took
 };

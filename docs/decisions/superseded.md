@@ -138,6 +138,15 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - The case's instrument line says where it came from: `FROM <world> (<sector> / <body>)` [C-17]; replaced by [R-414]
 - The drone bay's rack keeps a trip's finds and places on its screen until the next trip [C-18]; replaced by [R-414]
 
+## The ship
+
+- The sun's patch falls on a room's floors, walls and box tops facing it, each a whole rectangle, cut to it [I-03]; replaced by
+  [B-434]
+- The banks are dealt in the sight, before the space view; looking out the pool is 9 and 21-30 (the space view holds 0-7, 11-20,
+  31) [I-02], [I-03]; replaced by [B-435]
+- Looking out, the pool leaves out the banks the space view left in the glass's box; 32 banks a frame at most [B-435]; replaced by
+  [B-437]
+
 ## Audio
 
 - A world's voice comes from the body's seed, leaning with its names' style as the music's timbres do [C-05]; replaced by [C-13],
@@ -328,3 +337,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [E-07]: log/6-1.4.0.md
 [U-01]: log/6-1.4.0.md
 [U-06]: log/6-1.4.0.md
+[I-02]: log/7-1.5.0.md
+[I-03]: log/7-1.5.0.md
+[B-434]: log/7-1.5.0.md
+[B-435]: log/7-1.5.0.md
+[B-437]: log/7-1.5.0.md

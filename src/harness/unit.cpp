@@ -52,6 +52,7 @@ const UnitGroup UNIT_GROUPS[] = {
     {"giants", "unit_kinds.cpp", 1, 2, unitGiants},
     {"traits", "unit_kinds.cpp", 1, 2, unitTraits},
     {"drifters", "unit_drifters.cpp", 1, 2, unitDrifters},
+    {"life", "unit_life.cpp", 1, 2, unitLife},
     {"basics", "unit_basics.cpp", 4, 3, unitBasics},
     {"signals", "unit_signals.cpp", 4, 3, unitSignals},
     {"forms", "civ_forms.cpp", 4, 3, [](const Check& c) { formsChecks(c); }},
@@ -86,6 +87,9 @@ const UnitGroup UNIT_GROUPS[] = {
     {"perf", "unit_proof.cpp", 4, 3, unitPerf},
     {"auto", "unit_navigation.cpp", 1, 2, unitAuto},
     {"states", "unit_navigation.cpp", 1, 2, unitStates},
+    {"ship", "unit_ship.cpp", 1, 2, unitShip},
+    {"search", "unit_search.cpp", 1, 2, unitSearch},
+    {"lab", "unit_lab.cpp", 1, 2, unitLab},
 };
 
 int testUnit(int argc, char** argv) {

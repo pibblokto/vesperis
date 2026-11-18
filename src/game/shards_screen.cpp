@@ -18,6 +18,7 @@
 #include "game.h"
 #include "ui.h"
 #include "peoples/records.h"   // the media
+#include "peoples/made.h"      // Z-06: the watermarks
 #include "core/rng.h"
 #include <cstdlib>
 #include <algorithm>
@@ -139,7 +140,23 @@ bool Game::openShardWorld(const std::string& key, int which) {
     int64_t sx, sy, sz; if (!Guide::parseStarKey(key, sx, sy, sz)) return false;
     int bi = bodyOfKey(key);
     Star s; if (!placeInSector(sx, sy, sz, s, true)) return false;
-    return buildShardWorld(shardWorld, s, bi, which);
+    if (!buildShardWorld(shardWorld, s, bi, which)) return false;
+    shardWatermarkAdd();
+    return true;
+}
+
+// Z-06: the open people's made species, when its watermark is held (sequenced): a record after theirs, read with their language (built
+// without it: the watermark teaches no word)
+void Game::shardWatermarkAdd() {
+    shardWorld.watermark = -1;
+    if (!shardWorld.valid || shardWorld.body < 0) return;
+    const MadeSpecies m = madeSpeciesOf(shardWorld.sys, shardWorld.body);
+    if (m.species < 0 || m.people != shardWorld.which || !guide.watermarks.count(shardWorld.key + "/M" + std::to_string(m.species))) return;
+    Shard w;
+    if (!madeWatermarkOf(shardWorld.sys, shardWorld.body, shardWorld.lore, m, w)) return;
+    shardWorld.watermark = (int)shardWorld.shards.size();
+    shardWorld.shards.push_back(w);
+    shardWorld.pieceForm.push_back(-1); shardWorld.pieceSeconds.push_back(0.0);
 }
 
 // C-04: the piece of the open world onto the synth, from the top; off it (the pointers cleared before anything they point at can move)
@@ -188,7 +205,7 @@ void Game::markShardRead() {
     if (!shardFresh || !shardWorld.valid || shardHeld.empty()) return;
     shardFresh = false;
     int idx = shardHeld[shardSel];
-    guide.decoded[heldShardKey(idx)] = (int)shardHeld.size();
+    guide.decoded[heldShardKey(idx)] = recordsHeld();
     toldValid = false;   // H-06: what the records told grows
     if (shardWorld.shards[idx].last && guide.ended.insert(endedKey()).second) {   // the world's last recording read: the log notes it and the timeline closes (`logEvent` saves the guide)
         logEvent("SHARD",
@@ -215,6 +232,15 @@ void Game::listShardWorlds() {
     for (const std::string& k : guide.shards) { size_t p = k.rfind("/S"); if (p != std::string::npos) held[k.substr(0, p)].insert(shardPeopleOf(atoi(k.c_str() + p + 2))); }
     // a friend's shards list their world too
     for (const std::string& k : guide.lent) { size_t p = k.rfind("/S"); if (p != std::string::npos) held[k.substr(0, p)].insert(shardPeopleOf(atoi(k.c_str() + p + 2))); }
+    // Z-06: and a made species' watermark its maker's
+    for (const std::string& k : guide.watermarks) {
+        const std::string wk = k.substr(0, k.rfind("/M"));
+        int64_t sx, sy, sz; Star s;
+        if (!Guide::parseStarKey(wk, sx, sy, sz) || !placeInSector(sx, sy, sz, s, true)) continue;
+        StarSystem wsys; wsys.generate(s);
+        const MadeSpecies m = madeSpeciesOf(wsys, bodyOfKey(wk));
+        if (m.species >= 0) held[wk].insert(m.people);
+    }
     shardWorldKeys.clear(); shardWorldWhich.clear(); shardWorldLabels.clear(); shardWorldTotals.clear();
     for (const auto& kv : held) {
         int peoples = 1; std::string names[2]; int totals[2] = {SHARDS_PER_WORLD, SHARDS_PER_WORLD};
@@ -256,6 +282,7 @@ void Game::listShardsHeld() {
                 i = shardLocalOf(i);
                 if (i >= 0 && i < (int)shardWorld.shards.size()) locals.insert(i);
             }
+    if (shardWorld.watermark >= 0) locals.insert(shardWorld.watermark);   // Z-06: by its year among them
     shardHeld.assign(locals.begin(), locals.end());
     std::sort(shardHeld.begin(), shardHeld.end(), [&](int a, int b) { int ya = shardWorld.shards[a].year, yb = shardWorld.shards[b].year; return ya != yb ? ya < yb : a < b; });
     shardSel = 0;
@@ -284,6 +311,7 @@ void Game::openShard(int sel) {
     if (!shardWorld.valid || shardHeld.empty()) return;
     int n = (int)shardHeld.size();
     shardSel = ((sel % n) + n) % n;
+    n = recordsHeld();   // Z-06: the language's count (a watermark teaches no word)
     int idx = shardHeld[shardSel];
     stopPiece(); stopSpeech(); shardFresh = false;
     std::string skey = heldShardKey(idx);
@@ -572,7 +600,7 @@ void Game::renderShards() {
         return;
     }
     const std::string& key = shardWorld.key;
-    int n = (int)shardHeld.size(), pct = (int)std::lround(100 * languageShare(n, shardWorld.lore.records));
+    int n = recordsHeld(), pct = (int)std::lround(100 * languageShare(n, shardWorld.lore.records));
     std::string name = upper(worldNameOfKey(key));
     if (shardsLevel == 1) {
         drawText(canvas, 6, 4,
@@ -595,7 +623,8 @@ void Game::renderShards() {
     int idx = shardHeld[shardSel]; const Shard& s = shardWorld.shards[idx];
     bool theLast = s.last && guide.ended.count(endedKey()) > 0;   // named as the last once read, not before
     // short of the medium's picture
-    std::string head = theLast ? fmt("%s - THE LAST RECORDING", shardWorldTitle(22).c_str()) : fmt("%s - SHARD %d OF %d", shardWorldTitle(22).c_str(), shardSel + 1, n);
+    std::string head = theLast ? fmt("%s - THE LAST RECORDING", shardWorldTitle(22).c_str())
+                               : (s.watermark ? fmt("%s - A WATERMARK", shardWorldTitle(22).c_str()) : fmt("%s - SHARD %d OF %d", shardWorldTitle(22).c_str(), shardSel + 1, n));
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
     if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // a friend's, credited
     const std::string date = upper(shardDate(shardWorld.lore, s));
@@ -706,7 +735,7 @@ std::string Game::recordSummary(int idx, int maxChars) const {
         bool foreign = false; const std::string* nm = shardNameOf(heldShardKey(idx), foreign);
         what = nm ? fmt("'%s' - %s", upper(*nm).c_str(), PIECE_FORM_NAMES[shardWorld.pieceForm[idx]])
                   : fmt("%s, %d S", PIECE_FORM_NAMES[shardWorld.pieceForm[idx]], (int)std::lround(shardWorld.pieceSeconds[idx]));
-    } else { std::vector<DecodedWord> w; decodeShard(s, shardWorld.lang, shardWorld.tongue, readAt, w); what = (s.chart ? "A CHART: " : "") + decodedText(w); }   // a chart by its caption
+    } else { std::vector<DecodedWord> w; decodeShard(s, shardWorld.lang, shardWorld.tongue, readAt, w); what = (s.chart ? "A CHART: " : (s.watermark ? "A WATERMARK: " : "")) + decodedText(w); }   // a chart by its caption
     return trunc(upper(what), maxChars);
 }
 // the pages' strip under the title: the three pages, the one shown white; the page's own note at the right

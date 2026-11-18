@@ -127,6 +127,8 @@ enum Trait {
     TR_SINGING_DUNES, TR_SINGING_ICE, TR_QUAKES,
     // the drifters' own (`TK_DARK`): never drawn, given to the bodies of a system with no sun by what they are (`darkTraitsOf`)
     TR_FROZEN_AIR, TR_EMBERS, TR_LIGHTS_LEFT_ON, TR_LIGHTS_IN_WATER,
+    // Z-03: a life trait given by a hash of its own (`BodyGen::make`), never drawn: red snow on the cold living worlds without a people
+    TR_SNOW_ALGAE,
     TR_COUNT
 };
 constexpr int TRAIT_SLOTS = 6;   // Q-01: a world's traits (`BodyGen::traits`): R-304's three, then three by kind of trait
@@ -234,6 +236,8 @@ enum KindShape : uint64_t {
     KS_SINGING_SAND = 1ull << 52,  // singing dunes: dunes of dry, sorted sand with slip faces, and an air to carry their hum
     KS_ICE_SONG    = 1ull << 53,   // singing ice: ice under an air that cracks and settles as the day warms and cools it
     KS_SEISMIC     = 1ull << 54,   // quakes: a crust that still moves (plates, a hot interior, a giant's tides) where the kind has no quakes of its own
+    // Z-03: red snow: the summer snow of a cold world whose life lives on its ground, where algae bloom in the melt (`TR_SNOW_ALGAE`, given)
+    KS_SNOW_ALGAE  = 1ull << 55,
 };
 
 // P-00: a star-class rule's effect on a kind's weight in `pickPlanetType`, w = w x mul + add ({1, 0} leaves it, {0, 0} rules it out),

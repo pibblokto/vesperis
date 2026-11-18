@@ -10,6 +10,10 @@ changing anything there.
 - `rules-galaxy-worlds.md`: bodies and orbits, kinds and made kinds, the almanac and the giants.
 - `rules-surface.md`: the planet function, materials and landforms, traits, water and drainage, sights, weather.
 - `rules-surface-site.md`: the site's caches and threads, the rings, what stands and walks, the vehicles, life.
+- `rules-life.md`: the living small (1.5.0): where life is, its species, the geneses and kin, the spores carried, the cache; the
+  forms and the slide; the genomes and the tree, the made species.
+- `rules-life-lab.md`: the search (the samples, the kit, the ultraviolet, the signs) and the laboratory (the microscope, the incubator and
+  the jars, the sequencer and the tree); the record (the catalogue, the counts, the samples logged).
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and the screens, controls and the frame, auto-explore.
@@ -17,6 +21,7 @@ changing anything there.
   marks.
 - `rules-game-screens.md`: how a state is made: its row in the states' table, what the frame runs for it; the ways in as rows; its
   controller; its way in and back, its own save lines.
+- `rules-ship.md`: the Stardrifter's interior (1.5.0's I series): its plan as rows, the mesh and the frame, the walk and the places.
 - `rules-audio.md`: the synth, levels, voices, music and instruments, the radar's and the drifters' sounds, the tape.
 - `rules-harness.md`: the harness's code, the unit, the flow and the tour, frames that repeat.
 - `rules-harness-scenes.md`: the scenes, the pinned sites and the test worlds.

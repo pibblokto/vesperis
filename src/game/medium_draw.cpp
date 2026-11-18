@@ -42,6 +42,7 @@ inline uint32_t mh(uint64_t s, int k) { uint64_t x = s + (uint64_t)k * 0x9E3779B
 // need please, just say what kind of medium this is ... For all the shards just explanation of what it is"): the medium, and for a piece on
 // a medium without a sound of its own what it is (a bone flute, notation, printed music); who reads or plays it, and the voice, went
 std::string Game::mediumLine(const Shard& s) const {
+    if (s.watermark) return "WRITTEN INTO A MADE LIFE'S GENOME";   // Z-06
     const int m = s.medium;
     if (m < 0 || m >= RM_COUNT) return std::string();
     if (s.music && !recordMediumSounds(m)) {

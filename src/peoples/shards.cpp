@@ -242,6 +242,7 @@ std::string personName(const Lore& L, uint64_t seed) { return personName(L, seed
 
 std::string shardDate(const Lore& L, const Shard& s) {
     std::string d = "year " + std::to_string(s.year) + " of " + L.city;
+    if (s.watermark) return d;   // Z-06: a genome keeps its year alone
     if (L.calendar == 1) d += ", moon " + std::to_string(s.month) + ", day " + std::to_string(s.day);
     else if (L.calendar == 0) d += ", day " + std::to_string(s.day);
     else if (L.calendar == 2) d += ", moon " + std::to_string(s.month);

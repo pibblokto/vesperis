@@ -18,8 +18,9 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   a companion from 20 degrees above its plane at six tenths of the first orbit: the disc arching over the shadow, the bent stars,
   the companion's stream) and each planet type from a parked view (plus a ringed gas giant); M5: `space_binary` (both suns from
   behind the primary), `space_binary_world` (a world of the companion), `space_comet` (a comet at periapsis with its tail, seen
-  from above its orbital plane), globes of the substellar, comet and companion types; the tests wait for maps (`warmMaps`) so
-  globes are textured. N0-01: the comet frame is rendered again 5 s later (the hashes must differ, the knot positions are
+  from above its orbital plane), globes of the substellar, comet and companion types; the tests wait for maps (`warmMaps`, the season
+  at the frame's time set first: B-438, else the frame made a world's map again and drew its globe flat) so globes are textured.
+  N0-01: the comet frame is rendered again 5 s later (the hashes must differ, the knot positions are
   printed), the comet's drift seen from the first planet over 500 s (x100) must exceed 4 px at 1x, and `space_comet_close` is
   rendered from the parking distance of 12 radii with the ship riding along, 3 s apart (over 500 px must change: the jets); N5:
   the gas giant globe is rendered again a day later (the hashes must differ: storms, `globe_GAS_GIANT_day_later.png`) and a frame
@@ -258,19 +259,60 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   (the home system, parked at its first world, every map waited for): its picture; the controller's command menu, each page's
   lines and picture; then its keys one a frame, its help's and its footer's, every row of the Esc menu, the guide menu, the
   flight computer's three pages and the settings entered by its label (`TestGame::testMenuRows`, the game's own labels), E at each
-  of the cabin's eleven devices found by the controller's "USE ..." line. After each key it prints the state, what is selected
+  of the cabin's devices from its row's stand (I-01: `cabinDevices`, in their order; fifteen now), found by the controller's "USE
+  ..." line. After each key it prints the state, what is selected
   (`testSelection`, no return variable) and the frame's hash, with a picture at each change of state. A key that leaves the state
   is followed by Esc, four at most (a screen that will not let go is printed, not waited on), then by a fresh game opened again;
   what writes a save or leaves the start (NEW EXPEDITION, QUIT, a flight, a landing, a save) runs last, and Esc after all. After
   every frame what threads build is waited for at one instant (`testSettle`: every map of the system, the cache held large enough;
   the scanner). Its probe falls into the first great storm the unit's probe group finds (named from the probe and from its
-  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments. U-06: then the rows, every
+  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments, Z-04: the cold store two vials
+  for the microscope (its keys: the list, a vial on the stage, each way, the zoom, the focus, the stage, tracking, the four things
+  done, the sheet, a name, a micrograph, a vial emptied); Z-05: a vial whose species were seen and a culture in the second flask for the
+  incubator (its keys: the flasks, the medium's fields and changes, as its world, a fresh broth, a strain's name refused, the chooser
+  and a species put in, a second's chooser left, the jars and their chooser, a flask emptied). U-06: then the rows, every
   row of the table in its order: opened by its row (`openScreen`, from the ship in its parking) or, a scene or a world set up first,
-  by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording; the capsule's way down and up,
-  with no commands, are toured above), its picture, the controller's pages, then each line of the command menu's first page run
+  by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording, Z-04: the microscope with two vials
+  of the home system's first worlds that show something in the cold store, Z-05: the incubator with its culture; the capsule's way down and up, with no commands, are
+  toured above), its picture, the controller's pages, then each line of the command menu's first page run
   as the controller runs it (`testPadCommand`: its keys a frame each), each followed by Esc. A state with no stop, a new screen,
   is toured there with no edit. About six minutes; the same twice and by one thread (output: stdout,
   `shots/tests/tour/NN_state_*.png` and `rows_NN_state_*.png`, each state's saves, guide, settings and keys under its prefix)
+* `ship rooms [scale ...]` and `ship walk` (I-02, `modes_ship.cpp`): `rooms` draws each of the eight spaces from its arch (its
+  first way's point inside it, facing in) and from its middle (the plan's view) at 1x and 4x
+  (`shots/tests/ship/<room>_<arch|middle>_<scale>x.png`), the light on and the hull polarised, parked at the start's world, each
+  at one instant once it holds still; for each it prints the rooms seen (their depth through the ways, their box on the screen
+  when not the whole frame), whether the space view was drawn, the banks dealt, the frame's time, and the pixels that differ when
+  the same frame is drawn with every room unclipped and with the space view drawn whatever is in view (`HarnessKnobs::shipWhole`,
+  `shipOutside`: none; the exit code counts the frames that differ). `walk` walks auto-explore's hands
+  (`TestGame::testShipWalkStep`) from the start to every device's stand (reached and faced) and to the laboratory, the quarters,
+  the engine room and back to the bridge (every arch walked), printing the rooms passed and the stair's floor every half second,
+  then into each room's corners from its middle; every frame's place on the plan's floors and off its colliders (`shipWalkable`)
+  and the floor's largest step in a frame (under 0.08 m) printed; the exit code counts the places not reached or faced, the frames
+  off the floors, the corners left and a jump (output: `shots/tests/ship/`, stdout)
+* `ship light [scale]` (I-03, `modes_ship.cpp`): the ship's light at 2x by default, parked at the start's world: each space from
+  its arch with the light on and off (`light_<room>_lit`, `_dark`; the two must differ), the sun's patches on the bridge's floor
+  through the great window and on the library's under its window at three of the sun's angles each, B-434's the laboratory's arch
+  from the hall with the sun low through its window (`lab_arch_sun`: no patch over the opening) (`TestGame::testSunAt` turns
+  the ship so the sun stands where asked in the ship's metres; a frame with no patch fails), the bridge's patches before and after
+  a degree of the ship's turn (the pixels that differ printed, as `pngdiff` of the two prints them), the prow from the great window,
+  the hull outside from the dome sunlit, depolarised (with the bridge so) and at the test drifter with no sun. Every frame prints
+  its daylight (the sun's way and light, the world's light), its patches and its banks, checked by `shipBanksWhole` (each dealt
+  bank one home's, never 0, 8 or 10, nor looking out 7, the outside's, B-437; at most 32 banks in the ship's palette); the exit code counts the failures
+  (output: `shots/tests/ship/light_*_<scale>x.png`, stdout)
+* `ship life [scale]` (I-04, `modes_ship.cpp`): life aboard at 2x by default, parked at the start's world. Twelve photographs first
+  (twelve of the plan's views, the HUD out, written as the game writes its photographs into `shots/tests/ship_life_gallery`), then the
+  quarters' wall lit and by night (`TestGame::testWaitPrints`: only the harness waits for the prints; twelve on the wall or it
+  fails), the garden at the expedition's start and two months on (they must differ; the home world's flora found), the shards'
+  shelves empty and with sixty-four worlds' shards (a world k holding k mod 16 + 1; they must differ), the library's wall of them,
+  the case's twelve instruments, the player's deck, Z-04: the microscope from its stand and the cold store's door empty and with
+  forty vials (five of its eight lamps lit; they must differ), Z-05: the incubator empty and stocked (`labStock`: a living world's
+  species in the twelve flasks, each in its best medium under the lights in turn, a luminous crowd in the dark, fifteen minutes on;
+  they must differ, and twelve filled) and by night, the jars' shelf with four worlds' jars settled, the laboratory's stern bench
+  whole, the drive's core at rest and in a flight (they must differ) and the
+  engine room so, the capsule in its cradle and the hatch's drop at five instants (`E` at the capsule, the landing map's `Enter`; the last must
+  differ from the cradle). Each frame's banks checked by `shipBanksWhole` and its time printed; the exit code counts the failures
+  (output: `shots/tests/ship/life_*_<scale>x.png`, stdout)
 * `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
   map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) (output:
   `shots/landmap_<TYPE>.png`)
@@ -300,14 +342,23 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   ground's caches, a class flip counts as a mismatch only when the two grades differ by more than 30%, and the line prints the
   site's light factor against the globe's; the felisian site moved onto snow under a dim star (light 0.62 on the ground, 0.35 on
   the globe: KI-309) and reads 105, so the count is 1 of 13 (output: `shots/consistency_<TYPE>.png`, stdout)
-* `flow`: scripted expedition: title, list, data, help, guide menu, rename the star by typing, star map (G-05: `Tab` to the
+* `flow`: scripted expedition: title, list, data, help, guide menu, rename the star by typing; I-04, after the telescope's photograph,
+  life aboard (`aboard_wall` its print on the quarters' wall, `E` at the bunk and the almanac's hour's rest from it, the desk's log,
+  the deck's player page, the garden, the core); star map (G-05: `Tab` to the
   galaxy, `starmap_galaxy`, four levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the
   flight, `starmap_flight`: the galaxy page with the line flown; G-06, after the belt and before the probe, which parks the ship
   where it needs it: the chart's cursor 3,000 ly coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab`
   looks, `starmap_look`, `Tab` back, `Enter` flies, `starmap_jumped` a second in, and at the arrival `starmap_arrived` with the
   crosshair printed; the minute of flight puts the five-minute autosave in it, so slot 0 is `DEEP SPACE ... IN SPACE` at the end),
-  arrival, approach, orbit, landing map, descent (save to slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
-  `surface2`, `Tab` again), sprint, jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase
+  arrival, approach, orbit, landing map, descent (I-04: boarded at the capsule, `drop` the hatch's drop two seconds in; save to
+  slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
+  `surface2`, `Tab` again; Z-03: three vials of the ground a few steps apart, `kit_line` the first's line, the cold store's three
+  printed at `back_in_space`; Z-04: then `E` at the microscope, `microscope_list` the cold store's vials, `Enter` and two seconds of
+  the first's slide, `microscope` with its line (its species, its preparation, the cells in view, the sheets, the log's FORM),
+  `microscope_sheet` with Tab, Esc twice; Z-05: `E` at the incubator, `incubator_choose` its chooser, `Enter` puts the first in flask
+  1 at AS ITS WORLD, its warmth turned to the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook),
+  `incubator` with its line (the species, its medium, its stage, its cells and spores), `incubator_jars` with Tab, Esc), sprint,
+  jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase
   view), drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`,
   `drone_readings` a second after it with `Tab` (R-414) and `Tab` again, `drone_chase`, S brakes, Shift lands, `E` out, the line
   `drone: ... top 320 km/h, 160 m up, landed ok after 13 s`), waypoint, C-07: the signal radar at the start (`radar_set` the set
@@ -319,7 +370,10 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   when the far scan is done (the view still on the Ghutreig: overloaded, the meter pinned red), `radar_far_hold` the view turned
   onto the farthest people's signal x32 hears (5,524 ly) with the longer hold filling, `radar_far_lock` its readout with the
   thousands, `radar_far_flight` Enter's flight, aborted at once by `V` so the flow goes on from where C-07's flight left it),
-  note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall, ascent, then reloads:
+  note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall, ascent (Z-07: before the reloads
+  `flow_auto_sample`, a game of its own landed 200 m inland of the flow's world's coast (`coastSite`), auto-explore begun on the ground
+  with its water outing planned, its sample at the water's edge and its look over the water: its steps, the vial's line, the log's
+  SAMPLE and the guide's count printed), then reloads:
   newest save (with the guide), and slot 2 which resumes the descent and reaches the surface; M6: `attract` (the title tour),
   `credits`, `photo` and `photo_flight` (free camera), `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01:
   parks at the first comet near the start (`comet` with the HUD motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from
@@ -342,7 +396,7 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   lock the nearest star again (the cabin view faces it), the landing map's cursor goes to a lit grassland site from the body's
   seed (`TestGame::testLandSite`; `J` had left it under the moon, in the sea at Heilya II), and when the arrival holds no living world
   the landing parks at the scan's first felisian world after the approach and orbit frames (Siophios, 0.97 ly from Heilya: thin
-  atmosphere, cratered, acidic); C-06: the shard decoder on the cabin's back wall (`decoder`, facing it; `shards_none` with an
+  atmosphere, cratered, acidic); C-06: the shard decoder in the library (`decoder`, facing it; `shards_none` with an
   empty guide; then three shards of Aieliaalas II put into the guide: `shards_worlds`, `shards_list`, `shards_decoding` a second
   into the recording (C-05: the words resolving as they are spoken), `shards_text` read at 46% with the speech skipped by Enter,
   the next shard likewise; then ten: `shards_list10` with every shard marked unread, `shards_full` the whole text,
@@ -359,9 +413,9 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   of its eras (`shards_eras`), `TAB` to its history as the shards read tell it (`shards_history`, the page's state and first rows
   printed), `TAB` back to the records; C-11: after the lending, the decoder's worlds turned with `TAB` to the ship's player
   (`player`), its first piece played and left playing as the decoder closes, the player's state printed at the flight (`vimana`,
-  its HUD line), on arrival and at the descent (stopped), the instruments' case on the cabin's left wall (`cabin_case`, `facing`
-  10); B-411: the hull made glass, seen from across the room with the light on (`cabin_glass_lit`: the desk, the capsule and the
-  cage solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the room dark round the stars); H-04: the
+  its HUD line), on arrival and at the descent (stopped), the instruments' case in the library (`cabin_case`, `facing`
+  10); B-411: the hull made glass, seen across the bridge with the light on (`cabin_glass_lit`: the flight desk and the console
+  arc solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the bridge dark round the stars); H-04: the
   longest of the world's first sixty records put into the guide and opened, its opening spoken (`shards_long`, `PAGE 1/3`), `DOWN`
   to its next page (`shards_long_page2`), `ENTER` speaking that page; C-13: three shards of each people of Eleinewai I (152 0 92)
   added and the decoder opened again, the worlds' list with that world listed once a people, named (`shards_peoples`), and the
@@ -371,7 +425,7 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   between the stars in the window band, its name), then the chart put down from the decoder; the chart's state printed at each
   step); C-09 ends the expedition with `roads_zoom`, the landing zoom over Aieliaalas II's land region with the old roads drawn as
   faint lines (R-415: with the peoples, `V`; the count and the layer's info printed), and C-18 after it with the drone bay over
-  the same world (`drones_rack` from the cabin's middle, `facing` 11; `drones_bay` its screen; `drones_launch` a second after
+  the same world (`drones_rack` from its stand in the hangar, `facing` 11; `drones_bay` its screen; `drones_launch` a second after
   Enter, drone 1 through its port; `drones_search` four seconds after the first stop; `drones_back` every drone docked, the finds
   printed), and every frame's line carries the seconds since the start, so a slow step shows (a first C-09 run took 930 s with the
   same output, the next 32); W-01 (2026-10-06) adds `almanac_ship` (the list from the parking at the start, 13 events),
@@ -383,7 +437,8 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   under it), `telescope_moon` (the widest other body tracked at the power that fits it), `telescope_name` (the text entry
   `NAME THIS MOON`), `telescope_named` (the line reads the name), the photo written as the test gallery's `screenshot_1.png` with
   its caption (`photo: THROUGH THE TELESCOPE X2: THE NEAR MOON  ROCKY MOON  64402 KM  6.4 DEG - IN ORBIT OF UNKNOWN ...`), then
-  stowed; the review's rework added `cabin_back` (the back wall's three sets in their colours, R-404) and `cabin_telescope`
+  stowed; the review's rework added `cabin_back` (I-02: `cabin_arc`, the bridge's console arc's three screens in their colours,
+  R-404) and `cabin_telescope`
   (facing the telescope's set) with `telescope_set` (the eyepiece opened from it by `E`) before the telescope block, and in it
   `telescope_plate` (the moon stepped deeper until the eyepiece's step is finer than the map's texel and a plate begins, then read
   out whole, `testTelescopeSettle`) and `telescope_plate_deep` (two steps deeper, read out whole), the plate's line printed with
@@ -404,7 +459,12 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   descent frames, and (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree
   tiers, hidden trees, points, the trees listed and their visits over the band threads, and the flora sections' milliseconds
   (`shots/tests/bench_forest.png`); `bench check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one
-  listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5, surface
+  listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5 (I-02: the
+  start on the bridge), the ship's spaces at 4x from their middles at one instant (I-02: the bridge 8.2, the hall 3.6, the library
+  2.8, the laboratory 2.9, the dome 6.0; I-03: the bridge facing the sun 3.6, its disc in the great window and its patches on the
+  floor, the ship turned to it and back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide, `lab time`'s at its 5 s,
+  in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms); Z-05: the laboratory stocked
+  (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks 4x`), surface
   2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13, herd draw 1x 0.6, drone 2x 3.3 (R-403: 60 frames at full thrust 200 m up with the
   camera tilted down 30 deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving
   from the seat through the game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through
@@ -923,7 +983,8 @@ catalogues, homes, texts and charts' marks pinned as D-04 left them).
 `regress` holds 24 hashes: five systems, ten maps, three site profiles (generation) and four frames at 1x (`scene_felisian_shore`,
 `scene_cratered_noon`, `scene_molten_night`, `space_S00`), hashed from the framebuffer indices after the mush with every map
 warmed, and since F-11 two more: the forest at 4x (`scene_felisian_forest_4x`, from its indices: B-423's frame) and the cabin at
-1x through the game (`cabin_1x`: the start's parking with the light on and the hull polarised, every map of the system made, the
+1x through the game (`cabin_1x`: I-02 the bridge, the start's parking with the light on and the hull polarised, every map of the
+system made, the
 game's RGB picture with its HUD drawn at one instant once it holds still), each drawn again by one thread in the same run: the
 regress fails when one thread draws one differently, and `bless` refuses then. They are written to
 `shots/tests/regress_forest_4x.png` and `regress_cabin_1x.png` for a look when their hash moves. Re-blessed 2026-09-27 (O1: the
@@ -942,13 +1003,15 @@ changes whenever a pixel changes, which is the point: run `./vesperis_test regre
 `./vesperis_test regress bless` only when the change is intended; note the reason in `docs/decisions/log/` when it is a look change.
 `bench check` prints the timings and fails when a budget is exceeded. Since F-11 a budget is about 1.5 times its row's median on
 the development Mac after F-10 and at least the median + 0.5 ms, so a change that gives a gain back fails: space 2x 3.1 ms and 4x
-9.5, surface 2x 2.8 and 4x 4.5, forest 2x 8.2, 4x 13 and 12 at the game's 3x3, city 2x 5.7 and 4x 8.3, capital 2x 5.4 and 4x 8.3,
+9.5, the ship's bridge 8.2, hall 3.6, library 2.8, laboratory 2.9 and dome 6.0 at 4x (I-02), Z-04: the microscope 15.6, Z-05: the
+laboratory stocked from its stern bench 3.5 (`flasks 4x`: 2.31 ms, the median of three, every flask lit), surface 2x 2.8 and 4x 4.5,
+forest 2x 8.2, 4x 13 and 12 at the game's 3x3, city 2x 5.7 and 4x 8.3, capital 2x 5.4 and 4x 8.3,
 the herd's draw 0.6, buggy 2x 6.1 and 4x 6.1, drone 2x 3.3, the belt 1.1, Vimana 2.0, the lamp 4x 7.0 (D-04: the `rogue_lamp`
 scene's thirty frames at 4x lit, against the same unlit: 4.7 ms either way), the telescope 2x 13 and 4x 28, probe 2x 8.9 and 4x
 13, the descent's first frame 26 and beside the capital 62, the sector map 8.2, the landing map 3.5, its zoom 3.9 and the zoom's
 build frame 22, the radar camera 3.8, a photo's PNG 11, the decoder 6.4, sunward 8.5 and sunaway 6.2, the sprint 5.7 and its worst
-frame at 1x 10 (a stall detector: one frame), an arrival's frames 6.6, the guide's save 1.5 and load 23 (38 rows since D-04's
-lamp; a recorded frame and an arrival's first frame have none: the writer's pace, the maps' threads). They are this Mac's with the
+frame at 1x 10 (a stall detector: one frame), an arrival's frames 6.6, the guide's save 1.5 and load 23 (43 rows since I-02's
+ship; a recorded frame and an arrival's first frame have none: the writer's pace, the maps' threads). They are this Mac's with the
 workers: `bench check <factor>` multiplies every limit for another machine or one thread, and a failure on a busy Mac is worth a
 second run (one run on battery with the Mac swapping read a stretch of rows 20-45% over their medians). The space and surface rows
 draw five frames at one instant after a scale's change before their timed frames (the new scale's buffers and tables). `bench`
@@ -1001,8 +1064,11 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   dunes as a slide down a slip face (the hum rising over a second, held three, dying as the sand runs on) at an Earth's grains'
   note and at Titan's, a thin-aired Mars' and a heavy world's gravity, with the note and the loudest frequency; the singing ice at
   dusk's level and at noon's, with the sounds counted; a quake under an air, through the boots of an airless world and on a
-  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them (output:
-  `shots/tests/sound_<name>.wav`, stdout (peak, rms))
+  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them. I-04: each room aboard as the frame
+  sets it (`Game::aboardSounds`, parked and in a flight, eight seconds each), the laboratory's bubbling and the garden's water
+  alone, and the player's music (the flow's world's first piece) on the bridge and in the library with its low end's share; the
+  exit code counts a render over the ground's bound (0.75) (output: `shots/tests/sound_<name>.wav`, `sound_room_<room>[_flight].wav`,
+  `sound_music_<bridge|library>.wav`, stdout (peak, rms))
 * `scene singing_dunes | singing_ice | quakes`: Q-03: the sounds' cues on the ground, each on the scan's first world with the
   trait under an air of a third of a bar or more (finders -99, -100, -101): the explorer on a dune's slip face of 15 degrees or
   more (over 4, 8 and 16 m: a face, not a ledge; no hazy world), the frame from the crest, then walking down it; on flat ice with
@@ -1097,7 +1163,116 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   `generate` gave it, and is walked through the made kinds as `kindOf` walks them (`kindSourceFits`, the first source of a row; a
   world taken goes no further). Per kind: the worlds it reaches, the ones it takes now, and where it takes any, the first salt from
   its own (its high word stepped, 4,096 tries) that takes none: the salt a new kind pins. With an argument, each world's hash and
-  share. Exit code 1 when the walk and `kindOf` disagree on a world (output: stdout)
+  share. Z-03: the given life trait too (red snow, `snowAlgaeSlot`: the worlds it may come to and those its hash gives it; exit 1
+  where it takes one). Exit code 1 when the walk and `kindOf` disagree on a world (output: stdout)
+* `life list [n]`: Z-01: the biota of the n landable worlds nearest home (12; its own system first, then the stars within 12
+  sectors by distance): each world's stage (and its second: fossils, or the protocells under carried spores), chemistry and
+  genesis (its id; its own, a kin cell's with its cell and index, a wanderer's; ours or mirrored, its letters, its age), its
+  habitats, its mean, how long its life has slept, and every species: its index, state, plan, niches, way (what it burns, its
+  pigment), oxygen, temperatures, salt, pH, dose, spores' years, life cycle, division, motion and taxis, glow, share, and a carried
+  spore's source; then the ship's three species (output: stdout)
+* `life survey [systems]`: Z-01: the first n systems of the scan region (1,500) and the forty drifters nearest home, by kind: the
+  worlds, their stages, those with fossils and with carried spores, their living species (the least, the most, the mean); whether
+  every landable kind but the furnaces shows something, the living worlds' species, the dead worlds' spores and how many outlast
+  their world's sleep, the spores carried; the home system's worlds with the spores carried to them. 14,091 worlds in 0.1 s
+  (output: stdout)
+* `life kin [ly]`: Z-01: the stars of the plane within ly of home (200): how many systems carry life of their own, their water life
+  its own genesis or its kin cell's (a fifth), the geneses of the other chemistries, mirrored and letters; home's genesis against
+  the pinned one; the kin cells' geneses with their systems, home's first; the twelve drifters nearest home, each with the star it
+  left, how long ago, whether that star's life is its own or a kin cell's, its system's living and dormant species. 18,968 stars
+  in 0.3 s (output: stdout)
+* `life plates [n]`: Z-02: a plate a world with life nearest home (4; home's first): each species in the ways of seeing that suit
+  it (`seeingsFor`, two at most) at the magnification that holds its body, a scale bar and its line; then a plate a stage and a
+  chemistry (prebiotic, simple, complex, colonial, dormant, fossil; water, acid, ammonia, hydrocarbon), sixteen species of it near
+  home, each plan and variant once first. `scale=2` for the plates to judge (output: `shots/tests/life_plate_<n>.png`,
+  `life_plates_<stage|chemistry>.png`)
+* `life strips [plan]`: Z-02: each act (`AN_*`: life, division, budding, a colony's release, sporulation, waking, the cyst,
+  lysis, engulfing, the bridge, the turns to light and to the field, the glow, the gathering, the fruiting, the colony's front, a
+  protocell's thread) in eight frames over its time, three species of it (the ship's first; a plan's two with one), the view
+  fitted to the box its frames cover, a swimmer followed. 17 strips in about 12 s (output: `shots/tests/life_strip_<act>.png`,
+  `life_strip_<plan>_<act>.png`)
+* `life distinct [species]`: Z-02: over the 300 worlds with species nearest home, every pair of a world's species by
+  `morphDistance` (none under `MORPH_ALIKE`, the nearest named); then 1,000 species' 96-px pictures in a dark field (their first
+  look's view), every pair's mean RGB difference (C-17's measure: alike under 6), the share alike (under 1.5%), the plans behind
+  them, and the evidence for the threshold (the share of pairs within each form distance whose pictures look alike); the sixteen
+  nearest pairs side by side and a sample of 64. Exit 1 when not distinct. About 1.5 s (output: stdout,
+  `shots/tests/life_distinct.png`, `life_distinct_sample.png`)
+* `life forms [plan]`: Z-02: every plan's every variant (`everyForm`: 75 forms of home's genesis) in the six ways of seeing, a
+  sheet a plan (output: `shots/tests/life_forms_<plan>.png`)
+* `life search [scene|all]`: Z-03: round a test scene's site, 97 places on a spiral out to 120 m (the feet first), each microhabitat
+  read there once with its count of places (its name, niche, mean, salt, shade, old rock) and what a vial of its first place holds
+  (each species' index, plan, state, decade and whether it grows there; the activity); then every place read again from a landing
+  300 m east, the same square metres in another frame: the same twice. `all` the search's 27 scenes (the mats, the shores, the soil,
+  the springs and vents, the salt, the ice and red snow, the crusts, the plumes, the walls, the dry, the acid, methane and ammonia,
+  the airless, a furnace): 2,619 places in about 25 s. Exit 1 where a place reads otherwise (output: stdout)
+* `life kit`: Z-03: the kit played (a TestGame) on the scan's first venusian world whose clouds hold life: the scoop's line in the
+  descent, a vial of the ground at the crosshair, the eight filled and the ninth refused, the climb aboard and the cold store's line
+  (output: `shots/tests/life_kit_<scoop|line|full|store>.png`)
+* `life auto`: Z-07: auto-explore's samples on its walks: a game landed 200 m inland of the coast of the scan's first felisian world
+  (`coastSite`: a wet point with dry ground three degrees east, the coast between them by halves) and one 80 m south of the first
+  terraced hot spring's pool of the scan (`springBands`' finder); each time auto-explore begun on the ground, its water outing planned
+  (`TestGame::testAutoWater`: a spring's pool first where one is in reach) and run till it took a sample (150 s at most): the steps it
+  went through, the vial's line and its niche, the frame of its look over what it sampled. About 15 s; exit 1 unless both took one
+  (output: stdout, `shots/tests/life_auto_water.png`, `life_auto_springs.png`)
+* `lab microscope` (`modes_lab.cpp`): Z-04: the microscope in a game (a TestGame, `MICROSCOPE`) on eleven samples found in the scan
+  region, each a world's square metre that holds its species of interest (`labVial`'s way: its niche, a warmth it grows at, the
+  fullest of 400 places): living water, acid, ammonia and hydrocarbon life from a drop, a dormant world's spores, old rock's fossils
+  (a section), a prebiotic world's protocells, and drops whose crowded swimmers turn to light, to the field and to food, and whose
+  spore former is stressed by warmth. Each its mount printed (the preparation, each kind's form, count, tile, depths, taxis and
+  stress) and every way of seeing at every zoom at its first look, the slide at 5 s (`lab_microscope_sample_<what>.png`); then the
+  strips: a cell tracked ten seconds (the stage following it), the light's crowd and a drop of food (L or F at the crosshair, 0 to 40
+  s, the turning kinds' cells within the spot counted: they must grow), the magnet's turn (M, M again at 8 s: the field's cells'
+  drift along x must turn from + to -), the warm stage (H, 0 to 90 s, the stage's warmth and the stressed counted), a fossil's
+  section at five objectives and in a bright field; then each species' sheet. About 6 s at 1x; exit 1 when a sample is not found or a
+  strip shows nothing of what it should (output: stdout, `shots/tests/lab_microscope_*.png`: 17)
+* `lab time`: Z-04: the densest slide (`labDenseVial`: the scan's first world with an abundant swimmer that turns to light, its
+  large armoured cells in a crowd of small ones) in each way at x100 and x400 and under the electron at x200 and x1,000, ten frames
+  each, the frame's parts timed: the specimens made, the slide drawn, the mush, the whole frame (at 4x about 10 ms in phase contrast
+  at x100, 42-47 under the electron at x200) (output: stdout)
+* `lab cultures` (`modes_cultures.cpp`): Z-05: twenty species of the scan region, each a kind of life (light, broth, hydrogen,
+  sulphide, iron, methane, a grazer, a predator, the gathering amoebae, a luminous one, a spore former, an encyster, a colony, a
+  halophile, a thermophile, a psychrophile, the acid's, the ammonia's, the hydrocarbon's, a dormant world's spores), each grown an hour
+  in four media (AS ITS WORLD, the standard broth at 30 C, its best, its hot edge): its curve by five minutes (log10 cells a millilitre,
+  `/spores`), the times its stages began, its doubling, any strain and its move; then six pairs, each of one world but the mirrored two
+  (a grazer and a small cell, a predator and a large cell, a light-feeder and a heterotroph, a fermenter and a hydrogen-eater, two
+  heterotrophs, two of mirrored hands), in the medium both grow best in: the relation, the winner, the cycle's turn, their curves; then
+  the incubator's screen in a game forty minutes on (the pairs, a dormant world's spores woken, the luminous crowd, a spore former at
+  its hot edge giving a strain). Under a second (output: stdout, `shots/tests/lab_cultures.png`)
+* `lab jars`: Z-05: the scan region's first living worlds whose wet silt holds three bands (two of water, then one of each other
+  chemistry), each made a jar in a game and drawn on the incubator's jars page at 0, 5, 10 and 20 minutes (its bands printed: the tone,
+  the depth in the silt, when it is full), then the shelf seen from the laboratory at twenty minutes, at 2x (output: stdout,
+  `shots/tests/lab_jars.png`, `lab_jars_shelf.png`)
+* `lab tree` (`modes_tree.cpp`): Z-06: a sequenced set in a game: the flow's world's species (the scan's first felisian world, where the
+  flow lands and samples), home's world's, a kin star's (home's genesis across stars), a world of a genesis of its own, a mirrored life's,
+  a drifter's and the star it left's (one deep branch), and the nearest made species, read on the sequencer (its screen halfway through
+  and read: its result printed, the guide's kin and watermark); the tree printed leaf by leaf (each genesis's head, each leaf's join with
+  the one above and its nearest kin) and drawn at its root, a drifter's leaf and the made one; the decoder opened on the made species'
+  people (its world listed by the watermark, the watermark opened in their tongue); then `lab kin 12`. Under four seconds (output: stdout,
+  `shots/tests/lab_sequencer.png`, `lab_tree.png`, `lab_watermark.png`)
+* `lab kin [r]`: Z-06: home's genesis, its partings and the ship's three species' markers; the systems within r sectors of home whose
+  water life is home's kin, their star's line and the common ancestor with the ship's own; the ranking over the region's species within
+  a deep branch (one world's, one system's, two stars' pairs: their common ancestors' ranges and their markers' agreement, any out of
+  order) and the pairs across geneses with none (output: stdout)
+* `lab catalogue` (`modes_tree.cpp`): Z-07: the record in a game: a guide as the lab fills it (the flow's world's four species: one seen
+  every way, grown, a strain and a name; one moving; a spore woken after 230 million years; a fossil; home's two, a kin star's two and a
+  mirrored life sequenced; the nearest made species and its watermark; 23 samples) and a friend's inbox file of their own sheets (a world
+  the explorer never saw, one of them sequenced and named; one the explorer saw too; one lent to them) imported through the guide's row:
+  what was lent, the guide read back and saved again byte for byte; the catalogue from the guide's row by world (its lent rows' cyan
+  pixels counted), a lent row chosen, by kin, the fullest species' sheet with its form live, under the electron, a lent one's sheet, a
+  species named from it; the statistics' first page, its LIFE page, the data sheet of the flow's world (its microbe line), a micrograph
+  taken on the microscope as P writes one and seen in the gallery. Under a second; exit 1 on a step failing (output: stdout,
+  `shots/tests/lab_catalogue.png`, `lab_life.png`, `lab_catalogue_gallery/`)
+* `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
+  its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
+  five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of
+  living), the words a text, the grammar's checks on each, the names against the history at the year, and the repeated frames at a
+  hundred (sentences of six words or more, names and numbers masked, the formulas left out; the records' aim 5%) with the most repeated.
+  About 25 s for a hundred; exit 1 on a check failing (output: stdout)
+* scenes `uv_mats`, `uv_shore`, `uv_stromatolites`, `spring_bands`, `red_snow`: Z-03: the lamp's ultraviolet at night (the sun 25
+  degrees down) looking down before the feet on an archean world's mats (`SCENE_MATS`), a living world's beach, an archean reef's
+  stromatolites (the white lamp out); a terraced hot spring's bands from 30 m south of its vent (`SCENE_SPRING_BANDS`); red snow
+  underfoot, the sun 15 degrees up behind (`SCENE_RED_SNOW`: the first red sample whose ground round it is red at four of nine
+  points 30 m apart and level within 8 m) (output: `shots/tests/scene_*.png`)
 * `stability <scene> <m/frame> [scale]`: B-319 addition: `skyline flips`, the pixels swapping between the sky and anything else
   per frame (in 1x pixel units) (output: stdout)
 * scenes `felisian_river`, `felisian_lake`: B-320: on the bank of the first river / lake found by `SurfaceSample::waterKind`, on
@@ -1667,7 +1842,8 @@ but a recorded frame (the writer's pace) and an arrival's first frame (its maps'
 `unit` counts its checks (`unit: N checks, M failures`; 320 at F-01) and prints the pool's dispatch (not checked): an empty
 `parallelFor` over eight bands after a rest of 2 ms and fifteen back to back. Its check `threads: the frames the regress skips` draws
 fourteen frames at 4x by the workers and by one thread in one run (`parallelThreadsOverride`): the shore through the surface renderer;
-through the game the landing map whole and zoomed, the cabin with the light on and off and with the hull glass both ways, the roof,
+through the game the landing map whole and zoomed, the cabin with the light on and off and with the hull glass both ways, the dome
+(I-02; it was the roof),
 the radar camera, the drones' rack with them out and outside the window, the ground, the nose camera and the sector map. A game's
 frame is drawn at one instant (`Game::frame(in, 0)`), the workers' twice first: a frame that changes by itself fails the check rather
 than proving nothing. The forest is not among them: it differs today (B-423) and joins with its fix.
@@ -1913,11 +2089,12 @@ and the summary counts the intervals over 17.5 ms.
 
 ## E-03: the harness in pieces (2026-10-24)
 
-The harness is `src/harness/` (46 files with E-02's fingerprints; `src/harness/CLAUDE.md` maps them), not one 2 MB file.
+The harness is `src/harness/` (57 files with E-02's fingerprints, Z-01's and Z-02's `life`, Z-03's search and Z-04's lab; `src/harness/CLAUDE.md` maps them),
+not one 2 MB file.
 
 * `help [md]`: every mode by group with its arguments, one line and its file (`MODES` in `main.cpp`); `md` the same as a table a
   group, for the docs' index (output: stdout)
-* `unit list`: the unit's 41 groups in its order, each with its file (output: stdout)
+* `unit list`: the unit's 46 groups in its order (Z-03: `search`; Z-04: `lab` last), each with its file (output: stdout)
 * `unit <group> ... [-q]`: those groups alone (`unit noise -q` in half a second); `-q`: stdout silenced while they run, only the
   failures and the count printed (output: stdout, exit code)
 

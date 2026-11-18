@@ -112,6 +112,10 @@ struct Bench {
     double slack = 1;
     double surface2x = 0, surface4x = 0, space2x = 0, space4x = 0, descentFirst = 0, runWorst = 0;
     double telescope2x = 0, vimana2x = 0, probe2x = 0, descentPeople = 0, capital2x = 0;
+    double ship4x[5] = {};   // I-02: the bridge, the hall, the library, the laboratory, the observatory at 4x
+    double bridgeSun4x = 0;  // I-03: the bridge facing the sun (its disc in the great window, its patches on the floor)
+    double microscope4x = 0; // Z-04: the microscope on the densest slide, in phase contrast at x100
+    double flasks4x = 0;     // Z-05: the laboratory's stern bench with every flask lit (the incubator, the microscope's camera, the window)
     int fails = 0;
     void press(int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 60); in.newFrame(); in.down[key] = false; }
     double bench(const char* name, int frames) {
@@ -162,6 +166,65 @@ void Bench::space() {
         double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60);
         if (s == 2) space2x = ms;
         if (s == 4) space4x = ms;
+    }
+    {   // I-02: the ship's spaces at 4x, each from its middle (the plan's views), the light on, at one instant (the clock the rows after them read
+        // stays as it was); then back to the start
+        const char* const ROWS[5][2] = {{"bridge 4x", "THE BRIDGE'S MIDDLE"}, {"hall 4x", "THE HALL'S MIDDLE"}, {"library 4x", "THE LIBRARY'S MIDDLE"},
+                                        {"lab 4x", "THE LABORATORY'S MIDDLE"}, {"dome 4x", "THE OBSERVATORY'S MIDDLE"}};
+        for (int i = 0; i < 5; i++) {
+            game.testCabinView(ROWS[i][1]); settle();
+            const double t0 = nowSec();
+            for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
+            ship4x[i] = (nowSec() - t0) / 60 * 1000;
+            printf("%-12s %.2f ms/frame\n", ROWS[i][0], ship4x[i]);
+        }
+        {   // I-03: the bridge facing the sun, the ship turned so it stands a quarter up over the bow (then turned back)
+            const double yaw = game.testShipYaw(), pitch = game.testShipPitch();
+            game.testCabinView("THE BRIDGE'S MIDDLE");
+            game.testSunAt(Vec3(0, std::sin(22 * DEG), std::cos(22 * DEG)));
+            settle();
+            const double t0 = nowSec();
+            for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
+            bridgeSun4x = (nowSec() - t0) / 60 * 1000;
+            printf("%-12s %.2f ms/frame (%d patches)\n", "bridge sun 4x", bridgeSun4x, (int)game.testCabinFrame().patches.size());
+            game.testShipAttitude(yaw, pitch);
+        }
+        {   // Z-04: the microscope at 4x on the densest slide (`lab time`'s: large armoured cells in a crowd of small ones) in phase contrast at x100,
+            // at `lab time`'s instant (5 s, the clock still); then under the electron at x200 (no budget: the large cells' meshes, its worst)
+            Vial v;
+            if (labDenseVial(v)) {
+                game.testColdStore().push_back(v);
+                game.openScreen(GameState::MICROSCOPE);
+                if (game.testScopeStage((int)game.testColdStore().size() - 1)) {
+                    const MicroscopeState& M = game.testScope();
+                    const double cx = M.mount.cx, cy = M.mount.cy, focus = M.mount.focus;
+                    game.testScopeView(WS_PHASE, 1, cx, cy, focus); game.testScope().t = 5; settle();   // `lab time`'s instant
+                    double t0 = nowSec();
+                    for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
+                    microscope4x = (nowSec() - t0) / 60 * 1000;
+                    printf("%-12s %.2f ms/frame (%zu specimens)\n", "microscope 4x", microscope4x, M.shown.size());
+                    game.testScopeView(WS_ELECTRON, 0, cx, cy, focus); settle();
+                    t0 = nowSec();
+                    for (int k = 0; k < 30; k++) { game.frame(in, 0); in.newFrame(); }
+                    printf("%-12s %.2f ms/frame (%zu specimens, Z-04, no budget)\n", "electron 4x", (nowSec() - t0) / 30 * 1000, M.shown.size());
+                }
+                game.closeScreen();
+                game.testColdStore().pop_back();
+            }
+        }
+        {   // Z-05: the laboratory stocked (`ship life`'s: a living world's species in the twelve flasks under the lights in turn, a crowd's own light,
+            // four jars) from its stern bench: the incubator's flasks lit, both screens, the window; then the lab emptied for the rows after
+            const size_t vials = game.testColdStore().size();
+            const int stocked = labStock(game);
+            game.testCabinView("THE STERN BENCH"); settle();
+            const double t0 = nowSec();
+            for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
+            flasks4x = (nowSec() - t0) / 60 * 1000;
+            printf("%-12s %.2f ms/frame (%d flasks lit, %zu jars)\n", "flasks 4x", flasks4x, stocked, game.testLab().jars.size());
+            game.testLab() = LabState();
+            game.testColdStore().resize(vials);
+        }
+        game.testCabinView("THE START"); settle();
     }
     {   // W-06: the telescope at its deepest magnification on the parked world (the globe fills the frame), 2x
         game.settings.renderScale = 2; game.applySettings();
@@ -646,7 +709,7 @@ void Bench::unbudgeted() {
                 pressF(KEY_Z); for (int i = 0; i < 5; i++) stepF();
                 // the decoder with a world's records listed (the flow's world)
                 for (int i = 0; i < 12; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
-                game.testCabinGoto(0.0, -0.8, PI, -0.65); for (int i = 0; i < 5; i++) stepF();
+                game.testCabinAtDevice(FACE_DECODER); for (int i = 0; i < 5; i++) stepF();
                 pressF(KEY_E); for (int i = 0; i < 10; i++) stepF();
                 if (game.state == GameState::SHARDS) { rowF("decoder 4x", 60, stepF, 6.4); writePNG("shots/tests/bench_decoder.png", game.output(), FBW, FBH); }   // 4.22 after F-10
                 else printf("decoder 4x   not opened (state %d)\n", (int)game.state);
@@ -754,7 +817,16 @@ void Bench::unbudgeted() {
 
 void Bench::budgets() {
     budget("space 2x", space2x, 3.1);           // 2.02 after F-10 (F-11: 12 -> 3.1)
-    budget("space 4x", space4x, 9.5);           // 6.33 after F-10 (a still camera: the backdrop kept)
+    budget("space 4x", space4x, 9.5);           // 6.33 after F-10 (a still camera: the backdrop kept); I-02: the start on the bridge
+    // I-02: the ship's spaces at 4x from their middles, budgeted at 1.5 times their medians of three runs
+    budget("bridge 4x", ship4x[0], 8.2);        // 5.44 (the great window: the space view and the bridge)
+    budget("hall 4x", ship4x[1], 3.6);          // 2.41 (the stair, the arches' rooms through them)
+    budget("library 4x", ship4x[2], 2.8);       // 1.87
+    budget("lab 4x", ship4x[3], 2.9);           // 1.92
+    budget("dome 4x", ship4x[4], 6.0);          // 3.98 (the dome's glass all round)
+    budget("bridge sun 4x", bridgeSun4x, 3.6);  // I-03: 2.40, the bridge facing the sun (its disc in the great window, its patches)
+    budget("microscope 4x", microscope4x, 15.6); // Z-04: 10.4 (`lab time`'s median of three), the densest slide in phase contrast at x100
+    budget("flasks 4x", flasks4x, 3.5);         // Z-05: 2.31 (the median of three), the laboratory stocked, from its stern bench
     budget("vimana 2x", vimana2x, 2.0);         // a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
     budget("telescope 2x", telescope2x, 13);    // the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
     budget("probe 2x", probe2x, 8.9);           // the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)

@@ -1,11 +1,12 @@
-# src/peoples/grammar: the records' grammar (107 .vg files on five shelves)
+# src/peoples/grammar: the records' grammar (109 .vg files on five shelves)
 
 `files.inc` lists them, three lines a file (`{"<path>",`, `#include "<path>"`, `},`): `GRAMMAR_FILES` (`shards.cpp`) in the
 parse's order. A file is a raw string (`R"VG(` its first line, `)VG"` its last). What a guard, a mark or a directive may
 name: `vesperis_test grammar schema`.
 
 ## The shelves (each file's genres and prefixes: `docs/reference/civilisations/grammar-files.md`)
-- `core/`: the root (`records.vg`), the world's and people's words, `culture_*`, `lexicon.vg`, `history.vg`, the charts'.
+- `core/`: the root (`records.vg`), the world's and people's words, `culture_*`, `lexicon.vg`, `history.vg`, the charts'; Z-06: a made
+  species' watermark (`watermark.vg`, `watermark_far.vg`: the root `watermark`, rules `wm.`, every word apart).
   `registers/`: an event told by kind (`annal*`, `letter_events*`, `news*`, `song*`, `log*`: `<register>.<kind>`).
   `ages/<age>/`: each age's genres. `genres/`: every age's. `peoples/sunlost/`: the people who lost their sun.
 - A file is named for its topic, uniquely across the shelves; a number means continued past the cap (`daycount2.vg`).

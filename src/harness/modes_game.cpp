@@ -18,9 +18,10 @@ struct Flow {
         printf("%-14s state=%d status='%s'  (%.1f s)\n", name, (int)game.state, game.testStatus().c_str(), nowSec() - t0);
     }
     void title();   // the title, the attract mode, the credits, space, the cabin, the console and the ship's screen
-    void decoder();   // the shard decoder on the back wall
-    void cabin();   // the roof, the glass hull, the back wall's sets, the case, the telescope's set, the list, the data, the almanac
+    void decoder();   // the shard decoder in the library
+    void cabin();   // the dome, the glass hull, the console arc's screens, the case, the telescope's set, the list, the data, the almanac
     void telescope();   // the telescope; then the help screen and the orbit view
+    void aboard();   // I-04: life aboard: the photograph on the quarters' wall, the bunk's rest, the desk, the player's deck, the garden, the core
     void radar();   // the signal radar
     void starmap();   // the star renamed, the star map and the galaxy, targeting, the flight and the arrival
     void landing();   // the landing and the ground: the approach, the descent, the walk, the buggy, the water
@@ -29,6 +30,7 @@ struct Flow {
     void chart();   // the next jump chosen on the chart
     void probe();   // the probe
     void roads();   // the old roads on the landing zoom
+    void autoSamples();   // Z-07: auto-explore on the coast of the flow's world, its walk to the water, the sample it takes
     void reload();   // the saves loaded again: the newest, then slot 2 mid-descent
 };
 
@@ -40,6 +42,7 @@ void Flow::title() {
     game.shotsDir = "shots/tests/test_gallery";
     game.moviesDir = "shots/tests/test_movies"; game.recFixedTake = true;   // M6-05: the recorder writes into shots/, take 1 overwritten
     remove("shots/tests/test_guide.txt");
+    for (int i = 0; i < 2; i++) remove(fmt("shots/tests/test_gallery/screenshot_%d.png", i).c_str());   // I-04: the quarters' wall prints only this run's
     applyTestScale(game);
     t0 = nowSec();
     run(0.5); shot("title");
@@ -49,16 +52,16 @@ void Flow::title() {
     for (int i = 0; i < (int)game.testSystem().bodies.size(); i++) game.testWaitMapOf(i);   // the system's maps first (made on their thread at a binary's own pace)
     run(1.0); shot("space"); printf("  %s\n", game.testDebugInfo().c_str());
     // walk to the GOES console, use it, then the front computer, the roof and the glass hull
-    game.testCabinGoto(-1.2, 0.0, -PI / 2); run(0.2); shot("cabin"); printf("  facing %d\n", game.testCabinFacing());
+    game.testCabinAtDevice(FACE_GOES); run(0.2); shot("cabin"); printf("  facing %d\n", game.testCabinFacing());
     press(KEY_E); run(0.1); game.testTypeText("SL 4"); run(0.1); shot("console"); press(KEY_ESCAPE);
-    game.testCabinGoto(0.0, 1.3, 0.0); run(0.2); press(KEY_E); run(0.1); shot("shipscreen"); press(KEY_ESCAPE);
+    game.testCabinAtDevice(FACE_FLIGHT); run(0.2); press(KEY_E); run(0.1); shot("shipscreen"); press(KEY_ESCAPE);
 }
 
 void Flow::decoder() {
     {
-        // C-06: the shard decoder on the back wall: empty; with three shards of Aieliaalas II in the guide (the first reading waits, the
+        // C-06: the shard decoder in the library: empty; with three shards of Aieliaalas II in the guide (the first reading waits, the
         // words resolving); with ten (every shard re-read, the whole text)
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); shot("decoder"); printf("  facing %d (7 is the decoder)\n", game.testCabinFacing());   // looking down at the desk from 1.5 m
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); shot("decoder"); printf("  facing %d (7 is the decoder)\n", game.testCabinFacing());   // looking down at the desk from 1.5 m
         press(KEY_E); run(0.1); shot("shards_none"); press(KEY_ESCAPE); run(0.1);
         for (int i = 0; i < 3; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         press(KEY_E); run(0.1); shot("shards_worlds"); press(KEY_ENTER); run(0.1); shot("shards_list");
@@ -141,7 +144,7 @@ void Flow::decoder() {
                     press(KEY_O); run(0.1); press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
                     game.testAimAtChartMark(); run(0.3); shot("chart_overlay"); printf("  held up in space, the view on the marked star: %s\n", game.testChartInfo().c_str());
                     game.testAimAtChartMark(0); run(0.3); shot("chart_overlay_figure"); printf("  the view on its first figure: %s\n", game.testChartInfo().c_str());
-                    game.testCabinGoto(0.0, -0.8, PI, -0.65);
+                    game.testCabinAtDevice(FACE_DECODER);
                     run(0.1);
                     press(KEY_E);
                     run(0.1);
@@ -181,7 +184,7 @@ void Flow::decoder() {
             // Khokurt) added to the guide, the decoder opened again lists the world once a people, named; the second people's list opened
             for (int i = 0; i < 3; i++) { game.guide.shards.insert("152,0,92/0/S" + std::to_string(i)); game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, i))); }
             press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
-            game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+            game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
             shot("shards_peoples"); printf("  the worlds' list with a world of two peoples: %s\n", game.testShardsInfo().c_str());
             press(KEY_DOWN); press(KEY_DOWN); run(0.1); press(KEY_ENTER); run(0.1);
             shot("shards_second_people"); printf("  the second people's list: %s\n", game.testShardsInfo().c_str());
@@ -195,7 +198,7 @@ void Flow::decoder() {
             Guide kept = game.guide; game.guide = Guide(); game.guide.genVersion = kept.genVersion;
             game.importInboxFile();
             printf("  a fresh guide imports the inbox: '%s'; %zu names in the inbox, %zu shards lent\n", game.testStatus().c_str(), game.guide.inbox.size(), game.guide.lent.size());
-            game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1);
+            game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1);
             shot("shards_lent"); printf("  the lent world's list: %s\n", game.testShardsInfo().c_str());
             int pi = -1;
             {
@@ -216,7 +219,7 @@ void Flow::decoder() {
         }
         {   // the ship's player: Tab at the decoder's worlds turns to it (the pieces and recordings held, what the radar caught); the first
             // piece played and left playing as the decoder closes: the radar below holds it, the flight carries it on the space HUD, the landing stops it
-            game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+            game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
             press(KEY_TAB); run(0.1);
             const int items = game.testPlayerItems();
             int first = -1; for (int i = 0; i < items && first < 0; i++) if (game.testPlayerItemLine(i).find(" music") != std::string::npos) first = i;
@@ -232,19 +235,41 @@ void Flow::decoder() {
 }
 
 void Flow::cabin() {
-    press(KEY_PAGE_UP); run(0.3); shot("roof"); press(KEY_PAGE_DOWN); run(0.1);
-    // B-411: the glass hull with the light on, across the room: what stands in it solid, a sheen on the glass
-    press(KEY_Y); game.testCabinGoto(1.4, -0.9, -0.35, -0.2); run(0.6); shot("cabin_glass_lit");
+    press(KEY_PAGE_UP); run(0.3); shot("dome"); press(KEY_PAGE_DOWN); run(0.1);   // I-02: the lift up to the observatory and down to the bridge
+    // B-411: the glass hull with the light on, across the bridge: what stands in it solid, a sheen on the glass
+    press(KEY_Y); game.testCabinView("TOWARD THE BOW"); run(0.6); shot("cabin_glass_lit");
     press(KEY_U); run(1.0); shot("cabin_glass"); press(KEY_Y); press(KEY_U); run(0.1);
-    game.testCabinGoto(0.0, 0.2, PI, -0.42); run(0.2); shot("cabin_back");   // the back wall's three sets in their colours (the decoder, the radar, the telescope), the head bent to the desks
-    game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); shot("cabin_case"); printf("  facing %d (10 is the instruments' case)\n", game.testCabinFacing());   // the case on the left wall
+    game.testCabinView("THE CONSOLE ARC"); run(0.2); shot("cabin_arc");   // I-02: the bridge's console arc, its three screens in their colours (the star map, the landing, the target)
+    game.testCabinAtDevice(FACE_CASE); run(0.2); shot("cabin_case"); printf("  facing %d (10 is the instruments' case)\n", game.testCabinFacing());   // the case in the library
     // the telescope's set, from where its screen is in the frame
-    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());
+    game.testCabinView("OVER THE TELESCOPE'S SET"); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());
     press(KEY_E); run(0.3); shot("telescope_set"); printf("  from the set: %s\n", game.testTelescopeInfo().c_str()); press(KEY_Z); run(0.1);
     press(KEY_TAB); run(0.1); shot("list"); press(KEY_ESCAPE);
     press(KEY_I); run(0.1); shot("data"); press(KEY_SPACE);
     // the system's events from the parking
     in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);
+}
+
+// I-04: life aboard: the telescope's photograph printed on the quarters' wall; E at the bunk (the almanac: its free row runs the clock an hour,
+// watched from the quarters), at the desk (the log), at the player's deck (the decoder's player page); the garden; the drive's core; back
+// to the bridge
+void Flow::aboard() {
+    game.testCabinView("THE QUARTERS' WALL"); run(0.2); game.testWaitPrints(); run(0.1); shot("aboard_wall");
+    printf("  %d prints on the quarters' wall\n", game.testPrints());
+    game.testCabinAtDevice(FACE_BUNK); run(0.2); printf("  facing %d (12 is the bunk)\n", game.testCabinFacing());
+    press(KEY_E); run(0.1); shot("aboard_bunk"); printf("  E at the bunk: %s\n", game.state == GameState::ALMANAC ? "the almanac" : "NOT THE ALMANAC");
+    const double before = game.testGameTime();
+    press(KEY_UP); press(KEY_ENTER); run(6.0);
+    printf("  rested from the bunk: the clock ran %.0f s, %s, in %s\n", game.testGameTime() - before, game.state == GameState::SPACE ? "back in space" : "NOT BACK IN SPACE",
+           shipRooms()[game.testCabinRoom()].name);
+    game.testCabinAtDevice(FACE_DESK); run(0.2); press(KEY_E); run(0.1); shot("aboard_desk");
+    printf("  E at the desk: %s\n", game.state == GameState::LOG ? "the log" : "NOT THE LOG"); press(KEY_ESCAPE); run(0.1);
+    game.testCabinAtDevice(FACE_DECK); run(0.2); press(KEY_E); run(0.1); shot("aboard_deck");
+    printf("  E at the player's deck: %s\n", game.state == GameState::SHARDS && game.testShardsTop() == 1 ? "the player's page" : "NOT THE PLAYER'S PAGE"); press(KEY_ESCAPE); run(0.1);
+    game.testShardsTop(0);   // the decoder opens on its worlds again for the stages after
+    game.testCabinView("THE GARDEN"); run(0.2); shot("aboard_garden");
+    game.testCabinView("THE CORE"); run(0.2); shot("aboard_core");
+    game.testCabinView("THE START"); run(0.2);
 }
 
 void Flow::telescope() {
@@ -278,7 +303,7 @@ void Flow::telescope() {
         press(KEY_Z); run(0.1); printf("  stowed: %s\n", game.testTelescopeInfo().c_str());
         // a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit
         // from the parking it had)
-        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);
+        game.testAimAtBody(game.testParkedBody()); game.testCabinView("THE BRIDGE'S MIDDLE"); run(0.2);
         in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(1.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
         shot("orbit_turn"); printf("  Shift+Right for a second: '%s'\n", game.testStatus().c_str());
     }
@@ -290,9 +315,9 @@ void Flow::radar() {
     {   // C-07: the signal radar: on at the start, a sweep of the sky (the scope filling), the view turned onto the first people's
         // signal within reach by the hook (the recording heard through the static), the hold, the lock, Enter targets its star, off
         // the set beside the decoder, looked down at from 1.6 m
-        game.testCabinGoto(-1.4, -1.1, PI, -0.6); run(0.2); shot("radar_set"); printf("  facing %d (8 is the radar set)\n", game.testCabinFacing());
+        game.testCabinView("OVER THE RADAR'S SET"); run(0.2); shot("radar_set"); printf("  facing %d (8 is the radar set)\n", game.testCabinFacing());
         press(KEY_E); run(0.3); shot("radar_on"); printf("  %s\n", game.testRadarInfo().c_str());   // E on the set switches the receiver on
-        game.testCabinGoto(0.4, -1.6, 0.0, 0.0);
+        game.testCabinView("THE START");
         in.down[KEY_RIGHT] = true; run(2.0); in.down[KEY_RIGHT] = false; run(0.3); shot("radar_sweep");
         int who = -1;
         for (int i = 0; i < game.testRadarSignals() && who < 0; i++) if (game.testRadarKind(i) == SIG_PEOPLE) who = i;
@@ -368,6 +393,7 @@ void Flow::landing() {
             press(KEY_TAB); run(0.1);
             for (int i = 0; i < lb; i++) press(KEY_DOWN);
             press(KEY_ENTER); run(2.0); shot("approach");
+            game.testWaitMapOf(lb);   // B-436: its map made before the orbit's frames (asked when it is a globe at the view's middle, it raced them)
             run(9.0); shot("orbit"); printf("  %s\n", game.testDebugInfo().c_str());
             press(KEY_C); game.testWaitMap(); run(0.2);   // the map's frames below (the screen reads the world on the map's thread)
         }
@@ -395,7 +421,15 @@ void Flow::landing() {
         press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // the sector zoom
         press(KEY_J); run(0.1); shot("landing_sky");
         game.testLandSite(); run(0.1);   // a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
-        press(KEY_ENTER); run(2.0); shot("descent"); printf("  the player at the descent: %s\n", game.testPlayerInfo().c_str());   // a landing stops it
+        {   // I-04: boarded at the capsule: Esc, E at the cradle in the hangar (the landing map again, the site kept), Enter: the hatch's drop first
+            double la, lo; int zoom;
+            game.testLandCursorAt(la, lo, zoom);
+            press(KEY_ESCAPE); run(0.1);
+            game.testCabinAtDevice(FACE_CAGE); run(0.2); press(KEY_E); game.testWaitMap(); run(0.1);
+            game.testLandCursor(la, lo); run(0.1);
+        }
+        press(KEY_ENTER); run(2.0); shot("drop"); printf("  boarded at the capsule: the descent's clock %.2f s (the hatch's drop under 0)\n", game.testTransT());
+        run(TestGame::DROP_SECONDS); shot("descent"); printf("  the player at the descent: %s\n", game.testPlayerInfo().c_str());   // a landing stops it
         game.currentSlot = 2; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false;   // save mid-descent to slot 2
         game.currentSlot = 1;
         run(6.0); shot("surface");
@@ -405,6 +439,14 @@ void Flow::landing() {
         in.mouseDx = 400; game.frame(in, 1.0 / 30); in.newFrame();
         run(0.5); shot("surface2");
         press(KEY_TAB); run(0.2); shot("surface_readings"); press(KEY_TAB); run(0.1);   // the readings (Tab) over the view and away again
+        {   // Z-03: three vials of the ground at the crosshair a few steps apart (the first's line), carried aboard at the climb below
+            const double pitch0 = game.testPitch();
+            game.testSetPitch(-0.8); run(0.2);
+            press(KEY_O); run(0.2); shot("kit_line");
+            for (int k = 0; k < 2; k++) { in.down[KEY_W] = true; run(1.0); in.down[KEY_W] = false; run(0.2); press(KEY_O); run(0.2); }
+            printf("  the kit: %d vials, the last '%s'\n", (int)game.testKit().size(), game.testStatus().c_str());
+            game.testSetPitch(pitch0); run(0.1);
+        }
         // sprint, jump + jetpack, the buggy
         in.down[KEY_W] = true; in.down[KEY_LEFT_SHIFT] = true; run(2.5); shot("sprint"); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_W] = false;
         printf("  sprint: stamina %.0f, speed %.1f m/s\n", game.testPlayerStamina(), game.testPlayerSpeed());
@@ -568,6 +610,62 @@ void Flow::landing() {
         press(KEY_K); run(0.5);
         press(KEY_Q); run(3.0); shot("ascent");
         run(6.0); shot("back_in_space");
+        printf("  aboard: %d vials in the cold store, %d in the kit\n", (int)game.testColdStore().size(), (int)game.testKit().size());   // Z-03
+        {   // Z-04: the microscope on the first vial: E at it (the cold store's list), Enter (the slide's first look), the sheet of the cell under the
+            // crosshair (Tab); Esc to the list and to the laboratory
+            game.testCabinAtDevice(FACE_MICROSCOPE); run(0.2); press(KEY_E); run(0.1); shot("microscope_list");
+            press(KEY_ENTER); run(2.0); shot("microscope");
+            const MicroscopeState& M = game.testScope();
+            int forms = 0;
+            for (const LogEntry& e : game.guide.log) forms += e.kind == "FORM";
+            printf("  the microscope: %s, vial %d, %s x%.0f, %zu species in the drop (prep %+d), %zu cells in view, %zu species' sheets, %d FORM in the log, '%s'\n",
+                   stateName(game.state), M.vial, SEEING_NAMES[M.seeing], game.testScopeMag(), M.mount.kinds.size(), M.mount.prep, M.shown.size(), game.guide.microbes.size(), forms,
+                   game.testStatus().c_str());
+            press(KEY_TAB); run(0.1); shot("microscope_sheet"); press(KEY_TAB);
+            press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
+        }
+        {   // Z-05: the incubator: E at it, Enter (the chooser: the species seen in the vials), Enter (the first into flask 1, AS ITS WORLD), its clock
+            // skipped twenty minutes (its hook) and the flask read; Tab the jars and back; Esc to the laboratory
+            game.testCabinAtDevice(FACE_INCUBATOR); run(0.2); press(KEY_E); run(0.1);
+            press(KEY_ENTER); run(0.1); shot("incubator_choose");
+            const int choices = (int)game.testIncub().choices.size();
+            press(KEY_ENTER); run(0.1);
+            const Flask& F = game.testLab().flasks[0];
+            const double asWorld = F.medium.tempC;
+            if (F.n > 0) {   // its warmth turned to its best with the keys (the warmth's field is the screen's first chosen): tens with Shift, then ones
+                const double want = std::round(F.culture.kind[0].s.tOpt);
+                for (int k = 0; k < 40 && std::fabs(F.medium.tempC - want) >= 10; k++) { in.down[KEY_LEFT_SHIFT] = true; press(F.medium.tempC > want ? KEY_MINUS : KEY_EQUAL); in.down[KEY_LEFT_SHIFT] = false; }
+                for (int k = 0; k < 20 && F.medium.tempC != want; k++) press(F.medium.tempC > want ? KEY_MINUS : KEY_EQUAL);
+            }
+            game.testLabSkip(20 * 60); run(0.5); shot("incubator");
+            const CultureNow n = game.testFlaskNow(0);
+            printf("  the incubator: %s, %d to choose from, flask 1 %s (%s, %s), AS ITS WORLD %.0f C turned to %.0f C (%s, %s), twenty minutes on %s: %.1f log cells, %.1f of spores\n",
+                   stateName(game.state), choices, F.n > 0 ? F.label[0].c_str() : "EMPTY", F.n > 0 ? MICROBE_PLAN_NAMES[F.culture.kind[0].s.plan] : "-",
+                   F.n > 0 ? WAY_NAMES[F.culture.kind[0].s.way] : "-", asWorld, F.medium.tempC, CULTURE_CELL_NAMES[F.medium.cell], CULTURE_ENERGY_NAMES[F.medium.energy],
+                   CULTURE_STAGE_NAMES[n.one[0].stage], n.one[0].cells > 0 ? std::log10(n.one[0].cells) : 0.0, n.one[0].spores > 0 ? std::log10(n.one[0].spores) : 0.0);
+            press(KEY_TAB); run(0.1); shot("incubator_jars"); press(KEY_TAB);
+            press(KEY_ESCAPE); run(0.1);
+        }
+        {   // Z-06: the sequencer: E at it, Enter (the chooser: the species seen), Enter (the first read), its clock skipped halfway and past its
+            // reading (the skip hook), its result; Tab the tree (its leaves, the geneses); Esc back to the sequencer, Esc to the laboratory
+            game.testCabinAtDevice(FACE_SEQUENCER); run(0.2); press(KEY_E); run(0.1);
+            press(KEY_ENTER); run(0.1); shot("sequencer_choose");
+            const int choices = (int)game.testLab().seq.choices.size();
+            press(KEY_ENTER); run(0.1);
+            game.testLabSkip(SEQUENCE_S / 2); run(0.2); shot("sequencer_reading");
+            game.testLabSkip(SEQUENCE_S / 2 + 1); run(0.2); shot("sequencer");
+            const SequencerState& Q = game.testLab().seq;
+            int kin = 0;
+            for (const LogEntry& e : game.guide.log) kin += e.kind == "KIN";
+            printf("  the sequencer: %s, %d to choose from, %s of %s read (%d letters%s), told %s, %d KIN in the log: '%s'\n", stateName(game.state), choices,
+                   Q.on ? Q.name.c_str() : "NOTHING", Q.on ? Q.world.c_str() : "-", Q.line.genesis.letters, Q.line.genesis.mirrored ? ", mirrored" : "", Q.told ? "yes" : "no", kin,
+                   Q.result.size() > 3 ? (Q.result[2] + " - " + Q.result[3]).c_str() : "-");
+            press(KEY_TAB); run(0.1); shot("tree");
+            const TreeState& T = game.testTree();
+            printf("  the tree: %s, %zu leaves (the ship's own three and the read), life began at least %d times\n", stateName(game.state), T.leaves.size(), T.geneses);
+            press(KEY_ESCAPE); run(0.1); press(KEY_ESCAPE); run(0.1);
+        }
+        game.testCabinView("THE START");   // aboard where the capsule was boarded (the hangar): the window for the stages after
         {   // a second landing (same world, another site) starts with no buggy
             printf("  before the second landing: %s\n", game.testMarksInfo().c_str());
             press(KEY_C); run(0.3); press(KEY_ENTER); run(8.0); shot("second_landing");
@@ -719,7 +817,7 @@ void Flow::roads() {
             printf("  %s; the plan's cores %d, its roads %d; %s\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD), game.testLandPeoplesInfo().c_str());
             press(KEY_V); press(KEY_Z); run(0.1); press(KEY_ESCAPE); run(0.1);
             // the drone bay over the same world: the rack, its screen, the drones sent (out of their ports), down there searching, back
-            game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);
+            game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_BAY); run(0.2);
             shot("drones_rack"); printf("  facing %d (11 is the drone bay)\n", game.testCabinFacing());
             press(KEY_E); run(0.1); game.testDronesSettle(); run(0.1); shot("drones_bay");
             press(KEY_ENTER); game.testDronesSettle(); run(1.0); shot("drones_launch");
@@ -732,6 +830,41 @@ void Flow::roads() {
             press(KEY_ESCAPE); run(0.1);
         }
     }
+}
+
+// Z-07: auto-explore takes samples on its walks: a game of its own (its saves and guide its own: the flow's newest save stays the probe's) landed
+// 200 m inland of the flow's world's coast, auto-explore begun on the ground with its water outing planned, run till it took a sample (two
+// minutes at most); the frame, its steps, the vial's line, the log's SAMPLE
+void Flow::autoSamples() {
+    StarSystem fs; int fb = -1; double la = 0, lo = 0;
+    if (!firstBodyOfType(PT_FELISIAN, fs, fb) || !coastSite(BodyGen::make(fs.bodies[fb]), fs.bodies[fb].radiusKm, la, lo)) { printf("auto-explore's samples: NO COAST\n"); return; }
+    TestGame g;
+    g.savePrefix = "shots/tests/flow_auto_save"; g.settingsPath = "shots/tests/flow_auto_settings.txt"; g.guidePath = "shots/tests/flow_auto_guide.txt";
+    g.keysPath = "shots/tests/test_keys.txt";   // its settings its own: the flow's files stay the flow's
+    remove(g.guidePath.c_str()); remove(g.settingsPath.c_str());
+    g.newGame(); g.setState(GameState::SPACE);
+    Input ain;
+    auto step = [&](int frames) { for (int i = 0; i < frames; i++) { g.frame(ain, 1.0 / 30); ain.newFrame(); } };
+    g.testParkAt(fs.star, fb); g.testLandCursor(la, lo);
+    ain.pressed[KEY_ENTER] = ain.down[KEY_ENTER] = true; step(1); ain.down[KEY_ENTER] = false;
+    for (int n = 0; n < 30 * 40 && g.state != GameState::SURFACE; n++) step(1);
+    step(60);
+    g.autoStart(AP_SURVEYOR, 7); step(1);
+    const bool planned = g.testAutoWater();
+    std::string way; double secs = 0;
+    while (planned && secs < 120 && g.autoOn() && g.testAutoCount(8) == 0) {
+        step(1); secs += 1.0 / 30;
+        const std::string d = g.testAutoDoing();
+        if (!d.empty() && way.find(d) == std::string::npos) way += (way.empty() ? "" : ", ") + d;
+    }
+    step(120);   // its look over the water
+    writePNG("shots/tests/flow_auto_sample.png", g.output(), FBW, FBH);
+    int logged = 0;
+    for (const LogEntry& e : g.guide.log) logged += e.kind == "SAMPLE";
+    const std::vector<Vial>& kit = g.testKit();
+    printf("auto_sample    auto-explore on the coast at %.3f %.3f: %s after %.0f s (%s): %s; the log's SAMPLE %d, the guide's samples %d on %zu world(s)  (%.1f s)\n", la, lo,
+           g.testAutoCount(8) ? "a sample" : "NO SAMPLE", secs, way.c_str(), kit.empty() ? "-" : g.testVialLine(kit.back()).c_str(), logged, g.guide.samplesTaken, g.guide.sampled.size(),
+           nowSec() - t0);
 }
 
 void Flow::reload() {
@@ -757,6 +890,7 @@ void runGameFlow() {
     f.decoder();
     f.cabin();
     f.telescope();
+    f.aboard();
     f.radar();
     f.starmap();
     f.landing();
@@ -765,6 +899,7 @@ void runGameFlow() {
     f.chart();
     f.probe();
     f.roads();
+    f.autoSamples();
     f.reload();
 }
 

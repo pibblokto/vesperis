@@ -1,5 +1,6 @@
 // TestGame's hooks defined out of line (test_game.h declares them; the game's own files keep none)
 #include "harness/test_game.h"
+#include "game/autoexplore_internal.h"   // Z-07: an outing planned (`testAutoWater`)
 #include "game/ui.h"
 #include "core/fs.h"
 #include "core/noise.h"
@@ -619,9 +620,32 @@ std::string TestGame::testAutoInfo() const {
                ax.records, ax.outings, ax.steps, ax.timeouts, ax.unsticks);
 }
 
+bool TestGame::testAutoWater() {
+    ax.groundBegun = true; ax.groundUntil = ax.clock + 600; ax.outingsLeft = 0;
+    ax.plan.clear(); ax.stepT = 0; ax.stepFirst = true;
+    return autoPlanOuting(AO_WATER);
+}
+
+bool TestGame::testNearWater(double withinM, double& x, double& z) {
+    const Player& p = surf.player;
+    auto dry = [&](double px, double pz) { return surf.site.waterNowAt(px, pz) < surf.site.groundHeight(px, pz) - 0.05; };
+    for (double R = 40; R <= withinM; R += 40)
+        for (int k = 0; k < 24; k++) {
+            const double a = k * TAU / 24, wx = p.x + std::sin(a) * R, wz = p.z + std::cos(a) * R;
+            if (surf.site.waterNowAt(wx, wz) < surf.site.groundHeight(wx, wz) + 0.3) continue;
+            for (double s = 4; s < R; s += 4)
+                if (dry(wx - std::sin(a) * s, wz - std::cos(a) * s)) {
+                    const double back = std::min(R, s + 80);
+                    x = wx - std::sin(a) * back; z = wz - std::cos(a) * back;
+                    return true;
+                }
+        }
+    return false;
+}
+
 int TestGame::testAutoCount(int what) const {
-    const int v[8] = {ax.stars, ax.bodies, ax.landings, ax.probes, ax.records, ax.outings, ax.timeouts, ax.unsticks};
-    return what >= 0 && what < 8 ? v[what] : -1;
+    const int v[9] = {ax.stars, ax.bodies, ax.landings, ax.probes, ax.records, ax.outings, ax.timeouts, ax.unsticks, ax.samples};
+    return what >= 0 && what < 9 ? v[what] : -1;
 }
 
 Vec3 TestGame::testViewDir() const {
@@ -848,14 +872,17 @@ std::string TestGame::testFrontInfo() const {
                e.frontCloud, e.cloudPattern, e.frontRain, e.frontCold, e.windKnots, compassName(e.windDir), e.temperatureC, e.fogDistance);
 }
 
-// R-404: the computers with a colour of their own and the smallest distance between two of them (nothing faced and the cage,
-// with no screen, left out)
-int TestGame::testScreenColours(double& minDist) const {
+// R-404: the computers with a colour of their own (the devices' rows but nothing faced and the cage, with no screen), the banks they
+// take between them, and the smallest distance between two colours
+int TestGame::testScreenColours(double& minDist, int& banks) const {
     minDist = 9; int n = 0;
+    bool used[SHIP_HOMES] = {};   // Z-06: a device's home may be past the banks (46, 47)
+    banks = 0;
     const RowList<CabinDevice>& d = cabinDevices();
     for (int i = 1; i < d.count; i++) {
         if (d.row[i].bank == BANK_LIGHT) continue;
         n++;
+        if (!used[d.row[i].bank]) { used[d.row[i].bank] = true; banks++; }
         for (int j = i + 1; j < d.count; j++) {
             if (d.row[j].bank == BANK_LIGHT) continue;
             const RGB &a = d.row[i].col, &b = d.row[j].col;
@@ -921,6 +948,16 @@ std::string TestGame::testSelection() const {
         case GameState::INSTRUMENTS: return fmt("level %d folder %d item %d", icase.level, icase.worldSel, icase.sel);
         case GameState::DRONES: return fmt("top %d", bay.listTop);
         case GameState::AUTO: return fmt("row %d", autoSel);
+        case GameState::MICROSCOPE:   // Z-04: the vials' row, or the slide: its way and magnification, a cell tracked, the sheet up
+            return scope.page == 0 ? fmt("vials row %d of %d", scope.sel, microscopeRows())
+                                   : fmt("%s %d %s x%.0f focus %.1f%s%s, %d events", scope.flask >= 0 ? "flask" : "vial", scope.flask >= 0 ? scope.flask : scope.vial,
+                                         SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "", (int)scope.events.size());
+        case GameState::INCUBATOR:   // Z-05: the page, the flask and the medium's field, the chooser's row
+            return incub.choosing ? fmt("choosing row %d of %d", incub.choiceSel, (int)incub.choices.size())
+                                  : (incub.page == 1 ? fmt("jars row %d of %d", incub.jar, (int)lab.jars.size()) : fmt("flask %d field %d, %d in it", incub.sel, incub.field, lab.flasks[incub.sel].n));
+        case GameState::CATALOGUE:   // Z-07: its order, the row chosen; on a sheet its way of seeing
+            return cat.page == 1 ? fmt("%s row %d of %d, its sheet in %s", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size(), SEEING_NAMES[cat.seeing])
+                                 : fmt("%s row %d of %d", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size());
         default: break;
     }
     return "?";

@@ -78,7 +78,7 @@ The orbital map uses `detail = 2 pi R * 1000 / 256 * 0.6` (about 110 km for R = 
 * **Craters with history** (`CraterMarks`): rays (young craters, 6-13 bright streaks to seven radii, albedo +0.3), multi-ring basins (r > 60 km, 55%), mare flooding of old large basins (flat floors, basalt), secondary fields around large craters raise the density of the 0.5 km pass.
 * **Volcanism**: felisian volcanic islands (0.25 R grid, calderas become lakes), thin-atmosphere shield volcanoes (0.35 R grid, 1400 m) with basalt plains, rocky old shields, icy cryovolcanic domes (25 km grid, bright fresh ice) and geyser spots (2 km grid), volcanic moons (two cone scales, lava in calderas and pools).
 * **Dune seas** (`duneField`): the prevailing wind is the body's `windAngle` flipped per hemisphere and turned per 30-degree band; styles transverse, barchan-like or star (`duneStyle`), wavelength `duneWl` 0.12-0.37 km; on thin-atmosphere lowlands (below 200 m) and felisian deserts (moist < 0.28, 5-700 m, flat).
-* **Seasons** (`BodyGen::season`, `StarSystem::seasonOf` = dot(spin axis, direction to the star)): the winter hemisphere's cap edge drops 11 degrees, the snow line 900 m; sea ice follows; tundra snows over; `seasonName` gives "NORTHERN SUMMER" etc. `SurfaceSite::init(..., t)` and `SpaceRenderer::setSeason` pass it; maps are regenerated per season step (eight per orbit). B-419: the season is the terrain's alone: what is made on a world (a people's plan, its extent, its histories, its settlements, roads and works, the scanner's sights) reads the planet without it (`unseasoned`: the generator itself where its season is 0, else a copy at 0, at every entry of those readers), so a people's towns stand where they stand whatever the season the explorer came in (a winter's sea ice had counted as land and its snow as ice sheet: nearly every place of a plan moved with the season, a tenth to a fifth of them came and went).
+* **Seasons** (`BodyGen::season`, `StarSystem::seasonOf` = dot(spin axis, direction to the star)): the winter hemisphere's cap edge drops 11 degrees, the snow line 900 m; sea ice follows; tundra snows over; `seasonName` gives "NORTHERN SUMMER" etc. `SurfaceSite::init(..., t)` and `SpaceRenderer::setSeason` pass it; maps are regenerated per season step (eight per orbit), each world's step and the season its generator is made at kept by its seed (B-438: by its index, another system's body of that index decided them). B-419: the season is the terrain's alone: what is made on a world (a people's plan, its extent, its histories, its settlements, roads and works, the scanner's sights) reads the planet without it (`unseasoned`: the generator itself where its season is 0, else a copy at 0, at every entry of those readers), so a people's towns stand where they stand whatever the season the explorer came in (a winter's sea ice had counted as land and its snow as ice sheet: nearly every place of a plan moved with the season, a tenth to a fifth of them came and went).
 * **New types**: ocean (global sea at -150 m with ice floes as worley plates toward the poles), metal (dark iron, sharp craters, MAT_METAL with speculars), volcanic (cones at two scales, MAT_SULPHUR plains, basalt, lava), carbon (MAT_GRAPHITE plains with diamond (quartz material) patches).
 * **Gas giants**: polar vortex pattern beyond 76 degrees in the map; zonal jets (longitude drifts by `0.06 sin(lat bandCount)` rotations) and night-side lightning are applied when the globe is drawn.
 
@@ -715,9 +715,19 @@ cut through it where a noise says; behind it the lagoon's floor lifted to 0.8-6 
 
 **The hot springs** (`landformsAt`, `springGrid`, `springOf`, `hotSpringsNear`): clusters of three to six springs within 0.7 km on a third of the
 cells of a 3 km grid in a geothermal province, each a terraced mound 80-300 m across and 3-17 m high (four to eight terraces): the vent's pool
-(`MAT_BRINE`, deep blue), white sinter round it (`MAT_SALT`), the terraces' rims white and their pools coloured by their mats (`MAT_MATS`, the
-thermophiles' orange: bright near the vent, darker as the water cools; every other terrace white where the eye sees the terraces, the inner half
-white from further), the runoff's mats streaking the ground round it.
+(`MAT_BRINE`, deep blue), white sinter round it (`MAT_SALT`), the terraces' rims white and their pools coloured by their mats (`MAT_MATS`; every
+other terrace white where the eye sees the terraces), the runoff's mats streaking the ground round it. Z-03: the pools' mats lie in bands by their
+water's heat (`springWaterC`: 92 C at the vent, falling down the terraces to 26 C at the outer pools; a terrace's at its middle where the eye sees
+the terraces, else at the point; Brock 1978): over 73 C bare (white sinter under clear water), yellow to 63, orange to 52, orange-brown to 38, brown
+below (`springBand`, `SPRING_BAND_ALBEDO`: one ramp on the ground turns with the shade); from further the inner third white. `springPartAt` finds
+where a point lies in a spring (the vent's pool, the sinter, a pool, the runoff) and its water's heat, for the search's samples.
+
+**Red snow** (`TR_SNOW_ALGAE`, Z-03): a life trait given, never drawn: after the new slots' draw, by its own hash (`SALT_SNOW_ALGAE`, a third of them,
+`SNOW_ALGAE_SHARE`) to the worlds of its process (`KS_SNOW_ALGAE`: the felisian, superhabitable, steppe, tundra, terminator, archean and snowball
+kinds) under a sun, without a people nor the home world, colder than 8 C at fifty degrees, with a new slot free and no trait of the life in them
+(`snowAlgaeSlot`); it moves no other trait. On their snow `snowAlgae` lays the algae's patches tens of metres across in regions of a few
+kilometres (`SurfaceSample::snowTint`, where the eye resolves them: within 100 m detail), drawn in bank 28 on the ground; the biota's snow alga
+lives in them (`life/biota.cpp`'s fixes).
 
 **The fungal forests** (`materialPalette`: the forest family's colour cream, ochre, white or a lilac grey; `make`: the second family's another
 pale) and **the petrified forests** (`landformsAt`'s province of the open dry ground; its density in `lifeTint` on the land for the surface's stone

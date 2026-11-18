@@ -1,11 +1,11 @@
 ---
 name: bench
-description: Measure Vesperis's frame cost against a previous binary with bench check in AB/BA pairs (best-of and median ratios, the 38 budgets, "level"). Use after a change to a hot path, and at a milestone's close.
+description: Measure Vesperis's frame cost against a previous binary with bench check in AB/BA pairs (best-of and median ratios, the 46 budgets, "level"). Use after a change to a hot path, and at a milestone's close.
 ---
 
 # Measure the frame against a previous binary
 
-- **Once:** `caffeinate -i ./vesperis_test bench check` prints the 38 budget rows (`budget <row> <ms> ms (limit <x>) ok`). A
+- **Once:** `caffeinate -i ./vesperis_test bench check` prints the 44 budget rows (`budget <row> <ms> ms (limit <x>) ok`). A
   milestone's own bench check runs without asking the user.
 - **In pairs:** `tools/prove bench <A> <B> [pairs]`. A and B are snapshot names (`build/prove/<name>/vesperis_test`) or binaries,
   e.g. `tools/prove bench e02-base ./vesperis_test`. It copies them to `./vt_pa` and `./vt_pb`, paths of one length (the launch

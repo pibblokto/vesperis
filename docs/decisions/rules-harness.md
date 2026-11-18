@@ -32,7 +32,7 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 ## Frames that repeat
 - A harness frame drawing a body waits for its map first (`testWaitMapOf`, `mapIfReady`): unwaited, code placement can flip it [E-02], [E-03]
 - A test waits for a thread at one instant (dt 0: `testWaitMap`, `testPlayerWaiting`), so a faster binary moves no clock [F-02], [F-05], [F-07]
-- A render sets the renderer's season before warming a body's map; `testParkAt` does both (with `waitMap` false it does not wait) [P-01], [F-02]
+- A render sets the renderer's season before warming a map (`warmMaps` takes its t); `testParkAt` both (`waitMap` false: no wait) [P-01], [F-02], [B-438]
 - `bothways` and the unit draw a frame at one instant (`frame(in, 0)`) twice by the workers, then by one thread: any difference fails [F-01], [B-423]
 - The unit holds frames the same by 1 to 8 threads (both-ways, `threads`), no dispatch off the main thread, no stale corner [A-02], [B-423], [F-04], [F-06]
 - A change to what threads share runs clean under ThreadSanitizer (the touched scenes, `screens`, `pool`) [F-02..F-07]
@@ -66,3 +66,4 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 [U-01]: log/6-1.4.0.md
 [U-06]: log/6-1.4.0.md
 [U-03]: log/6-1.4.0.md
+[B-438]: log/7-1.5.0.md

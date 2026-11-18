@@ -50,6 +50,7 @@ struct Shard {
     int recordAge = -1;     // the age of its year (AGE_*, the record's era: a modern people's medieval hymn is medieval), -1 past the records
     int medium = -1;        // what it was made on (RM_*, peoples/records.h: a clay tablet, a wax cylinder, a disc), -1 past the records
     int dark = 0;           // a drifter's people's sun in its year (`sunDarkAt`: 0 as ever .. 3 gone): its music by the cold
+    bool watermark = false; // Z-06: a made species' watermark (peoples/made.h), in its genome: read on the decoder beside the records, never taken
 };
 int musicShardsOf(const BodyGen& g);              // C-04: how many of the world's fifty are music (12..18)
 bool shardIsMusic(const BodyGen& g, int index);   // C-04: whether that one is

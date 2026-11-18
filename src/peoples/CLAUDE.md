@@ -15,8 +15,10 @@ instruments, works_sites, records, charts, music, plan.
   `buildings_dress`, `buildings_medieval`, `buildings_ages`, `buildings_works`; `forms` (`formMesh`) with `forms_colliders`
   and `forms_internal.h`; `ruins` (`ruinOfCell`, `cultureOf`) with `ruins_layout.h`, `ruins_settlement`, `ruins_towns`
 - The records: `records` (`recordsOf`), `shards` (`loreOf`, `shardTextsOf`; `GRAMMAR_FILES` is `grammar/files.inc`), `lore.h`,
-  `genres` (`writeRecordTexts`) with `genres_schema`, `grammar` (the `.vg` engine: `vgRecord`) with `grammar_internal.h`,
+  `genres` (`writeRecordTexts`; Z-06: `writeWatermark`) with `genres_schema`, `grammar` (the `.vg` engine: `vgRecord`) with `grammar_internal.h`,
   `grammar_parse`, `grammar_words` (`grammar/` has its own note)
+- Z-06: `made` (the made organisms: `madeSpeciesOf` a late people's world's made species, `madeWatermarkOf` its watermark as a record): the one
+  file here that reads `src/life` (tools/check.py's exception; its header names none of it)
 - Music and the air: `music` (`traditionOf`, `pieceOf`) with `music_ages` and `music_internal.h`, `charts` (`chartOf`),
   `instruments` (`instrumentsOf`) with `instrument_plans.cpp` (declared in instruments.h), `signals` (`signalsNear`,
   `programmeOf`), `drones` (the hauls)
@@ -33,5 +35,7 @@ instruments, works_sites, records, charts, music, plan.
 - Music and speech are judged printed: `music` as notation, `voice` word by word (spoken at about 0.8 of the nominal
   rate). A tongue's words are two letters at least.
 - The grammar's files move whole, and no alternative's line is ever rewrapped: its text keys it.
+- A text written outside the catalogue (a chart's caption, Z-06's watermark) takes no memory and tells no event: no people's records move
+  with it; its words go `@apart`.
 
 More, with the numbers: `docs/reference/lessons.md`, "Generation: the worlds, and the peoples".

@@ -705,7 +705,8 @@ const BuiltNames BUILT_NAMES[] = {
     {"life", "R <n>", 0, "life", "<kind> none", "life"},
 };
 constexpr int BUILT_COUNT = (int)(sizeof(BUILT_NAMES) / sizeof(BUILT_NAMES[0]));
-const char* const CXX_ROOTS[][2] = {{"record", "genres.cpp: a record"}, {"chart", "shards.cpp: a chart's caption"}};
+const char* const CXX_ROOTS[][2] = {{"record", "genres.cpp: a record"}, {"chart", "shards.cpp: a chart's caption"},
+                                     {"watermark", "genres.cpp: a made species' watermark (Z-06)"}};
 
 std::vector<std::string> wordsOf(const std::string& s) { std::vector<std::string> w; std::istringstream in(s); std::string x; while (in >> x) w.push_back(x); return w; }
 const std::vector<std::string>& schemaWords(const char* name) {

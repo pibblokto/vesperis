@@ -88,6 +88,11 @@ std::string Game::screenshotCaption() const {
                         probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) +
                 " - " + where;
     }
+    if (state == GameState::MICROSCOPE && scope.page == 1 && ((scope.vial >= 0 && scope.vial < (int)coldStore.size()) || scope.flask >= 0)) {   // Z-04: a micrograph
+        const int sp = microscopeSpeciesUnder();
+        where = fmt("A MICROGRAPH, %s X%s: %s FROM %s, %s", SEEING_NAMES[scope.seeing], thousands(std::round(microscopeMag())).c_str(),
+                    sp >= 0 ? speciesName(sp).c_str() : "THE SLIDE", scope.title.c_str(), scope.line.c_str()) + " - " + where;
+    }
     if (tele.on && state == GameState::SPACE) {   // a photo through the telescope names what the reticle rests on
         std::string line = telescopeTargetLine(true);
         where = fmt("THROUGH THE TELESCOPE X%.0f: %s", telescopeZoom(), line.empty() ? "THE SKY" : line.c_str()) + " - " + where;
@@ -163,7 +168,7 @@ void Game::takeShard() {
 // and read lent to the decoder (`Guide::lent`: read there in cyan, counted in the world's language, never taken: the ruins keep them)
 void Game::importInboxFile() {
     std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_inbox.txt";
-    int lentN = 0, probesN = 0, worldMarksN = 0, galaxyN = 0, n = guide.importInbox(p, &lentN, &probesN, &worldMarksN, &galaxyN);
+    int lentN = 0, probesN = 0, worldMarksN = 0, galaxyN = 0, microbesN = 0, n = guide.importInbox(p, &lentN, &probesN, &worldMarksN, &galaxyN, &microbesN);
     if (n < 0) { status(fmt("NO INBOX FILE (%s)", upper(p).c_str()), 5); return; }
     guide.save(guidePath);
     const int marksN = worldMarksN + galaxyN;   // the marks of the galaxy with the worlds' (the chart is a map too)
@@ -175,10 +180,12 @@ void Game::importInboxFile() {
         for (const std::string& k : guide.lent) { size_t q = k.rfind("/S"); if (q != std::string::npos) worlds.insert(k.substr(0, q)); }
         logEvent("INBOX", fmt("%d SHARDS OF %d WORLD%s LENT BY THE INBOX, TO READ ON THE DECODER", lentN, (int)worlds.size(), worlds.size() == 1 ? "" : "S"));
     }
-    std::string got = fmt("INBOX: %d NAMES", n);   // 50 characters at most with all four
+    if (microbesN > 0) logEvent("INBOX", fmt("%d SPECIES' SHEETS LENT BY THE INBOX, IN THE CATALOGUE IN CYAN", microbesN));   // Z-07: a friend's species
+    std::string got = fmt("INBOX: %d NAMES", n);   // 50 characters at most with all four; Z-07: a fifth where it fits
     if (lentN > 0) got += fmt(", %d SHARDS", lentN);
     if (probesN > 0) got += fmt(", %d RECORDINGS", probesN);
     if (marksN > 0) got += fmt(", %d MARKS", marksN);
+    if (microbesN > 0 && got.size() + fmt(", %d SPECIES", microbesN).size() <= 52) got += fmt(", %d SPECIES", microbesN);
     status(got, 5);
 }
 

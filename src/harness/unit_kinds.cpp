@@ -822,7 +822,7 @@ void unitGiants(const Check& check) {
                 gnb.update(shipPos);
                 Framebuffer fb; SpaceContext c;
                 c.sys = &sys; c.stars = &gnb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-                gsr.mapFor(B); gsr.setupPalette(fb, &sys, bi, -1, 1.0); gsr.render(fb, c);
+                gsr.setSeason(sys, t); gsr.mapFor(B); gsr.setupPalette(fb, &sys, bi, -1, 1.0); gsr.render(fb, c);
                 std::vector<uint32_t> px((size_t)FBW * FBH); fb.toRGB(px.data(), 1.0);
                 int red = 0, disc = 0;
                 const int cx = FBW / 2, cy = FBH / 2, r = FBH / 6;
@@ -896,9 +896,11 @@ void unitTraits(const Check& check) {
                 for (int j = 3; j < TRAIT_SLOTS; j++) {
                     const int t = g.traits[j];
                     if (!t) { for (int jj = j + 1; jj < TRAIT_SLOTS; jj++) if (g.traits[jj]) { slotsOk = false; why = b.name + ": a gap"; } break; }
-                    got++; carried[t]++;
+                    got += TRAITS[t].cls != TC_GIVEN; carried[t]++;   // the share with none is the draw's (Z-03: red snow is given after it)
                     if (!first[t].s.seed) { first[t].s = st; first[t].bi = bi; }
-                    if (TRAITS[t].kind == TK_FIRST || !traitEligible(b.type, t) || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) {
+                    // eligible: drawn, the kind's; Z-03: given by its own hash, where `snowAlgaeSlot` lets it come
+                    const bool eligible = TRAITS[t].cls == TC_GIVEN && TRAITS[t].kind != TK_DARK ? snowAlgaeSlot(b, g) >= 0 : traitEligible(b.type, t);
+                    if (TRAITS[t].kind == TK_FIRST || !eligible || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) {
                         slotsOk = false;
                         why = b.name + ": " + TRAITS[t].name;
                     }

@@ -95,6 +95,7 @@ void runConsistency() {
             double lat, lon;
             StarSystem::latLonFromBody(frame * toStar, lat, lon);   // the sub-solar point: noon, sun overhead
             // the site: within 3 deg of that point, standing on the material that covers most of the globe patch
+            sr.setSeason(sys, t);   // the map made for the season the globe is drawn in
             const PlanetMap& pm = sr.mapFor(b);
             int want = MAT_ROCK;
             {
@@ -118,7 +119,7 @@ void runConsistency() {
             nb.update(shipPos);
             Framebuffer fbg; SpaceContext c;
             c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-            warmMaps(sr, sys, bi);
+            warmMaps(sr, sys, bi, t);
             sr.setupPalette(fbg, &sys, bi, -1, 1.0); sr.render(fbg, c); fbg.mush(2);
             std::vector<uint32_t> globeRGB(FBW * FBH); fbg.toRGB(globeRGB.data(), 1.0);
             int wantBank = SpaceRenderer::globeBank(2, sys.bodies[bi].type, want);
@@ -759,6 +760,7 @@ int runScene(int argc, char** argv) {
         const CmpScene& sc = *found;
         StarSystem sys; SurfaceView sv; double t = 0;
         if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no body\n"); return 1; }
+        if (sc.uv) { sv.uvLamp = true; sv.lamp = false; printf("  the lamp's ultraviolet on\n"); }   // Z-03
         if (warm > 0) {
             Input in;
             for (double w = 0; w < warm; w += 0.05) { t += 0.05; sv.update(0.05, in, t, false); }

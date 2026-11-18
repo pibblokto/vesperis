@@ -217,7 +217,7 @@ static int musicDecoderFrames() {
             if (game.guide.shards.size() >= 6) break;
         }
         if (pick < 0) { printf("  %s: no piece of the age in the world's records\n", AGE_NAMES[a]); continue; }
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.3);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.3);
         const bool opened = game.testShardsOpenIndex(pick); run(a == AGE_FAR_FUTURE ? 20.0 : 6.0);
         const std::string fn = fmt("shots/tests/music_decoder_%s.png", AGE_FILE[a]);
         writePNG(fn.c_str(), game.output(), FBW, FBH); shots++;

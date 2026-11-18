@@ -22,4 +22,4 @@ scene_cratered_noon c652b41ec17386f0  # frame of scene cratered_noon at 1x (Wyar
 scene_molten_night f4834e469f70761c  # frame of scene molten_night at 1x (Shiesaimiori I)
 space_S00 94d6e6d85e491996  # space frame from the first orbit of Salyiesesh
 scene_felisian_forest_4x e99fe2aa57b7bdee  # frame of scene felisian_forest at 4x (Feeyeithis IV)
-cabin_1x 3c829d5fd83fb24b  # the cabin at 1x, the light on, parked at Heilya II
+cabin_1x 203b204554b02338  # the bridge at 1x, the light on, parked at Heilya II

@@ -81,6 +81,17 @@ static void qualityWater(const BodyGen& g, const Vec3& unit, double detailM, Sur
     }
 }
 
+// Z-03 (TR_SNOW_ALGAE): red snow. The algae bloom in the melting surface of the summer snowfields in patches some tens of metres across
+// (watermelon snow: Hoham and Remias 2020), thicker in the regions where the melt lingers (a field of a few kilometres); the patches where the eye
+// resolves them, the snow white from further (B-404's rule: the unfaded field, so every ring that shows them agrees)
+static void snowAlgae(const BodyGen& g, const Vec3& unit, double detailM, SurfaceSample& s) {
+    if (s.material != MAT_SNOW || !matVisible(0.025, detailM)) return;
+    const Vec3 p = unit * g.R;
+    const double region = smoothstep(-0.1, 0.35, fbm3(p / 2.5, g.sG + 341, 2));
+    if (region <= 0) return;
+    s.snowTint = region * smoothstep(-0.15, 0.35, 0.7 * fbm3(p / 0.024, g.sG + 342, 3) + 0.35 * fbm3(p / 0.010, g.sG + 343, 2));   // patches of cells, not single cells
+}
+
 // Q-02 (TR_GREAT_TIDES): the tidal flats. The local spring range (the trait's at the equator, the bulges' cos^2 of the latitude) decides a band
 // round the sea's level: the ground within six ranges of it is pressed toward the level (h' = S + H x (0.2 + 0.8 x^4), x the height over
 // the level in units of H: the intertidal zone takes the ground of two ranges either side, a flat kilometres wide on a gentle coast, the
@@ -189,6 +200,7 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
     }
     if (g.tideRangeM > 0) tidalFlat(g, unit, detailM, s);
     qualityWater(g, unit, detailM, s);
+    if (g.hasTrait(TR_SNOW_ALGAE)) snowAlgae(g, unit, detailM, s);
     if (g.dark) darkGround(c);
     if (s.material != MAT_LAVA) s.albedo = clampd(s.albedo, 0.03, 1.0);
     return s;

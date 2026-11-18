@@ -66,7 +66,7 @@ void Game::ensureTold() {
     const History& H = *shardWorld.history;
     std::vector<int> read; int lastIndex = -1;
     for (size_t i = 0; i < shardWorld.shards.size(); i++) if (shardWorld.shards[i].last) lastIndex = (int)i;
-    for (int i : shardHeld) if (guide.decoded.count(heldShardKey(i))) read.push_back(i);
+    for (int i : shardHeld) if (i != shardWorld.watermark && guide.decoded.count(heldShardKey(i))) read.push_back(i);   // Z-06: a watermark tells no event
     toldHistoryOf(H, *shardWorld.texts, read, lastIndex, told);
     {   // the timeline: each era its share of the width by the people's records written in it (an era of few or none a sliver), linear within
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, shardWorld.which);
@@ -82,7 +82,7 @@ void Game::ensureTold() {
     {   // the history page: the people's ways as the records told them, then the events told under their eras' headings, each line read as the
         // records are (the names kept)
         std::set<std::string> names; legendNameWords(H, told, names);
-        const int held = (int)shardHeld.size();
+        const int held = recordsHeld();
         auto addWords = [&](int kind, int item, int year, const std::string& label, const std::vector<DecodedWord>& words) {   // a line's words in rows the text's width
             LegendRow row; row.kind = kind; row.item = item; row.year = year; row.first = true; row.text = label;
             int x = HIST_TEXT_X;

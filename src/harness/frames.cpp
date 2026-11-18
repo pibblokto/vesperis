@@ -11,8 +11,11 @@ void saveFB(Framebuffer& fb, const char* path, double gain) {
     writePNG(path, rgbBuf.data(), FBW, FBH);
 }
 
-// maps are generated on worker threads (M9-15): the tests wait for the ones they are about to draw
-void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only) {
+// maps are generated on worker threads (M9-15): the tests wait for the ones they are about to draw, made for the season the frame
+// draws (`rules-harness.md`). B-438: a world's step is kept by its seed, so a map warmed before its season was set is made again by the
+// frame's own `setSeason`, and the frame drew the globe flat; by the index it had often survived, with another body's season
+void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only, double t) {
+    sr.setSeason(sys, t);
     for (const Body& b : sys.bodies) {
         if (b.type == PT_COMPANION) continue;
         if (only >= 0 && b.index != only) continue;

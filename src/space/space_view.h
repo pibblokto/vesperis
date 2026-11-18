@@ -96,6 +96,8 @@ class SpaceRenderer {
 public:
     Proj proj = Proj::fromHFov(70);
     std::vector<BodyScreenInfo> bodyInfo;
+    // I-02: the bodies' places on the screen (`bodyInfo`) as `render` leaves them, nothing drawn (the ship's walls hide the outside)
+    void bodiesOnScreen(const SpaceContext& c);
     void render(Framebuffer& fb, const SpaceContext& c);
     // M5-07/N0-01: a comet's coma, its ion tail with streaming knots, its curved dust tail and, when the
     // nucleus is a disc of `nucleusRpx` pixels, jets from its sunlit side (the nucleus is drawn by drawGlobe)
@@ -131,11 +133,14 @@ public:
     ~SpaceRenderer();
     // maps and generators follow the season; call before rendering a system at time t
     void setSeason(const StarSystem& sys, double t);
+    int seasonStepOf(const Body& b) const;   // B-438: the body's season step as last set, -1 none yet
 private:
     FrontMap frontMaps[4]; int frontMapNext = 0;
     static void frontCoarse(FrontMap& fm);
-    double curSeason[64] = {0};
-    int seasonBucket[64] = {0};
+    // B-438 (KI-442): a world's season step (eight an orbit) and the season its generator is made at, kept by its seed: kept by its index,
+    // another system's body of that index decided when its map was made again, and a map could keep a season a step off
+    struct SeasonStep { int step = -1; double season = 0; };
+    std::map<uint64_t, SeasonStep> seasons;
 public:
     // Draw all bodies of the system into a sky (from a surface), excluding one.
     void drawSkyBodies(Framebuffer& fb, const SpaceContext& c);

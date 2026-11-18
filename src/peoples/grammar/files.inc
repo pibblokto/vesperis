@@ -322,3 +322,9 @@
 {"peoples/sunlost/deephalls2.vg",
 #include "peoples/sunlost/deephalls2.vg"
 },
+{"core/watermark.vg",
+#include "core/watermark.vg"
+},
+{"core/watermark_far.vg",
+#include "core/watermark_far.vg"
+},

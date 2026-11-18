@@ -15,7 +15,8 @@
 - The backdrop is kept while the camera is still. `SpaceRenderer::BackdropKey` (space_view.h) holds every input of that
   pass (the camera, `Proj`, the size, `bandGen`): a new input belongs in it, and every write of `bandMap` bumps `bandGen`.
 - A body's map builds on its own thread: `mapIfReady` is null until it is done, `mapFor` waits. Frame paths ask; they never wait.
-- Maps and BodyGens follow the season: `setSeason` before rendering a system at a time t.
+- Maps and BodyGens follow the season: `setSeason` before rendering a system at a time t. A world's step is kept by its seed, as
+  every cache here is (B-438: by its index another system's body of that index decided it).
 - The banks (space_view.h's `Palette banks:`; `docs/reference/02-*` has the table): 0 stars, 1 sun, 2/3 bodies A/B, 6/7 water, 11 and 13-15
   body A, 16-19 body B, 12 the companion, 20 belt rocks, 8-10 the cabin.
 - What is in the sky is where the maths puts it. The sun is drawn by its angle per pixel; a globe is culled only behind the

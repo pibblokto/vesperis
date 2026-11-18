@@ -41,6 +41,7 @@ The rules in force for the framebuffer, the palette, the rasteriser and the fram
 ## Small things and the mush
 - No visible squares: grain perspective-correct and bilinear past 2.5 px a texel, material edges noisy, smooth shading by default [table], [B-311]
 - A point of light is a square `FB_SCALE` + 2 px wide in its glow's stops: a lone pixel dies in the mush [D-04]
+- A body is a point or a globe by its size at the view's middle; a point near a globe's size dims less by day [B-436]
 - A sub-pixel tower is one pixel at its own shade, never widened or paled; forms fog as terrain does; a window cell under two 1x px is its mean [A-02]
 - Against shimmer: far thin features are sized in screen pixels, never texels; sampling grids are anchored in the world [P-05], [P-06], [X-02], [G-05]
 
@@ -94,3 +95,4 @@ The rules in force for the framebuffer, the palette, the rasteriser and the fram
 [D-01]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [D-04]: log/6-1.4.0.md
+[B-436]: log/7-1.5.0.md

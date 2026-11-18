@@ -5,7 +5,7 @@ flight and the maps, a line each with the entries behind them (`log/`, by releas
 line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The rest of the game: `rules-game.md`.
 
 ## The cabin and its instruments
-- Every device has a row on the devices page; each cabin computer a bank and colour of its own, 0.3 apart in RGB (a unit check) [W-01], [W-06], [R-404]
+- Every device has a row on the devices page; each computer a colour and a home bank of its own, 0.3 apart in RGB [W-01], [W-06], [R-404], [I-02]
 - An instrument looked through is a camera you enter (`radarCameraFeed`, `CAM 04 TELESCOPE`), not a HUD overlay; one at the window at a time [C-07], [W-06]
 - At a parking the telescope's stabiliser holds parking and view in the body's frame (`tele.parkBF`, `viewBF`); stowed, the lap resumes [R-405]
 
@@ -81,3 +81,4 @@ line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The rest 
 [P-01]: log/6-1.4.0.md
 [D-01]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
+[I-02]: log/7-1.5.0.md

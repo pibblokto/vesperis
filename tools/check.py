@@ -3,8 +3,10 @@
 
 - No raylib include outside src/platform_raylib.cpp: src/platform.h is the boundary.
 - The layering: src/core includes only src/core; src/galaxy (the worlds) only src/core and itself, but for the worlds' two
-  readers of the peoples (E-09: landmarks.cpp, planet_bodygen.cpp); src/peoples only src/core, src/galaxy and itself;
-  src/space and src/surface nothing of src/game, nor platform.h.
+  readers of the peoples (E-09: landmarks.cpp, planet_bodygen.cpp); src/life (Z-01: the living small) only src/core,
+  src/galaxy and itself; src/peoples only src/core, src/galaxy and itself, but for its one reader of the living small (Z-06:
+  made.cpp, the made organisms); src/space and src/surface nothing of src/game,
+  nor platform.h.
 - No C++ line in src over 300 characters (E-12 wrapped those over 200; a `.vg` line is never wrapped: its text is its key).
 - Every .cpp and .h is named in its directory's CLAUDE.md (src/'s own files in the root CLAUDE.md), by its name without the
   extension, so that the maps stay true.
@@ -25,9 +27,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"')
 RAYLIB = re.compile(r'^\s*#\s*include\s*[<"](raylib|rlgl|raymath)\.h[>"]')
-LOWER = {'core': {'core'}, 'galaxy': {'core', 'galaxy'}, 'peoples': {'core', 'galaxy', 'peoples'},
+LOWER = {'core': {'core'}, 'galaxy': {'core', 'galaxy'}, 'life': {'core', 'galaxy', 'life'}, 'peoples': {'core', 'galaxy', 'peoples'},
          'space': None, 'surface': None}   # None: anything but game/ and platform.h
 WORLDS_READING_PEOPLES = {'galaxy/landmarks.cpp', 'galaxy/planet_bodygen.cpp'}   # E-09: the scanner's sights; a world's people
+PEOPLES_READING_LIFE = {'peoples/made.cpp'}   # Z-06: the made organisms, a world's species
 LONG = 2000
 LONG_CPP = 300   # E-12: src's C++ lines
 
@@ -105,6 +108,8 @@ def main():
             tdir = trel.split(os.sep)[0] if os.sep in trel else ''
             allowed = LOWER[top]
             if tdir == 'peoples' and rel.replace(os.sep, '/') in WORLDS_READING_PEOPLES:
+                continue
+            if tdir == 'life' and rel.replace(os.sep, '/') in PEOPLES_READING_LIFE:
                 continue
             if (allowed is not None and tdir not in allowed) or (allowed is None and (tdir == 'game' or trel == 'platform.h')):
                 problems.append('src/%s:%d: includes %s (src/%s may not)' % (rel, i, trel, top))

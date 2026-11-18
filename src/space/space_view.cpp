@@ -68,20 +68,26 @@ void drawStarField(Framebuffer& fb, const std::vector<Star>& stars, const Vec3& 
 }
 
 void SpaceRenderer::setSeason(const StarSystem& sys, double t) {
-    for (int i = 0; i < (int)sys.bodies.size() && i < 64; i++) {
-        double s = sys.seasonOf(i, t);
-        int bucket = (int)std::floor((s + 1.0) * 3.999);   // eight steps per orbit
-        if (bucket != seasonBucket[i] || std::fabs(s - curSeason[i]) > 0.3) {
-            seasonBucket[i] = bucket; curSeason[i] = s;
-            gens.erase(sys.bodies[i].seed);   // the map's seasonBucket no longer matches: regenerated on request
-        }
+    for (int i = 0; i < (int)sys.bodies.size(); i++) {
+        const double s = sys.seasonOf(i, t);
+        const int step = (int)std::floor((s + 1.0) * 3.999);   // eight steps per orbit
+        SeasonStep& st = seasons[sys.bodies[i].seed];
+        if (step == st.step) continue;
+        st.step = step; st.season = s;
+        gens.erase(sys.bodies[i].seed);   // the map's step no longer matches: regenerated on request
     }
+}
+
+int SpaceRenderer::seasonStepOf(const Body& b) const {
+    auto it = seasons.find(b.seed);
+    return it == seasons.end() ? -1 : it->second.step;
 }
 
 const BodyGen& SpaceRenderer::genFor(const Body& b) {
     auto it = gens.find(b.seed);
     if (it != gens.end()) return it->second;
-    return gens.emplace(b.seed, BodyGen::make(b, curSeason[b.index < 64 ? b.index : 0])).first->second;
+    auto st = seasons.find(b.seed);   // a world whose season was never set: its mean
+    return gens.emplace(b.seed, BodyGen::make(b, st != seasons.end() ? st->second.season : 0.0)).first->second;
 }
 
 void SpaceRenderer::frontCoarse(FrontMap& fm) {   // W-03: the blocks that hold a band, each nonzero texel marking its block and its neighbours'
@@ -153,7 +159,7 @@ void SpaceRenderer::startMap(const Body& b, int bucket) {
 }
 
 const PlanetMap* SpaceRenderer::mapIfReady(const Body& b) {
-    int bucket = b.index < 64 ? seasonBucket[b.index] : 0;
+    const int bucket = seasonStepOf(b);
     mapLastUse[b.seed] = ++useStamp;
     auto it = maps.find(b.seed);
     if (it == maps.end()) { startMap(b, bucket); return nullptr; }

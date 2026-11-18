@@ -314,6 +314,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     for (int i = 0; i < frames; i++) {
         humLvl += (st.hum - humLvl) * k;
         engLvl += (st.engine - engLvl) * k;
+        bubLvl += (st.bubbles - bubLvl) * k; watLvl += (st.water - watLvl) * k; fullLvl += (st.musicFull - fullLvl) * k;   // I-04: the rooms aboard
         windLvl += (st.wind - windLvl) * k;
         leavesLvl += (st.leaves - leavesLvl) * k;
         hoofLvl += (st.hoofs - hoofLvl) * k;
@@ -350,6 +351,30 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         lp2 += (lp1 - lp2) * 0.08f;
         s += engLvl * (0.5 * lp2 + 0.12 * std::sin(phase1 * 6.2831853 * 3.0 * (1 + engLvl)));
         if (engLvl > 0.05 && rpmLvl > 0.001) s += engLvl * 0.08 * std::sin(phase1 * 6.2831853 * (9.0 + 12.0 * rpmLvl));   // the gear's pitch on top of the drive
+        if (bubLvl > 1e-4 || bubT >= 0) {   // I-04: the laboratory's bubbling: now and then a bubble's blip, rising in pitch as it breaks
+            bubNext -= dt;
+            if (bubNext <= 0 && bubT < 0 && bubLvl > 0.01) {
+                bubT = 0; bubPh = 0; bubF = 380 + 700 * (0.5 + 0.5 * aboardNoise()); bubAmp = 0.5 + 0.5 * (0.5 + 0.5 * aboardNoise()); bubNext = 0.04 + 0.3 * (0.5 + 0.5 * aboardNoise());
+            }
+            if (bubT >= 0) {
+                if (bubT < 0.05) { bubPh += dt * bubF * (1 + 2.2 * bubT / 0.05); s += bubLvl * 0.17 * bubAmp * std::exp(-bubT * 50) * std::sin(bubPh * 6.2831853); bubT += dt; }
+                else bubT = -1;
+            }
+        }
+        if (watLvl > 1e-4) {   // I-04: the garden's water: a trickle (noise in a band, its ripple) and now and then a drip
+            const float wn = aboardNoise();
+            watLp1 += (wn - watLp1) * 0.35; watLp2 += (watLp1 - watLp2) * 0.12;
+            watModT -= dt;
+            if (watModT <= 0) { watMod = 0.5 + 0.5 * (0.5 + 0.5 * aboardNoise()); watModT = 0.03 + 0.06 * (0.5 + 0.5 * aboardNoise()); }
+            watRip += (watMod - watRip) * 0.002;
+            s += watLvl * 0.22 * (watLp1 - watLp2) * watRip;
+            watDripNext -= dt;
+            if (watDripNext <= 0 && watDripT < 0) { watDripT = 0; watDripPh = 0; watDripF = 900 + 900 * (0.5 + 0.5 * aboardNoise()); watDripNext = 0.8 + 2.5 * (0.5 + 0.5 * aboardNoise()); }
+            if (watDripT >= 0) {
+                if (watDripT < 0.06) { watDripPh += dt * watDripF * (1 + 1.5 * watDripT / 0.06); s += watLvl * 0.05 * std::exp(-watDripT * 70) * std::sin(watDripPh * 6.2831853); watDripT += dt; }
+                else watDripT = -1;
+            }
+        }
         if (skidLvl > 0.02) { float n4 = noise(); lpK += (n4 - lpK) * 0.25f; s += skidLvl * 0.16 * lpK; }   // tyres sliding
         if (rotorLvl > 0.01) {   // the drone's pods: a blade-pass whine (a fundamental with two harmonics, beating between the four pods) over a low rush of air
             rotorPh += dt * (70.0 + 90.0 * rotorPitchLvl);
@@ -443,6 +468,14 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         {   // the music, C-05 the voice; C-07: through the radar's receiver when the radar owns them: a band of 250 Hz to 2.6 kHz,
             // a tape's wow (slight under a voice, heavy under a slowed piece), a slow fading, and only as much of it as the beam has
             double m = musicSample(dt, st) + speechSample(dt, st);
+            if (!st.radio && fullLvl > 1e-4) {   // I-04: the library's fullness: its low end raised, two early echoes off its shelves, no louder
+                const size_t n = (size_t)(0.05 * sr) + 1;
+                if (fullLine.size() != n) { fullLine.assign(n, 0.0f); fullI = 0; }
+                fullLp += (m - fullLp) * (1 - std::exp(-6.2831853 * 200 * dt));
+                const double e1 = fullLine[(fullI + n - (size_t)(0.023 * sr)) % n], e2 = fullLine[(fullI + n - (size_t)(0.04 * sr)) % n];
+                fullLine[fullI] = (float)m; fullI = (fullI + 1) % n;
+                m = m * (1 - 0.3 * fullLvl) + fullLvl * (0.45 * fullLp + 0.2 * e1 + 0.12 * e2);
+            }
             rdContent = 0;
             if (st.radio) {   // and ghosted: a metallic ring under it, a slow fade, dropouts now and then; it joins the receiver's bed and echo below
                 // a far signal's content comes through narrower and drifting in pitch (`radarWear`); a phonograph's through its

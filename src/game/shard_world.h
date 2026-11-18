@@ -21,4 +21,5 @@ struct ShardWorld { std::string key; bool valid = false; StarSystem sys; int bod
                     Voice readVoice;                                                                                 // the ship reading a record with no voice of its own (`voiceRead`)
                     StarChart chart;                                                                                 // the chart on the screen
                     bool pending = false;                                                                            // its records are being written on a thread (the radar does not wait)
+                    int watermark = -1;                                                                              // Z-06: the decoder's: a made species' watermark held, after its records (-1 none)
                     std::shared_ptr<const History> history; std::shared_ptr<const ShardTexts> texts; };              // the decoder's: its history and its records' texts (what each told)

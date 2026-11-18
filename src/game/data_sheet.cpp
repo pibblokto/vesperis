@@ -192,6 +192,17 @@ void Game::renderDataSheet() {
         const char* hint = quiet > 0.15 ? "   AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "   AURORAE IN STORMS" : (peak > 0.12 ? "   A FAINT AURORA IN A GREAT STORM" : ""));
         put(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
     }
+    {   // Z-07: the microbes of this world seen under the microscope (the catalogue's rows of it; a friend's lent in no count), or its samples
+        const std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi) + "/M";
+        int seen = 0, named = 0, read = 0;
+        for (auto it = guide.microbes.lower_bound(prefix); it != guide.microbes.end() && it->first.compare(0, prefix.size(), prefix) == 0; ++it) {
+            seen++;
+            if (guide.names.count(it->first)) named++;
+            if (it->second.seen & SEEN_KIN) read++;
+        }
+        if (seen > 0) put(fmt("MICROBES    %d SPECIES SEEN%s%s", seen, named ? fmt(", %d NAMED", named).c_str() : "", read ? fmt(", %d SEQUENCED", read).c_str() : ""), HUD_GREEN);
+        else if (guide.sampled.count(prefix.substr(0, prefix.size() - 2))) put("MICROBES    SAMPLED, NONE SEEN YET", HUD_GREEN);
+    }
     section(true);
     // seasons readout, M5-09 what is up in the sky (surface only)
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {

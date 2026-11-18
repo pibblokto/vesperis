@@ -60,6 +60,7 @@ struct SurfaceSample {
     double groundTint = 0;  // the ground trait's field here, 0..1: a meteorites' strewn field's stones (the surface's objects), a rainbow stratum's accent
     double slipFace = 0;    // how much this point is a sand dune's slip face, 0..1 (its lee, downwind of the crest, where the sand slides: the singing
                             // dunes' hum; the dune field's share times the lee's, whatever the face's steepness; not a gypsum's dunes, nor snow's drifts)
+    double snowTint = 0;    // Z-03: red snow's algae on the snow here, 0..1 (TR_SNOW_ALGAE: its patches where the eye resolves them)
 };
 
 struct BodyGen {
@@ -161,6 +162,12 @@ struct BodyGen {
 int darkTraitsOf(const Body& b, int* out);
 constexpr double EMBERS_SHARE = 0.3;            // of the rock drifters (a young interior, still erupting)
 constexpr double LIGHTS_IN_WATER_SHARE = 0.5;   // of the dark oceans (if anything lives there)
+// Z-03: red snow (TR_SNOW_ALGAE), given by its own hash (`SALT_SNOW_ALGAE`: `salt scan` holds that no protected world takes it) to a share of
+// the worlds it may come to: a kind of its process (`KS_SNOW_ALGAE`), under a sun, its mean at fifty degrees under `SNOW_ALGAE_COLD_C`, no people
+// nor the home world, a new slot free and no trait of the life in them (one trait of a kind). The free slot it would take, -1 where it may not come
+constexpr double SNOW_ALGAE_SHARE = 0.35, SNOW_ALGAE_COLD_C = 8.0;
+constexpr uint64_t SALT_SNOW_ALGAE = 0x5A0A1CAE00000001ULL;
+int snowAlgaeSlot(const Body& b, const BodyGen& g);
 // B-419: what is made on a world is the world's, not its season's. The terrain the explorer sees keeps the season (the winter
 // hemisphere's ice cap and snow line); a reader of the world's made things (a people's plan, its extent, its histories, settlements,
 // roads and works, the scanner's sights) reads it without (the cap and the line at their means): the generator itself where its season

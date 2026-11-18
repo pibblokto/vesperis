@@ -11,7 +11,7 @@ struct AutoTaste {
     int bodies0, bodies1;              // the bodies it visits in a system before the next star
     double longJump;                   // a move's chance of being a long jump (60 to 3,000 ly) rather than one to a neighbour
     double land, probe;                // its chance to land at a landable world, to drop a probe into a giant
-    double tele, roof, glass, orbit;   // at a parking: the telescope, the roof deck, the glass hull, a lap round the world
+    double tele, roof, glass, orbit;   // at a parking: the telescope, the observatory's dome, the glass hull, a lap round the world
     double stay0, stay1;               // seconds of looking at a parked world
     double ground0, ground1;           // seconds on the ground
     double w[AO_COUNT];                // the ground's outings: a view, the water, the life, a sight, a drive, a flight, the ruins, the sky
@@ -24,4 +24,3 @@ const AutoTaste TASTES[AP_COUNT] = {
     {1, 2, 0.04, 0.2, 0.0, 0.2, 0.1, 0.1, 0.25, 6, 12, 300, 600, {0.4, 0.2, 0.3, 0.7, 0.2, 0.3, 6, 0.2}},     // ARCHAEOLOGIST
     {1, 3, 0.1, 0.25, 0.85, 0.45, 0.35, 0.3, 0.5, 12, 24, 90, 180, {1, 0.3, 0.5, 0.5, 0.3, 0.5, 0.2, 4}},     // GIANTS
 };
-const double CAB_WINDOW_X = 0.62, CAB_WINDOW_Z = 1.72;   // where the explorer stands at the front window: between its bars (at 0 and 1.25 m), the desk at 1.95

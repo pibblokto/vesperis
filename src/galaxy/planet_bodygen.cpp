@@ -220,6 +220,20 @@ int darkTraitsOf(const Body& b, int* out) {
     return n;
 }
 
+int snowAlgaeSlot(const Body& b, const BodyGen& g) {
+    if (b.drifter || b.wanderer || !KINDS[b.type].landable || !(shapesOf(b) & KS_SNOW_ALGAE)) return -1;
+    const bool home = b.starKnown && b.starSx == HOME_SX && b.starSy == HOME_SY && b.starSz == HOME_SZ && b.parent < 0 && b.type == PT_FELISIAN;
+    if (home || peoplesHash(b.type, b.seed)) return -1;
+    if (climateTempC(g, 50, 0, 0, 0) - (g.hasTrait(TR_SNOWBALL) ? 6.0 : 0.0) >= SNOW_ALGAE_COLD_C) return -1;
+    int free = -1;
+    for (int j = 3; j < TRAIT_SLOTS; j++) {
+        const int t = g.traits[j];
+        if (t == TR_SNOW_ALGAE || !t) { if (free < 0) free = j; continue; }
+        if (TRAITS[t].kind == TK_LIFE) return -1;
+    }
+    return free;
+}
+
 static bool traitFits(const Body& b, const BodyGen& g, int t) {
     switch (t) {
         case TR_GREAT_TIDES: return b.tideForcingM >= TIDE_FORCING_MIN;
@@ -390,6 +404,9 @@ BodyGen BodyGen::make(const Body& b, double season) {
                 }
                 if (n > 0) g.traits[3 + nOwn + got++] = elig[(int)(nu(10 + order[i]) * n) % n];
             }
+            // Z-03: red snow, by its own hash after the draw (no draw moves: a world it comes to keeps its other traits)
+            const int snow = snowAlgaeSlot(b, g);
+            if (snow >= 0 && unitFromHash(mix64(b.seed ^ SALT_SNOW_ALGAE)) < SNOW_ALGAE_SHARE) g.traits[snow] = TR_SNOW_ALGAE;
         }
         for (int k = 0; k < TRAIT_SLOTS; k++) switch (g.traits[k]) {
             case TR_ARCHIPELAGO: g.seaLevel += 0.3; g.islandDensity = std::max(g.islandDensity, 0.5); break;   // a kind's own islands may be more

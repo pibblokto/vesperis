@@ -152,9 +152,25 @@ static const Mode MODES[] = {
         {"datasheet", "kinds", "[n]", "Q-01: the n data sheets that run longest, in space and on the ground, a page a frame", "modes_kinds.cpp", runDataSheet},
         {"salt", "kinds", "scan [name|ground|family] [tries]", "E-07: the made kinds against the protected worlds as kindOf walks them: what each reaches and takes, the first salt taking none",
                 "modes_kinds.cpp", runSaltScan},
+        {"life", "life", "list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto",
+                "Z-01: the biota of the worlds nearest home; by kind over the scan region; the geneses and the kin cells. Z-02 (modes_life_look.cpp): the "
+                "forms' plates, the acts' strips, no two alike, every plan's variants in the six ways. Z-03: each microhabitat round the search's scenes "
+                "and what a sample there holds, read again from another landing; the kit played (its frames). Z-06 (modes_tree.cpp): `made`, the made "
+                "species of the late peoples' worlds nearest home and fifty of their watermarks as the decoder reads them, the checks, the repeats at a hundred. "
+                "Z-07: `auto`, auto-explore's water outing on a felisian world and at a terraced spring, run till it takes a sample (its steps, the vial's line)",
+                "modes_life.cpp", runLife},
+        {"lab", "life", "microscope | time | cultures | jars | tree | kin [r] | catalogue", "Z-04: the microscope opened on samples of each stage and chemistry: every way of seeing at every zoom, a cell tracked, "
+                "the light's crowd, the magnet's turn, the warm stage, the food, a fossil's section; the mounts and the sheets. `time`: a dense slide's frame "
+                "timed by its parts. Z-05 (modes_cultures.cpp): `cultures`, twenty species an hour in four media (their curves, their stages' times), the pairs "
+                "(the cycles' periods, the winners, the mirrored), the incubator's screen; `jars`, worlds' jars at 0, 5, 10 and 20 minutes and their shelf. "
+                "Z-06 (modes_tree.cpp): `tree`, a sequenced set (the flow's world's, home's, a kin star's, its own genesis's, a mirrored one, a drifter's and "
+                "the star it left, a made one on the sequencer), the tree printed and drawn, the decoder's watermark, the kin near home; `kin`, those alone. "
+                "Z-07: `catalogue`, a guide as the lab fills it and a friend's file lent: the catalogue by world (the lent in cyan) and by kin, a sheet's form "
+                "live, a name given from it; the statistics' LIFE page, the data sheet's microbes, a micrograph in the gallery",
+                "modes_lab.cpp", runLab},
         {"signals", "radio", "[<sx> <sy> <sz>] [reach] [xG] | wav", "C-07: the far signals heard from a sector; their WAVs", "modes_signals.cpp", runSignals},
         {"voice", "radio", "<sx> <sz> <body> [index] [wav]", "C-05: a world's voice, a record spoken", "modes_signals.cpp", runVoice},
-        {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake", "modes_signals.cpp", runSounds},
+        {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake; I-04: each room aboard, its flight, the library's music", "modes_signals.cpp", runSounds},
         {"rogues", "radio", "[ly] | heard | voices | dark", "D-01: the drifters near home; D-02 to D-04: heard, their voices, their dark", "modes_rogues.cpp", runRogues},
         {"peoples", "peoples", "ages | fresh | map | scorched | rogues | <sx> <sz> <body> [second]",
                 "C-13, A-01: the peoples near home by age, a world's peoples, the scorched worlds' and the drifters'", "civ_peoples.cpp", runPeoples},
@@ -199,6 +215,10 @@ static const Mode MODES[] = {
                 [](int argc, char** argv) -> int { return runFuzz(argc > 2 ? atoi(argv[2]) : 10000); }},
         {"zoom", "game", "<sx> <sz> <body> <latDeg> <lonDeg> [scale]", "C-09: the landing map's zoom window over a point", "modes_game.cpp", runZoom},
         {"drones", "game", "[frames] | check | world <sx> <sz> <body>", "C-18: the drone bay in a game", "modes_drones.cpp", runDrones},
+        {"ship", "game", "rooms [scale ...] | walk | light [scale] | life [scale]",
+                "I-02: each space from its arch and its middle; a walk to every device and through every arch; I-03: the light (lit and dark, the "
+                "sun's patches, the hull outside); I-04: life aboard (the photographs, the garden, the shelves, the core, the hatch's drop)",
+                "modes_ship.cpp", runShip},
         {"parkings", "game", "", "B-428: twelve parkings of the scenes that were crowded", "modes_game.cpp", [](int argc, char** argv) -> int { return runParkings(); }},
         {"tape", "game", "[dir]", "R-420: auto-explore's tape, its tracks and the deck's sequences", "modes_game.cpp", runTape},
         {"tail", "game", "[<sx> <sy> <sz> <body>]", "B-427: a Wolf-Rayet star's giant and the tail its wind strips", "modes_game.cpp", runTail},
@@ -206,12 +226,12 @@ static const Mode MODES[] = {
         {"unit", "proof", "[list] [-q] [group ...]", "the unit's checks, all or by group (`unit list`); -q: only the failures", "unit.cpp", testUnit},
         {"regress", "proof", "[bless]", "M0-03: the determinism hashes against tests/regress_baseline.txt (bless: with GEN_VERSION only)", "modes_proof.cpp",
                 [](int argc, char** argv) -> int { return runRegress(argc > 2 && std::string(argv[2]) == "bless"); }},
-        {"fingerprint", "proof", "bodies | stream | peoples | modules [n] [out] [full]", "E-02: what the generators make, as keyed lines (tools/prove)", "fingerprint.cpp", runFingerprint},
+        {"fingerprint", "proof", "bodies | stream | peoples | modules | life [n] [out] [full]", "E-02: what the generators make, as keyed lines (tools/prove)", "fingerprint.cpp", runFingerprint},
         {"screens", "proof", "[scale ...]", "F-05: the game's frames the regress never hashes", "modes_proof.cpp", runScreens},
         {"pngdiff", "proof", "<a.png> <b.png> [diff.png]", "F-01: two PNGs pixel for pixel", "modes_proof.cpp", runPngDiff},
         {"bothways", "proof", "<scene> [scale]", "F-01: a scene by the workers and by one thread", "modes_proof.cpp", runBothWays},
         {"suncone", "proof", "", "F-05: the sun's cone test swept to the frame's corner", "modes_proof.cpp", [](int argc, char** argv) -> int { return runSunCone(); }},
-        {"bench", "bench", "[check [slack]] | forest | noise", "the frame's costs; `check` against the 38 budgets", "modes_bench.cpp",
+        {"bench", "bench", "[check [slack]] | forest | noise", "the frame's costs; `check` against the 46 budgets", "modes_bench.cpp",
                 [](int argc, char** argv) -> int {
                     if (argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();
                     // `bench check <factor>`

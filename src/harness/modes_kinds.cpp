@@ -236,7 +236,7 @@ static void qualityGlobe(const StarSystem& sys, int bi, double t, double lat, do
     nb.update(shipPos);
     Framebuffer fb; SpaceContext c;
     c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1))); c.bankBodyA = bi;
-    sr.setSeason(sys, t); warmMaps(sr, sys, bi);
+    warmMaps(sr, sys, bi, t);
     sr.setupPalette(fb, &sys, bi, -1, 1.0); sr.render(fb, c); fb.mush(2);
     out.px.resize((size_t)FBW * FBH); fb.toRGB(out.px.data(), 1.0);
     out.label = label;
@@ -596,6 +596,27 @@ static bool qualitySheet(StarSystem& sys, int bi, int tr, const std::string& fil
             qualityFrame(sys, bi, lat, lon, t1, yaw, 80, -0.25, sr, nb, F[3], "80 M UP, WITHOUT THEM", tr);
             break;
         }
+        case TR_SNOW_ALGAE: {   // Z-03: standing on a red snowfield by day, 30 m over it, 300 m over it, 30 m up without it
+            double sLat = 0, sLon = 0, best = 0;
+            setDrainageEnabled(false);
+            for (double la = -80; la <= 80 && best < 0.8; la += 0.5)
+                for (double lo = -180; lo < 180 && best < 0.8; lo += 0.5) {
+                    const SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, lo * DEG), 16);
+                    if (ss.material == MAT_SNOW && ss.snowTint > best) { best = ss.snowTint; sLat = la * DEG; sLon = lo * DEG; }
+                }
+            setDrainageEnabled(true);
+            if (best < 0.5) return false;
+            lat = sLat; lon = sLon;
+            SurfaceSite st; st.init(&sys, bi, lat, lon, 1000.0);
+            const double t1 = qualityTimeYear(st, 1000.0, 3, [](double a, bool, double) { return a > 22.0 && a < 45.0; });
+            if (t1 < 0) return false;
+            const double yaw = sunAz(st, t1) + PI * 0.75;
+            qualityFrame(sys, bi, lat, lon, t1, yaw, -1, -0.3, sr, nb, F[0], "ON THE SNOW");
+            qualityFrame(sys, bi, lat, lon, t1, yaw, 30, -0.55, sr, nb, F[1], "30 M UP");
+            qualityFrame(sys, bi, lat, lon, t1, yaw, 300, -0.7, sr, nb, F[2], "300 M UP");
+            qualityFrame(sys, bi, lat, lon, t1, yaw, 30, -0.55, sr, nb, F[3], "30 M UP, WITHOUT IT", tr);
+            break;
+        }
         case TR_REEFS: {   // the day side from orbit over its widest lagoon, 2.5 km over the reef and the lagoon, 300 m over the reef's crest, without it
             // a lagoon within 4 km of deep water outside its reef: the reef's line between them, faced across
             double wLat = 0, wLon = 0, yaw = 0; bool found = false;
@@ -886,7 +907,7 @@ int runKinds(int argc, char** argv) {
             nb.update(shipPos);
             Framebuffer fb; SpaceContext c;
             c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-            sr.setSeason(sys, t); warmMaps(sr, sys, bi);   // the map made for the season the frame draws (else a tilted world's globe was drawn flat)
+            warmMaps(sr, sys, bi, t);   // the map made for the season the frame draws (else a tilted world's globe was drawn flat)
             sr.setupPalette(fb, &sys, bi, -1, 1.0); sr.render(fb, c); fb.mush(2);
             std::vector<uint32_t> px((size_t)FBW * FBH); fb.toRGB(px.data(), 1.0);
             sheet.blit(px, FBW, FBH, 0, 0);
@@ -1186,5 +1207,37 @@ int runSaltScan(int argc, char** argv) {
     }
     if (!shown) { printf("no made kind is \"%s\"\n", want ? want : ""); return 2; }
     printf("%d of %d kinds take a protected world now; the walk agrees with kindOf on %d of %d readings\n", taking, shown, worlds - disagree, worlds);
+    {   // Z-03: the given life trait (red snow) against the same worlds: those it may come to (`snowAlgaeSlot`), those it comes to by its hash,
+        // and where it comes to any, the first salt from its own that takes none
+        std::vector<std::pair<uint64_t, std::string>> reach;
+        int took = 0; std::string names;
+        for (const ProtectedSystem& P : PROTECTED_SYSTEMS) {
+            Star st;
+            if (!starInSector(P.sx, P.sy, P.sz, st) || st.name != P.name) continue;
+            StarSystem sys; sys.generate(st);
+            for (const Body& b : sys.bodies) {
+                if (!KINDS[b.type].landable) continue;
+                const BodyGen g = BodyGen::make(b);
+                if (snowAlgaeSlot(b, g) < 0) continue;
+                reach.push_back({b.seed, b.name});
+                if (g.hasTrait(TR_SNOW_ALGAE)) { took++; names += (names.empty() ? "" : ", ") + b.name; }
+            }
+        }
+        printf("  %-18s reaches %2zu, takes %d  0x%016llXULL (given)", "SNOW ALGAE", reach.size(), took, (unsigned long long)SALT_SNOW_ALGAE);
+        if (took) {
+            uint64_t got = 0; int j = 1;
+            for (; j < tries && !got; j++) {
+                const uint64_t salt = SALT_SNOW_ALGAE + ((uint64_t)j << 32);
+                bool any = false;
+                for (const auto& r : reach) any = any || unitFromHash(mix64(r.first ^ salt)) < SNOW_ALGAE_SHARE;
+                if (!any) got = salt;
+            }
+            printf(": %s; ", names.c_str());
+            if (got) printf("none from 0x%016llXULL (%d steps)\n", (unsigned long long)got, j - 1); else printf("none within %d steps\n", tries);
+            taking++;
+        } else printf("\n");
+        if (want) for (const auto& r : reach) printf("      %-22s hash %.3f, share %.3f\n", r.second.c_str(), unitFromHash(mix64(r.first ^ SALT_SNOW_ALGAE)), SNOW_ALGAE_SHARE);
+        if (took) return 1;
+    }
     return disagree ? 1 : 0;
 }

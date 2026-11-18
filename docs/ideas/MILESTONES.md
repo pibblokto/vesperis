@@ -11,7 +11,7 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/archive/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0` to `1.4.0` shipped in that release, `later` is for a release not planned yet.
+column: `1.1.0` to `1.4.0` shipped in that release, `1.5.0` is planned for it, `later` is for a release not planned yet.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
@@ -39,6 +39,12 @@ E-13, the repo made cheaper to read and change, nothing generated or drawn movin
 2026-10-24, E-09 to E-11 2026-10-25, E-12 and E-13 2026-10-26. Then the U series (`PLAN-screens.md`, R-424), U-01 to U-06, a
 screen in one row, done 2026-10-26 and 2026-10-27; with B-429 to B-433 (the last four the known issues KI-423, KI-432, KI-433
 and KI-434). The rows not done are marked `later`.
+
+**Planned for 1.5.0 (2026-11-16), generation 17:** the iteration `ITERATION-1.5.0.md` on the branch `release/v1.5.0` (from main
+bb0e58b), on the user's request of 2026-11-16 (R-425 microorganisms on every world, searched for and studied aboard; R-426 a
+Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-spacious.md`: eleven milestones, Z-01 and Z-02,
+I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03 done 2026-11-16, I-04,
+Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -295,6 +301,34 @@ Every step is proven identical to the binary before it, and nothing is blessed.
 | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | 1.4.0, done 2026-10-26 |
 | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | 1.4.0, done 2026-10-26 |
 | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0, done 2026-10-27 |
+
+## Z: the living small (`IDEAS-small-and-spacious.md` section 1) — generation 17 from Z-01
+
+Planned 2026-11-16 for 1.5.0 (R-425): microorganisms on every world, each world's life at a stage of its own and its organisms
+through the stages of theirs, found by where life would be, seen six ways, grown, woken, mixed and read aboard. Z-01 and Z-02 come
+first (the look judged on plates before any screen), Z-03 to Z-07 after the I series (the lab is a room of the new ship).
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Z-01 | Where life is: each world's stage, chemistry, genesis and species; the kin cells; generation 17 | L | 1.5.0, done 2026-11-16 |
+| Z-02 | What it looks like: the form genome, six ways of seeing, the life cycle's animations; plates to judge | XL | 1.5.0, done 2026-11-16 |
+| Z-03 | The search: microhabitats, the kit, the activity, the lamp's ultraviolet, the signs, the capsule's scoop | XL | 1.5.0, done 2026-11-17 |
+| Z-04 | The microscope: a camera you enter, six ways of seeing, zoom, tracking, light and field; names and sheets | XL | 1.5.0, done 2026-11-17 |
+| Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars | XL | 1.5.0, done 2026-11-17 |
+| Z-06 | The genome and the tree: the sequencer, kin across worlds and stars, the geneses, the made organisms | L | 1.5.0, done 2026-11-17 |
+| Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | 1.5.0, done 2026-11-17 |
+
+## I: the interior (`IDEAS-small-and-spacious.md` section 2) — the drawing alone, no generation change
+
+Planned 2026-11-16 for 1.5.0 (R-426): the Stardrifter's one 5 m room becomes three decks and eight spaces, a home rather than a
+cockpit. I-01 changes nothing drawn (the old room proven as the first plan of rows); I-02 to I-04 bless `cabin_1x` where named.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| I-01 | The ship as rows: rooms, openings, fixtures and devices; the harness reads them; nothing drawn changes | L | 1.5.0, done 2026-11-16 |
+| I-02 | The new Stardrifter: three decks, eight spaces, the stair and the arches, the devices in their rooms | XL | 1.5.0, done 2026-11-16 |
+| I-03 | Light, materials and views: lamps, the star's light through the windows, the hull seen outside | L | 1.5.0, done 2026-11-16 |
+| I-04 | Life aboard: the quarters, the garden, the library's shelves, the hangar's capsule, sound by room | L | 1.5.0, done 2026-11-17 |
 
 ## Suggested order for 1.2.0
 

@@ -574,8 +574,8 @@ int runFlightStability() {
 }
 
 // G-07: `crossing`: the galaxy round the ship in two long flights from home, R-407's jump 10,000 ly coreward and 3,000 ly north:
-// frames at shares of each flight through the front window and aside (the head turned in the cabin toward the galactic centre square
-// to the line: a jump north leaves the disc below it), the galaxy page in the flight, the band's keyframes (how many, how far apart, built at once, the cells a
+// frames at shares of each flight through the front window and aside (I-02: from the flank's window on that side, toward the galactic
+// centre square to the line: a jump north leaves the disc below it), the galaxy page in the flight, the band's keyframes (how many, how far apart, built at once, the cells a
 // frame), the arrival's band (handed over, not built), and a flight frame's time at 2x; `shots/tests/crossing_*.png`
 int runCrossing() {
     TestGame g; g.savePrefix = "shots/tests/crossing_save"; g.settingsPath = "shots/tests/test_settings.txt"; g.keysPath = "shots/tests/test_keys.txt"; g.guidePath = "shots/tests/crossing_guide.txt";
@@ -610,7 +610,9 @@ int runCrossing() {
             printf("  %3.0f%% (%.1f s): at %.0f %.0f %.0f, %s, %.0f ly from the core; keyframe %d of %zu (%.2f s apart), %d cells this frame\n", s * 100, g.testFlightT(), p.x, p.y, p.z,
                    REGION_NAMES[galaxyRegion((int64_t)std::floor(p.x), (int64_t)std::floor(p.y), (int64_t)std::floor(p.z))], length(p - Vec3(GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ)),
                    F.k, F.tau.size(), F.tau[std::min((size_t)F.k + 1, F.tau.size() - 1)] - F.tau[F.k], F.cellsFrame);
-            if (s == 0.25 || s == 0.5 || s == 0.98) { g.testCabinLook(BareFlight::aside(h, fl[f].dir)); run(0.25); shot(std::string(fl[f].tag) + "_" + pct + "_aside"); g.testCabinTurn(0, 0); }
+            if (s == 0.25 || s == 0.5 || s == 0.98) {   // I-02: from the flank's window on that side
+                g.testCabinLookOut(BareFlight::aside(h, fl[f].dir)); run(0.25); shot(std::string(fl[f].tag) + "_" + pct + "_aside"); g.testCabinView("THE START");
+            }
             if (s == 0.5) {
                 press(KEY_M); run(0.1); shot(std::string(fl[f].tag) + "_50_chart"); press(KEY_ESCAPE); run(0.1);
                 g.settings.renderScale = 2; g.applySettings(); run(0.5);

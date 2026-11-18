@@ -6,7 +6,7 @@
 // the frames by any thread count, bit for bit
 void unitPerf(const Check& check) {
     {   // the frames the regress never hashes, drawn by the workers and by one thread in one run (B-310's contract, A-02's template),
-        // at 4x: the shore through the surface renderer, and through the game the cabin (the light on and off, the hull glass, the roof, the
+        // at 4x: the shore through the surface renderer, and through the game the cabin (the light on and off, the hull glass, the dome, the
         // drones out at the rack and outside the window), the radar camera, the landing map whole and zoomed, the ground, the nose camera and
         // the sector map. A game's frame is drawn at one instant (`frame(in, 0)`): the workers' twice (a frame that changes by itself says so),
         // then one thread's. B-423: the forest at 1x, 2x and 4x by the workers, by one thread and by three (fewer threads than its bands)
@@ -76,16 +76,16 @@ void unitPerf(const Check& check) {
                 press(KEY_Y); run(1.5); both("the cabin, the hull glass, the light off");
                 press(KEY_U); run(1.5); both("the cabin, the hull glass, the light on");
                 press(KEY_Y); run(0.5);
-                press(KEY_PAGE_UP); run(0.5); both("the roof"); press(KEY_PAGE_DOWN); run(0.3);
+                press(KEY_PAGE_UP); run(0.5); both("the dome"); press(KEY_PAGE_DOWN); run(0.3);
                 press(KEY_B); run(0.5); both("the radar camera"); press(KEY_B); run(0.2);
-                game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);   // the drones' rack (C-18's harness)
+                game.testCabinAtDevice(FACE_BAY); run(0.2);   // the drones' rack (C-18's harness)
                 press(KEY_E); run(0.1);
                 if (game.state == GameState::DRONES) {
                     game.testDronesSettle(); run(0.2);
                     press(KEY_ENTER); game.testDronesSettle();
-                    game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(1.1);
+                    game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_BAY); run(1.1);
                     both("the rack, the drones out");
-                    game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05); game.testDronesSkip(4.0); run(0.05);
+                    game.testAimAtBody(W.body); game.testCabinView("OUT TO THE DRONES' WAY"); run(0.05); game.testDronesSkip(4.0); run(0.05);
                     both("the drones outside the window");
                 } else bad += fmt("%sthe drone bay not opened (state %d)", bad.empty() ? "" : "; ", (int)game.state);
             }

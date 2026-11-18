@@ -140,6 +140,11 @@ The E series' proof (`docs/archive/ideas/PLAN-reorganisation.md`, section 5), ke
   trees, logs, boulders, colliders, ground and drainage; the almanac of home and of every 40th system of the scan region (on the
   ground and parked), with the showers, dust and fronts; and the tables. 4,607 lines in about 33 s; `full` adds each line's text
   beneath it (output: `shots/tests/fingerprint_modules.txt`)
+* `fingerprint life [n] [out]`: Z-01: the biota of every landable body of `bodies`' four regions and of the forty drifters nearest
+  home (`dark` lines), a line a world keyed as `bodies`' are: its kind, stage, second stage, chemistry, genesis, habitats, its
+  species' count and the living's, and hashes of the world's fields, its genesis's and every field of its species; then home's
+  genesis and the ship's three species. 41,884 worlds in under a second, the same with one thread (output:
+  `shots/tests/fingerprint_life.txt`)
 * `scene list`: every comparison scene's name, in the table's order (109) (output: stdout)
 
 A keyed line is `<what> <key...> <field>=<value> ...`. `tools/keydiff.py <a> <b>` compares two files key by key and field by
@@ -159,7 +164,7 @@ others.
   names an item's files known to move, with the reason in the items file. The flow starts from an empty `shots/tests` (it makes
   every save it loads) and two runs draw the same 179 files. The unit's six scanner and map frames (R-408, B-412, T-03) and its
   autosave move between runs: it runs frames until a thread has found the cells or the scan, so the trees and grass sway, and
-  the clock ends, where the threads' pace leaves them. Its printout (the 403 checks) and its other files are compared.
+  the clock ends, where the threads' pace leaves them. Its printout (the 425 checks) and its other files are compared.
 - `datasheet`, `surface` (the sweeps), `rogues heard` and the unit's lent piece wait for every body's map before a frame (E-02), as
   the flow and the regress do (F-07): the maps are made on their thread at the binary's own pace, and a frame drawn before one
   would move between runs by a faint disc or a dim background.

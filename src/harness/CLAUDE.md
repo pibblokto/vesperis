@@ -13,12 +13,18 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 - `frames.cpp`, `audio_util.cpp`: frames to PNG and compared, the clock, the test scale, scripted moves (`pressKey`,
   `runFrames`, `selectRow`: a menu's row by its label); the receiver headless, WAVs, an FFT, a pitch.
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`,
-  `modes_signals`, `modes_rogues`, `modes_drones`, `modes_game` (the flow, `Flow`), `modes_input`, `modes_tour` (every
-  state toured, `Tour`: its `STOPS`, then the rows), `modes_bench` (`Bench`'s stages), `modes_proof`.
+  `modes_signals`, `modes_rogues`, `modes_life` (Z-01: the biota; Z-03: `life search`, `life kit`; Z-07: `life auto`,
+  `coastSite`), `modes_life_look` (Z-02: the forms' plates, strips, distinctness; `everyForm`), `modes_lab` (Z-04:
+  `lab microscope`, `lab time`; `labVial`, `labDenseVial`), `modes_cultures` (Z-05: `lab cultures`, `lab jars`; `labStock`, the
+  lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07: `lab catalogue`),
+  `modes_drones`, `modes_ship` (I-02: `ship rooms`, `ship walk`; I-03: `ship light`; I-04: `ship life`),
+  `modes_game` (the flow, `Flow`), `modes_input`, `modes_tour` (every state toured, `Tour`: its `STOPS`, then the rows),
+  `modes_bench` (`Bench`'s stages), `modes_proof`.
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`,
   `civ_peoples`, `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
 - `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`,
-  `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`.
+  `unit_life`, `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`,
+  `unit_search` (Z-03), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record).
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:
@@ -33,5 +39,8 @@ Rules:
   `tools/prove`'s scratch directory). `records check` reads the `test_settings.txt` that `settings` writes.
 - The unit and the flow both write `test_guide.txt` (the root note's rule). A frame of bodies waits for their maps
   (`testWaitMapOf`, `mapIfReady`).
+- The explorer stands in the ship where its plan says (I-01): a view by its name (`testCabinView`) or a device's stand
+  (`testCabinAtDevice`), never at numbers of the harness's (nor a fixture's: read its row); the tour faces every device from its
+  row, in the rows' order.
 - Pictures and sounds: the `look` skill.
 - No dynamically initialised globals and nothing self-registering. More: `docs/reference/lessons.md`, "The harness".

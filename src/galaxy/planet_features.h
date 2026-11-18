@@ -4,6 +4,7 @@
 // springs, the steam world's and the chemotroph's vents, the plumes and the spiders, the great shield, the landforms' point
 // features, the tiger stripes and their curtains, the great cliff, a giant's storm cells
 #include "core/types.h"
+#include <cmath>
 #include <cstdint>
 #include <vector>
 struct BodyGen;
@@ -17,6 +18,17 @@ double emberFieldAt(const BodyGen& g, const Vec3& p);
 struct GeyserVent { Vec3 unit; double radiusKm; uint64_t id; };
 void geyserVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
 void hotSpringsNear(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);   // Q-02 (TR_HOT_SPRINGS): the springs' vents within 2.5 km, their pools' radii
+// Z-03: where a point lies in a terraced hot spring as its landform lays it at the finest (the province and the land aside: the ground's
+// material says whether it is there): 0 none, 1 the vent's pool, 2 sinter (round the vent, a terrace's rim), 3 a terrace's pool, 4 the runoff
+// round it; the water's temperature there (`springWaterC`: a pool's at its terrace's middle, a rim's its pool's, the runoff's 26 C)
+// Z-03: the water's temperature in a terraced spring at x, its distance from the vent in its radii: near boiling at the vent, cooling down the
+// terraces to the outer pools' 26 C (Brock 1978's gradient in Yellowstone's springs); the band its mats lie in by it: none over 73 C (the hottest
+// bare, above where light can be lived on), then yellow (Synechococcus) to 63, orange to 52, orange-brown to 38, brown below
+inline double springWaterC(double x) { const double v = clampd((1 - x) / 0.86, 0, 1); return 26.0 + 66.0 * std::pow(v, 1.6); }
+inline int springBand(double waterC) { return waterC > 73 ? 0 : (waterC > 63 ? 1 : (waterC > 52 ? 2 : (waterC > 38 ? 3 : 4))); }
+constexpr double SPRING_BAND_ALBEDO[5] = {0.86, 0.74, 0.56, 0.42, 0.30};
+enum SpringPart { SPP_NONE = 0, SPP_VENT, SPP_SINTER, SPP_POOL, SPP_RUNOFF };
+int springPartAt(const BodyGen& g, const Vec3& unit, double& waterC);
 // P-01: the steam world's vents near a point (EV_STEAM_BURSTS): the centres of the sinter mounds of `groundSteam` (where the mound lies
 // in a field of vents on the high ground: a surface finds its sinter under the vent)
 void steamVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);

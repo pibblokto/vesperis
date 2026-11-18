@@ -96,6 +96,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
+    setupFilmGlow();   // Z-03: the world's films under the lamp's ultraviolet
     site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the old roads round the site, before anything samples the ground
     site.clearMarks(); markCheckX = markCheckZ = 1e18;
     site.clearEdits(); workCells.clear(); workNear.clear(); workEdited.clear();
@@ -709,6 +710,8 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     if (buggy.deployed) drawBuggy(fb, t);
     if (drone.deployed) drawDrone(fb, t);
     drawLife(fb, t);
+    prepareFilmGlow();   // Z-03: the films under the lamp's ultraviolet, after the old result (nothing at all with the lamp's ultraviolet off)
+    drawFilmGlow(fb);
     if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
     drawWeather(fb, t);
     drawVeil(fb);

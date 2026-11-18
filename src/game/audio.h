@@ -25,6 +25,10 @@ enum Beep { BEEP_NONE = 0, BEEP_LOCK, BEEP_ARRIVE, BEEP_ERROR, BEEP_UI };
 struct AudioState {
     double hum = 0;        // ship interior hum 0..1
     double engine = 0;     // vimana / approach drive 0..1
+    // I-04: the rooms aboard (the plan's rows, `shipRoomSound`): the laboratory's bubbling and the garden's water (0..1), the player's music
+    // fuller in the library (0 as anywhere .. 1: its low end and a room's early echoes); none off the ship (`aboardOff`)
+    double bubbles = 0, water = 0, musicFull = 0;
+    void aboardOff() { bubbles = water = musicFull = 0; }
     double wind = 0;       // surface wind 0..1
     double rain = 0;       // 0..1
     double lava = 0;       // rumble 0..1
@@ -163,6 +167,13 @@ private:
     double hoofLvl = 0, hoofT = 0, insectLvl = 0, lpI = 0, lpI2 = 0;
     double rpmLvl = 0, skidLvl = 0, thudT = -1, thudAmp = 0, lpK = 0;
     double rotorLvl = 0, rotorPitchLvl = 0, rotorPh = 0, lpR = 0;
+    // I-04: the rooms aboard: the bubbles (the one rising, its clock and pitch, the next's wait), the water's filters and its ripple, the
+    // music's fullness (its level, its low end's filter, its early echoes' line)
+    double bubLvl = 0, bubT = -1, bubF = 600, bubNext = 0.3, bubAmp = 0, bubPh = 0;
+    double watLvl = 0, watLp1 = 0, watLp2 = 0, watMod = 0, watRip = 0, watModT = 0, watDripT = -1, watDripF = 1500, watDripNext = 2, watDripPh = 0;
+    double fullLvl = 0, fullLp = 0; std::vector<float> fullLine; size_t fullI = 0;
+    uint32_t rsAboard = 0x5EED1234u;   // their own noise, so the rest's draws never move with them
+    inline float aboardNoise() { rsAboard = rsAboard * 1664525u + 1013904223u; return ((rsAboard >> 8) & 0xFFFF) / 32768.0f - 1.0f; }
     // the sounds of the ground: the dunes' hum (its note gliding to the world's, its phase and clock, the sand's hiss), the ice's events (a
     // near crack's chirp, a far one's, the sheet's boom, the snow settling: its kind, clock, length, pitches, loudness, phase, filters), the
     // quake's (its rumble's poles, its clock, the P-wave's thump, the stones' rattle)

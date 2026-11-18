@@ -21,8 +21,13 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         double s = 1 - std::pow(1 - u, 2.2);
         surf.cameraOverrideAlt = 1800 * (1 - s);
         surf.cameraOverridePitch = (-60 + 60 * s) * DEG;
-        fade = std::min(1.0, u * 4);
+        fade = transT < 0 ? 1.0 : std::min(1.0, u * 4);   // I-04: the hatch's drop (the ship's frame, unfaded), then the descent fading in
         surf.player.pitch = 0;
+        if (u > 0.15 && !scooped && (surf.biota().habitats & nicheBit(NI_CLOUD))) {   // Z-03: through the clouds (a save loaded after the scoop holds its vial)
+            bool held = false;
+            for (const Vial& v : kit) held = held || v.hab.niche == NI_CLOUD;
+            if (held) scooped = true; else scoopClouds(surf.placeMeanC(surf.player.x, surf.player.z, 0));
+        }
         if (u >= 1) {
             surf.cameraOverrideAlt = -1;
             state = GameState::SURFACE;
@@ -50,6 +55,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
             fade = 1;
             surf.cameraOverrideAlt = -1;
             status("BACK ABOARD THE STARDRIFTER", 4);
+            storeVials();   // Z-03: the vials to the cold store (its line over the last)
             logEvent("LAUNCH",
                     fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M%s", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding,
                             flownLanding > 0 ? fmt(", FLEW %.0f M", flownLanding).c_str() : ""));
@@ -57,6 +63,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         audio.engine = 0.6 * u; audio.hum = 0.3;
     }
     audio.surfaceOff();   // the capsule hears nothing of the ground, going down or up (its last level went on through the climb)
+    audio.aboardOff();    // I-04: nor the rooms aboard
     surf.update(realDt, in, t, false);
     updateShipMotion(dt);
     if (std::getenv("VESPERIS_TRACE") && transT < 0.05)
@@ -196,7 +203,12 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = BEEP_UI; }   // the readings in and out of the view
-    if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); audio.beep = BEEP_UI; }   // the helmet lamp
+    if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) {   // the helmet lamp; Z-03: Shift its ultraviolet, the living films' glow
+        if (in.shift()) { surf.uvLamp = !surf.uvLamp; status(surf.uvLamp ? "ULTRAVIOLET ON" : "ULTRAVIOLET OFF", 2); }
+        else { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); }
+        audio.beep = BEEP_UI;
+    }
+    if (in.wasPressed(KEY_O) && !in.ctrl()) takeSample();   // Z-03: a vial of the ground at the crosshair
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
         returnState = GameState::SURFACE;
         openScreen(GameState::SECTOR_MAP);
@@ -334,6 +346,8 @@ void Game::surfacePad(PadMenu& m) const {
     m.item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
     if (!surf.inVehicle()) {
         m.item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
+        m.item(surf.uvLamp ? "PUT THE ULTRAVIOLET OUT" : "THE LAMP'S ULTRAVIOLET", KEY_U, MOD_SHIFT);
+        m.item("TAKE A SAMPLE", KEY_O);
         m.item("VISION MODE", KEY_V);
         m.item("CREATURES NEARBY", KEY_X);
         const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));

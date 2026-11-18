@@ -75,6 +75,25 @@ struct GalaxyMark {
     long long when = 0;           // placed (the wall clock)
 };
 
+// Z-04: what was seen of a species under the microscope, keyed `<body key>/M<index>` (its index its world's list's, the biota's saved key): a bit
+// for each part of its sheet seen (its form and size on any slide, its motion on a living one, its flagella in a dark field, its DNA in the
+// glow, its wall under the electron; Z-05 its growth, Z-06 its kin), and the forms of its life cycle seen (`CycleForm`'s bits). `microbe` lines,
+// after the `microbes 1` line that marks the keys' scheme. Z-05: the stages of its life seen on a culture's curve (`LifeCycle`'s bits), and its
+// growth (the quickest doubling seen in a flask and the medium it grew in), after a sheet's two numbers where there are any. Z-06: its genome
+// read on the sequencer (its kin: the tree's). Z-07: the years its spores slept before a flask woke them (the longest seen), after the growth's
+enum SheetSeen : uint32_t { SEEN_FORM = 1, SEEN_MOTION = 2, SEEN_FLAGELLA = 4, SEEN_DNA = 8, SEEN_WALL = 16, SEEN_KIN = 32 };
+struct MicrobeSheet {
+    uint32_t seen = 0, forms = 0;
+    uint32_t stages = 0;
+    double doublingS = 0;        // 0: never seen growing
+    int cell = 0, light = 0, energy = 0, salt = 0;
+    double tempC = 0;
+    double sleptYears = 0;       // 0: never woken (or woken with no years: a living world's)
+};
+// Z-05: a strain arisen in a flask, keyed `<body key>/M<index>/S<n>` (its species' key and its number): the strain it came of (0 the wild),
+// its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines
+struct StrainRecord { int parent = 0, what = 0; double value = 0; };
+
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
     std::map<std::string, std::string> inbox;     // key -> name (from imported guides)
@@ -92,6 +111,15 @@ struct Guide {
     std::set<std::string> graves;                 // "<body key>/G<id>" of every grave read in the ruins (`grave` lines), like the landmarks
     std::set<std::string> ended;                  // the worlds whose last recording the decoder read (`ended` lines): their timeline closed
     std::set<std::string> instruments;            // "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; peoples/instruments.h's ids): kept in the cabin's case
+    std::map<std::string, MicrobeSheet> microbes; // Z-04: "<body key>/M<index>" of every species seen under the microscope, what of it was seen (`microbe` lines)
+    std::map<std::string, StrainRecord> strains;  // Z-05: "<body key>/M<index>/S<n>" of every strain a flask gave (`strain` lines)
+    std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
+    // Z-07: the samples taken (`stat samples`) and the worlds they came from (`sampled` lines); a friend's sheets of the species they saw, lent by
+    // their inbox file (`lentmicrobe` lines, as `microbe` lines): in the catalogue in cyan, in no statistic; the explorer's own sheet wins
+    int samplesTaken = 0;
+    std::set<std::string> sampled;
+    std::map<std::string, MicrobeSheet> lentMicrobes;
+    bool isLentMicrobe(const std::string& key) const { return lentMicrobes.count(key) && !microbes.count(key); }
     // "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in
     // cyan, never taken, the ruins still hold them
     std::set<std::string> lent;
@@ -126,8 +154,10 @@ struct Guide {
     // (its `shard` keys with a `decoded` line, not its own lent ones), `lentOut` how many are new; -1 when the file cannot be read
     // and the probes' recordings it holds (its own, not those lent to it), `probesOut` how many are new; R-408: and its marks
     // (its own, not those lent to it, nor one standing where a mark of the explorer's or an earlier loan does), `marksOut`; G-06: and its
-    // marks of the galaxy likewise (one within a light year of a mark already there is the same place), `galaxyOut`
-    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr);
+    // marks of the galaxy likewise (one within a light year of a mark already there is the same place), `galaxyOut`; Z-07: and the sheets of the
+    // species it saw (its own, not those lent to it, nor one the explorer saw), `microbesOut` how many are new
+    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr,
+                    int* microbesOut = nullptr);
     void addLog(double t, const std::string& kind, const std::string& text);
     void pushHistory(const std::string& key);
 };

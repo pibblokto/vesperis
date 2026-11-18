@@ -59,13 +59,19 @@ void Game::renderSpace() {
     c.detailBody = titleCam ? -1 : telescopePlateBody();   // the eyepiece's body gets the planet function at its footprint (the plate)
     c.detailBudget = (wantsScreenshot || telePlateFinish) ? 0 : TELE_PLATE_BUDGET;   // a photo reads the plate out whole
     telePlateFinish = false;
-    spaceR.render(fb, c);
-    // the cabin round the view, the drones' lights outside its windows (M2): not on the landing map (auto-explore's is the cabin still), nor
-    // with the radar camera (outside the cabin) or the eye at the eyepiece
-    if (settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }
+    // the ship round the view, the drones' lights outside its windows (M2): not on the landing map (auto-explore's is the ship still), nor
+    // with the radar camera (outside the ship) or the eye at the eyepiece. I-02: what the eye sees of the ship first; with no window,
+    // oculus or dome in view the space view is not drawn (the frame cleared under the ship's walls, the bodies' places on the screen kept
+    // for the HUD, the flight's band kept building)
+    const bool aboard = settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on;
+    if (aboard) cabinSight();
+    if (!aboard || cabinFrame.sight.seesOut) spaceR.render(fb, c);
+    else { fb.clear(0); fb.clearDepth(); spaceR.bodiesOnScreen(c); keepFlightBand(); }
+    if (aboard) { cabinDeal(); cabinPalette(); if (cabinFrame.sight.seesOut) drawDroneLights(); drawCabin(); }
     if (radar.on && !titleCam) radarCameraFeed(fb);
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // arrival flash
+    fb.raiseUnder();   // B-437: the outside's own banks back in the frame (a flight's next frame fades this one)
 }
 
 // U-02: the scene under an overlay, the one it was opened from (`returnState`): the ground, the title over space, else space;

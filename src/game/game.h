@@ -39,6 +39,9 @@
 #include "case_state.h"
 #include "drone_state.h"
 #include "telescope_state.h"
+#include "aboard_state.h"
+#include "search_state.h"
+#include "lab_state.h"
 #include "probe_state.h"
 #include "autoexplore_state.h"
 #include "tape_state.h"
@@ -104,7 +107,8 @@ public:
     std::string guidePath = "guide.txt";
     std::string shotsDir = "shots";
     std::string screenshotCaption() const;
-    void noteScreenshot() { guide.screenshots++; guide.save(guidePath); }
+    void noteScreenshot() { guide.screenshots++; guide.save(guidePath); prints.stale = true; }   // I-04: the quarters' wall prints it
+    static void aboardSounds(AudioState& a, int room, bool radarOn, bool playing, int shipMode);   // I-04: a room's sounds (autopilot.cpp)
     std::string starNameOf(const Star& s) const;
     std::string bodyNameOf(int bi) const;
     bool starNamed(const Star& s) const;
@@ -222,7 +226,7 @@ protected:
     std::vector<uint32_t> rgbBuf;
     RGBCanvas canvas;
     GameState returnState = GameState::SPACE;
-    double t = 3.6e6;
+    double t = EXPEDITION_T0;
     double timeWarp = 1;
     double realTime = 0;
     StarNeighborhood nb;
@@ -365,10 +369,14 @@ protected:
     std::vector<std::string> consoleLines;
     std::string consoleInput;
     Mat3 viewBasis() const;
+    CabinFrame cabinFrame;   // I-02: the frame's, taken before the space view (`cabinSight`) and drawn after it (`drawCabin`)
+    void cabinSight();
+    void cabinDeal();   // B-435: the banks dealt once the outside is drawn; B-437: the outside sunk into its own bank first
+    void cabinDaylight(CabinFrame& f);   // I-03: the sun and the parked world aboard
     void cabinPalette();
     void updateCabin(const Input& in, double realDt);
     void drawCabin();
-    void drawCabinBand(const CabinFrame& f);
+    void drawCabinPieces(CabinFrame& f);
     void renderCabinHUD();
     void shipScreenEnter(); void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen(); void shipScreenPad(PadMenu& m) const; void consolePad(PadMenu& m) const;
     void consoleEnter(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in, double dt, double realDt); void renderConsole();
@@ -496,10 +504,10 @@ protected:
     DronePose dronePoseAt(int k) const;
     bool droneRackPlace(int k, double& x, double& lift, double& blur) const;
     void droneRackFrame(CabinFrame& f) const;
-    void drawDroneRack(const CabinFrame& f);
+    void drawDroneRack(CabinFrame& f);
     void drawDroneLights();
     void drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun);
-    void drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims);
+    void drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims, ShapeSink& out);
     void drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col);
     void buildDroneMap(int body);
     int droneBayWorld() const;
@@ -706,6 +714,7 @@ protected:
     void autoPlanProbe();
     void autoPlanGround(); bool autoPlanOuting(int kind); void autoPlanLeave(); void autoPlanVehicleOut(int which);
     bool autoOutingVista(); bool autoOutingWater(); bool autoOutingLife(); bool autoOutingSight(); bool autoOutingDrive(); bool autoOutingFly(); bool autoOutingRuins(); bool autoOutingSky();
+    bool autoOutingSprings(); bool autoSampleRoom() const; void autoPlanSample(double towardX, double towardZ, const char* what);   // Z-07: its samples
     void autoPlanTravel(double x, double z, double r, int how, double circle = 0);
     void autoPlanTown(double cx, double cz, double size);
     bool autoFindRise(double& x, double& z); bool autoBigSky(Vec3& dirLocal); bool autoDryAt(double x, double z);
@@ -717,7 +726,7 @@ protected:
     void autoLookAt(double x, double y, double z, double pace = 1);
     void autoAimShip(const Vec3& dir); double autoShipOff(const Vec3& dir) const;
     void autoWindowLook(double pace); void autoEyesFront(double pace); void autoGazeOverBody(int b); void autoGazeRound(double pace);
-    bool autoAtWindow() const; bool autoCabinWalk(double x, double z, double yaw); bool autoCabinToCapsule();
+    bool autoAtWindow() const; bool autoCabinWalk(int room, double x, double z, double yaw); bool autoCabinToCapsule();
     int autoWalkTo(double x, double z, double r, double speed, double dt, double replanMove = 0.5);
     void autoWay(double x0, double z0, double x1, double z1, std::vector<std::pair<double, double>>& out);
     int autoDrive(double x, double z, double r, double cruise, double dt); bool autoDriveClear(double x, double z, double heading);
@@ -736,4 +745,137 @@ protected:
     void tapeRender();
     // ---- where each screen was opened from (`openScreen`, U-05): its way back when its row's is its opener
     GameState openedFrom[STATE_COUNT] = {};
+    // ---- life aboard (cabin_life.cpp, aboard_state.h; I-04): the photographs' prints on the quarters' wall (made on a thread of their
+    // own, asked for when the quarters are seen), the home world's garden, the shards held of each world for the shelves (made again when
+    // their count changes), the hatch's drop (a descent's first seconds, seen from the hangar, when boarded at the capsule)
+    ShipPrints prints;
+    ShipGarden garden;
+    GrainTexture leafGrain;
+    std::vector<int> shelfCounts; size_t shelfShards = (size_t)-1;
+    bool dropNext = false;   // the landing map opened by boarding at the capsule: its Enter drops it from the hangar first
+    static constexpr double DROP_S = 3.5;
+    void lifeSight(CabinFrame& f, std::vector<ShipBankAsk>& asks);
+    void printsAsk(); void printsCollect();
+    void gardenMake();
+    RGB finishColour(int k) const;
+    double gardenGrowth() const;
+    bool cabinDropping() const;
+    Cabin cabinSeen() const;
+    double lifeShade(const CabinFrame& f, int room, const Vec3& p, const Vec3* n, double a) const;
+    void drawLifePiece(CabinFrame& f, const ShipPiece& pc, const CabinDraw& d);
+    void drawPrints(CabinFrame& f, const ShipFixture& F, const CabinDraw& d); void drawShelf(CabinFrame& f, const ShipFixture& F, int unit, const CabinDraw& d);
+    void drawGarden(CabinFrame& f, const ShipFixture& F, const CabinDraw& d); void drawCore(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);
+    void drawDisplay(CabinFrame& f, const ShipFixture& F, const CabinDraw& d); void drawDeck(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);
+    void drawCapsule(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);
+    void drawStore(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);   // Z-04: the cold store's door's lamps
+    // ---- the search (search.cpp, search_state.h; Z-03): the kit's vials taken on this descent (O on foot, the capsule's scoop in a cloud
+    // world's descent), the cold store they go to at the climb aboard (its 64 places the save's `vial` lines)
+    std::vector<Vial> kit, coldStore;
+    bool scooped = false;   // this descent's scoop taken
+    std::string scoopLine; double scoopUntil = 0;   // its line, in the capsule's caption while it lasts (the capsule draws no status)
+    void takeSample();
+    void sampleTaken(const Vial& v, const char* how);   // Z-07: counted, its world the guide's, logged (SAMPLE)
+    void scoopClouds(double altKm);
+    void storeVials();
+    std::string vialLine(const Vial& v) const;
+    void saveVials(std::ostream& f) const;
+    bool loadVial(const std::string& line);
+    // ---- the microscope (microscope.cpp, microscope_draw.cpp, lab_state.h; Z-04): the laboratory's first device, a camera entered on the
+    // cold store's vials: a vial's slide in six ways of seeing, zoomed, focused, panned, a cell tracked; the four things done to it; what is
+    // seen of each species the guide's (its sheet), named with N, a micrograph with P
+    MicroscopeState scope;
+    std::string textSpeciesKey;   // the species a text entry of TEXT_SPECIES names
+    void microscopeEnter(); void updateMicroscope(const Input& in, double dt, double realDt); void renderMicroscope(); void microscopePad(PadMenu& m) const;
+    bool microscopeStage(int vial);
+    void microscopeEmpty(int vial);
+    void microscopeWay(int seeing);
+    void microscopeFrame();
+    void microscopeSee();
+    SlideLook microscopeLook() const;
+    double microscopeMag() const { return std::exp(scope.logMag); }
+    double microscopeStepMag(int seeing, int step) const;
+    int microscopeSpeciesUnder() const;
+    std::string speciesKey(int species) const;
+    std::string speciesName(int species) const;
+    std::string vialWorldName(const Vial& v) const;
+    std::vector<std::string> sheetLines(int species) const;
+    std::string formWords(int species, int form) const;
+    // Z-07: any species' sheet and form in words (the catalogue's), its plan's words
+    std::vector<std::string> sheetLinesOf(const std::string& key, const Microbe& s, const Morph& m, const std::string& world, const MicrobeSheet& seen) const;
+    static std::string formWordsOf(const Morph& m, int form);
+    static const char* planWords(int plan);
+    static std::string formsSeenWords(uint32_t forms);                   // "CELLS, SPORES" (`CycleForm`'s bits)
+    static std::string stagesSeenWords(uint32_t stages, bool largeCell);   // "ASLEEP, WAKING" (`LifeCycle`'s bits)
+    void renderMicroscopeList(); void renderMicroscopeHUD(); void renderMicroscopeSheet();
+    bool microscopeStageFlask(int flask);   // Z-05: a flask's drop on the stage, its culture as it is
+    void microscopeView();                  // a new mount's first look
+    int microscopeRows() const;             // the list's rows: the cold store's vials, then the flasks with a culture
+    int microscopeRowFlask(int row) const;  // a row's flask (-1 a vial's)
+    // ---- the incubator (incubator.cpp, incubator_draw.cpp, lab_state.h; Z-05): the laboratory's second device, a screen over the room: twelve
+    // flasks, each a medium and a culture of one or two species on the lab's clock (its curve, its stages; spores woken, two in a flask, strains
+    // named with N), and the jars' shelf (a world's silt in a column, settling in bands); the clock and both saved (`lab`, `flask`, `flaskwho`,
+    // `flaskev`, `jar` lines); the flasks and the jars drawn in the room by `cabin_life` (`drawIncubator`, `drawJars`)
+    LabState lab;
+    IncubatorState incub;
+    std::string textStrainKey;   // the strain a text entry of TEXT_STRAIN names
+    void incubatorEnter(); void updateIncubator(const Input& in, double dt, double realDt); void renderIncubator(); void incubatorPad(PadMenu& m) const;
+    void incubatorSave(std::string& lines) const; bool incubatorLoad(const std::string& line); void incubatorReset();
+    void updateLab(double realDt);
+    void flaskMake(int i);
+    void flaskMadeAll();
+    bool flaskPut(int i, const IncubatorChoice& c);
+    void flaskEmpty(int i);
+    void flaskSet(int i, const Medium& m);
+    void flaskFresh(int i);
+    void flaskSeen(int i);
+    Medium flaskAsItsWorld(int i) const;
+    CultureNow flaskNow(int i) const;
+    std::string flaskLine(int i) const;
+    std::string flaskSpeciesKey(const FlaskSpecies& w) const;   // its species' guide key; a strain's its key and /S<n>
+    std::string flaskStrainKey(const FlaskSpecies& w) const;
+    std::string flaskSpeciesName(const FlaskSpecies& w) const;
+    bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept) const;
+    void incubatorChoices();
+    bool jarPut(int vial);
+    void jarEmpty(int j);
+    void jarMake(int j);
+    void renderIncubatorFlasks(); void renderIncubatorJars(); void renderIncubatorChooser();
+    void drawIncubator(CabinFrame& f, const ShipFixture& F, const CabinDraw& d); void drawJars(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);
+    // ---- the sequencer (sequencer.cpp, lab_state.h; Z-06): the laboratory's third device, a screen over the room: a species seen in a vial or a
+    // flask read in its genesis's alphabet in SEQUENCE_S on the lab's clock (the `seq` line), its place in the tree told (the sheet's kin, the
+    // log's KIN), a made species' watermark to the decoder (`guide.watermarks`); the tree of kin (tree_screen.cpp), every species read and the
+    // ship's own by kinship, the geneses counted, Enter on a kin's world its star the remote target
+    TreeState tree;
+    void sequencerEnter(); void updateSequencer(const Input& in, double dt, double realDt); void renderSequencer(); void sequencerPad(PadMenu& m) const;
+    void sequencerSave(std::string& lines) const; bool sequencerLoad(const std::string& line); void sequencerReset();
+    void sequencerChoices();
+    bool sequencerPut(const FlaskSpecies& w);
+    void sequencerMake();
+    void sequencerTick();             // the reading's end as the lab's clock reaches it (`updateLab`)
+    std::string sequencerResult();    // its result's lines (its kin among those read), the log's line
+    double sequencerRead() const;     // the share read, 0 .. 1
+    bool speciesOfKey(const std::string& key, FlaskSpecies& w) const;
+    const Lineage& lineageOfKey(const std::string& key);
+    void treeEnter(); void updateTree(const Input& in, double dt, double realDt); void renderTree(); void treePad(PadMenu& m) const;
+    void treeBuild();
+    int treeNearest(int i, double& gyr) const;
+    void drawTreeWall(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);   // cabin_life.cpp: its lines over the screen in the room
+    // the decoder's watermarks (shards_screen.cpp): a made species' sequenced, read beside its people's records, its language theirs
+    void shardWatermarkAdd();
+    int recordsHeld() const { return (int)shardHeld.size() - (shardWorld.watermark >= 0 ? 1 : 0); }   // the records held, the watermark aside
+    static std::string genesisWords(const Genesis& g);          // a genesis's head (its letters, its hand, its years); Z-07: the catalogue's too
+    static uint32_t genesisColour(uint64_t id, float k = 1);    // its colour (home's the tree's screen's)
+    // ---- the catalogue (catalogue.cpp, lab_state.h; Z-07): the guide's page of every species seen and a friend's lent (cyan), by world or by kin;
+    // a species' sheet beside its form drawn live, named with N; the statistics' LIFE page (guide_screens.cpp)
+    CatalogueState cat;
+    bool statsLife = false;   // the statistics' LIFE page (L)
+    void catalogueEnter(); void updateCatalogue(const Input& in, double dt, double realDt); void renderCatalogue(); void cataloguePad(PadMenu& m) const;
+    void catalogueBuild();
+    void catalogueStep(int d);
+    void catalogueName();
+    const MicrobeSheet& catalogueSheet(const std::string& key) const;   // the explorer's sheet, else a friend's lent
+    std::string catalogueLine(const CatalogueRow& r, bool world = true);
+    void renderCatalogueSheet();
+    double renderCatalogueForm(const Morph& m, const MicrobeSheet& seen, uint64_t seed);
+    void renderStatsLife();
 };

@@ -20,6 +20,11 @@ Contents:
 * Palette: 64 colour stops per bank (`pal[BANKS*64*3]`); `setRamp(pal, bank, {{pos, RGB}, ...})` defines a bank as a piecewise linear ramp through stops at positions 0..63; `scalePalette` fades all banks. `toRGB(out, gain)` interpolates the 64 stops to 256 steps per bank and looks pixels up by `intensity >> 3`, so smooth gradients (sky, glow) no longer show 64-step banding.
 * `Framebuffer::mush(passes)` is Noctis' `psmooth_64` generalised: for each pixel, keep the bank of the pixel one row below and replace the intensity by the average of the k x k block starting one row below. `g_mushKernel` = scale + 1 in the "classic" setting (2x2 at 1x, 3x3 at 2x, 4x4 at 3x, 5x5 at 4x; "soft" = scale + 2, "sharp" = max(2, scale), and since B-310 "fine" = max(2, scale - 1), the default: 3x3 at 4x, so two passes span five pixels, 1.25 logical pixels, and leaves, trunks and ridges resolve while the edges still melt); two passes everywhere. k = 2 keeps the original inner loop; larger boxes use separable running sums (windows clamped at the right edge). F-07: a pass reads the frame and writes `back`, the two swapped after it (no copy); its rows go to the pool, k = 2's too (the last two rows copied as they were); a larger box slides the column sums of its k rows down a band of rows one row at a time and a k-wide window along them, the row under the pixel giving the bank and leaving the sums in one read, and the quotient is a multiply and a shift (`(sum x m) >> 32`, `m = 2^32 / divisor + 1`: exact while sum x divisor < 2^32, every k to 38), the same pixels as the two passes over a 4 MB buffer it replaced. Consequences: colours never bleed across banks, edges melt, single-pixel points soften (stars and far bodies are therefore drawn as 2x2 logical blocks with a halo), the image shifts up by about one logical row per pass.
 * `glowDisc(cx, cy, radius, coreRadius, maxAddShades, bankIfEmpty)` adds intensity inside a disc (sun glow, flares); `bankIfEmpty` -1 keeps the existing bank. F-05: nothing at all when `maxAddShades` is 0 or less (every add would be 0: a dim veil walked its 0.9 M pixels at 4x), and the rows on the pool (a disc under 64 rows stays on the caller); every caller is on the main thread outside a pool job.
+* The layer under the banks (B-437): `sinkUnder(bank, box)` moves a box's pixels of every bank but 0 into one bank, each pixel's own bank kept
+  in `under` (a byte a pixel) and the palette in `underPal`. The mush counts its passes, and a pixel of that bank whose bank came from
+  the box (`underRow`: each pass takes a row's banks from the row below, the last two rows kept by the 2x2 kernel, the last one by the
+  box) is read by `toRGB` through `underPal` at its own bank, the table made again only when that palette changes; `raiseUnder` puts
+  the banks back and ends the layer. Aboard, the outside under the ship is one (bank 7, "The ship's light").
 * Sizes in scale units (M10-15): line thickness, point size, star dots, the far-body point, the sun's minimum corona and the Vimana streak length are multiplied by `FB_SCALE`; the terrain grain scale too, so the grain keeps its on-screen size; the sky cloud grid cell is `4 * FB_SCALE` pixels; at 3x and 4x the sky is evaluated at half resolution.
 
 ## Rasteriser (`core/raster.*`)
@@ -75,21 +80,21 @@ Space (`SpaceRenderer::setupPalette`):
 | 5 | red stars |
 | 6 | body A's water (any body's water texels, M1-06/N1-02) |
 | 7 | body B's water |
-| 8 | the cabin hull (M2), lit by `cabin.lightLevel` |
-| 9 | the flight computer's screen (green phosphor); R-404 (2026-10-06): the other computers' screens are banks 21-27, each in its own colour |
-| 10 | the cabin light, the fuel orb and the capsule |
+| 8 | the ship's hull (M2): its grey; I-03: a fixed ramp, the light in the shades (the lamps' pools, the sun's patches) |
+| 9 | the flight computer's screen (green phosphor); R-404 (2026-10-06): the other computers' screens are banks 21-27, each in its own colour; I-02: the screens' home banks, dealt each frame to what is seen (`ShipBanks`) |
+| 10 | the cabin light, the fuel orb and the capsule; I-03: the lamps' points, the drive's ring's glow outside; I-04: the capsule as the surface draws it, the drive's core and its ring's glow aboard |
 | 11 | body A's forest (N1-02) |
 | 12 | the companion star (M5-01); D-02: in a system with no sun (no second sun to hold it), a giant's or a brown dwarf drifter's aurorae (hydrogen's pink and violet, `auroraBank12`) |
 | 13 | body A's sand family: sand, dust, sulphur, quartz |
 | 14 | body A's snow family: snow, ice, and thick cloud (`cloud > 0.6`) so clouds read white |
 | 15 | body A's grass |
 | 16 / 17 / 18 / 19 | body B's forest / sand / snow / grass (O0-02, B-305: the family banks used to be shared between A and B, tinted by whichever body had the family first, so the smaller world borrowed the bigger one's sand and snow and changed colour as you approached its neighbour) |
-| 20 | belt rocks (O3): a warm dark grey under the star's light |
-| 21-27 | the cabin's other computers (R-404): the GOES console amber, the star map screen blue, the landing map screen pink, the target data screen cyan, the shard decoder violet, the signal radar red, the telescope's set ice-white (`cabinPalette`, the screens' ramp shape) |
+| 20 | belt rocks (O3): a warm dark grey under the star's light; Z-05: aboard, the incubator's screen's home key (amber; dealt as the microscope's) |
+| 21-27 | the cabin's other computers (R-404): the GOES console amber, the star map screen blue, the landing map screen pink, the target data screen cyan, the shard decoder violet, the signal radar red, the telescope's set ice-white (`cabinPalette`, the screens' ramp shape); I-03: the ship's finishes are dealt from this pool too (their homes 11-17 are keys, the panels, the floor, fabric, brass, plants, glass and the hull outside), the nearest asks first; I-04: the photographs' print (18) and the garden's second green (19), and the shelves' shards in the decoder's |
 | 28 | in space, the cabin's instruments' case (C-11, R-404's scheme: its shelves' glass in lime); X-01 had drawn the probe's sun here before X-02 composited the probe's picture in RGB |
 | 29 | in space, the cabin's drone bay (C-18, R-404's scheme: its screen's cells in a pale yellow; the drones' stripe and arms, their number lamps) |
 | 30 | in space, the bay's drones' paint (C-18: a light warm grey under the cabin's light, `cabinPalette`) |
-| 31 | body A's water trait colour (Q-02, 2026-10-22: a bloom's, a reef's lagoon's, else a pink lake's, from its map's `ltint`/`wtint`; body B's water stays its own: the cabin holds the other banks). X-01 drew the probe's rain and entry plasma in 30 and 31; since X-02 the probe's picture is composited in RGB from `ShadeRamp`s and uses no bank of its own. A milky sea's glow on body A's night side is drawn in its water's own ramp (its pale upper stops) |
+| 31 | Z-04: the microscope's screen's home key (teal; dealt as the cabin's banks are, a free one of the pool looking out). Body A's water trait colour (Q-02, 2026-10-22: a bloom's, a reef's lagoon's, else a pink lake's, from its map's `ltint`/`wtint`; body B's water stays its own: the cabin holds the other banks). X-01 drew the probe's rain and entry plasma in 30 and 31; since X-02 the probe's picture is composited in RGB from `ShadeRamp`s and uses no bank of its own. A milky sea's glow on body A's night side is drawn in its water's own ramp (its pale upper stops) |
 
 The pixel (O0-02, 2026-09-27): `Pix` is still 16 bits, but the top 5 bits are the bank (32 banks, `BANK_MASK 0xF800`) and the low 11 bits the intensity (`INTEN_PER_SHADE` 32 units per classic shade, 0..2047). The mush, the glow discs, the rasteriser's blends and the RGB conversion work in those units through the constants; the ordered dither nudges by 12 units (1.5/16 of a stop, as before). The regression frames were re-blessed.
 
@@ -127,11 +132,11 @@ Surface (`SurfaceView::setupPalette`, colours from `lookFor(gen, star)`):
 | 12 | the companion star's disc and glow in its own colour (M5-01) |
 | 13 | a glowing parent in the sky, its colour toward amber (M5-02) |
 | 14 | warning red: tail lights, the antenna light, the dial needles {0 black, 14 dark red, 40 red, 63 salmon} (N4-01) |
-| 15 | on comets only (O4): the ion tail's blue {0 black, 18 deep blue, 40 blue, 63 pale blue}; P-03 the chemotroph's spores; Q-02 a milky sea's glow at night (its dark end the night sea's, its top the bacteria's pale blue) |
+| 15 | on comets only (O4): the ion tail's blue {0 black, 18 deep blue, 40 blue, 63 pale blue}; P-03 the chemotroph's spores; Q-02 a milky sea's glow at night (its dark end the night sea's, its top the bacteria's pale blue); Z-03 the living films under the lamp's ultraviolet (`drawFilmGlow`, after the old result: the glow's light added to the pixel's, in this bank where it is the brighter; its own ramp in the films' colour where none of the above holds the bank, set only while it is on) |
 | 16 | bark (B-315): a brown of the planet's own, toward the second flora colour, through `matRamp` (trunks, branches, logs, stubs, roots; on the ground bank the dark stops took the sky's colour and trunks came out black) |
 | 17 | cut wood (B-315): pale tan through `matRamp` (the ends of logs) |
 | 18 / 19 / 20 / 24 | A-02: the first people's palette (`FORM_BANKS[0]`): the structure, the accent, metal and glass through `matRamp` (a slot of the ground's own material takes that bank's colour, so C-01's walls of rock or adobe look as they did), and light, a ramp that glows whatever the sun (`{0 black, 24 0.3c, 46 c, 56 c->white 45%, 63 fog}`); A-03: the age's materials in them (`agePalette`: the rock, timber and thatch and a post hole's dark; the rock, the roofs, timber; brick, slate, rust; concrete, an accent, steel; composite, an accent, diamond glass; the far future's one material, its accent, black); A-04: the people's genome through its age (`culturePalette`): the structure (the ground's rock tinted a quarter toward the people's base colour, `FormPalette::tint`, or painted in it; its brick, concrete, composite), the accent (where the people put it), the roofing or the glass in the people's tint, and timber and rust in bank 24 where the age has no light (`FormPalette::glow` false: a material ramp lit as the rest), the light's ramp only in the futuristic and the far future's; a pool's water draws in bank 2, a great tree's trunk in bank 16 and its crown in bank 3 (`Form::part` 9, 10, 11) |
-| 25-28 | A-02: the second people's palette (`FORM_BANKS[1]`), as 18-20 and 24. Q-02 (2026-10-22): on a world without a people (its traits that take them never come to a people's) 25 is a pink lake's water or the hot springs' mats, 26 a bloom's or a reef lagoon's water or the petrified trunks' jasper, 27 the rainbow strata's accent (`setupPalette`; where the harness stages a people's forms they keep theirs) |
+| 25-28 | A-02: the second people's palette (`FORM_BANKS[1]`), as 18-20 and 24. Q-02 (2026-10-22): on a world without a people (its traits that take them never come to a people's) 25 is a pink lake's water or the hot springs' mats, 26 a bloom's or a reef lagoon's water or the petrified trunks' jasper, 27 the rainbow strata's accent (`setupPalette`; where the harness stages a people's forms they keep theirs). Z-03: the springs' mats in one ramp whose colour turns along it (`matRampTurning`: the coolest bands' brown in its dark end, orange, the hottest's yellow in its light end), 28 red snow's algae |
 | 21 | the aurora's tops (R-402): the high part of the curtains' profile in the world's second colour, the same ramp shape as bank 11 |
 | 22 | the galactic band and the nebula patches (G-03): from the night sky's colour (black on an airless world) to a pale star-grey at 40, toward a protostar's cloud tone under one (S-04). B-408: an airless sky lies in it all over and its sun is drawn in it, so the ramp keeps the star-grey under 20, turns to the sun's colour above it at the grey's light and takes the sky bank's sun stops from 55 (a protostar's sky keeps the cloud's ramp). Q-02: the noctilucent clouds and the moon's ice halo drawn in it (the sky's colour to a pale silver, where the night sky's own ramp is darker in its middle than at its ends: they had dark outlines in bank 1) |
 
@@ -192,21 +197,84 @@ thin at the companion and flaring into the disc, bent back against its motion; i
 sun). Asteroid belts are drawn as hashed points between the star field and the sun; after the globes, when the ship is inside a
 belt, `drawBeltRocks` (O3) draws the rocks within four cells: points under 1.6 px (bank 3, lit by phase), else lumpy meshes (a 6 x
 3 or 12 x 6 sphere with fbm radii, tumbling, back faces culled, `0.06 + 0.94 lambert` shading, depth-tested), far to near. In
-cabin mode the cabin geometry is drawn after the space scene with depth (`Game::drawCabin`; F-05: in bands of rows on the pool as
-the ground's rings are, the frame's values taken once in a `CabinFrame` (the eye, the light, the screens' flickers, the decoder's
-wait, the rack's drones with their models: `droneRackFrame`), every band walking every piece in order (`drawCabinBand`), then the
-bulb's and the orb's points and glows, a glow not being clipped to a band): floor, ceiling ring, wall bands and pillars, mullions,
-the cage bars and the capsule dome, the console and desk boxes with their screens, the bulb and the orb, and C-18's drone rack
-(its panels and shelves in the hull's bank, its screen's cells in bank 29, the drones from `droneModel`: faces in bank 30, 8, 29
-and 0, the arms and struts as lines, the lamps as points; drawn after the case, so the rack's back panel hides a drone backing
-through its port); before the cabin, C-18's drones outside the hull (`drawDroneLights`: within 2.6 s of the hull the model lit by
-the sun, depth-written so the walls drawn after cover it outside the window band, farther a strobe in bank 10 without depth); a
-depolarised hull (B-411) draws only the hull (the floor, the ceiling ring, the walls, the pillars and the mullions, the deck's rim
-from the roof) with `BLEND_DARKEN` and its `sheen` (the pixel behind at 45% of its intensity, or the glass's own shade in bank 8
-where that is the brighter: the cabin light's level times 16, `GLASS_SHEEN`, times the face's share of the hull's shade, so the
-outside shows through tinted and the lit cabin's glass catches a faint sheen), and what stands in the room (the consoles, the back
-wall's sets, the case, the front desk) and the deck's floor with the solid hull's parameters; M2's `BLEND_DARKEN` on every face
-had turned the furniture to glass with the walls and left the light nothing to light.
+cabin mode the ship is drawn after the space scene with depth (`Game::drawCabin`; F-05: in bands of rows on the pool as the
+ground's rings are, the frame's values taken once in a `CabinFrame` (the eye, the light, the screens' flickers, the decoder's wait,
+the rack's drones with their models: `droneRackFrame`; I-01: each device's screen's shade, its row's `screen`). The ship is its
+plan's rows (`game/ship_plan.h`, I-01; I-02's three decks and eight spaces: rooms, ways, windows, fixtures, lamps, views; a mesh
+built once from them in ship metres, a piece its room, material, bank, device and shade's factors). I-02: the frame's sight is
+taken before the space view (`Game::cabinSight`, `shipSight`): the room the eye is in (on the stair, by its height), then the rooms
+through its arches, the well and the oculus a few ways deep, each with the box of the screen its ways are seen in (a way partly
+behind the eye: its room's own box; the eye on the way's far side: not looked through); with no window's glass, oculus or dome
+in a seen room's box and the hull polarised, `renderSpace` clears the frame and its depth instead of drawing the space view
+(`SpaceRenderer::bodiesOnScreen` keeps the bodies' places for the HUD, `keepFlightBand` the flight's band). The seen rooms' pieces
+are projected once a frame, the room stood in first and on by depth, in their serial order into the frame's `ShapeList`
+(`core/raster.h`: `rasterPolygon`'s and `rasterLine3`'s two halves; a room's clip: its shapes left out off its box and filled in its
+rows only, a row's pixels its own; `drawCabinPieces`), then every band fills the shapes that reach its rows, then the seen rooms'
+lamps' points (I-03: their glows are the pools on the rooms' surfaces, below). A window's glass is written to depth only
+(`BLEND_DARKEN` at 1: the outside stays, no room behind it is drawn through it). `ship rooms` draws each frame again with every room
+unclipped and with the space view, and counts the pixels that differ: none (a room's walls share their edges' points, two rooms
+never a face's plane, walls between rooms being slabs). The rooms: floors and ceilings round the stair's well and the oculus (a
+square's frame and the ring from the square to the circle's sixteen points), walls round their holes (a round head's strips),
+the arches' tunnels, the rims and rails, the bridge's steps and the great window's arc of panes and mullions, the observatory's
+parapet, the dome's ribs (lines) and glass, the stair's column, landings, treads, undersides, risers and handrail; what stands in
+them, boxes, screens, the cage's bars and the capsule's dome, tubes, the drive's ring, and C-18's drone rack in the hangar (its
+panels and shelves in the hull's bank, its screen's cells in the bay's dealt bank, the drones from `droneModel`: faces in the
+paint's bank, 8, the bay's and 0, the arms and struts as lines, the lamps as points; drawn after the case, so the rack's back panel
+hides a drone backing through its port); before the ship, with the space view, C-18's drones outside the hull (`drawDroneLights`:
+within 2.6 s of the hull the model lit by the sun, depth-written so the walls drawn after cover it outside the windows, farther a
+strobe in bank 10 without depth). The banks are dealt each frame (`ShipBanks`, I-02): 8 the hull and 10 the light fixed, a seen
+device's screen (Z-06: unless it stands behind the eye) its home bank (9, 21-29; Z-04: the microscope's teal asks for 31, its own
+since B-437 whatever the glass shows, as do the cold store's door's lamps, drawn in it; Z-05: the incubator's amber 20) and the
+drones' paint and lamps theirs while the rack or the drones are seen, by nearness; Z-05: the homes are keys to 47 (`SHIP_HOMES`), 32-45
+the lab's tones (the pigments', a
+crowd's glow, the incubator's red and blue lights, the jars' rust and sulphur, a broth's cloud: `cabin_life.cpp`), which have no bank of
+their own and take a free one, asked only for a flask or a jar drawn in front of the eye, 1.5 m farther than they stand (Z-06: 46 the
+tree of kin's screen, 47 the sequencer's: a device's home is never another's, 30 the drones' paint, for a home asked twice keeps one colour);
+one asked of a bank not in the pool takes a free one, past the pool a screen dims to the hull's grey; the pool is every bank but 0, 8
+and 10 and, looking out, 7 (I-03: the pool's nearest asks dealt, the rest dimmed; B-435: the deal comes once the outside is drawn,
+`cabinDeal`; B-437: the space view's pixels in the panes' box, the whole frame in the hatch's drop, are sunk into bank 7, a layer read
+through the space view's own ramps, "Framebuffer and palette", so the ship's 28 never wait on what the glass shows; it was 9 and 21-30
+looking out, then the banks the glass did not show). A depolarised hull (B-411) draws only the outer hull (the outer
+walls, floors and ceilings, the parapet) with `BLEND_DARKEN` and its `sheen` (the pixel behind at 45% of its intensity, or the
+glass's own shade in bank 8 where that is the brighter: the cabin light's level times 16, `GLASS_SHEEN`, times the face's share of
+the hull's shade, so the outside shows through tinted and the lit glass catches a faint sheen), and the inner walls and what
+stands in the rooms with the solid hull's parameters; M2's `BLEND_DARKEN` on every face had turned the furniture to glass with
+the walls and left the light nothing to light.
+
+The ship's light (I-03): every surface has a finish (`ShipFinishRow`: the hull's grey in bank 8, warm panels, a darker floor, fabric,
+brass, plants, glass, the hull outside), each a ramp fixed in its dealt bank (`{0 black, 16 0.22c, 34 0.62c, 50 c, 63 1.55c toward
+white}`, the outside's toward the star's colour); the light is in the shades. A room's surfaces and boxes are cut to a 1 m grid at the
+ship's whole metres when the mesh is built, and each vertex keeps its room's lamps' light (`lampOn`: the power by the face's turn to the
+lamp, wrapped a little, by `1 / (1 + (d / reach)^2)`, a bulb's within its cone of straight down, and a quarter of the room's mean given
+back), the fuel orb's apart: a vertex's shade is 42 x its factors x (0.1 + the lamps' x the light's level + the orb's x its pulse), so the
+lamps lie in pools and U dims them. A face turned from the eye is left out (each piece's normal toward its room's middle, a box's out).
+The sun (`Game::cabinDaylight`: `lightAt`, the ship's attitude, the share of its disc a world leaves showing; none sunless or in a flight)
+casts patches (`shipPatches`): each glass's outline (a window's light between its mullions, a pane of the great window, the oculus) cast
+along the light onto the pieces of the room's floors, steps, ceiling, walls and box tops facing it and cut to each (Sutherland-Hodgman),
+a floor's boxes' shadows taken out (the hull of a box's eight corners cast, the piece split by its edges); the dome lights the
+observatory's floor but in the parapet's shadow. The pieces are those the surfaces are built of round their holes (`Builder::receives`,
+B-434: the walls' whole rectangles laid a patch over an arch, which showed from the room beyond, drawn first). A patch is drawn after
+its room's pieces with `BLEND_ADD` (its shade added in the surface's own bank), `zbias` 1.0015 and no depth written, so it lies on its
+plane and nothing else. The parked world's light (`bodyShineAt`) adds 40 x its light on faces turned to
+it in rooms whose glass sees it (`shipGlassToward`). The hull outside (the roofs, the prow below the great window, the drive's ring astern
+with its inner face aglow, the radar's mast with its dish turning, the drones' door) is drawn first, clipped to the glass in view
+(`ShipSight::ox0..oy1`), so the panes keep it, lit as 4 + 46 x the sun's light x its turn to the sun + 30 x the world's; with the hull
+depolarised its skin is glass (not drawn), the sun lights every face turned to it and casts no patch. `ship light` draws it all.
+
+Life aboard (I-04, `game/cabin_life.cpp`): what the explorer keeps aboard is filled by the frame where its fixture comes in its room's
+order (the plan's pieces of `PIECE_SHELF` and on), each point lit as the mesh's vertices are (`shipLampLight`: the room's lamps and its
+fill). U's night keeps the glows' share (0.35, `SHIP_NIGHT_GLOW`: a vertex's `night`, its glows' light and their part of the fill), so
+the reading, bedside and picture lamps leave pools when the bulbs are out. The photographs on the quarters' wall are prints in one tone
+(the PRINT finish's sepia): each a 64 x 64 tile of its photograph's luminance (each cell its block's mean, exposed so the brightest
+fiftieth is white) as the polygon's grain, its offset `(tone / 79) x` the print's mean shade, so a print darkens with the light on it;
+a thread reads the last twelve `screenshot_<n>.png` when the quarters are seen after a photograph. The garden's leaves are clusters,
+each a seven-sided disc facing the eye (jittered), in the PLANT and PLANT2 finishes coloured as the home world's flora
+(`Game::finishColour`) with a grain of their own; its trunks four tapering faces. The shelves' shards are tablets in the decoder's dealt bank, their shade by
+the world's count; the core's ring and heart, the drive's ring's inner face (`MAT_GLOW`, 20 + 14 x the pulse + 26 x the drive) and the
+orb rise with the drive's level; the floor glass over the core darkens to 0.82 and catches no sheen (a sheen over the pit's grain
+mottled it). The capsule is `SurfaceView::drawCapsule`'s dome and ring in bank 10, lit by the hangar's lamps; in the hatch's drop its
+leaves sink as they slide under the floor (a leaf 3 mm under it fought the floor's depth), and a pane over the hole keeps the space
+view drawn behind (the frame's sight sees out while it drops).
 
 The telescope's plate (W-06 reworked on the user's review, 2026-10-06, `DetailPlate` in `space/space_view.h`, `updatePlate` in
 `space_globe.cpp`): the world map is the planet function sampled at 11-44 km, so at the eyepiece's powers (a disc over about 80

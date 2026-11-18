@@ -1,8 +1,8 @@
 # Rules: rendering and the frame: order, threads, time
 
-The rules in force for the frame's draw order, threads, pool, time and exact arithmetic, a line each with the entries behind them
-(`log/`, by release). A milestone that sets or changes one edits its line here; a replaced one moves to `superseded.md`
-(`docs/CLAUDE.md`). The pixel, the banks, the light and the views: `rules-rendering.md`.
+The rules in force for the frame's order, threads, pool, time and exact arithmetic, each with the entries behind it (`log/`, by
+release). A milestone that sets or changes one edits its line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The
+pixel, the banks, the light and the views: `rules-rendering.md`.
 
 ## Order and depth
 - The star mask dims a star by its pixel's shade in any bank: the band and the aurora come after the stars, the aurora after the bodies [G-03], [B-403]
@@ -16,8 +16,8 @@ The rules in force for the frame's draw order, threads, pool, time and exact ari
 - Pictures are the same at any thread or core count: nothing drawn follows the bands' layout or who draws what [M7-04], [B-310], [A-02], [B-423], [F-06], [F-11]
 - A pooled pass is row-pure or band-pinned, its items reading pure or read-only state into their own slots; rows split, never primitives [B-310], [F-03], [F-05]
 - A band pass walks every piece in the serial order, its fills clipped to its rows (`setRasterBand`, reset after it) [B-310], [F-04], [F-05]
-- What bands share (vertex caches, tiles, `CabinFrame`) is made before them and only read; no band reads another's rows; `glowDisc` after [B-310], [F-05]
-- `binTerrainLOD` bins rows, not bands, by the draw's own helpers (`cellShoreSplit`, `polygonRows`, ...), so it never under-lists [F-04], [F-05]
+- What bands share (vertex caches, tiles, the ship's shapes) is made first and only read; no band reads another's rows; `glowDisc` after [B-310], [F-05], [I-01]
+- `binTerrainLOD` bins rows, not bands, by the draw's own helpers (`polygonRows`, ...), so it never under-lists [F-04], [F-05]
 - The camera feeds' noise is one xorshift32 walk along the rows: pooled rows start from `xorshiftRowStarts` [F-05]
 - The telescope's plate is dealt 64 blocks at a time, the same blocks in the same frames at any threads; `plateFill` 0 fills it whole [F-06], [B-424]
 
@@ -30,7 +30,7 @@ The rules in force for the frame's draw order, threads, pool, time and exact ari
 - Progressive work a frame shows runs in shares inside frames (the flight band's keyframes, the far scan), never on a thread [G-07], [C-15]
 - A page that hides the scene in a flight keeps the band's keyframes building (`Game::keepFlightBand`); the opaque galaxy page draws no scene [G-05], [G-07]
 - The platform paces desktop frames, not raylib (`SetTargetFPS(0)`): `floor(hz / 60 + 0.2)` refreshes apart, each swap held to 3/4 refresh before [F-08]
-- An early-out skips only work that would write nothing, with a slack far over the rounding, proved bit for bit (`coneMissesFrame`) [F-02], [F-05], [F-07]
+- An early-out skips only work that writes nothing, far over the rounding, proved bit for bit (`coneMissesFrame`, I-02's) [F-02], [F-05], [F-07], [I-02]
 - Hot loops read their band's own locals, never a closure's captures; hot lookups stay inline (`PlanetMap`, `TerrainCache::at`) [F-05], [F-07]
 - Kind tags and `matBank` are read once before a pixel loop; per-kind passes only on their kinds; no per-cell `std::function` past its buffer [P-00], [P-02]
 - A star class's effect costs only its own frames: its pass skips pixels outside its strip [S-04], [S-05]
@@ -43,7 +43,7 @@ The rules in force for the frame's draw order, threads, pool, time and exact ari
 - `smoothstep` with equal edges is a step, never a NaN: any caller may pass equal edges [B-409]
 - Globe and plate wrap their cloud drifts alike once a frame (`cloudDriftOf`): within a turn of each other [F-10]
 - `BackdropKey` holds every input of the kept backdrop (camera, focal length and centre, size, `bandGen`); both band map writers move `bandGen` [F-07]
-- `SpaceRenderer`'s caches are keyed by the bodies' seeds: a recording swaps another star's `StarSystem` in for one call [X-04]
+- `SpaceRenderer`'s caches, its season steps too, are keyed by the bodies' seeds: a recording swaps another star's `StarSystem` in for one call [X-04], [B-438]
 - `sampleGalaxyBand` inverts `bandRowLat`, takes the map's size as a constant and wraps the longitude by a mask: change them together [G-03], [F-07]
 
 [M7-04]: log/0-1.0.0.md
@@ -82,3 +82,6 @@ The rules in force for the frame's draw order, threads, pool, time and exact ari
 [P-02]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [D-04]: log/6-1.4.0.md
+[I-01]: log/7-1.5.0.md
+[I-02]: log/7-1.5.0.md
+[B-438]: log/7-1.5.0.md

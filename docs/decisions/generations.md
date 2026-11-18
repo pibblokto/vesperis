@@ -7,6 +7,7 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 
 | Gen | Date | By | What changed | Its entry |
 | --- | --- | --- | --- | --- |
+| 17 | 2026-11-16 | Z-01, Z-03 | the biota: every landable world's stage of life, chemistry, genesis and species; red snow, the springs' bands | [Z-01](log/7-1.5.0.md), [Z-03](log/7-1.5.0.md) |
 | 16 | 2026-10-21 | P-01..P-07, Q-01, Q-02 | 1.4.0's made kinds of world (P) and the six trait slots (Q) | [P-01](log/6-1.4.0.md) and after |
 | 15 | 2026-10-18 | B-428 | a solid world's moons spread out (the first at 5-40 radii) | [B-428](log/5-1.3.2.md) |
 | 14 | 2026-10-18 | B-425 | the companion stars keep clear of the other sun's worlds | [B-425](log/5-1.3.2.md) |
@@ -23,6 +24,19 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 | 3 | 2026-09-26 | M5 | astronomy: companion stars, substellar objects, comets, Kepler orbits, double planets | [the table](log/0-1.0.0.md) |
 | 2 | 2026-09-26 | M9 | plates, rivers, biomes, seasons, four new types | [the table](log/0-1.0.0.md) |
 | 1 | before 2026-09-26 | iteration 1 | the first worlds | |
+
+## 17
+
+Z-01 the biota, a new part of every landable body (`src/life/`): the stage its life reached (sterile, prebiotic, small cells,
+large cells, colonies; spores and fossils where life ended or was carried), the chemistry it is built on (water, acid, ammonia,
+hydrocarbon), the genesis it descends from (a system's own, or one living system in five its kin cell's oldest; a drifter's the
+star's it left, a wanderer's its own) and its species, drawn on salts of their own after every draw of 16 from the body, its
+system and its traits; a system's living worlds' spores carried to their airless and icy neighbours. No star, system, body,
+map or ground moves: no regress hash, no `fingerprint bodies` line; the saves and the guides record 17
+
+Z-03 rides it (2026-11-17): red snow (`TR_SNOW_ALGAE`), a life trait given by its own hash after the trait draw into a free new slot of
+a cold living world without a people (its algae on the snow, bank 28 on the ground; the biota's snow alga), and the hot springs' mats in
+bands by their water's heat, the hottest pools bare (`springWaterC`). Only the worlds given red snow or with hot springs move.
 
 ## 16
 

@@ -560,7 +560,7 @@ void unitCharts(const Check& check) {
         }
         for (int i = 0; i < 3; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         if (ci >= 0) game.guide.shards.insert("151,0,25/1/S" + std::to_string(ci));
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
         bool atDecoder = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
         press(KEY_ENTER); run(0.1);
         bool opened = ci >= 0 && game.testShardsOpenIndex(ci); run(1.0);
@@ -607,7 +607,7 @@ void unitCharts(const Check& check) {
             if (which >= 0 && which < (int)L.marks.size()) remoteIsMark = L.marks[which].star.sx == rx && L.marks[which].star.sy == ry && L.marks[which].star.sz == rz;
         }
         // put down again from the decoder
-        game.setState(GameState::SPACE); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1);
+        game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1);
         bool reopened = game.testShardsOpenIndex(ci); run(0.1); press(KEY_O); run(0.1);
         bool down = !game.testChartUp();
         press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);

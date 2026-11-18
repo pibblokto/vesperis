@@ -23,6 +23,8 @@ inline std::string sectorName(double latDeg, double lonDeg) { int sx, sy; sector
 // metres as "420 M" or "8.4 KM"
 inline std::string metresString(double m) { return m < 1000 ? fmt("%.0f M", m) : fmt("%.1f KM", m / 1000.0); }
 std::string thousands(double v);   // 13050 -> "13,050" (G-05, C-15)
+std::string fitText(const std::string& s, int width);   // Z-06: a line cut at a word with a stop to fit a width (a name and its world)
+std::string yearsWords(double years);   // Z-05: "ABOUT 12,000 YEARS", "ABOUT 1.2 MILLION YEARS"
 // Up and Down (and Left and Right, `sideways`) step a list's choice round its n rows; true when one was pressed
 bool menuStep(const Input& in, int& sel, int n, bool sideways = false);
 

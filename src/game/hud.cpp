@@ -41,12 +41,14 @@ void Game::renderSpaceScreen() { renderSpace(); if (!photoMode && !ax.on) render
 // the ground's picture, likewise
 void Game::renderSurfaceScreen() { renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); }
 
-// the capsule's way down and back up: the ground, the visor and its line (none while auto-explore plays)
+// the capsule's way down and back up: the ground, the visor and its line (none while auto-explore plays); I-04: the hatch's drop first,
+// the ship from the hangar (`cabinSeen`)
 void Game::renderCapsuleScreen() {
-    renderSurfaceScene();
+    if (cabinDropping()) renderSpace(); else renderSurfaceScene();
     if (!ax.on) {
         drawVisor(HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER);
+        const bool scoop = state == GameState::DESCENT && realTime < scoopUntil && !scoopLine.empty();   // Z-03: the scoop's line in the caption's place
+        drawTextCentered(canvas, UW / 2, UH - 10, scoop ? scoopLine.c_str() : (state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER"), HUD_AMBER);
     }
 }
 
@@ -445,7 +447,7 @@ void Game::drawReadings() {
         const std::string st = b.airborne ? "AIRBORNE" : (b.skid > 0.3 ? "SKIDDING" : (b.brake ? "BRAKING" : ""));
         pack({fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? " REVERSE" : ""), st, b.lights ? "LIGHTS ON" : ""}, st.empty() ? HUD_GREEN : HUD_AMBER);
     }
-    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC), surf.lamp && !surf.inVehicle() ? "LAMP ON" : ""}, HUD_GREEN);
+    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC), surf.lamp && !surf.inVehicle() ? "LAMP ON" : "", surf.uvLamp && !surf.inVehicle() ? "UV ON" : ""}, HUD_GREEN);
     const double gg = surf.site.gravity / 9.8;
     if (gg < 0.01) pack({fmt("GRAV %.4f G", gg), fmt("ESCAPE %.1f M/S", surf.site.escapeVelocity)}, HUD_GREEN);   // a comet
     else pack({fmt("GRAV %.2f G", gg), fmt("%.2f ATM", e.pressureAtm)}, HUD_GREEN);
@@ -496,6 +498,7 @@ void Game::drawReadings() {
         if (pl.swimming) row(pl.underwater ? "DIVING" : "SWIMMING", HUD_CYAN);
         if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) pack({fmt("JET ALT %.0f M", pl.altAboveGround), fmt("VS %+.1f", pl.vy)}, HUD_AMBER);
         if (pl.autoWalk > 0) row(fmt("AUTOWALK %d", pl.autoWalk), HUD_GREEN);
+        if (!kit.empty()) row(fmt("VIALS %d OF %d FILLED", (int)kit.size(), KIT_VIALS), HUD_GREEN);   // Z-03
         static const char* const vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
         if (visionMode > 0 && visionMode < 5) row(vn[visionMode], HUD_CYAN);
     }

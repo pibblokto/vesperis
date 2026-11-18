@@ -41,6 +41,7 @@ The peoples and what they built: `rules-peoples.md`.
 - An alternative's line is never edited (its key is its rule's name and text): a people's variant is `@instead <guard> <rule> <rule'>` [D-05]
 - A new alternative keeps its rule's flags (no directive or stop it lacks), never joining a one-alternative rule (that changes `many`) [D-05]
 - `@apart` keeps a population's words out of the distinctive-word counts; a word in 24 alternatives or fewer wears with use [H-04 second pass], [D-05]
+- A text outside the catalogue (a caption, a watermark) takes no memory, tells no event, its words apart: no people's records move [Z-06]
 - A `.vg` file (in `R"VG(` `)VG"`, read from disk alike) stays under 16 KB, cut at a rule: none continues across files [H-01], [H-03], [D-05]
 - The files sit on src/peoples/grammar's shelves by role, named by topic; `files.inc` lists them, append-only [E-11]
 - The realiser owns the English: texts name entities by marks (`:obj`, `:poss`, `:refl`, `vgName`), never pronouns; no place is "it" [H-01], [H-03], [H-04]
@@ -77,3 +78,4 @@ The peoples and what they built: `rules-peoples.md`.
 [P-04]: log/6-1.4.0.md
 [D-05]: log/6-1.4.0.md
 [E-11]: log/6-1.4.0.md
+[Z-06]: log/7-1.5.0.md

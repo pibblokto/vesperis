@@ -17,7 +17,7 @@ their keys: `rules-game.md`.
 ## The ways in
 - A menu is a list of rows in its order, its count read from the list (`rowsOf`): no menu holds a count or a numbered case [U-03]
 - A list is constant data, a `static constexpr` table in a Game static method, its acts lambdas; each row whole, asserted [U-03]
-- A cabin device is its row in `cabinDevices` plus its picture in `drawCabinBand`; a facing without its row fails to compile [U-03]
+- A cabin device is its row in `cabinDevices` (room, stand, screen's shade) and its fixtures in the ship's plan; a facing with no row won't compile [U-03], [I-01]
 - A row's act keeps its case's calls and their order; an act that opens a screen calls its opener [U-03]
 
 ## The controller
@@ -40,3 +40,4 @@ their keys: `rules-game.md`.
 [U-06]: log/6-1.4.0.md
 [B-431]: log/6-1.4.0.md
 [B-432]: log/6-1.4.0.md
+[I-01]: log/7-1.5.0.md

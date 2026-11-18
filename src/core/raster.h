@@ -46,7 +46,11 @@ struct FacePattern {
     double meanDress = 0;                    // the dress's mean shade over a cell (the far mean)
 };
 
-struct RasterParams {
+// I-01: a view-space vertex projected: where it lands, its 1/z, and its shade, u, v and weight over z (the fill interpolates them
+// in screen space, perspective-correct)
+struct ScreenVert { double sx, sy, iz, shade, u, v, w; };
+
+struct RasterParams {   // (a field added here joins `sameParams` in raster.cpp)
     int bank = 0;                 // bank index 0..15
     const GrainTexture* grain = nullptr;    // micro grain (M10-05: faded by grainWeight)
     double grainScale = 1.0;      // texels per unit of u/v
@@ -91,3 +95,58 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
 bool rasterPoint3(Framebuffer& fb, const RVert& a, int bank, const Proj& pj, bool ztest, int size = 1);
 // Projects a view-space point; returns false if behind the camera.
 bool projectPoint(const RVert& a, const Proj& pj, double& sx, double& sy);
+
+// I-01: a shape projected once and filled band by band, the same pixels as `rasterPolygon`'s and `rasterLine3`'s (their two halves).
+// A convex polygon clipped at the near plane and projected into `out` (16 room): its vertex count, 0 when it fills nothing in the
+// frame, and its rows' extremes; then its fill in the calling thread's band
+int projectPolygon(const RVert* v, int n, const Proj& pj, ScreenVert* out, double& miny, double& maxy);
+void fillPolygon(Framebuffer& fb, const ScreenVert* p, int m, double miny, double maxy, const RasterParams& rp, const Proj& pj);
+// a line clipped and projected (its thickness in 1x pixels, scaled): false when it draws nothing; then its steps in the band
+struct ProjectedLine { ScreenVert p, q; int steps = 1, thickness = 1; };
+bool projectLine(const RVert& a, const RVert& b, const Proj& pj, int thickness, ProjectedLine& out);
+void fillLine(Framebuffer& fb, const ProjectedLine& l, int bank, bool ztest);
+
+// I-01: where a drawing's shapes go, in view space: rasterised at once (`RasterNow`), or kept in a `ShapeList`
+struct ShapeSink {
+    virtual void polygon(const RVert* q, int n, const RasterParams& rp) = 0;
+    virtual void line(const RVert& a, const RVert& b, int bank, bool ztest, int thickness) = 0;
+    virtual void point(const RVert& a, int bank, bool ztest, int size) = 0;
+protected:
+    ~ShapeSink() = default;
+};
+struct RasterNow final : ShapeSink {
+    Framebuffer& fb; const Proj& pj;
+    RasterNow(Framebuffer& f, const Proj& p) : fb(f), pj(p) {}
+    void polygon(const RVert* q, int n, const RasterParams& rp) override { rasterPolygon(fb, q, n, rp, pj); }
+    void line(const RVert& a, const RVert& b, int bank, bool ztest, int thickness) override { rasterLine3(fb, a, b, bank, pj, ztest, thickness); }
+    void point(const RVert& a, int bank, bool ztest, int size) override { rasterPoint3(fb, a, bank, pj, ztest, size); }
+};
+// I-01: shapes projected once (what a band pass shares, made before the bands and only read by them), then filled by each band:
+// every shape whose rows reach the calling thread's band (`setRasterBand`), in the order they came. A polygon keeps its params
+// (the same as an earlier shape's shared). I-02: a clip (a box of the frame, the ship's room seen through its arch): the shapes
+// that come while it is set are left out when they miss it, and fill only its rows (a row's pixels are its own: the same pixels
+// in them as unclipped)
+class ShapeList final : public ShapeSink {
+public:
+    void begin(const Proj& pj);   // emptied, for a frame projected by `pj`
+    void clip(double x0, double y0, double x1, double y1);
+    void noClip();
+    void polygon(const RVert* q, int n, const RasterParams& rp) override;
+    void line(const RVert& a, const RVert& b, int bank, bool ztest, int thickness) override;
+    void point(const RVert& a, int bank, bool ztest, int size) override;
+    void fill(Framebuffer& fb) const;
+    int count() const { return (int)shapes.size(); }
+private:
+    enum { POLYGON, LINE, POINT };
+    struct Shape { int kind = POLYGON, first = 0, n = 0, params = 0, bank = 0, size = 1; bool ztest = true; double miny = 0, maxy = 0; int y0 = -(1 << 30), y1 = 1 << 30; };
+    bool clipped = false;
+    double cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
+    bool outside(double x0, double y0, double x1, double y1) const { return clipped && (x1 < cx0 - 1 || x0 > cx1 + 1 || y1 < cy0 - 1 || y0 > cy1 + 1); }
+    void rows(Shape& s) const { if (clipped) { s.y0 = (int)std::floor(cy0) - 1; s.y1 = (int)std::ceil(cy1) + 2; } }
+    Proj pj;
+    std::vector<Shape> shapes;
+    std::vector<ScreenVert> sv;
+    std::vector<ProjectedLine> lines;
+    std::vector<RVert> pts;
+    std::vector<RasterParams> params;
+};

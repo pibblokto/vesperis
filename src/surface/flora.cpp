@@ -27,20 +27,25 @@ inline bool deciduous(int fam) { return fam == 0 || fam == 2 || fam == 3 || fam 
 constexpr int BANK_BARK = 16, BANK_WOOD = 17;   // B-315: the vegetation's own banks (SurfaceView::setupPalette)
 }
 
-// B-315: the look of each silhouette on this planet, hashed from the seed and the family
+// B-315: the look of a silhouette on a planet, hashed from its seed and the family (I-04: the ship's garden grows the home world's)
+TreeLook treeLookOf(uint64_t seed, int f) {
+    uint64_t h = mix64(seed ^ (0x100C5ULL + (uint64_t)f * 0x9E3779B97F4A7C15ULL));
+    TreeLook L;
+    L.aspect = 0.8 + 0.5 * hash01(h);
+    L.clusterR = 0.4 + 0.25 * hash01(mix64(h + 1));
+    L.count = 0.75 + 0.6 * hash01(mix64(h + 2));
+    L.trunkW = 0.75 + 0.7 * hash01(mix64(h + 3));
+    L.lean = hash01(mix64(h + 4)) < 0.4 ? 0.0 : 0.03 + 0.1 * hash01(mix64(h + 5));
+    L.ragged = 0.7 + 0.8 * hash01(mix64(h + 6));
+    L.tone = 0.88 + 0.24 * hash01(mix64(h + 7));
+    L.droop = hash01(mix64(h + 8));
+    return L;
+}
+FloraShape floraShapeOf(int f) { f = clampi(f, 0, 9); return {FAM_H0[f], FAM_H1[f], FAM_R[f], FAM_CY[f]}; }
+
+// the look of each silhouette on this planet
 void SurfaceView::buildLooks() {
-    for (int f = 0; f < 10; f++) {
-        uint64_t h = mix64(site.gen.seed ^ (0x100C5ULL + (uint64_t)f * 0x9E3779B97F4A7C15ULL));
-        TreeLook& L = looks[f];
-        L.aspect = 0.8 + 0.5 * hash01(h);
-        L.clusterR = 0.4 + 0.25 * hash01(mix64(h + 1));
-        L.count = 0.75 + 0.6 * hash01(mix64(h + 2));
-        L.trunkW = 0.75 + 0.7 * hash01(mix64(h + 3));
-        L.lean = hash01(mix64(h + 4)) < 0.4 ? 0.0 : 0.03 + 0.1 * hash01(mix64(h + 5));
-        L.ragged = 0.7 + 0.8 * hash01(mix64(h + 6));
-        L.tone = 0.88 + 0.24 * hash01(mix64(h + 7));
-        L.droop = hash01(mix64(h + 8));
-    }
+    for (int f = 0; f < 10; f++) looks[f] = treeLookOf(site.gen.seed, f);
 }
 
 // The forest's density: the terrain's veg times a clearing mask (worley-ish fbm cells with low density inside)

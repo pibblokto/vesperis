@@ -170,11 +170,15 @@ In space:
 | `Z` | The telescope (zoom, the reticle, photographs) |
 | `O` | Toggle orbit / fixed point chase; `Shift`+arrows carry the parked ship round its world |
 | `F` | Field amplificator (brighter star field) |
-| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map (`Tab` turns to the galaxy chart: `Enter` plots a jump to the cursor, `Enter` again flies it) / expedition log |
+| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import; the catalogue of the species seen, by world or by kin, each one's sheet with its form alive; the statistics, `L` their LIFE page) / star map (`Tab` turns to the galaxy chart: `Enter` plots a jump to the cursor, `Enter` again flies it) / expedition log |
 | `C` | Deploy the surface capsule (from orbit around a landable world), or drop a probe into a gas giant |
 | `B` | The signal radar (the sweep, lock a signal, its distance and age; `+`/`-` turn the gain up to hear farther) |
 | `E` at the cabin's back wall | The shard decoder: a world's records, timeline and history (`Tab`; `Shift` with the arrows runs the cursor), read, hear and play what the ruins held, name a piece with `N`; `Tab` at the worlds turns to the ship's player |
 | `E` at the cabin's left wall | The instruments' case (play what the ruins held) and, by the front window, the drone bay (`Enter` sends three drones down for records and instruments) |
+| `E` at the laboratory's microscope | The cold store's vials and the incubator's flasks (`Enter` puts a vial, or a drop of a flask's culture, on the stage; `Backspace` empties a vial); on the slide `1`-`6` (or `V`) the six ways of seeing, `+`/`-` zoom, `[`/`]` focus, the arrows and the mouse move the stage, `Enter` tracks a cell, `L` a spot of light, `M` the magnet, `H` the warm stage, `F` a drop of food, `Tab` the species' sheet, `N` names it, `P` a micrograph |
+| `E` at the laboratory's incubator | Twelve flasks: `Enter` puts in a species seen in a vial or a flask's culture (on a culture, a second), `←`/`→` the medium's field (its cell, warmth, light, energy, salt) and `+`/`-` change it (`Shift` ten degrees), `W` as its world, `F` a fresh broth, `Backspace` empties it, `N` names a strain; `Tab` the jars' shelf (`Enter` makes a world's jar from a vial of wet silt, a mat or soil) |
+| `E` at the laboratory's sequencer | `Enter` chooses a species seen in a vial or growing in a flask and reads its genome (about 90 seconds, its letters in its life's own alphabet), then its place among its kin; `Backspace` takes it off, `Tab` the tree |
+| `E` at the tree of kin | Every species read and the ship's own by kinship, each origin of life its own clade: `↑`/`↓` a species (its nearest kin and when they parted), `Enter` its world's star the remote target, `Tab` the sequencer |
 | `I` (`F2`) | Data sheet of the local target |
 | `T` / `Ctrl+T` | Time warp x1 / x10 / x100 / x1000 / x10000 / the almanac |
 | `Ctrl+S` / `Ctrl+L` (`F5` / `F9`) | Save / load |
@@ -213,6 +217,7 @@ On the surface:
 | `R` / `Shift+R` | The scanner: ruins, works, lakes, peaks, craters, canyons, mesas, geysers, crystals, off / leave out or take in what you have marked |
 | `Tab` | The readings: the place, the sky, the air, the ground, the vehicle |
 | `L` | Mark the spot under the crosshair and name it |
+| `O` / `Shift+U` | A sample of the ground at the crosshair (eight vials a descent, to the ship's cold store at the climb aboard) / the lamp's ultraviolet |
 | `N` | Sector map (2 km to 2048 km wide): a cursor (arrows or mouse), `Enter` marks or renames, `Delete` twice removes, `M` places the waypoint, `Tab` the next mark, `+`/`-` zoom |
 | `G` | The GUIDE: name the world, write a note |
 | `V` | Vision modes |
@@ -224,6 +229,8 @@ On the surface:
 Auto-explore: the menu's `AUTO-EXPLORE` hands the game to an explorer that plays
 by itself in one of six profiles (WANDERER, STARGAZER, PLANETFALL, SURVEYOR,
 ARCHAEOLOGIST, GIANTS), with no HUD; any key or button gives the controls back.
+On the ground it takes samples at the water and the springs it walks to; what
+is in them is left for you to study in the laboratory.
 While it plays, `M` (a controller's `SELECT`) starts and stops a tape: the game
 comes with four tracks, Jarrad Wright's *Forwards*, *It's time to wake up* and
 *BLUE-MEAN-EYES* and Black Sabbath's *Planet Caravan*, in its `music` folder.
@@ -243,6 +250,7 @@ src/core      math, hashing, noise, 8-bit framebuffer + palette + smoothing filt
               scanline rasteriser with depth buffer, 5x7 font, PNG writer, input
 src/galaxy    star field and star classes, system generator, the planet function,
               drainage, landmarks and maps
+src/life      the microorganisms of every world: their stages, species and origins, their forms and the slide they are seen on
 src/peoples   the peoples that lived on some worlds: their histories, towns, buildings and ruins,
               records and their grammar, music and signals
 src/space     star field, suns, ray-traced globes and rings, sky bodies

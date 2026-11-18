@@ -7,7 +7,7 @@ dot is a rule of its own (a word list: `crop`).
 
 ## The files by shelf
 
-### `core/` (9)
+### `core/` (11)
 
 | File | Genres | Prefixes | Rules without a dot |
 | --- | --- | --- | --- |
@@ -19,6 +19,8 @@ dot is a rule of its own (a word list: `crop`).
 | `lexicon.vg` |  |  |  |
 | `people.vg` |  | `god`, `rite` | `buried`, `deadplace`, `focusword`, `hall`, `holyplace`, `living` |
 | `records.vg` |  |  | `record` |
+| `watermark.vg` |  | `wm` | `watermark` |
+| `watermark_far.vg` |  | `wm` |  |
 | `world.vg` |  | `season`, `sun`, `weather` | `bright`, `dest`, `land`, `n`, `nbig`, `nth`, `offering`, `simile`, `skill`, `sky`, `skynight`, `skyone`, `skyverb`, `sun`, `trade`, `water`, `weather` |
 
 ### `registers/` (24)
@@ -309,4 +311,5 @@ dot is a rule of its own (a word list: `crop`).
 | `weather` | `core/world.vg`, `peoples/sunlost/sunlost.vg` |
 | `whoever` | `genres/ending_whoever.vg` |
 | `will` | `ages/medieval/will_epitaph.vg` |
+| `wm` | `core/watermark.vg`, `core/watermark_far.vg` |
 | `wx` | `ages/modern/weather.vg` |

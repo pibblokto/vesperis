@@ -24,6 +24,7 @@ struct TerrainVertex {
     uint8_t road = 0;      // an old road's share of this vertex's footprint (0..255), what the wear left of it
     uint8_t wtint = 0, ltint = 0;   // the water's trait colours here (`SurfaceSample::waterTint`, `lifeTint`), 0..255
     uint8_t gtint = 0;              // the ground trait's field (`SurfaceSample::groundTint`): a strewn field's stones, a stratum's accent
+    uint8_t stint = 0;              // Z-03: red snow's algae (`SurfaceSample::snowTint`)
     int32_t cx = 0x7fffffff, cz = 0x7fffffff;   // tags
 };
 

@@ -246,7 +246,7 @@ void unitBasics(const Check& check) {
         Framebuffer fb; SpaceContext c;
         c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)));
         c.bankBodyA = bi;
-        warmMaps(sr, sys, bi);
+        warmMaps(sr, sys, bi, t);
         sr.setupPalette(fb, &sys, bi, -1, 1.0);
         sr.render(fb, c);
         int lit = 0;
@@ -457,7 +457,7 @@ void unitBasics(const Check& check) {
             Vec3 shipPos = bp + dir * (3.6 * b.radiusKm);   // the disc is 32 degrees across from here
             Vec3 toBody = -dir, side = normalize(cross(toBody, Vec3(0, 1, 0)));
             nb.update(shipPos);
-            warmMaps(sr, rsys, rb);
+            warmMaps(sr, rsys, rb, t);
             int lit[3] = {0, 0, 0};
             float deepest = 0;
             const double offs[3] = {-45 * DEG, 45 * DEG, 45 * DEG};   // the centre 10 degrees outside the frame on either side, the limb 6 degrees inside
@@ -496,6 +496,131 @@ void unitBasics(const Check& check) {
                         fmt("nearest 1/%.0f m (it would read 1/%.0f in kilometres)", deep2 > 0 ? 1.0 / deep2 : 0.0, 3.6 * rsys.bodies[sb].radiusKm));
             }
         }
+    }
+    // B-436: a moon near a globe's least size shows wherever the view turns. The user's place: Heilya III-a by day (fov 80), facing west;
+    // Heilya III-c is 0.98 of a globe's least size at the view's middle. By its projected size (larger off the middle) it was a globe
+    // looking down and a point nearer the middle, and the point was hidden by the day sky: gone as the view turned up
+    {
+        Star hs; StarSystem hsys;
+        const bool found = starInSector(195, 0, 46, hs);
+        if (found) hsys.generate(hs);
+        check("Heilya III-a and III-c found", found && hsys.bodies.size() > 10 && hsys.bodies[8].name == "Heilya III-a" && hsys.bodies[10].name == "Heilya III-c");
+        if (found && hsys.bodies.size() > 10) {
+            SpaceRenderer sr; StarNeighborhood nb; SurfaceView sv;
+            const double t = 3638000;
+            sv.init(&hsys, 8, 50.4 * DEG, 92.6 * DEG, t);
+            sv.setFov(80); sr.proj = Proj::fromHFov(80);   // the game's space renderer takes the setting's field as the ground's
+            nb.update(sv.site.worldPos(t, 0, 0, 0));
+            int shown = 0, views = 0; double least = 1e9, size = 0; std::string at;
+            for (double p = -12; p <= 8; p += 4) {
+                sv.player.yaw = 257 * DEG; sv.player.pitch = p * DEG;
+                Input in; sv.update(0.016, in, t, false);
+                Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0);
+                const BodyScreenInfo& b = sr.bodyInfo[10];
+                if (!b.inFront || b.sx < 0 || b.sy < 0 || b.sx >= FBW - 4 * FB_SCALE || b.sy >= FBH) continue;
+                views++;
+                const int o = (int)b.sy * FBW + (int)b.sx;
+                const double over = shadeOf(fb.idx[o]) - shadeOf(fb.idx[o + 3 * FB_SCALE]);   // over the sky beside it
+                least = std::min(least, over);
+                if (over > 10) shown++; else at += fmt(" %+.0f", p);
+                size = sr.proj.f * std::tan(std::asin(hsys.bodies[10].radiusKm / b.distKm)) / (1.2 * FB_SCALE);
+            }
+            check("a moon near a globe's size shows wherever the view turns (B-436)", views == 6 && shown == views && size > 0.9 && size < 1,
+                  fmt("Heilya III-c at %.2f of a globe's least size, %d of %d views with it over its sky, the least by %.1f shades%s%s", size, shown, views, least,
+                      at.empty() ? "" : "; hidden at", at.c_str()));
+        }
+    }
+    // B-438 (KI-442): a world's season is its own whatever system was drawn between. The space view kept a world's season step and the
+    // season its generator is made at by the body's index: a world drawn at t1, then another system whose body of that index stood in the
+    // world's step at t2, then the world at t2, and its generator kept t1's season (the sweep's Wyariothmai I, a step off). Kept by its seed
+    {
+        std::vector<StarSystem> syss;
+        for (int64_t x = 185; x < 215 && syss.size() < 6; x++)
+            for (int64_t z = 40; z < 52 && syss.size() < 6; z++) { Star st; if (starInSector(x, 0, z, st)) { syss.emplace_back(); syss.back().generate(st); } }
+        auto stepOf = [](double s) { return (int)std::floor((s + 1.0) * 3.999); };
+        int cases = 0, own = 0;
+        std::string off;
+        std::vector<uint64_t> seen;   // a world once
+        for (size_t a = 0; a < syss.size() && cases < 12; a++)
+            for (size_t c = 0; c < syss.size() && cases < 12; c++) {
+                if (a == c) continue;
+                const StarSystem& A = syss[a];
+                const StarSystem& B = syss[c];
+                for (int i = 0; i < (int)std::min(A.bodies.size(), B.bodies.size()) && cases < 12; i++) {
+                    const Body& b = A.bodies[i];
+                    if (b.type == PT_COMPANION || KINDS[b.type].cover != DC_NONE) continue;   // a dead world's ground keeps no season
+                    if (std::find(seen.begin(), seen.end(), b.seed) != seen.end()) continue;
+                    const double year = b.parent >= 0 ? A.bodies[b.parent].orbitPeriod : b.orbitPeriod;
+                    for (int q = 1; q < 8; q++) {
+                        const double t1 = 1000, t2 = 1000 + year * q / 8;
+                        const double s1 = A.seasonOf(i, t1), s2 = A.seasonOf(i, t2);
+                        if (stepOf(s1) == stepOf(s2) || stepOf(B.seasonOf(i, t2)) != stepOf(s2)) continue;
+                        cases++; seen.push_back(b.seed);
+                        SpaceRenderer sr;
+                        sr.setSeason(A, t1); sr.genFor(b);
+                        sr.setSeason(B, t2);
+                        sr.setSeason(A, t2);
+                        const double g = sr.genFor(b).season;
+                        if (std::fabs(g - BodyGen::make(b, s2).season) < 1e-12 && sr.seasonStepOf(b) == stepOf(s2)) own++;
+                        else off += fmt("; %s at %+.2f, its own %+.2f", b.name.c_str(), g, s2);
+                        break;
+                    }
+                }
+            }
+        check("a world's season is its own whatever system was drawn between (B-438)", cases >= 8 && own == cases,
+              fmt("%d of %d worlds' generators at their own step's season, another system's world of their index drawn between%s", own, cases, off.c_str()));
+    }
+    // B-437: a frame's layer under its banks reads as the frame whole. Aboard, the outside's pixels are sunk into one bank and read through
+    // the palette they were drawn in, so the ship's ramps can take every other bank. A frame of every bank sunk (whole, or a box of it),
+    // every ramp but 0's changed after, mushed (both kernels) and turned to colour (dithered or not) is the frame turned to colour as it was
+    // wherever a pixel's bank came from the sunk box, and its banks come back as they were mushed; sinking a box leaves the rest as it was
+    {
+        const int savedK = g_mushKernel;
+        int same = 0, cases = 0;
+        std::string why;
+        for (int k : {2, 3})
+            for (int form = 0; form < 3; form++) {   // the whole frame, plain and dithered; a box, plain
+                const bool dither = form == 1, boxed = form == 2;
+                g_mushKernel = k; cases++;
+                Framebuffer a; Rng r(0xB437 + 3 * k + form);
+                for (uint8_t& c : a.pal) c = (uint8_t)r.irange(256);
+                for (Pix& p : a.idx) p = pixI(r.irange(32), r.irange(2048));
+                Framebuffer b = a;
+                const int x0 = boxed ? FBW / 5 : 0, y0 = boxed ? FBH / 4 : 0, x1 = boxed ? FBW - FBW / 6 : FBW, y1 = boxed ? FBH - FBH / 5 : FBH;
+                a.sinkUnder(7, x0, y0, x1, y1);
+                for (int i = 64 * 3; i < BANKS * 64 * 3; i++) a.pal[i] = (uint8_t)r.irange(256);   // the ship's ramps over every bank but 0's
+                a.mush(2); b.mush(2);
+                std::vector<uint32_t> pa((size_t)FBW * FBH), pb((size_t)FBW * FBH);
+                a.toRGB(pa.data(), 1.0, dither); b.toRGB(pb.data(), 1.0, dither);
+                int wrong = 0, read = 0;
+                for (int y = 0; y < FBH; y++) {
+                    const int src = a.underRow(y);   // the row the mush took this row's banks from
+                    if (src < y0 || src >= y1) continue;
+                    for (int x = x0; x < x1; x++) { read++; if (pa[(size_t)y * FBW + x] != pb[(size_t)y * FBW + x]) wrong++; }
+                }
+                a.raiseUnder();
+                if (wrong == 0 && read > 0 && a.idx == b.idx && a.underBank < 0) same++;
+                else why += fmt(" kernel %d%s%s (%d of %d)", k, dither ? " dithered" : "", boxed ? " a box" : "", wrong, read);
+            }
+        g_mushKernel = savedK;
+        Framebuffer a; Rng r(0xB4370);
+        for (Pix& p : a.idx) p = pixI(r.irange(32), r.irange(2048));
+        const std::vector<Pix> was = a.idx;
+        const int x0 = FBW / 5, y0 = FBH / 4, x1 = FBW - FBW / 6, y1 = FBH - FBH / 5;
+        uint32_t want = 0;
+        for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) want |= 1u << bankOf(was[(size_t)y * FBW + x]);
+        const uint32_t held = a.sinkUnder(7, x0, y0, x1, y1);
+        int wrong = 0;
+        for (int y = 0; y < FBH; y++)
+            for (int x = 0; x < FBW; x++) {
+                const size_t o = (size_t)y * FBW + x;
+                const Pix p = was[o], q = a.idx[o];
+                const bool in = x >= x0 && x < x1 && y >= y0 && y < y1;
+                if (!in || bankOf(p) == 0 ? q != p : (bankOf(q) != 7 || intenOf(q) != intenOf(p) || a.under[o] != bankOf(p))) wrong++;
+            }
+        check("a frame's layer under its banks reads as the frame whole (B-437)", same == cases && wrong == 0 && held == want,
+              fmt("%d of %d frames turned to colour the same and their banks back (two kernels; whole, dithered or a box)%s; a box sunk: %d pixels wrong, "
+                  "the banks it held %s", same, cases, why.c_str(), wrong, held == want ? "told" : "MISTOLD"));
     }
     // the terrain rings meet at their edges (geomorphing): a ring's edge vertices are drawn on the coarser ring's
     // surface, where the unmorphed vertices differed by metres to hundreds of metres (the cells popped as the edge swept)

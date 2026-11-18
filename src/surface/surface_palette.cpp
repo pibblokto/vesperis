@@ -107,6 +107,17 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         RGB mid = lerp(dark, lit, 0.55f);
         setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, dark}, {34, mid}, {47, lit}, {56, lerp(lit, white, 0.5f)}, {63, fog}});
     };
+    // Z-03: a material ramp whose colour turns along it (the springs' mats by their water's heat: the coolest's brown in its dark end, then
+    // orange, the hottest's yellow in its light end), the surface's terms as `matRamp`'s
+    auto matRampTurning = [&](int bank, RGB lo, RGB c, RGB hi) {
+        MatRamp r = materialRamp(lo, site.atmosphere && env.pressureAtm >= 0.001 ? &skyLight : nullptr, day);
+        RGB dark = r.stop[1];
+        double night = site.atmosphere ? (1 - day) : (1 - smoothstep(-0.05, 0.1, sinAlt));
+        if (env.moonLight > 0.01) dark = lerp(dark, env.moonColor * (0.22f + 0.3f * (float)env.moonLight), (float)(night * clampd(env.moonLight * 2.5, 0, 0.7)));
+        const float k = (float)(1.0 - 0.12 * overcast);
+        const RGB l0 = lo * sunsetTint * k, l1 = c * sunsetTint * k, l2 = hi * sunsetTint * k;
+        setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, dark}, {28, l0}, {34, lerp(l0, l1, 0.5f)}, {40, l1}, {47, l2}, {55, lerp(l2, white, 0.45f)}, {63, fog}});
+    };
     matRamp(0, L.ground);
     if (lavaGlow) {
         setRamp(fb.pal, 2,
@@ -196,7 +207,12 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         const bool formsStaged = !placedCells.empty();
         if (site.gen.hasTrait(TR_PINK_LAKES) && !formsStaged) { tintBankW = 25; waterTint(25, site.gen.waterTintColour); }
         tintBankSprings = -1;
-        if (site.gen.hasTrait(TR_HOT_SPRINGS) && !formsStaged) { tintBankSprings = 25; matRamp(25, site.gen.matColor[MAT_MATS] * lerp(site.sys->star.color, white, 0.5f)); }   // the springs' mats
+        if (site.gen.hasTrait(TR_HOT_SPRINGS) && !formsStaged) {   // the springs' mats; Z-03: their bands by the water's heat in one ramp, the coolest
+            // pools' brown at its dark end, their orange in its middle, the hottest mats' yellow in its light end (`SPRING_BAND_ALBEDO`)
+            tintBankSprings = 25;
+            const RGB lt = lerp(site.sys->star.color, white, 0.5f);
+            matRampTurning(25, RGB(0.42f, 0.22f, 0.10f) * lt, site.gen.matColor[MAT_MATS] * lt, RGB(0.90f, 0.80f, 0.30f) * lt);
+        }
         if (site.gen.hasTrait(TR_MILKY_SEAS)) {
             tintGlow = 1 - smoothstep(0.04, 0.3, day);
             if (tintGlow > 0.02) {
@@ -225,10 +241,21 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             static const RGB A[3] = {RGB(0.74f, 0.30f, 0.20f), RGB(0.82f, 0.52f, 0.20f), RGB(0.46f, 0.56f, 0.36f)};
             tintBankStrata = 27; matRamp(27, A[(int)(hash01(mix64(site.gen.seed ^ 0x57A7BULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
+        tintBankSnow = -1;
+        if (site.gen.hasTrait(TR_SNOW_ALGAE) && !formsStaged) {   // Z-03: red snow's algae, a rose, a red or a salmon by the world (Chlamydomonas nivalis' astaxanthin)
+            static const RGB S[3] = {RGB(0.94f, 0.66f, 0.70f), RGB(0.90f, 0.56f, 0.58f), RGB(0.95f, 0.70f, 0.62f)};
+            tintBankSnow = 28; matRamp(28, S[(int)(hash01(mix64(site.gen.seed ^ 0x5A0A1CAEULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
+        }
         if (site.gen.hasTrait(TR_PETRIFIED) && !formsStaged) {   // the stone trunks' jasper: red-brown, ochre or a purple grey by the world
             static const RGB J[3] = {RGB(0.62f, 0.32f, 0.22f), RGB(0.70f, 0.52f, 0.28f), RGB(0.54f, 0.42f, 0.52f)};
             matRamp(26, J[(int)(hash01(mix64(site.gen.seed ^ 0x9E7AULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
+    }
+    // Z-03: bank 15, the films' glow under the lamp's ultraviolet in their own colour where nothing else holds it (a comet's tail, the spores'
+    // light, a milky or a dark sea's glow, the lamps left lit: their light the glow's on those worlds); set only while the ultraviolet is on
+    if (uvLamp && site.gen.type != PT_COMET && !(KINDS[site.gen.type].events & EV_SPRINGS) && tintBankW != 15 && !site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) {
+        const RGB c((float)filmColour.x, (float)filmColour.y, (float)filmColour.z);
+        setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {20, c * 0.22f}, {40, c * 0.7f}, {54, c}, {63, lerp(c, white, 0.45f)}});
     }
     // bank 4: stars (their own ramp, not the ground's); D-04: reddened through a thick air (the share it lets through)
     {

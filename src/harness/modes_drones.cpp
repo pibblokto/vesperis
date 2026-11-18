@@ -55,7 +55,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
         printf("    %s\n", fn.c_str());
     };
     auto held = [&]() { std::set<std::string> h(game.guide.shards.begin(), game.guide.shards.end()); h.insert(game.guide.instruments.begin(), game.guide.instruments.end()); return h; };
-    auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.1); };
+    auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_BAY); run(0.1); };
     run(0.2); game.testParkAt(st, W.body); run(0.2); game.setState(GameState::SPACE); run(0.2);
     // ---- the rack with the drones aboard, E, the screen
     atRack(); run(0.2);
@@ -81,7 +81,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testDronesSkip(3.6);
     const double gone = game.testDroneRackX(0);
     // the lights: the ship's nose on the world, the explorer at the front window
-    game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05);
+    game.testAimAtBody(W.body); game.testCabinView("OUT TO THE DRONES' WAY"); run(0.05);
     game.testDronesSkip(4.0); run(0.02);
     shot("lights");
     game.testDronesSkip(6.5); run(0.02);
@@ -89,9 +89,10 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testDronesSkip(9.0); game.testOpenDroneBay(); run(0.05);
     const std::string descent = game.testDroneState(0);
     shot("screen_descent");
-    ck("the drone bay: the launch (C-18)", sent && x1 < -2.3 && y1 > 1.0 && std::fabs(x3 - (-2.19)) < 0.01 && gone < -90 && game.testDronesPlanned() && descent == "DESCENDING",
-       fmt("sent %s; at 1.2 s drone 1 at x %.2f (backing into the hull from -2.19) %.2f m up, drone 3 at x %.2f (waiting its turn); at 3.6 s drone 1 %s; the haul %s; at 9 s drone 1 %s",
-           sent ? "yes" : "NO", x1, y1, x3, gone < -90 ? "gone through its port" : "STILL IN THE CABIN", game.testDronesPlanned() ? "drawn" : "NOT DRAWN", descent.c_str()));
+    const double shelfX = shipFixtureOf(FX_RACK).droneX;   // I-01: where a drone stands on its shelf, the plan's
+    ck("the drone bay: the launch (C-18)", sent && x1 < shelfX - 0.1 && y1 > 1.0 && std::fabs(x3 - shelfX) < 0.01 && gone < -90 && game.testDronesPlanned() && descent == "DESCENDING",
+       fmt("sent %s; at 1.2 s drone 1 at x %.2f (backing into the hull from %.2f) %.2f m up its rack, drone 3 at x %.2f (waiting its turn); at 3.6 s drone 1 %s; the haul %s; at 9 s drone 1 %s",
+           sent ? "yes" : "NO", x1, shelfX, y1, x3, gone < -90 ? "gone through its port" : "STILL IN THE CABIN", game.testDronesPlanned() ? "drawn" : "NOT DRAWN", descent.c_str()));
     // ---- the search: a hand closing on a find, the ways on the map; each drone two minutes from its first place to its last (the user's)
     std::string info = game.testDronesInfo();
     double arrive = 0;
@@ -149,7 +150,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     const std::set<std::string> before2 = held();
     const bool second = game.testDronesLaunch();
     game.testDronesSettle();
-    game.setState(GameState::SPACE); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.1);
+    game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_DECODER); run(0.1);
     press(KEY_E); run(0.1);
     const bool decoderOpen = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
     press(KEY_ENTER); run(0.1);
@@ -227,7 +228,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     const bool two = peoplesOf(BodyGen::make(sys.bodies[W.body])) > 1;
     for (int p = 0; p < 2 && two; p++) caseAdd(W.sx, W.sz, W.body, p);
     auto keyFits = [&](const std::string& k, const std::string& world, int which) { return k.rfind(world + "/I", 0) == 0 && atoi(k.c_str() + world.size() + 2) / 1000 == which; };
-    game.setState(GameState::SPACE); game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.1);
+    game.setState(GameState::SPACE); game.testCabinView("CLOSE AT THE CASE"); run(0.1);
     press(KEY_E); run(0.1);
     const bool caseOpen = game.state == GameState::INSTRUMENTS && game.testCaseLevel() == 0;
     int counted = 0; for (int w = 0; w < game.testCaseWorlds(); w++) counted += game.testCaseWorldItems(w);

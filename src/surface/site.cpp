@@ -40,6 +40,7 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
     t.scree = (uint8_t)clampi((int)(s.scree * 255 + 0.5), 0, 255);
     t.wtint = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); t.ltint = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255);
     t.gtint = (uint8_t)clampi((int)(s.groundTint * 255 + 0.5), 0, 255);
+    t.stint = (uint8_t)clampi((int)(s.snowTint * 255 + 0.5), 0, 255);
     if (!edits.empty()) applyEdits(x, z, detailM, t);   // T-03: the works' cuts, pits, ditches, craters, flats, reservoirs and lines
     if (!roads.empty() && detailM <= 100) {   // an old road through this vertex (the coarse rings see nothing: a seven-metre road is a hundredth of their cells)
         double d, along, hd; const SiteRoad* rd;

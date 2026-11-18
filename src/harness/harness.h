@@ -9,6 +9,7 @@
 #include "core/parallel.h"
 #include "core/fs.h"
 #include "galaxy/starfield.h"
+#include "life/morphs.h"
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
 #include "galaxy/planet_features.h"
@@ -158,6 +159,9 @@ enum SceneCode : int {
     SCENE_ROGUE_EMBERS = -103,   // a drifter's embers
     SCENE_ROGUE_FROZEN_AIR = -104,   // a frozen air
     SCENE_DARK_OCEAN = -105,   // a dark ocean
+    SCENE_SPRING_BANDS = -106,   // Z-03: a terraced hot spring's banded pools
+    SCENE_RED_SNOW = -107,   // Z-03: red snow
+    SCENE_MATS = -108,   // Z-03: a microbial mat on a wet flat
 };
 
 // M7-03 unit tests: frame maths, the sun against analytic cases, noise statistics, name lengths, the Kepler solver
@@ -326,7 +330,7 @@ extern int g_testScale;
 // ---- frames.cpp
 double nowSec();
 void saveFB(Framebuffer& fb, const char* path, double gain = 1.0);
-void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only = -1);
+void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only, double t);   // the season at t set first (B-438)
 uint64_t fnv(uint64_t h, const void* p, size_t n);
 double effectiveSunAlt(const SurfaceSite& site, double t);
 double findTime(SurfaceSite& site, double targetAlt, double t0, double* errOut = nullptr);
@@ -460,9 +464,39 @@ int runSounds(int argc, char** argv);
 // ---- modes_rogues.cpp
 int runRogues(int argc, char** argv);
 
+// ---- modes_life.cpp, unit_life.cpp
+int runLife(int argc, char** argv);
+std::vector<Star> starsNearHome(int r);   // the stars within r sectors of home (a cube), nearest first
+bool coastSite(const BodyGen& g, double radiusKm, double& latDeg, double& lonDeg);   // Z-07: land 200 m inland of a sea's coast (`life auto`, the flow)
+// ---- modes_life_look.cpp
+int runLifeLook(int argc, char** argv);
+std::vector<Morph> everyForm();   // every plan's every variant, of home's genesis (the forms' sheets, the unit)
+void unitLife(const Check& check);
+// ---- modes_lab.cpp: the laboratory (Z-04: `lab microscope`, `lab time`); unit_lab.cpp: the unit's `lab` group
+int runLab(int argc, char** argv);
+bool labVial(const StarSystem& sys, int body, Vial& out);   // a vial of a world's ground as the kit takes it (its most abundant living species of a drop)
+bool labDenseVial(Vial& out);   // the densest slide the lab knows (`lab time`'s, the bench's microscope row)
+void unitLab(const Check& check);
+// ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`, `lab jars`)
+int labCultures();
+int labJars();
+int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: twelve flasks of a living world's species, four jars
+// ---- modes_tree.cpp (Z-06; Z-07's `lab catalogue`)
+int treeKin(int r);
+int lifeMade(int want);
+int labTree();
+int labCatalogue();
+
 // ---- modes_drones.cpp
 void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 int runDrones(int argc, char** argv);
+
+// ---- modes_ship.cpp
+int runShip(int argc, char** argv);
+// I-03: a frame's banks whole: each dealt bank one home's (no bank two hues), none 0, the hull's or the light's, looking out never the
+// outside's (B-437: 7, read through the space view's own palette); `used` the banks the ship's palette takes (the dealt, 0, the two
+// fixed and the outside's one), at most 32
+bool shipBanksWhole(const CabinFrame& f, int& used, std::string& why);
 
 // ---- modes_game.cpp
 void runGameFlow();
@@ -598,6 +632,12 @@ void unitNavigation(const Check& check);
 void unitSights(const Check& check);
 void unitAuto(const Check& check);
 void unitStates(const Check& check);
+
+// ---- unit_ship.cpp
+void unitShip(const Check& check);
+
+// ---- unit_search.cpp
+void unitSearch(const Check& check);
 
 // ---- unit_civ.cpp
 void unitCivilisations(const Check& check);

@@ -28,6 +28,8 @@ make check                    # the layout: raylib only in the platform, the lay
 src/core        framebuffer and palette, raster, font, noise, rng.h (the hashes), png, input, parallel (the pool)
 src/galaxy      the worlds: starfield, system (GEN_VERSION), kinds, planetmap (the planet function), drainage,
                 landmarks, almanac, nights, fronts, probe, drifters
+src/life        the living small (1.5.0): biota (a world's stage, chemistry and species), lineages (the geneses), morphs (a species'
+                form), morph_draw (the slide in six ways of seeing; the shape, plans, acts and mesh behind it)
 src/peoples     the peoples: peoples, history, plan, towns, works, buildings, ruins, forms, genome, records, shards,
                 genres, grammar (+ grammar/**/*.vg), tongue, voice, music, charts, instruments, signals, drones
 src/space       space_view (+ _sun, _globe, _bodies), probe_view

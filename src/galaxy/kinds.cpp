@@ -1494,6 +1494,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     for (int t = 0; t < PT_COUNT; t++)
         if (K[t].landable && (K[t].tags & KT_PLATES) && K[t].pressureLo + K[t].pressureSpan > 0.001 && !(K[t].events & EV_QUAKES)) K[t].shapes |= KS_SEISMIC;
     for (int t : {PT_VOLCANIC, PT_TIGER_STRIPED, PT_CRYOVOLCANIC}) K[t].shapes |= KS_SEISMIC;
+    // Z-03: red snow where snow lies on a world whose life lives on its ground (the living worlds with snow, the archean's, the snowball's)
+    for (int t : {PT_FELISIAN, PT_SUPERHABITABLE, PT_STEPPE, PT_TUNDRA, PT_TERMINATOR, PT_ARCHEAN, PT_SNOWBALL}) K[t].shapes |= KS_SNOW_ALGAE;
     // what freezes in the dark. A carbon dioxide or a sulphurous air falls as snow under 150 K at the pressures the game's thin airs have
     // (Mars' poles at 145 K); a nitrogen air under a methane haze holds to 60 (Titan's at 94 K); hydrogen never. Water's seas freeze at 271 K,
     // a brine's at 250, ammonia water's at 176, methane's at 90, a tar sea sets under 300
@@ -1551,6 +1553,10 @@ constexpr void landform(std::array<TraitDef, TR_COUNT>& T, int id, const char* n
 // peoples' palette banks on the ground: never on a world with a people nor the home world)
 constexpr void quality(std::array<TraitDef, TR_COUNT>& T, int id, const char* name, const char* phrase, uint64_t needs, int kind, bool moves, bool colour = false, int excludes = TR_NONE) {
     T[id] = TraitDef{id, name, phrase, TC_WORLD, needs, colour, excludes, kind, moves};
+}
+// Z-03: a new slot's trait given by a hash of its own to the kinds of its process (`BodyGen::make`), never drawn
+constexpr void given(std::array<TraitDef, TR_COUNT>& T, int id, const char* name, const char* phrase, uint64_t needs, int kind, bool moves) {
+    T[id] = TraitDef{id, name, phrase, TC_GIVEN, needs, false, TR_NONE, kind, moves};
 }
 // D-04: a drifter's own (`TK_DARK`): given, never drawn (`moves`: it moves the ground or what stands on it)
 constexpr void dark(std::array<TraitDef, TR_COUNT>& T, int id, const char* name, const char* phrase, bool moves) {
@@ -1630,6 +1636,8 @@ constexpr std::array<TraitDef, TR_COUNT> buildTraits() {
     dark(T, TR_EMBERS, "EMBERS", ", lakes of lava glowing in its endless night", true);
     dark(T, TR_LIGHTS_LEFT_ON, "LIGHTS LEFT ON", ", the lights of a dead people's cities still burning", false);
     dark(T, TR_LIGHTS_IN_WATER, "LIGHTS IN THE WATER", ", faint lights drifting in its dark sea", false);
+    // Z-03: red snow, the snow algae's (Hoham and Remias 2020): it takes a people's palette bank on the ground
+    given(T, TR_SNOW_ALGAE, "SNOW ALGAE", ", its summer snow stained red by algae", KS_SNOW_ALGAE, TK_LIFE, true);
     return T;
 }
 constexpr bool traitsOk(const std::array<TraitDef, TR_COUNT>& T) {
@@ -1638,9 +1646,11 @@ constexpr bool traitsOk(const std::array<TraitDef, TR_COUNT>& T) {
         if (t.id != i || !t.name || !t.phrase || (t.cls != TC_GIVEN && !t.needs)) return false;
         if (t.excludes != TR_NONE && T[t.excludes].excludes != i && (t.kind == TK_FIRST || T[t.excludes].kind != TK_FIRST)) return false;   // an exclusion goes
         // both ways (Q-02: a new slot's of one of R-304's one way, the new slots being drawn after the first three)
-        if (t.kind < TK_FIRST || t.kind >= TK_COUNT || (t.kind != TK_FIRST) != (i > TR_CIVILISATION) || (t.kind != TK_FIRST && (t.cls == TC_GIVEN) != (t.kind == TK_DARK))) return false;   // R-304's
-        // traits first (the first three slots draw them alone), the new slots' after the given ones, each of a kind (D-04: the drifters' own given)
+        if (t.kind < TK_FIRST || t.kind >= TK_COUNT || (t.kind != TK_FIRST) != (i > TR_CIVILISATION) || (t.kind == TK_DARK && t.cls != TC_GIVEN)) return false;   // R-304's
+        // traits first (the first three slots draw them alone), the new slots' after the given ones, each of a kind (D-04: the drifters' own given;
+        // Z-03: another kind's given trait names the process of the kinds it is given to)
         if ((t.kind == TK_LANDFORM) != (i > TR_CIVILISATION && t.cls == TC_LANDFORM) || (t.kind == TK_LANDFORM && !t.moves)) return false;
+        if (t.kind != TK_FIRST && t.kind != TK_DARK && t.cls == TC_GIVEN && !t.needs) return false;
     }
     return true;
 }

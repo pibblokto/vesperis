@@ -21,6 +21,7 @@ namespace { const int MAP_LW = 256, MAP_LH = 128; }   // logical size of the map
 
 void Game::landingMapEnter() {
     landBody = ship.parkedBody;
+    dropNext = false;   // I-04: the hatch's drop only for a boarding at the capsule (its act sets it after this)
     // default site: the sub-ship point (what you are looking at from orbit)
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 bf = frame * ship.parkDir;
@@ -108,7 +109,9 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE)) closeScreen();
     if (enterKey(in)) {
         state = GameState::DESCENT;
-        transT = 0;
+        transT = settings.cabin && dropNext ? -DROP_S : 0;   // I-04: boarded at the capsule, the hatch's drop first, seen from the hangar
+        dropNext = false;
+        scooped = false;   // Z-03: this descent's scoop not yet taken
         fade = 0;
         {   // the capsule sets down outside a settlement's walls
             double la = landLat, lo = landLon;

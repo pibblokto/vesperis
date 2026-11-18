@@ -320,7 +320,7 @@ void SpaceRenderer::updatePlate(const SpaceContext& c) {
             extA = std::max(extA, a); extB = std::max(extB, b);
         }
     };
-    int bucket = bi < 64 ? seasonBucket[bi] : 0;
+    const int bucket = seasonStepOf(b);
     const BodyGen& g = genFor(b);
     double cloudDrift = cloudDriftOf(b, c.t);
     auto fits = [&](const DetailPlate& p) {
@@ -382,6 +382,41 @@ std::string SpaceRenderer::plateInfo() const {
     return s;
 }
 
+// I-02: the bodies' places on the screen as `render` leaves them (drawGlobe's own lines, their expressions as they are there), nothing
+// drawn: the ship's walls hide the outside, the HUD's marks and the crosshair's pick still read them
+void SpaceRenderer::bodiesOnScreen(const SpaceContext& c) {
+    bodyInfo.clear();
+    if (!c.sys || !c.sys->valid) return;
+    const StarSystem& sys = *c.sys;
+    bodyInfo.resize(sys.bodies.size());
+    for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+        if (bi == c.excludeBody) continue;
+        BodyScreenInfo& info = bodyInfo[bi];
+        const Body& b = sys.bodies[bi];
+        Vec3 posW = sys.bodyPos(bi, c.t);
+        Vec3 relW = posW - c.shipPos;
+        Vec3 cv = c.cam * relW;
+        double dist = length(cv);
+        info.body = bi;
+        info.distKm = dist;
+        info.inFront = cv.z > 0;
+        double R = b.radiusKm;
+        if (cv.z + R <= 0) { info.radiusPx = 0; continue; }
+        double cz = cv.z;
+        double angR = std::asin(clampd(R / dist, 0, 1));
+        double rpx;
+        if (cz > 1e-3 * R) {
+            info.sx = proj.cx + proj.f * cv.x / cz;
+            info.sy = proj.cy - proj.f * cv.y / cz;
+            rpx = proj.f * std::tan(angR) * (dist / cz);
+        } else {
+            info.sx = proj.cx; info.sy = proj.cy; rpx = 1e9;
+        }
+        info.radiusPx = rpx;
+        if (b.type == PT_COMPANION && c.skyMode) info.radiusPx = 0;
+    }
+}
+
 void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, int bank, BodyScreenInfo& info) {
     const StarSystem& sys = *c.sys;
     const Body& b = sys.bodies[bi];
@@ -433,12 +468,16 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     // as 20 km, so hills beyond that failed the depth test against it and the moon stood in the ground); in space the
     // kilometre stays, since the whole scene is in kilometres
     const double depthUnit = c.skyMode ? 1000.0 : 1.0;
-    if (rpx < 1.2 * FB_SCALE && cz > 0) {
+    // B-436: a point or a globe by its size at the view's middle, wherever it stands on the screen (its projected size grows off the middle:
+    // a moon near the globe's least size flipped between the two as the view turned, the point hidden in a day sky where the globe was not)
+    const double size = proj.f * std::tan(angR) / (1.2 * FB_SCALE);
+    if (size < 1 && cz > 0) {
         // far body: a point like a bright star. In a sky (M5-09) it is a wandering star: a scale+1 square
-        // that survives the mush, bright with phase, albedo and closeness, hidden where the sky is brighter
+        // that survives the mush, bright with phase, albedo and closeness, hidden where the sky is brighter; B-436: by day dimmed the
+        // less the nearer it is to a globe's size (a near globe's lit face shows by day)
         Vec3 toShip = normalize(c.shipPos - posW);
         double phase = 0.5 + 0.5 * dot(toShip, starDirW);
-        double v = c.skyMode ? clampd((30 + 26 * phase * pt.albedo * lf + 8 * (rpx / (1.2 * FB_SCALE))) * (0.35 + 0.65 * c.skyDark), 6, 60)
+        double v = c.skyMode ? clampd((30 + 26 * phase * pt.albedo * lf + 8 * (rpx / (1.2 * FB_SCALE))) * lerpd(0.35 + 0.65 * c.skyDark, 1.0, smoothstep(0.75, 1.0, size)), 6, 60)
                              : clampd(18 + 30 * phase * pt.albedo * lf + 10 * (rpx / (1.2 * FB_SCALE)), 6, 55);
         if (sys.sunless() && !glows) {   // no sun: a dark world is no point of light (a molten one a faint ember; D-04: and a young interior's fields)
             const BodyGen& fg = genFor(b);

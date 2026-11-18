@@ -186,6 +186,9 @@ void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& al
     // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
     if (tintBankSprings >= 0 && v.material == MAT_MATS) { bank = (uint8_t)tintBankSprings; return; }   // the hot springs' mats in their own bank
     if (tintBankStrata >= 0 && v.gtint > 127) { bank = (uint8_t)tintBankStrata; return; }             // a rainbow stratum's accent layer
+    if (tintBankSnow >= 0 && v.material == MAT_SNOW && v.stint > 127) {   // Z-03: red snow, deeper where the algae are thicker
+        bank = (uint8_t)tintBankSnow; albedo = KINDS[site.gen.type].snowAlbedo * (0.94 - 0.3 * (v.stint - 127) / 128.0); return;
+    }
     switch (matFamilyOn(site.gen.type, v.material)) {
         case FAM_WATER: bank = 2; break;
         case FAM_FOREST: bank = 3; if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg; break;

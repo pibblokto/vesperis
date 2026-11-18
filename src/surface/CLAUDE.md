@@ -15,6 +15,8 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
 - `site` (`SurfaceSite`, `TerrainCache`: the sun, `groundHeight`, `sampleAt`, the roads and marks near), `flora` (`forTrees`,
   `forLogs`, `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`), `bestiary` (`Bestiary::make`), `buggy`
   (`updateBuggy`, `cameraFeed`), `drone` (`deployDrone`), `forms_draw` (a settlement's forms), `textures` (`buildMesoTile`)
+- `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC`; the films under the lamp's ultraviolet:
+  `filmNicheOf`, `prepareFilmGlow`, `drawFilmGlow`)
 
 ## Rules and traps
 - One planet function (`src/galaxy/planetmap`): the surface samples it and keeps no copy. A material never follows a faded
@@ -31,6 +33,10 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   that is sampled, never drawn. `applyDrainage`'s valley melt lifts exposed low ground: re-blend a dry bed after it.
 - A call the compiler inlines stays in its file (`materialLook` in `vertexOf`, `mesoFor`, `jetStrength`, `bandAt` in
   `drawSky`): a split that crosses one is timed (`bench`).
+- A microhabitat reads what the world fixes (the planet function, the features' finders, the walls), never what the landing deals
+  on its own grid (rocks, domes, trees, chimneys): a sample is its square metre's from any landing (`life search`'s second read).
+- The ultraviolet's pass runs only while it is on, and its ramp (bank 15) is set only then: off, the frame is the old one to the
+  bit (the unit's `search` group). It reads the frame's grid made on the main thread; its rows are pure.
 - A new vehicle: the cookbook's "Add a vehicle".
 
 More, with the numbers: `docs/reference/lessons.md`, "The surface".

@@ -175,7 +175,7 @@ void unitCultures(const Check& check) {
         // the second people's at 1000 up
         for (int i = 0; i < 3; i++) { game.guide.shards.insert("152,0,92/0/S" + std::to_string(i)); game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, i))); }
         if (li >= 0) game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, li)));
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
         bool atDecoder = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
         std::string list = game.testShardsInfo(); bool twoEntries = list.find("2 worlds") != std::string::npos;
         press(KEY_DOWN); run(0.05); press(KEY_ENTER); run(0.1);
@@ -258,7 +258,7 @@ void unitCultures(const Check& check) {
         Input gi;
         auto run = [&](double secs) { runFrames(game, gi, secs); };
         auto press = [&](int key) { pressKey(game, gi, key); };
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
         bool atDecoder = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
         std::string list = game.testShardsInfo(); bool oneWorld = list.find("1 worlds") != std::string::npos;
         press(KEY_ENTER); run(0.1);

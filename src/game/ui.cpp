@@ -30,6 +30,22 @@ std::string thousands(double v) {   // 13050 -> "13,050" (G-05; C-15's radar)
     return (v < -0.5 ? "-" : "") + out;
 }
 
+// Z-05: a span of years as the lab says it, to two figures: "ABOUT 12,000 YEARS", "ABOUT 1.2 MILLION YEARS"
+std::string yearsWords(double y) {
+    auto two = [](double v) { const double p = std::pow(10.0, std::floor(std::log10(std::max(1.0, v))) - 1); return v < 10 ? fmt("%.2g", v) : thousands(std::round(v / p) * p); };
+    if (y >= 1e9) return "ABOUT " + two(y / 1e9) + " BILLION YEARS";   // two figures (Z-06: 230 million, not 2.3e+02)
+    if (y >= 1e6) return "ABOUT " + two(y / 1e6) + " MILLION YEARS";
+    const double p = std::pow(10.0, std::floor(std::log10(std::max(1.0, y))) - 1);
+    return "ABOUT " + thousands(std::max(1.0, std::round(y / p) * p)) + " YEARS";
+}
+
+std::string fitText(const std::string& s, int width) {
+    if (textWidth(s.c_str()) <= width) return s;
+    std::string t = s;
+    while (!t.empty() && textWidth((t + ".").c_str()) > width) { const size_t sp = t.find_last_of(' '); t = sp == std::string::npos ? t.substr(0, t.size() - 1) : t.substr(0, sp); }
+    return t + ".";
+}
+
 std::string trunc(const std::string& s, size_t n) { return s.size() <= n ? s : s.substr(0, n - 1) + "."; }
 std::vector<std::string> wrapText(const std::string& s, size_t width) {
     std::vector<std::string> out;

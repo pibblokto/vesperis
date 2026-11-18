@@ -3,7 +3,7 @@
 // view and code (setupSceneForType places it)
 #include "harness/harness.h"
 
-struct CmpScene { const char* name; int type; double latDeg, alt, yawOff, pitch; int wantMat = -1; };
+struct CmpScene { const char* name; int type; double latDeg, alt, yawOff, pitch; int wantMat = -1; bool uv = false; };   // Z-03: `uv` the lamp's ultraviolet on
 static const CmpScene CMP_SCENES[] = {
     {"felisian_forest", PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, SCENE_FOREST},
     {"biome_tropical", PT_FELISIAN, 0, 40 * DEG, 0.5, -0.03, SCENE_BIOME - BIO_TROPICAL},
@@ -157,6 +157,14 @@ static const CmpScene CMP_SCENES[] = {
     {"civilisation_far_future", -1, 0, 35 * DEG, 0.0, 0.02, SCENE_AGE_FAR_FUTURE},
     // on the old shore of a dead desert world, looking out over the dry seabed
     {"desert_dead_sea", PT_DESERT, 15, 35 * DEG, 0.0, -0.02, SCENE_DEAD_SEA},
+    // Z-03: the search's signs. The lamp's ultraviolet at night (the sun 25 degrees down), looking down before the feet: an archean world's mats
+    // on its wet flats, a living world's beach, an archean reef's stromatolites; a terraced hot spring's banded pools from 30 m south of its
+    // vent; red snow underfoot, the sun 15 degrees up behind
+    {"uv_mats", PT_ARCHEAN, 8, -25 * DEG, 0.0, -0.45, SCENE_MATS, true},
+    {"uv_shore", PT_FELISIAN, 12, -25 * DEG, 0.0, -0.3, MAT_SAND, true},
+    {"uv_stromatolites", PT_ARCHEAN, 8, -25 * DEG, 0.0, -0.4, SCENE_ARCHEAN_FLATS, true},
+    {"spring_bands", -1, 10, 35 * DEG, 0.0, -0.25, SCENE_SPRING_BANDS},
+    {"red_snow", -1, 10, 15 * DEG, 2.6, -0.3, SCENE_RED_SNOW},
 };
 
 // E-03: the scene of that name, or none (the names are unique)

@@ -18,6 +18,11 @@ Contents:
 - Add a HUD readout
 - Add a key
 - Add a screen
+- Add a cabin device (I-01, I-02)
+- Add a room to the ship (I-02)
+- Add a fixture to the ship (I-01 to I-04)
+- Add a lab device (Z-04 to Z-06)
+- Add a kind's biota row (Z-01)
 - Add a save field
 - Add a vehicle
 - Add a palette effect
@@ -351,14 +356,103 @@ docs. Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, n
 4. **Its banner in game.h:** the file's methods, and its members after the last of `Game`'s.
 5. **Its way in,** a row of a list (U-03): a flight computer row (`shipPages`, cabin.cpp: its label, act, status column, and
    whether it stays on the screen), an Esc menu row (`escMenu`, menus.cpp), a guide menu row (`guideMenu`: the status that
-   refuses it on the ground, a label that names) or a cabin device (a `CabinFacing` before `FACE_COUNT` and its row in
-   `Game::cabinDevices`: its spot and reach, its lines, its screen's bank and colour, E's act, its body against a wall; its
-   picture in `drawCabinBand`). Its act calls `openScreen`; the harness finds a row by its label.
+   refuses it on the ground, a label that names) or a cabin device (its row and its fixtures: "Add a cabin device"). Its act calls
+   `openScreen`; the harness finds a row by its label.
 
 Then the docs: its help lines (`renderHelp`), 07's states, the file in the game's note. The harness needs nothing: the tour's
 rows open it by its row and run its controller's commands, and `unit states` checks the row (a name, an update, a picture, a way
 in, its commands). A scene, or a screen that needs a world set up first (the ground, a probe falling, a recording), gets a stop
 in `modes_tour.cpp` and its name in `SETUPS`; a `screens` capture if a frame needs its scales.
+
+## Add a cabin device (I-01, I-02)
+
+A device is a row and its fixtures; no count, place or colour of it is kept anywhere else:
+1. **Its facing:** a `CabinFacing` before `FACE_COUNT` (`game/game_types.h`): the tour and the unit read the rows in its order.
+2. **Its row** in `Game::cabinDevices` (`game/cabin.cpp`), in the enum's order: its room (`ShipRoomId`: the bridge, the library,
+   the laboratory, the hangar, the observatory...); its spot (its front's middle) and reach (of the devices in the room stood in,
+   the one whose spot is most ahead within its reach is faced); its stand, where the explorer stands to face it (about 1.1 m before
+   its front, the head bent to its screen; the tour's `E at <use>`, the harness's `testCabinAtDevice`, `ship walk`'s goal); its line
+   under the crosshair and the controller's `USE` line; its screen's home bank and colour (R-404: a bank of its own, 0.3 apart in
+   RGB from every other: the unit holds both over the table); `E`'s act (an opener calls `openScreen`); its screen's shade in the
+   frame (the frame's flicker and its own state); its line while it works.
+3. **Its fixtures** in `makeFixtures` (`game/ship_plan.cpp`), in the order its room draws them: its body (`boxAt`: its middle, the
+   way its front faces, half its width and depth, its floor and height, its faces with their shades of the hull's), its screen
+   (`screenOn` its front face, or `screenTop` lying on a desk: the device's bank as dealt and the row's shade), or a fixture its own
+   code draws in its place in the order (the rack: `PIECE_RACK`, drone_draw.cpp). Its footprint keeps the walk off it (the
+   colliders are made from the fixtures; `open` for one overhead or flat). Keep it clear of the room's ways: the unit's `ship` group
+   walks every arch's and landing's way through the colliders.
+4. **Its bank:** the frame deals it (`cabinSight` asks for each seen device's home bank by its nearness, `cabinPalette` sets the
+   dealt ramp): a home bank past 21-29 is one free in 02-rendering.md's table; past the pool the screen dims to the hull's grey.
+
+Then `vesperis_test unit ship` (its room reached, its stand on the floors and facing it), `ship walk` (walked to and faced) and
+`ship rooms` (its room's pictures). The docs: 07's cabin, 02's banks. The harness needs nothing more: the tour faces every device
+from its stand and `unit states` checks its screen.
+
+## Add a room to the ship (I-02)
+
+A room is rows, and its pieces are built from them: its `ShipRoomId` before `SHIP_ROOMS` (the number is saved), its `ROOMS` row in
+that order (its shape, its walls' inner faces, floor, ceiling, outer hull and shades); its ways (`archOf`: on a side of the room
+it opens from, its span and height; the slab to the room beyond is the two rooms' facing walls, so leave a gap between them), its
+windows (`WINDOWS`: a side, a span, the edges, the mullions); its fixtures; its lamps in `LAMPS`; a middle view (`THE <ROOM>'S
+MIDDLE`, `ship rooms`' and the bench's). `planWhole` checks the rows at compile time; then `unit ship` (reached, the ways clear),
+`ship walk`, `ship rooms` (the clip and the skip still leave the same pixels: no gap in its walls, every curve's points shared).
+
+Its light (I-03): its row's floor, wall and ceiling finishes (`roomOf`'s last three; a fixture's by `fin`, a box's top its own),
+from `FINISHES` (a new finish: a row and a home of 11-20 not taken, its colour; the frame deals it a bank); its lamps (a bulb under
+the ceiling with its cone, a glow, a power that gives a floor under it about 1, a reach where its light is half: the room's mood);
+glass the sun comes through is its windows' lights (or `glassOf` for another shape) and the surfaces its patches fall on are its
+`receiver`s. `ship light` draws it lit and dark, and the unit's `ship` group checks its pool and every view's banks.
+
+Its sound (I-04): its row in `SOUNDS`, in the rooms' order (its share of the hum and the drive, its bubbling, its water, the music's
+fullness); `sounds` renders it as the frame sets it (`Game::aboardSounds`), each within the ground's bound.
+
+A thing the frame fills (I-04: the explorer's, its look by the game's state): a fixture kind of its own (`kindOf` a box, or its
+own maker) whose builder case emits its static parts and a `marker` of a `ShipPieceKind` past `PIECE_CAPSULE`, in a finish it asks
+a bank for; its drawing in `game/cabin_life.cpp` (`drawLifePiece`'s case), its points lit by `lifeShade` (the room's lamps as the
+vertices take them), into `f.shapes` with the finishes' params (`CabinDraw`). What it reads is made before the dealing
+(`lifeSight`) and never waited for (a thread's, `printsCollect`); `ship life` draws it.
+
+## Add a fixture to the ship (I-01 to I-04)
+
+A fixture is a row, never a number in code: `makeFixtures` (`game/ship_plan.cpp`) builds `ShipFixture`s in the order their rooms draw
+them. Its room; its kind (`FX_*`: a box, a screen, a tube, a ring, the cage, the rack; a kind of its own appends to the enum); its place
+(a box's corners and floor, its height; `boxAt` takes its middle, the way its front faces, half its width and depth), its faces' finishes
+and shades (`FINISHES`: a home of 11-20, the frame deals the bank), `open` where the walk passes it (low, flat, overhead): every other
+fixture's footprint is a collider (`ShipCollider`), so keep it off the rooms' ways (the unit's `ship` group walks them). A screen goes on a
+box's face (`screenOn`) or lies on a desk (`screenTop`), in its device's bank as dealt. A thing the frame fills (I-04's prints, the
+garden, Z-05's flasks and jars, Z-06's tree wall) is a fixture with a `marker` of a `ShipPieceKind` appended, drawn by its case in
+`game/cabin_life.cpp`; its own tones are homes past the banks (32-47, `ShipBanks`), asked only for what is drawn in front of the eye and
+after the screens near them (rules-life-lab.md). A place the explorer looks from is a view (`shipViews`: `THE <WHAT>`, the harness's
+`testCabinView`). Then `unit ship`, `ship rooms`, `ship light` (its finishes lit) and `ship life` (a filled piece).
+
+## Add a lab device (Z-04 to Z-06)
+
+A cabin device ("Add a cabin device": its facing, its row with a colour 0.3 from every other in RGB and a home bank no other takes, its
+fixtures) whose use is a screen ("Add a screen"): a camera you enter (the microscope: its slide whole in the framebuffer, every bank its
+own, no space view, no cabin) or, as the incubator, the sequencer and the tree, a screen over the room (`ST_SIMULATES | ST_OVERLAY |
+ST_STOWS | ST_SHIP_MOVES`, back to SPACE). Then, as the lab's three do:
+1. **What it holds** is the save's, through its row's `save`, `load` and `reset` (U-05; the `flask`, `jar`, `seq` lines): the least that
+   makes it again (its species by key, its events, when it began), never what is made from them (`flaskMake`, `sequencerMake`).
+2. **What runs on** runs on the lab's clock (`lab.clock`, the drones' kind: real seconds while the game simulates, `updateLab`), closed
+   form in it, so the same skipped (`testLabSkip`), stepped and loaded again; what it comes to is told as the clock reaches it, the
+   screen open or not (`sequencerTick`), said and logged (a log kind of its own).
+3. **A species** is its key (`<body key>/M<index>`): its world drawn by `LabSystems` (the explorer's own while it is there), its biota
+   by `lifeOf`, its form by `morphsOf`; what the device shows of it goes to its sheet (`SheetSeen`'s or `LifeCycle`'s bits, a field
+   appended to the `microbe` line, read with `sheetLinesOf`: the microscope's, the catalogue's).
+4. **The harness:** a `lab <name>` mode (its frames and printout), a unit check in `unit_lab`, the tour's stop where it needs vials or
+   sheets first (`STOPS`, `SETUPS`), its frames in `ship life` (a stocked lab, `labStock`), the bench's stage if it draws every frame.
+
+## Add a kind's biota row (Z-01)
+
+A kind's row of `BIOTA` (`life/biota.cpp`, a `LifeRow` a kind in `PT_*`'s order, built at compile time: `biotaOk` holds the order, a
+furnace sterile and keeping nothing, a row with habitats a stage and a chemistry): the weights of the stages its own life reaches, the
+share of its old rock that keeps fossils, its chemistry, `furnace`, `keepsSpores` (airless or icy: a living neighbour's spores),
+`underIce` (its life in a sea under its ice), its habitats. A new kind ("Add a kind of world") adds its row with it; the unit's `life`
+group holds the rows against `KINDS` (a landable kind with habitats, any other none). The biota draws on salts of its own after every
+draw of the generation it came in, so a row changed moves only its kind's worlds' life (`fingerprint life` names them; `salt scan` the
+salts). Its look follows: the stage's plans (`life/morphs.cpp`), its pigments by its sun and niche; a habitat new to the kinds needs its
+microhabitat in `readSample` (`surface/sampling.cpp`) or the vials never meet it (`life search`). Then `life list`, `life survey`, the
+unit's `life` and `search` groups, `fingerprint life` against the base.
 
 ## Add a save field
 

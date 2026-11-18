@@ -12,6 +12,9 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <map>
+#include <set>
+#include <tuple>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fstream>
@@ -47,6 +50,7 @@ const RowList<MenuRow>& Game::guideMenu() {
         {"EXPEDITION LOG", [](Game& g) { g.openScreen(GameState::LOG); }},
         {"GALLERY", [](Game& g) { g.openScreen(GameState::GALLERY); }},
         {"STATISTICS", [](Game& g) { g.openScreen(GameState::STATS); }},
+        {"THE CATALOGUE", [](Game& g) { g.openScreen(GameState::CATALOGUE); }},   // Z-07: the species seen
         {"THE SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }, "THE SHARDS ARE READ ON THE SHIP"},
         {"TARGET A STAR BY NAME", [](Game& g) { g.closeScreen(); g.beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); }, SHIP_TARGETS},
         {"TARGET BY COORDINATES", [](Game& g) { g.closeScreen(); g.beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); }, SHIP_TARGETS},
@@ -164,6 +168,22 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             logEvent("NOTE", fmt("NAMED A STORM %s", text.c_str()));
             break;
         }
+        case TEXT_SPECIES: {   // Z-04: the species under the microscope's crosshair
+            if (text.empty() || textSpeciesKey.empty()) return;
+            guide.names[textSpeciesKey] = text; guide.save(guidePath);
+            status(fmt("THE SPECIES IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A SPECIES %s", text.c_str()));
+            break;
+        }
+        case TEXT_STRAIN: {   // Z-05: a strain in the incubator's flask
+            if (text.empty() || textStrainKey.empty()) return;
+            guide.names[textStrainKey] = text; guide.save(guidePath);
+            for (int i = 0; i < INCUBATOR_FLASKS; i++) lab.flasks[i].made = false;   // its lines say its name
+            flaskMadeAll();
+            status(fmt("THE STRAIN IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A STRAIN %s", text.c_str()));
+            break;
+        }
         case TEXT_PIECE: {   // the piece's name (the shard on the decoder screen)
             if (text.empty() || textShardKey.empty()) return;
             guide.names[textShardKey] = text; guide.save(guidePath);
@@ -191,21 +211,24 @@ void Game::textEntryPad(PadMenu& m) const {
     if (textKind == TEXT_MARK) m.item("WHAT IT MARKS: THE NEXT", KEY_TAB);
 }
 
-// a text entry covers the frame over the galaxy chart, the probe's screen or a recording (its opener), drawn under it
+// a text entry covers the frame over the galaxy chart, the probe's screen, a recording or the microscope (its opener), drawn under it
 bool Game::textEntryCovers() const {
     const GameState from = openedFrom[(int)GameState::TEXT_ENTRY];
-    return (from == GameState::STAR_MAP && mapPage == 1) || from == GameState::PROBE || from == GameState::RECORDING;
+    return (from == GameState::STAR_MAP && mapPage == 1) || from == GameState::PROBE || from == GameState::RECORDING || from == GameState::MICROSCOPE;
 }
 
 void Game::renderTextEntry() {
     // over what it names: a mark on the galaxy chart, a storm on the probe's screen or a recording, a piece on the decoder; R-408: a
-    // mark on the sector map (from the guide menu or the star map's first page, over the scene alone)
+    // mark on the sector map (from the guide menu or the star map's first page, over the scene alone); Z-04 a species, Z-05 a strain
     const GameState from = openedFrom[(int)GameState::TEXT_ENTRY];   // U-05: its opener
     if (from == GameState::STAR_MAP && mapPage == 1) renderStarMap();
     else if (from == GameState::PROBE) renderProbe();
     else if (from == GameState::RECORDING) renderRecording();
     else if (from == GameState::SHARDS) renderShards();
     else if (from == GameState::SECTOR_MAP) renderSectorMap();
+    else if (from == GameState::MICROSCOPE) renderMicroscope();
+    else if (from == GameState::INCUBATOR) renderIncubator();   // Z-05: a strain's name over its flask
+    else if (from == GameState::CATALOGUE) renderCatalogue();   // Z-07: a species' name over its row or its sheet
     const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
     drawPanel(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // as wide as its last line (it ran past the box)
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
@@ -276,16 +299,81 @@ bool Game::statsKindsOverflow() const {
     return n > 48;
 }
 
-// the statistics: any key closes; P-00: K opens the world types walked where they outgrow their line
+// the statistics: any key closes; P-00: K opens the world types walked where they outgrow their line; Z-07: L the LIFE page (the tree built
+// for its count of geneses)
 void Game::updateStats(const Input& in, double dt, double realDt) {
     bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-    if (any && !statsKinds && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
-    else if (any) { statsKinds = false; closeScreen(); }
+    if (any && !statsKinds && !statsLife && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
+    else if (any && !statsKinds && !statsLife && in.pressed[KEY_L]) { statsLife = true; treeBuild(); }
+    else if (any) { statsKinds = statsLife = false; closeScreen(); }
+}
+
+// Z-07: the LIFE page: what was found of the living small, the explorer's own (a friend's lent in no count but its own line), in the other
+// screens' words: the species the catalogue's rows, their forms and stages their sheets', the woken the flasks' words, the geneses the tree's
+void Game::renderStatsLife() {
+    int y = 8;
+    auto line = [&](const std::string& s, uint32_t c) { drawText(canvas, 12, y, s.c_str(), c); y += 10; };
+    auto sub = [&](const std::string& s) { for (const std::string& w : wrapText(s, 48)) { drawText(canvas, 12, y, ("  " + w).c_str(), HUD_DIM); y += 9; } };
+    auto plural = [](int n, const char* one, const char* many) { return fmt("%d %s", n, n == 1 ? one : many); };
+    line("LIFE STATISTICS", HUD_AMBER);
+    line("SAMPLES TAKEN         " + fmt("%d ON ", guide.samplesTaken) + plural((int)guide.sampled.size(), "WORLD", "WORLDS"), HUD_GREEN);
+    std::set<std::string> worlds;
+    int named = 0, woken = 0, read = 0;
+    uint32_t forms = 0, stages = 0;
+    double slept = 0;
+    for (const auto& kv : guide.microbes) {
+        worlds.insert(kv.first.substr(0, kv.first.rfind("/M")));
+        if (guide.names.count(kv.first)) named++;
+        const MicrobeSheet& m = kv.second;
+        forms |= m.forms; stages |= m.stages;
+        if (m.stages & LC_WAKING) { woken++; slept = std::max(slept, m.sleptYears); }
+        if (m.seen & SEEN_KIN) read++;
+    }
+    line(fmt("SPECIES SEEN          %d ON ", (int)guide.microbes.size()) + plural((int)worlds.size(), "WORLD", "WORLDS") + fmt(", %d NAMED", named), HUD_GREEN);
+    if (forms) sub("SEEN AS: " + formsSeenWords(forms));
+    if (stages && !stagesSeenWords(stages, false).empty()) sub("STAGES SEEN: " + stagesSeenWords(stages, false));
+    line(fmt("WOKEN FROM SPORES     %d", woken), HUD_GREEN);
+    if (slept > 0) sub("THE LONGEST AFTER " + yearsWords(slept));
+    int strainsNamed = 0;
+    for (const auto& kv : guide.strains) if (guide.names.count(kv.first)) strainsNamed++;
+    line(fmt("STRAINS               %d, %d NAMED", (int)guide.strains.size(), strainsNamed), HUD_GREEN);
+    line(fmt("SEQUENCED             %d", read) + (guide.watermarks.empty() ? std::string() : fmt(", %d MADE BY A PEOPLE", (int)guide.watermarks.size())), HUD_GREEN);
+    if (read > 0) sub(tree.geneses == 1 ? std::string("LIFE BEGAN AT LEAST ONCE") : fmt("LIFE BEGAN AT LEAST %d TIMES", tree.geneses));
+    {   // kin across stars: the species read whose kin were read at another star (the tree's leaves on worlds), the farthest two stars apart
+        int across = 0; double farLy = 0;
+        std::map<std::tuple<int64_t, int64_t, int64_t>, Vec3> at;
+        auto where = [&](const TreeLeaf& L) -> Vec3 {
+            const auto k = std::make_tuple(L.sx, L.sy, L.sz);
+            auto it = at.find(k);
+            if (it != at.end()) return it->second;
+            Star st; const Vec3 p = placeInSector(L.sx, L.sy, L.sz, st, true) ? st.pos : Vec3();
+            return at[k] = p;
+        };
+        for (size_t i = 0; i < tree.leaves.size(); i++) {
+            const TreeLeaf& A = tree.leaves[i];
+            if (A.body < 0) continue;
+            bool kin = false;
+            for (size_t j = 0; j < tree.leaves.size(); j++) {
+                const TreeLeaf& B = tree.leaves[j];
+                if (j == i || B.body < 0 || (A.sx == B.sx && A.sy == B.sy && A.sz == B.sz) || commonAncestorGyr(A.line, B.line) < 0) continue;
+                kin = true;
+                farLy = std::max(farLy, length(where(A) - where(B)) / SECTOR_KM);
+            }
+            across += kin;
+        }
+        line(fmt("KIN ACROSS STARS      ") + plural(across, "SPECIES", "SPECIES"), HUD_GREEN);
+        if (across > 0) sub(fmt("THE FARTHEST %.1f LY APART", farLy));
+    }
+    int lentN = 0;
+    for (const auto& kv : guide.lentMicrobes) if (!guide.microbes.count(kv.first)) lentN++;
+    if (lentN > 0) line(fmt("LENT BY THE INBOX     %d SPECIES, IN THE CATALOGUE", lentN), HUD_CYAN);
+    drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
 }
 
 void Game::renderStats() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 215);
     int y = 8;
+    if (statsLife) { renderStatsLife(); return; }
     if (statsKinds) {   // P-00: the world types walked, by name, in three columns (sixty fit)
         drawText(canvas, 12, y, fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()).c_str(), HUD_AMBER); y += 14;
         int i = 0;
@@ -324,7 +412,7 @@ void Game::renderStats() {
         Star h;
         if (placeInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN);
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, statsKindsOverflow() ? "K WORLD TYPES   ANY OTHER KEY CLOSES" : "ANY KEY TO CLOSE", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 10, statsKindsOverflow() ? "L LIFE   K WORLD TYPES   ANY OTHER KEY CLOSES" : "L LIFE   ANY OTHER KEY CLOSES", HUD_DIM);   // Z-07
 }
 
 // X-04: the photographs and the probes' recordings (each by its final image: shots/probe_<n>.png, a lent one drawn), in the order

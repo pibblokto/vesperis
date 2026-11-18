@@ -13,7 +13,7 @@ constexpr int to(GameState s) { return (int)s; }   // a way back to a screen of 
 constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
     // the state, its name, traits and controller's context; its update, its picture, an overlay's covers, an away, its controller's page;
     // U-05: its enter (`openScreen`'s) and its way back (`closeScreen`'s); a screen with lines of its own in the save, its `save`,
-    // `load` and `reset` after them (none yet)
+    // `load` and `reset` after them (Z-05: the incubator's, the lab's flasks and jars; Z-06: the sequencer's)
     {S::TITLE, "TITLE", ST_STOWS | ST_TAKES_SYNTH | ST_BASE, PCX_TITLE,
      &G::updateTitle, &G::renderTitle, nullptr, nullptr, &G::titlePad, nullptr, BACK_NONE},
     {S::SPACE, "SPACE", ST_SIMULATES | ST_IN_PLAY | ST_MOUSE | ST_PHOTO | ST_BASE | ST_CLOCK, PCX_SHIP,
@@ -72,6 +72,18 @@ constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
      &G::updateDroneBay, &G::renderDroneBay, nullptr, nullptr, &G::droneBayPad, &G::droneBayEnter, to(S::SPACE)},
     {S::AUTO, "AUTO", ST_OVERLAY, PCX_SCREEN,
      &G::updateAutoScreen, &G::renderAutoScreen, nullptr, nullptr, nullptr, &G::autoEnter, BACK_OPENER},
+    {S::MICROSCOPE, "MICROSCOPE", ST_SIMULATES | ST_STOWS | ST_MOUSE | ST_SHIP_MOVES, PCX_SCREEN,   // Z-04: a camera entered (it draws its slide whole)
+     &G::updateMicroscope, &G::renderMicroscope, nullptr, nullptr, &G::microscopePad, &G::microscopeEnter, to(S::SPACE)},
+    {S::INCUBATOR, "INCUBATOR", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // Z-05: a screen over the room; the lab's lines its own
+     &G::updateIncubator, &G::renderIncubator, nullptr, nullptr, &G::incubatorPad, &G::incubatorEnter, to(S::SPACE), &G::incubatorSave, &G::incubatorLoad,
+     &G::incubatorReset},
+    {S::SEQUENCER, "SEQUENCER", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // Z-06: a screen over the room; its line its own
+     &G::updateSequencer, &G::renderSequencer, nullptr, nullptr, &G::sequencerPad, &G::sequencerEnter, to(S::SPACE), &G::sequencerSave, &G::sequencerLoad,
+     &G::sequencerReset},
+    {S::TREE, "TREE", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // Z-06: the tree of kin, over the room (back to its opener)
+     &G::updateTree, &G::renderTree, nullptr, nullptr, &G::treePad, &G::treeEnter, BACK_OPENER},
+    {S::CATALOGUE, "CATALOGUE", ST_OVERLAY, PCX_SCREEN,   // Z-07: the guide's catalogue, as its log and its statistics
+     &G::updateCatalogue, &G::renderCatalogue, nullptr, nullptr, &G::cataloguePad, &G::catalogueEnter, BACK_SCENE},
 };
 
 namespace {

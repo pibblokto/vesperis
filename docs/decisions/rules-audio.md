@@ -11,6 +11,7 @@ or changes one edits its line here; a replaced one moves to `superseded.md` (`do
 - While the decoder, radar or gramophone plays, the ship's player is held, then resumes (`pieceFrom`, `speechFrom`): one piece at a time [C-11]
 - `Game::darkRadio` plays a drifter on the cabin's and suit's radios only where no other owner has the synth: a new owner joins its list [D-03]
 - `AudioState::surfaceOff()` zeroes every ground level (a new one joins it) each frame of descent, climb and space, and a load; ground menus keep them [B-413]
+- The rooms aboard sound by their plan's rows (`Game::aboardSounds`), from a noise of their own; `aboardOff` off the ship [I-04]
 
 ## Levels and the proof
 - A change not meant to be heard keeps every WAV of the proof byte for byte (`AudioSynth::Coefs`: per-sample expressions) [F-07], [D-03]
@@ -72,3 +73,4 @@ or changes one edits its line here; a replaced one moves to `superseded.md` (`do
 [Q-03]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [D-03]: log/6-1.4.0.md
+[I-04]: log/7-1.5.0.md

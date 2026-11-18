@@ -182,7 +182,7 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         shot("taken");
         // the case on the ship: the explorer before it, E, a few notes
         game.setState(GameState::SPACE); run(0.2);
-        game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.2);
+        game.testCabinView("CLOSE AT THE CASE"); run(0.2);
         const int facing = game.testCabinFacing();
         press(KEY_E); run(0.2);
         press(KEY_ENTER); run(0.2);   // the case opens on its worlds (this one first, the ship over it): Enter opens it
@@ -570,7 +570,7 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, piece)));
     game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, rec)));
     game.guide.heard.insert(key + std::to_string(shardWorldIndex(W.which, heard)));
-    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_TAB); run(0.1);
+    game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_TAB); run(0.1);
     const int n = game.testPlayerItems();
     int pi = -1, ri = -1, hi = -1;
     for (int i = 0; i < n; i++) {
@@ -609,7 +609,7 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     // held while the decoder plays a record of its own, taken up where it was
     game.testPlayerSkipTo(3.0); run(0.1);
     const double heldAt0 = game.testPlayerT();
-    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+    game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
     if (game.testShardsTop() == 1) press(KEY_TAB);
     press(KEY_ENTER); run(0.1); game.testShardsOpenIndex(piece); run(0.3);
     const bool heldNow = game.testPlayerHeld() && !game.testPlayerOwnsPiece() && !game.testPlayerOwnsSpeech() && game.audio.piece;

@@ -480,14 +480,27 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     if (dataKey(in) && inSystem) { returnState = GameState::SPACE; openScreen(GameState::DATA); }
     updateShipMotion(dt);
     const bool playing = player.playing >= 0 && !player.held && !player.paused;   // the ship's player: the hum and the drive lower under it
-    audio.hum = radar.on ? 0.25 : (playing ? 0.3 : 0.6);   // the hum under the receiver's static
-    audio.engine = ship.mode == ShipState::VIMANA ? (playing ? 0.55 : 0.9) : (ship.mode == ShipState::APPROACH ? (playing ? 0.22 : 0.35) : 0.0);
+    // I-04: the room stood in's sound (the classic cockpit's the bridge's); the drive's level easing up in a flight and down after it (the
+    // core's and the ring's glow), the deck's reels turning while the player plays
+    aboardSounds(audio, settings.cabin ? shipEyeRoom(cabin.place()) : ROOM_BRIDGE, radar.on, playing, ship.mode);
+    cabin.drive += ((ship.mode == ShipState::VIMANA ? 1.0 : (ship.mode == ShipState::APPROACH ? 0.35 : 0.0)) - cabin.drive) * (1 - std::exp(-realDt * 0.8));
+    if (playing) cabin.deckTurn = std::fmod(cabin.deckTurn + realDt * 2.4, 1000 * TAU);
     audio.surfaceOff();   // nothing of the ground aboard
     {   // the drones' fans as they leave the rack or come back to it (the surface drone's whine, aboard)
         double spin = 0;
         for (int k = 0; k < DRONE_COUNT; k++) { double x, lift, blur; if (droneRackPlace(k, x, lift, blur)) spin = std::max(spin, blur); }
         audio.rotor = 0.4 * spin; audio.rotorPitch = 0.25 * spin;
     }
+}
+
+// I-04: the ship's sounds in a room (the plan's row, `shipRoomSound`): the hum (under the receiver's static the radar's own; lower under the
+// player) and the drive (a flight's, an approach's) at the room's share of them, the lab's bubbling, the garden's water, the player's music
+// fuller in the library; the harness renders each room so (`sounds`)
+void Game::aboardSounds(AudioState& a, int room, bool radarOn, bool playing, int shipMode) {
+    const ShipRoomSound& rs = shipRoomSound(room);
+    a.hum = radarOn ? 0.25 : (playing ? 0.3 : 0.6) * rs.hum;
+    a.engine = (shipMode == ShipState::VIMANA ? (playing ? 0.55 : 0.9) : (shipMode == ShipState::APPROACH ? (playing ? 0.22 : 0.35) : 0.0)) * rs.drive;
+    a.bubbles = rs.bubbles; a.water = rs.water; a.musicFull = rs.full;
 }
 
 // U-04: the ship's commands (the controller's first page; its name is its context's): the telescope's, the radar's, the aim's,
@@ -531,7 +544,8 @@ void Game::spacePad(PadMenu& m) const {
         if (settings.cabin) {
             m.item(cabin.light ? "CABIN LIGHT OFF" : "CABIN LIGHT ON", KEY_U);
             m.item(cabin.depolarised ? "POLARISE THE HULL" : "GLASS HULL", KEY_Y);
-            if (cabin.onRoof) m.item("BACK INTO THE CABIN", KEY_PAGE_DOWN); else m.item("UP TO THE ROOF DECK", KEY_PAGE_UP);
+            const ShipOpening& l = shipLifter();   // I-02: the plan's lift, up from any room, down from the observatory
+            if (cabin.room == l.to) m.item(l.downPad, KEY_PAGE_DOWN); else m.item(l.upPad, KEY_PAGE_UP);
         }
     }
 }

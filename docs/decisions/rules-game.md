@@ -22,7 +22,7 @@ Devices, flight, maps: `rules-game-devices.md`.
 - Saves and the guide record `gen`: an older save loads with one notice; one whose star is gone does not load [M9], [G-01]
 - The guide's save is byte-stable: loaded and saved again it is the same file, but the lending's clock [F-02]
 - Not saved: the telescope, the jump plot, an almanac run (`warp` reads 1), the peoples layer, a probe's held frame [W-06], [G-06], [W-01], [R-415]
-- Lending is one text file of the friend's own finds, never what was lent to them, nor pictures; theirs are cyan, in no statistic [C-14], [X-04]
+- Lending: a file of the friend's own finds (Z-07: species' sheets), not what was lent them, pictures, samples or flasks; cyan, no count [C-14], [X-04], [Z-07]
 
 ## The HUD and the screens
 - The HUD stays pared (the user's ask): on foot the epoch, name and place, scanner, compass, stamina, what E or Q would do; the rest on Tab [R-414]
@@ -83,3 +83,4 @@ Devices, flight, maps: `rules-game-devices.md`.
 [R-420]: log/5-1.3.2.md
 [Q-01]: log/6-1.4.0.md
 [D-05]: log/6-1.4.0.md
+[Z-07]: log/7-1.5.0.md
