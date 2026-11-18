@@ -149,7 +149,8 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-440 | S4 | screens | The data sheet's GRAVITY line runs past the frame's right edge on most worlds (`EQUILIBRIUM 154 K (-119 C)` cut after `(-`: 57-58 characters of the 52 a line holds); z06's `datasheet` frames show it too. | open, found in Z-07 (2026-11-17) |
 | KI-441 | S4 | cabin | Aboard, the banks can still run short: with two worlds' discs and a second sun in the glass (the outside keeping up to 18 banks), a view asking more than the rest (the hangar's 21) dims its farthest finishes. | resolved 2026-11-18 (B-437: the outside its own palette) |
 | KI-442 | S4 | space | The space view keeps a world's season step by index, not by system: another system's body of that index decides when its map is made again, so a map can keep a season a step off (`space`, Wyariothmai I). | resolved 2026-11-18 (B-438: kept by its seed) |
-| KI-443 | S4 | bench | The ship's rows run slow now and then in `bench check`: `library 4x` past its 2.8 ms in 4 of 26 runs of B-437's build (3.02-3.44 ms), 1 of 16 before, never twice in a row. Steadily B-437's layer adds 0.1-0.2 ms (2.03 to 2.18). | open, found by B-437 (2026-11-18) |
+| KI-443 | S4 | bench | The ship's rows run slow now and then in `bench check`: `library 4x` past its 2.8 ms in 4 of 26 runs of B-437's build (3.02-3.44 ms), 1 of 16 before, never twice in a row. Steadily B-437's layer adds 0.1-0.2 ms (2.03 to 2.18). | resolved 2026-11-18 (B-439: new budgets) |
+| KI-444 | S4 | bench | `surface 4x` has the tightest budget: 4.5 ms, 1.30 times its median of 3.45 since 1.4.0 began (F-11 set it at 1.5 times F-10's 2.97). Over it once in 18 runs with the machine in use, as 1.4.0's D-03. | open, found by B-439 (2026-11-18) |
 
 ## The long rows, continued
 

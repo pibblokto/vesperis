@@ -128,6 +128,17 @@ struct Bench {
     // five frames at one instant after a scale's change, before a row's timed frames: the first frames at a new scale allocate its
     // buffers and tables (on the swapping Mac one run's space 4x read 11.0 ms against 6.4-6.6), and the timeline stays the rows' before
     void settle() { for (int i = 0; i < 5; i++) { game.frame(in, 0); in.newFrame(); } }
+    // B-439 (KI-443): a view aboard starts the maps of the worlds it shows first, each on its thread beside the timed frames (the hall's:
+    // its first twenty frames at 2.9-3.4 ms against 2.3): a row aboard waits for them and settles again, so it times its own frame;
+    // returns the maps it waited for
+    int settleMaps() {
+        settle();
+        const int making = game.testMapsMaking();
+        for (int i = 0; i < 10000 && game.testMapsMaking() > 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        settle();
+        return making;
+    }
+    static std::string madeFirst(int n) { return n ? fmt(" (%d map%s made first)", n, n > 1 ? "s" : "") : std::string(); }
     // performance budgets. F-11: about 1.5x the dev Mac's medians after F-10 (an M4 of four performance and six efficiency cores;
     // at least the median + 0.5 ms), so a change that gives a gain back fails; `bench check <factor>` multiplies them for another machine
     // or one thread
@@ -168,25 +179,26 @@ void Bench::space() {
         if (s == 4) space4x = ms;
     }
     {   // I-02: the ship's spaces at 4x, each from its middle (the plan's views), the light on, at one instant (the clock the rows after them read
-        // stays as it was); then back to the start
+        // stays as it was), each once the maps its view starts are made (B-439: `settleMaps`); then back to the start
         const char* const ROWS[5][2] = {{"bridge 4x", "THE BRIDGE'S MIDDLE"}, {"hall 4x", "THE HALL'S MIDDLE"}, {"library 4x", "THE LIBRARY'S MIDDLE"},
                                         {"lab 4x", "THE LABORATORY'S MIDDLE"}, {"dome 4x", "THE OBSERVATORY'S MIDDLE"}};
         for (int i = 0; i < 5; i++) {
-            game.testCabinView(ROWS[i][1]); settle();
+            game.testCabinView(ROWS[i][1]);
+            const int made = settleMaps();
             const double t0 = nowSec();
             for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
             ship4x[i] = (nowSec() - t0) / 60 * 1000;
-            printf("%-12s %.2f ms/frame\n", ROWS[i][0], ship4x[i]);
+            printf("%-12s %.2f ms/frame%s\n", ROWS[i][0], ship4x[i], madeFirst(made).c_str());
         }
         {   // I-03: the bridge facing the sun, the ship turned so it stands a quarter up over the bow (then turned back)
             const double yaw = game.testShipYaw(), pitch = game.testShipPitch();
             game.testCabinView("THE BRIDGE'S MIDDLE");
             game.testSunAt(Vec3(0, std::sin(22 * DEG), std::cos(22 * DEG)));
-            settle();
+            const int made = settleMaps();
             const double t0 = nowSec();
             for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
             bridgeSun4x = (nowSec() - t0) / 60 * 1000;
-            printf("%-12s %.2f ms/frame (%d patches)\n", "bridge sun 4x", bridgeSun4x, (int)game.testCabinFrame().patches.size());
+            printf("%-12s %.2f ms/frame (%d patches)%s\n", "bridge sun 4x", bridgeSun4x, (int)game.testCabinFrame().patches.size(), madeFirst(made).c_str());
             game.testShipAttitude(yaw, pitch);
         }
         {   // Z-04: the microscope at 4x on the densest slide (`lab time`'s: large armoured cells in a crowd of small ones) in phase contrast at x100,
@@ -216,11 +228,12 @@ void Bench::space() {
             // four jars) from its stern bench: the incubator's flasks lit, both screens, the window; then the lab emptied for the rows after
             const size_t vials = game.testColdStore().size();
             const int stocked = labStock(game);
-            game.testCabinView("THE STERN BENCH"); settle();
+            game.testCabinView("THE STERN BENCH");
+            const int made = settleMaps();
             const double t0 = nowSec();
             for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
             flasks4x = (nowSec() - t0) / 60 * 1000;
-            printf("%-12s %.2f ms/frame (%d flasks lit, %zu jars)\n", "flasks 4x", flasks4x, stocked, game.testLab().jars.size());
+            printf("%-12s %.2f ms/frame (%d flasks lit, %zu jars)%s\n", "flasks 4x", flasks4x, stocked, game.testLab().jars.size(), madeFirst(made).c_str());
             game.testLab() = LabState();
             game.testColdStore().resize(vials);
         }
@@ -818,15 +831,17 @@ void Bench::unbudgeted() {
 void Bench::budgets() {
     budget("space 2x", space2x, 3.1);           // 2.02 after F-10 (F-11: 12 -> 3.1)
     budget("space 4x", space4x, 9.5);           // 6.33 after F-10 (a still camera: the backdrop kept); I-02: the start on the bridge
-    // I-02: the ship's spaces at 4x from their middles, budgeted at 1.5 times their medians of three runs
-    budget("bridge 4x", ship4x[0], 8.2);        // 5.44 (the great window: the space view and the bridge)
-    budget("hall 4x", ship4x[1], 3.6);          // 2.41 (the stair, the arches' rooms through them)
-    budget("library 4x", ship4x[2], 2.8);       // 1.87
-    budget("lab 4x", ship4x[3], 2.9);           // 1.92
-    budget("dome 4x", ship4x[4], 6.0);          // 3.98 (the dome's glass all round)
-    budget("bridge sun 4x", bridgeSun4x, 3.6);  // I-03: 2.40, the bridge facing the sun (its disc in the great window, its patches)
+    // I-02: the ship's spaces at 4x from their middles, budgeted at 1.5 times their medians of three runs; B-439 (KI-443): again, of
+    // eighteen runs of the ship dressed (I-03 to Z-07, B-435, B-437: the library's and the lab's budgets had come down to 1.27 times
+    // their medians, and a machine in use slows a run up to 1.45 times), each row after the maps its view starts
+    budget("bridge 4x", ship4x[0], 8.6);        // 5.76 (the great window: the space view and the bridge; I-02 5.44)
+    budget("hall 4x", ship4x[1], 3.6);          // 2.38 (the stair, the arches' rooms through them; I-02 2.41)
+    budget("library 4x", ship4x[2], 3.3);       // 2.21 (I-02 1.87)
+    budget("lab 4x", ship4x[3], 3.4);           // 2.27 (I-02 1.92)
+    budget("dome 4x", ship4x[4], 6.6);          // 4.39 (the dome's glass all round; I-02 3.98)
+    budget("bridge sun 4x", bridgeSun4x, 4.0);  // I-03, the bridge facing the sun (its disc in the great window, its patches): 2.67 (I-03 2.40)
     budget("microscope 4x", microscope4x, 15.6); // Z-04: 10.4 (`lab time`'s median of three), the densest slide in phase contrast at x100
-    budget("flasks 4x", flasks4x, 3.5);         // Z-05: 2.31 (the median of three), the laboratory stocked, from its stern bench
+    budget("flasks 4x", flasks4x, 3.7);         // Z-05, the laboratory stocked, from its stern bench: 2.45 (Z-05 2.31)
     budget("vimana 2x", vimana2x, 2.0);         // a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
     budget("telescope 2x", telescope2x, 13);    // the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
     budget("probe 2x", probe2x, 8.9);           // the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)

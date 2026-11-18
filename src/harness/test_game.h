@@ -14,6 +14,7 @@ public:
     void testAttract(double idleSecs) { titleIdle = idleSecs; }
     const SpaceRenderer::MapStats& testMapStats() const { return spaceR.mapStats; }
     size_t testMapsHeld() const { return spaceR.mapsHeld(); }
+    int testMapsMaking() const { return spaceR.mapsMaking(); }   // B-439: the maps on their threads now (the bench's rows aboard wait for them)
     long testGenMicros() const { return spaceR.genMicros.load(); }
     int testAheadCells() const { return surf.testAheadCells(); }
     // ---- the controller: the command menu, the keyboard, the controller page (pad.cpp)

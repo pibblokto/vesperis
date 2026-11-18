@@ -460,11 +460,12 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   tiers, hidden trees, points, the trees listed and their visits over the band threads, and the flora sections' milliseconds
   (`shots/tests/bench_forest.png`); `bench check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one
   listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5 (I-02: the
-  start on the bridge), the ship's spaces at 4x from their middles at one instant (I-02: the bridge 8.2, the hall 3.6, the library
-  2.8, the laboratory 2.9, the dome 6.0; I-03: the bridge facing the sun 3.6, its disc in the great window and its patches on the
-  floor, the ship turned to it and back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide, `lab time`'s at its 5 s,
+  start on the bridge), the ship's spaces at 4x from their middles at one instant, each once the maps its view starts are made
+  (B-439: budgeted again on the dressed ship; I-02: the bridge 8.6, the hall 3.6, the library 3.3, the laboratory 3.4, the dome
+  6.6; I-03: the bridge facing the sun 4.0, its disc in the great window and its patches on the floor, the ship turned to it and
+  back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide, `lab time`'s at its 5 s,
   in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms); Z-05: the laboratory stocked
-  (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks 4x`), surface
+  (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks 4x` 3.7), surface
   2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13, herd draw 1x 0.6, drone 2x 3.3 (R-403: 60 frames at full thrust 200 m up with the
   camera tilted down 30 deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving
   from the seat through the game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through

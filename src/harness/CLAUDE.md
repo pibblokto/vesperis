@@ -38,7 +38,7 @@ Rules:
 - Outputs go to `shots/tests/`; `tests/` and the grammar are read from the working directory (the repo root, or
   `tools/prove`'s scratch directory). `records check` reads the `test_settings.txt` that `settings` writes.
 - The unit and the flow both write `test_guide.txt` (the root note's rule). A frame of bodies waits for their maps
-  (`testWaitMapOf`, `mapIfReady`).
+  (`testWaitMapOf`, `mapIfReady`); the bench's rows aboard, for those their view starts (`settleMaps`, B-439).
 - The explorer stands in the ship where its plan says (I-01): a view by its name (`testCabinView`) or a device's stand
   (`testCabinAtDevice`), never at numbers of the harness's (nor a fixture's: read its row); the tour faces every device from its
   row, in the rows' order.

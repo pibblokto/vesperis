@@ -34,12 +34,14 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - Known to move between runs: pictures printing a time (the landforms sheets, the capital map), the bench's people's-world pictures [P-00], [P-03], [E-03]
 
 ## The bench
-- `bench check`'s 38 budgets hold at every close, each about 1.5x its row's median on the dev Mac with the workers, at least median + 0.5 ms [F-11], [E-03]
+- `bench check`'s 46 budgets hold at every close, each about 1.5x its row's median on the dev Mac with the workers, at least median + 0.5 ms [F-11], [E-03]
 - A row's budget falls with its time when a change makes it faster, so a later change that gives the gain back fails [F-03], [F-11]
+- A budget set before its scene was finished is set again at 1.5x its median once it is [B-439]
 - A row is budgeted once it holds within a few percent over runs; never a recorded frame, an arrival's first frame or a 1x or 3x row [F-01], [F-11]
 - `bench check <factor>` multiplies every limit: another machine or one thread passes its own factor [F-11]
 - Budgeted: the densest scene at the default scale (`forest 4x`), the descent's first frame; surface rows print their bands [B-310], [O6-03..O6-07], [F-01]
 - The bench descends at the default site (Enter's, never `R`'s random one); each row warms itself, with five dt-0 frames after a scale change [G-02], [F-11]
+- A row aboard is timed once the maps its view starts are made (`settleMaps`) [B-439]
 
 ## Timing pairs
 - A timing claim: medians of four AB/BA pairs (`tools/prove bench`) against the previous binary, from paths of one length, on mains [F-02..F-11], [P-04], [E-02]

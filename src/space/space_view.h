@@ -163,6 +163,7 @@ public:
     struct MapStats { int generated = 0, hits = 0, evicted = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // `mapFor` waiting on a map or making it
     std::atomic<long> genMicros{0};
     size_t mapsHeld() const { return maps.size(); }
+    int mapsMaking() const { int n = 0; for (const auto& kv : maps) n += kv.second->generating ? 1 : 0; return n; }   // B-439: on their threads now
 private:
     std::map<uint64_t, BodyGen> gens;
     std::map<uint64_t, std::vector<EmberField>> emberFields;   // a young interior's fields by the body's seed (`emberFieldsOf`, once a body)

@@ -55,15 +55,17 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   sheets lent in cyan and in no count, auto-explore's samples at the water and the springs; the cookbook's recipes, the reference
   notes; `lab catalogue`, `life auto`. R-425 and R-426 are done: all eleven milestones. Their entries are
   `docs/decisions/log/7-1.5.0.md`, their rules `docs/decisions/rules-life.md`, `rules-life-lab.md`, `rules-game.md`,
-  `rules-peoples-grammar.md` and `rules-ship.md`. Committed on the user's word (2026-11-18) with B-434 to B-438 below: one commit on
-  the branch, not pushed.
+  `rules-peoples-grammar.md` and `rules-ship.md`. Committed on the user's word (2026-11-18) with B-434 to B-438 below (0c90433),
+  and B-439 after it: two commits on the branch, not pushed.
 - **Fixed before the release** (2026-11-18, the user's reports in play): B-434, the laboratory's sunlight over its arch from the
   hall (a room's sun patches cast onto its surfaces' own pieces, round their holes); B-435, far things aboard grey until near (the
   ship's banks dealt once the outside is drawn: every bank the glass does not show; KI-439's flasks with it); B-436, a small moon
   lost from a day sky as the view turned (a point or a globe by its size at the view's middle). Then, on the user's word, the two
   known issues they left: B-437 (KI-441), the outside seen through the glass in its own palette, so the ship's banks never wait on
   what the glass shows; B-438 (KI-442), a world's season step kept by its seed, not its index (the harness's sweeps with it: every
-  globe drawn with its map). Their B files, and entries in `docs/decisions/log/7-1.5.0.md`.
+  globe drawn with its map). Then B-439 (KI-443), on the user's word: the bench's ship rows budgeted again on the dressed ship
+  (set on I-02's bare rooms, the library's had come to 1.27 times its median), each timed once the maps its view starts are made.
+  Their B files, and entries in `docs/decisions/log/7-1.5.0.md`.
 - **The ship to walk:** `vesperis_test ship rooms`, `ship light` and `ship life` draw its spaces, their light and what is kept in them
   into `shots/tests/ship/`, and the game walks it (Shift runs, Page Up the lift, U the light, Y the glass hull, E at the bunk, the desk,
   the deck and the capsule). On the ground O takes a sample and Shift+U lights the ultraviolet; `life kit` plays a landing's kit. In
@@ -80,19 +82,20 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
 - **Next:** 1.5.0's iteration is done; the release (the `release` skill: the branch merged by its pull request, the tag `v1.5.0`, six
   zips; the Linux builds need Docker, asked first) on the user's word, and commits only when asked.
 - **The proof's base:** `build/prove/b438` (35 items: z07's, with B-434 to B-438's checks and frames: `ship light`'s
-  `lab_arch_sun`, the flow's orbit waiting for its world's map, the sweeps' globes warmed at their season).
+  `lab_arch_sun`, the flow's orbit waiting for its world's map, the sweeps' globes warmed at their season; B-439 moved only the
+  bench, which no item runs).
 - **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; KI-424 (the grammar's picture register, which
   no call expands); KI-425 (the radar's heard list); KI-428 (a T typed at the console warps time); KI-429 (the settings' title over
   their first row); KI-430 (a race in the unit's lent piece frame); KI-431 (the almanac's STOP THE RUN, offered and ignored); KI-435
   (aboard, the local target's HUD label over the ship's walls, found in I-04); KI-436 (a chemotroph world made from a hot tectonic one reads
   188 C on its ground, found in Z-03); KI-437 (the microscope's electron view over large cells, 25-47 ms a frame at 4x) and KI-438 (Z-02's
   plates draw spores moving as their cells), found in Z-04; KI-440 (the data sheet's GRAVITY line past the frame's edge), found in
-  Z-07; KI-443 (the ship's rows slow now and then in the bench: `library 4x` past its budget in 4 of 26 runs), found by B-437; offered
+  Z-07; KI-444 (`surface 4x` the bench's tightest budget, 1.30 times its median), found by B-439; offered
   by B-430: the tables' dump as a harness mode for the container, and parallel.h's misleading indentation (38 of the Linux builds'
   46 warnings); offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant; game.h at 57.3 KB, past
   the plan's 48 KB (`PLAN-screens.md` section 8 revisits at 60 KB); our Docker images `vesperis-build:arm64` and
   `:amd64` (removed on the user's word); the old proof kits (`build/p00` to `build/d05`, about 9 GB), deleted only on the user's word.
-- **The disk:** room enough (about 89 GB free); a snapshot and a compare's outputs about 1.2-1.3 GB each (`life_look`'s 60 pictures
+- **The disk:** room enough (about 87 GB free); a snapshot and a compare's outputs about 1.2-1.3 GB each (`life_look`'s 60 pictures
   are 0.2 GB of it).
-- **Next free ids:** bugs B-439, requests R-427, known issues KI-444. Milestone ids go by letter series in
+- **Next free ids:** bugs B-440, requests R-427, known issues KI-445. Milestone ids go by letter series in
   `docs/ideas/MILESTONES.md` (1.5.0 took Z and I).
