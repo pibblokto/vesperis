@@ -83,6 +83,18 @@ bool Guide::load(const std::string& path) {
             if (!is.fail()) { double slept = 0; is >> slept; if (!is.fail()) g.sleptYears = slept; else is.clear(); }
             (key == "microbe" ? microbes : lentMicrobes)[k] = is.fail() ? m : g;
         }
+        else if (key == "answers" || key == "lentanswers") {   // R-437: <key> <answers> <movingLo> <movingHi> <stillCold> <stillHot> <stressC> <stressAct>
+            std::string k; MicrobeSheet a;   // (after its sheet's line: the sheet's fields its own)
+            is >> k >> a.answers >> a.movingLo >> a.movingHi >> a.stillCold >> a.stillHot >> a.stressC >> a.stressAct;
+            if (is.fail()) continue;
+            MicrobeSheet& m = (key == "answers" ? microbes : lentMicrobes)[k];
+            m.answers = a.answers; m.movingLo = a.movingLo; m.movingHi = a.movingHi; m.stillCold = a.stillCold; m.stillHot = a.stillHot;
+            m.stressC = a.stressC; m.stressAct = a.stressAct;
+        }
+        else if (key == "jarband" || key == "lentjarband") {   // R-439: <key> <layer> (after its sheet's line)
+            std::string k; int l = -1; is >> k >> l;
+            if (!is.fail() && l >= 0) (key == "jarband" ? microbes : lentMicrobes)[k].jarLayer = l;
+        }
         else if (key == "sampled") { std::string k; is >> k; if (!is.fail()) sampled.insert(k); }   // Z-07: a world a sample was taken on
         else if (key == "strain") {   // Z-05: <key> <parent> <what> <value>
             std::string k; StrainRecord r; is >> k >> r.parent >> r.what >> r.value;
@@ -189,6 +201,14 @@ bool Guide::save(const std::string& path) const {
     };
     for (auto& kv : microbes) sheet("microbe", kv.first, kv.second);
     for (auto& kv : lentMicrobes) sheet("lentmicrobe", kv.first, kv.second);   // Z-07
+    auto answers = [&](const char* kind, const std::string& k, const MicrobeSheet& m) {   // R-437: after the sheets
+        if (m.answered()) f << kind << " " << k << " " << m.answers << " " << m.movingLo << " " << m.movingHi << " " << m.stillCold << " " << m.stillHot << " " << m.stressC
+                            << " " << m.stressAct << "\n";
+    };
+    for (auto& kv : microbes) answers("answers", kv.first, kv.second);
+    for (auto& kv : lentMicrobes) answers("lentanswers", kv.first, kv.second);
+    for (auto& kv : microbes) if (kv.second.jarLayer >= 0) f << "jarband " << kv.first << " " << kv.second.jarLayer << "\n";   // R-439
+    for (auto& kv : lentMicrobes) if (kv.second.jarLayer >= 0) f << "lentjarband " << kv.first << " " << kv.second.jarLayer << "\n";
     for (auto& k : sampled) f << "sampled " << k << "\n";
     for (auto& kv : strains) f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << "\n";
     for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
@@ -259,6 +279,11 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
         m.seen |= o.seen; m.forms |= o.forms; m.stages |= o.stages;
         if (o.doublingS > 0 && (m.doublingS <= 0 || o.doublingS < m.doublingS)) { m.doublingS = o.doublingS; m.cell = o.cell; m.tempC = o.tempC; m.light = o.light; m.energy = o.energy; m.salt = o.salt; }
         m.sleptYears = std::max(m.sleptYears, o.sleptYears);
+        m.answers |= o.answers;   // R-437: what the friend saw it answer too
+        m.movingLo = std::min(m.movingLo, o.movingLo); m.movingHi = std::max(m.movingHi, o.movingHi);
+        m.stillCold = std::max(m.stillCold, o.stillCold); m.stillHot = std::min(m.stillHot, o.stillHot);
+        if (m.stressAct < 0 && o.stressAct >= 0) { m.stressAct = o.stressAct; m.stressC = o.stressC; }
+        if (m.jarLayer < 0) m.jarLayer = o.jarLayer;   // R-439
     }
     if (microbesOut) *microbesOut = un;
     return n;

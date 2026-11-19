@@ -40,3 +40,8 @@ inline bool dataKey(const Input& in) { return in.wasPressed(KEY_F2) || (in.wasPr
 inline bool saveKey(const Input& in) { return in.wasPressed(KEY_F5) || (in.ctrl() && in.wasPressed(KEY_S)); }
 inline bool loadKey(const Input& in) { return in.wasPressed(KEY_F9) || (in.ctrl() && in.wasPressed(KEY_L)); }
 inline bool enterKey(const Input& in) { return in.wasPressed(KEY_ENTER) && !in.alt(); }   // Alt+Enter is fullscreen
+// R-435: a digit typed (the row's or the keypad's, GLFW's 320 on), else -1
+inline int digitKey(const Input& in) { for (int d = 0; d < 10; d++) if (in.wasPressed(KEY_0 + d) || in.wasPressed(320 + d)) return d; return -1; }
+// R-435: a warmth typed into `s`: a digit (three at most), the minus sign (- turns it, the keypad's too), Backspace; Up and Down a degree, Page
+// Up and Down ten, from `now` while nothing is typed
+void warmthTyping(const Input& in, std::string& s, double now);

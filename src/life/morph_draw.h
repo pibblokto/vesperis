@@ -49,6 +49,7 @@ struct Specimen {
     bool still = false;
     double wander = 1, vx = 0, vy = 0;
     double blurUm = 0;
+    double clock = -1;   // R-438: its own clock for its moves (its kind's pace through the stage's warmth); the slide's when negative
 };
 
 // the magnifications of the light ways (x20 .. x1000 the objectives, x2000 and x4000 the camera's zoom on the oil one) and the electron's

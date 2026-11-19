@@ -78,42 +78,54 @@ void Game::sequencerChoices() {
     Q.pages = ChooserPage();
     std::vector<std::string> keys;
     LabSystems systems;
-    std::set<std::string> listed;
+    std::set<std::string> listed, cultured;   // each species once in the vials' tab, once in each folder of the cultures' (R-441)
+    std::vector<std::string> looks, rests, traits;   // B-442: each row's look, the rest of its words, its form's colour and motion
+    auto add = [&](const SequencerChoice& c, const std::string& key, const std::string& look, const std::string& rest, const std::string& trait) {
+        Q.choices.push_back(c); keys.push_back(key); looks.push_back(look); rests.push_back(rest); traits.push_back(trait);
+    };
     for (const Vial& V : coldStore) {
         const StarSystem* S = systems.get(sys, V.sx, V.sy, V.sz);
         if (!S || V.body < 0 || V.body >= (int)S->bodies.size()) continue;
         const Biota& B = lifeOf(*S)->bodies[V.body];
+        std::vector<Morph> forms;
         for (const Held& H : sampleOf(B, V.hab).held) {
             if (H.state == SS_FOSSIL || H.state == SS_PROTO) continue;
             const std::string key = Guide::bodyKey(V.sx, V.sy, V.sz, V.body) + "/M" + std::to_string(H.species);
             const auto it = guide.microbes.find(key);
             if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM) || !listed.insert(key).second) continue;   // only what was seen of it, each once
+            if (forms.empty()) forms = morphsOf(*S, V.body);
             SequencerChoice c; c.who.sx = V.sx; c.who.sy = V.sy; c.who.sz = V.sz; c.who.body = V.body; c.who.species = H.species;
-            c.line = flaskSpeciesName(c.who) + " - FROM " + V.name + ((it->second.seen & SEEN_KIN) ? " (READ)" : "");
-            Q.choices.push_back(c); keys.push_back(Guide::bodyKey(V.sx, V.sy, V.sz, V.body));
+            add(c, Guide::bodyKey(V.sx, V.sy, V.sz, V.body), flaskSpeciesWords(c.who, forms[H.species], true), " - FROM " + V.name + ((it->second.seen & SEEN_KIN) ? " (READ)" : ""),
+                formTraits(forms[H.species]));   // B-442
         }
     }
+    flaskMadeAll();   // (their forms)
     for (int f = 0; f < INCUBATOR_FLASKS; f++)
-        for (int k = 0; k < lab.flasks[f].n; k++) {
+        for (int k = 0; k < lab.flasks[f].n && k < (int)lab.flasks[f].forms.size(); k++) {
             FlaskSpecies w = lab.flasks[f].who[k]; w.strain = w.strainIn = 0;
             const std::string key = flaskSpeciesKey(w);
-            if (!listed.insert(key).second) continue;
+            if (!cultured.insert("FLASKS|" + key).second) continue;
             const auto it = guide.microbes.find(key);
             SequencerChoice c; c.who = w;
-            c.line = fmt("FLASK %d: ", f + 1) + flaskSpeciesName(w) + (it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "");
-            Q.choices.push_back(c); keys.push_back("FLASKS");
+            add(c, "FLASKS", fmt("FLASK %d: ", f + 1) + flaskSpeciesWords(w, lab.flasks[f].forms[k], false),
+                it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "", "");
         }
-    for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order
-        for (int k : F.id >= 0 ? F.rows : std::vector<int>()) {
-            FlaskSpecies w = lab.kept[k].who; w.strain = w.strainIn = 0;
-            const std::string key = flaskSpeciesKey(w);
-            if (!listed.insert(key).second) continue;
-            const auto it = guide.microbes.find(key);
-            SequencerChoice c; c.who = w;
-            c.line = keptName(k) + (it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "");
-            Q.choices.push_back(c); keys.push_back(keptFolderKey(k));
-        }
+    for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order (R-440: a pair's two each)
+        for (int k : F.id >= 0 ? F.rows : std::vector<int>())
+            for (int one = 0; one < (lab.kept[k].paired ? 2 : 1); one++) {
+                FlaskSpecies w = one == 1 ? lab.kept[k].partner : lab.kept[k].who; w.strain = w.strainIn = 0;
+                const std::string key = flaskSpeciesKey(w);
+                if (!cultured.insert(keptFolderKey(k) + "|" + key).second) continue;
+                const auto it = guide.microbes.find(key);
+                SequencerChoice c; c.who = w;
+                std::string trait;
+                const std::string look = keptRow(k, &trait, one);
+                add(c, keptFolderKey(k), look, it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "", trait);
+            }
+    apartRows(looks, rests, keys, traits);
+    for (size_t i = 0; i < Q.choices.size(); i++) Q.choices[i].line = looks[i] + rests[i];
     Q.pages.folders = chooserFolders(keys);
+    chooserTabs(Q.pages, Q.lastTab);   // R-441: the vials, the cultures; the tab last shown
 }
 
 // what is on it made again (not saved): its lineage, its genome's length, its name and world, a made one's watermark (its letters drawn)
@@ -224,6 +236,7 @@ void Game::updateSequencer(const Input& in, double dt, double realDt) {
     SequencerState& Q = lab.seq;
     if (Q.choosing) {   // R-432: its folders, then the rows of the one open
         const int r = Q.choices.empty() ? -2 : chooserKeys(in, Q.pages, Q.choiceSel);
+        if (Q.pages.tabbed) Q.lastTab = Q.pages.tab;
         if (r == -2) { Q.choosing = false; return; }
         if (r >= 0 && r < (int)Q.choices.size()) { Q.choosing = false; sequencerPut(Q.choices[r].who); }
         return;
@@ -237,7 +250,7 @@ void Game::updateSequencer(const Input& in, double dt, double realDt) {
         Q.choosing = true; audio.beep = BEEP_UI;
         return;
     }
-    if ((in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) && Q.on) { Q = SequencerState(); status("THE SEQUENCER IS EMPTY", 2); audio.beep = BEEP_UI; }
+    if ((in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) && Q.on) { const int tab = Q.lastTab; Q = SequencerState(); Q.lastTab = tab; status("THE SEQUENCER IS EMPTY", 2); audio.beep = BEEP_UI; }
 }
 
 void Game::renderSequencer() {
@@ -320,7 +333,12 @@ void Game::renderSequencer() {
 
 void Game::sequencerPad(PadMenu& m) const {
     m.title = "THE SEQUENCER";
-    if (lab.seq.choosing) { m.item(lab.seq.pages.open ? "READ IT" : "OPEN THE FOLDER", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
+    if (lab.seq.choosing) {
+        m.item(lab.seq.pages.open ? "READ IT" : "OPEN THE FOLDER", KEY_ENTER);
+        if (lab.seq.pages.tabbed) m.item(lab.seq.pages.tab == 0 ? "THE CULTURES" : "THE VIALS", KEY_TAB);   // R-441
+        m.item("BACK", KEY_ESCAPE);
+        return;
+    }
     m.item("A SPECIES TO READ", KEY_ENTER); m.item("TAKE IT OFF", KEY_BACKSPACE); m.item("THE TREE OF KIN", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "READ"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "TREE");
 }

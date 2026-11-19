@@ -14,6 +14,16 @@ void drawPanel(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t fill, int 
     drawRectRGB(c, x0, y0, x1, y1, edge);
 }
 
+void warmthTyping(const Input& in, std::string& s, double now) {
+    const bool minus = !s.empty() && s[0] == '-';
+    const int d = digitKey(in);
+    if (d >= 0 && (int)s.size() - (minus ? 1 : 0) < 3) s += (char)('0' + d);
+    if (in.wasPressed(KEY_MINUS) || in.wasPressed(333)) s = minus ? s.substr(1) : "-" + s;   // 333: GLFW's keypad minus
+    if (in.wasPressed(KEY_BACKSPACE) && !s.empty()) s.pop_back();
+    const int step = in.wasPressed(KEY_UP) ? 1 : (in.wasPressed(KEY_DOWN) ? -1 : (in.wasPressed(KEY_PAGE_UP) ? 10 : (in.wasPressed(KEY_PAGE_DOWN) ? -10 : 0)));
+    if (step) s = std::to_string((s.empty() || s == "-" ? (int)std::lround(now) : atoi(s.c_str())) + step);
+}
+
 bool menuStep(const Input& in, int& sel, int n, bool sideways) {
     const bool up = in.wasPressed(KEY_UP) || (sideways && in.wasPressed(KEY_LEFT)), down = in.wasPressed(KEY_DOWN) || (sideways && in.wasPressed(KEY_RIGHT));
     if (up) sel = (sel + n - 1) % n;

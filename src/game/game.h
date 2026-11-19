@@ -835,6 +835,7 @@ protected:
     std::string flaskSpeciesKey(const FlaskSpecies& w) const;   // its species' guide key; a strain's its key and /S<n>
     std::string flaskStrainKey(const FlaskSpecies& w) const;
     std::string flaskSpeciesName(const FlaskSpecies& w) const;
+    std::string flaskSpeciesWords(const FlaskSpecies& w, const Morph& form, bool sized) const;   // B-442: its name, else its look
     bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept) const;
     void incubatorChoices();
     bool jarPut(int vial);
@@ -893,8 +894,27 @@ protected:
     std::vector<LabFolder> vialFolders() const; std::vector<LabFolder> cultureFolders() const;
     std::vector<LabFolder> chooserFolders(const std::vector<std::string>& keys) const; std::string keptFolderKey(int k) const;
     void keepCulture(int flask, int k); std::string keptName(int k); bool microscopeStageKept(int k);
+    std::string keptRow(int k, std::string* traits = nullptr, int one = -1);   // B-442: a chooser's row (sized; one of its species alone)
+    static std::string formTraits(const Morph& m);                                    // B-442: ", GREEN, GLIDING"
     int folderNew(const std::string& name); bool folderRename(int id, const std::string& name); bool folderRemove(int id);
     void keptMove(int k, int id); void keptDiscard(int k);
     void keptSave(std::ostream& f) const; bool keptLoad(const std::string& key, std::istream& is);
     void microscopeListKeys(const Input& in); void microscopeFind(); void renderMicroscopeFolders(const std::vector<LabFolder>& F);
+    // ---- the four things done to a slide made plain (microscope.cpp, incubator.cpp, lab_lists.cpp; R-435 to R-438): a warmth typed (the
+    // stage's by H, a flask's by its digits), what the view's kinds answer told and kept on their sheets; B-441: a culture grown on its
+    // partner kept with it
+    void microscopeTypeKeys(const Input& in); void microscopeAnswers(); std::string answerWho(int species) const;
+    bool incubatorTypeKeys(const Input& in);
+    // ---- the incubator's rows and the collection by hand (incubator.cpp, lab_lists.cpp, microscope.cpp; B-442, R-439 to R-442): a species'
+    // look where it has no name; N names a flask's organism; the choosers' two tabs; K keeps a copy (the species under the crosshair alone, a
+    // flask's one, two or either) in a folder, C copies a kept one; the jars' bands told and kept on the sheets
+    KeepPick keep;
+    bool vialMedium(const Vial& V, Medium& out);
+    bool keptAdd(KeptCulture c, int folder); void keptCopy(int k, int folder); std::string folderName(int id) const;
+    std::string keptWordsOf(KeptCulture& c) const;
+    void keepOpen(const KeptCulture& c); bool keepKeys(const Input& in); void renderKeepPick(uint32_t colour);
+    void microscopeKeep(); void incubatorKeep(); void keepFromFlask(int i, int which); void incubatorName(); void incubatorNameKey(const std::string& key, bool strain);
+    void incubatorPickKeys(const Input& in); void renderIncubatorPick();
+    void jarSeen(int j); std::string jarBandWords(const Jar& J, int b) const;
+    static std::string jarWays(int layer, int substrate, bool full);   // R-439: what a band's species lives on ("IRON, NEEDS AIR")
 };

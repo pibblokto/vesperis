@@ -13,8 +13,11 @@ changing anything there.
 - `rules-surface-site.md`: the site's caches and threads, the rings, what stands and walks, the vehicles, life.
 - `rules-life.md`: the living small (1.5.0): where life is, its species, the geneses and kin, the spores carried, the cache; the
   forms and the slide; the genomes and the tree, the made species.
-- `rules-life-lab.md`: the search (the samples, the kit, the ultraviolet, the signs) and the laboratory (the microscope and its lists by
-  world and folder, the incubator and the jars, the culture collection, the sequencer and the tree); the record (the catalogue, the counts).
+- `rules-life-lab.md`: the search (the samples, the kit, the ultraviolet, the signs) and the microscope (its lists by world and folder, the
+  four things done to a slide and what they are answered).
+- `rules-life-cultures.md`: the incubator (its flasks, their names and choosers), the jars and their bands, the culture collection (kept
+  by itself and by hand).
+- `rules-life-record.md`: the sequencer and the tree; the record (the catalogue, the counts).
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and the screens, controls and the frame, auto-explore.

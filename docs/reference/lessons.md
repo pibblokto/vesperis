@@ -188,6 +188,10 @@ Contents:
   site 80 m inland landed the explorer in the sea. Land well clear (200 m) and let the game's own walk find the edge.
 - A test's picture of what the game writes is written as the game writes it: a micrograph is P's frame, its HUD and its caption beside
   it; Z-07's first one turned photo mode on, which the game never does there.
+- A key a check presses on the cell under the microscope's crosshair runs a frame, and a swimmer leaves the crosshair in a few: R-440's
+  check kept a cell once and refused it after (no cell under it). Track the cell first (Enter), as the explorer would.
+- `newGame` writes a fresh guide at `guidePath`: a probe on a copy of the player's guide that set the path before it read an empty guide
+  (B-442's first look at the user's chooser had no worlds in it). Load the player's guide after `newGame`.
 
 ## Pixels and the look
 
@@ -404,6 +408,9 @@ Contents:
 - A list's folders made each frame from what they hold keep an index, not the folder: a world's folder goes with its last vial and the
   index then opens the next world's, so emptying the last closes the folder (R-432). A new step in a scripted run takes its frames from
   a wait after it, or every later frame moves in time (the flow's three keys: its printout after the laboratory the same).
+- What a kind is said to do comes from what its copies do: R-438's answers said a magnetotactic eater gathered round lit cells while
+  `copyAt` gave a field-turner the field's branch alone (it never ran to food); and a crowd's disc sized to hold every cell of a reach
+  sent the cells near the spot outward to their places in it (capped at twice the spot's radius). Measure a law on the copies first.
 - A `thread_local` named inside a pool's lambda is each worker's own (empty): bind it to a reference outside (Z-04's crash).
 - A tree drawn from its leaves' neighbours: sort the leaves so every clade is a run (`treeBefore`), keep each pair of neighbours' join;
   the node of a run is its highest join, its two sides the runs either side of it (a Cartesian tree), drawn by recursion (Z-06's tree).

@@ -26,7 +26,8 @@ bool scopeOnVial(TestGame& g, Input& in, const char* guide) {
     return g.testScopeStage(0);
 }
 // the frame at a time: the slide's clock set, a frame drawn at one instant, the status cleared first
-void frameAt(TestGame& g, Input& in, double t) { g.testScope().t = t; g.testClearStatus(); g.frame(in, 0); in.newFrame(); }
+// R-437: the slide's told answers forgotten first, the HUD's lines of no history (what is said is the game's, not the slide's closed form)
+void frameAt(TestGame& g, Input& in, double t) { g.testScope().t = t; g.testScopeFresh(); g.testClearStatus(); g.frame(in, 0); in.newFrame(); }
 }   // namespace
 
 void unitLab(const Check& check) {
@@ -39,7 +40,7 @@ void unitLab(const Check& check) {
             MicroscopeState& M = g.testScope();
             const double cx = M.mount.cx, cy = M.mount.cy, focus = M.mount.focus;
             const double r = umPerPxAt(100) * UW * 0.12;
-            M.events = {{SD_LIGHT, 2, cx, cy, r, true}, {SD_MAGNET, 4, 0, 0, 0, true}, {SD_WARM, 6, 0, 0, 0, true}, {SD_FOOD, 8, cx + r, cy, r * 0.7, true}};
+            M.events = {{SD_LIGHT, 2, cx, cy, r, true}, {SD_MAGNET, 4, 0, 0, 0, true}, {SD_WARM, 6, M.mount.stageC + 30, 0, 0, true}, {SD_FOOD, 8, cx + r, cy, r * 0.7, true}};
             for (int way = 0; way < WS_COUNT; way++) {
                 if (way == WS_SECTION) continue;   // a drop's
                 g.testScopeView(way, way == WS_ELECTRON ? 2 : 2, cx, cy, focus);

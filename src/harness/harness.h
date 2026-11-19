@@ -477,6 +477,8 @@ int runLab(int argc, char** argv);
 bool labVial(const StarSystem& sys, int body, Vial& out);   // a vial of a world's ground as the kit takes it (its most abundant living species of a drop)
 bool labDenseVial(Vial& out);   // the densest slide the lab knows (`lab time`'s, the bench's microscope row)
 void unitLab(const Check& check);
+void unitLabAnswers(const Check& check);   // R-435 to R-438, B-441: the group `experiments`
+void unitLabIncubator(const Check& check);   // B-442, R-439 to R-442: the group `incubator`
 // ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`, `lab jars`)
 int labCultures();
 int labJars();

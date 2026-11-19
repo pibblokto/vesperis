@@ -82,6 +82,9 @@ struct GalaxyMark {
 // growth (the quickest doubling seen in a flask and the medium it grew in), after a sheet's two numbers where there are any. Z-06: its genome
 // read on the sequencer (its kin: the tree's). Z-07: the years its spores slept before a flask woke them (the longest seen), after the growth's
 enum SheetSeen : uint32_t { SEEN_FORM = 1, SEEN_MOTION = 2, SEEN_FLAGELLA = 4, SEEN_DNA = 8, SEEN_WALL = 16, SEEN_KIN = 32 };
+// R-437: what a species answered on the slide (the sheet's TO LIGHT, TO FOOD and TO THE FIELD lines): gathering in the light, fleeing it, no
+// answer seen; following the food's scent, gathering round lit cells, none seen; swimming along the field, none seen
+enum AnswerSeen : uint32_t { AW_LIGHT = 1, AW_FLEES = 2, AW_LIGHT_NONE = 4, AW_FOOD = 8, AW_FOOD_NONE = 16, AW_LIT = 32, AW_FIELD = 64, AW_FIELD_NONE = 128 };
 struct MicrobeSheet {
     uint32_t seen = 0, forms = 0;
     uint32_t stages = 0;
@@ -89,6 +92,13 @@ struct MicrobeSheet {
     int cell = 0, light = 0, energy = 0, salt = 0;
     double tempC = 0;
     double sleptYears = 0;       // 0: never woken (or woken with no years: a living world's)
+    // R-437: its answers (AnswerSeen) and the stage's warmths it was seen at: moving (the lowest and the highest), still under its range (the
+    // highest) and over it (the lowest), its stress (and its act, life's AN_ number; -1 none seen); the guide's `answers` line
+    uint32_t answers = 0;
+    double movingLo = 1e9, movingHi = -1e9, stillCold = -1e9, stillHot = 1e9, stressC = 1e9;
+    int stressAct = -1;
+    int jarLayer = -1;           // R-439: its band's place in a jar (life/jars.h's JarLayer; -1 none seen); the guide's `jarband` line
+    bool answered() const { return answers || movingHi >= movingLo || stillCold > -1e8 || stillHot < 1e8 || stressAct >= 0; }
 };
 // Z-05: a strain arisen in a flask, keyed `<body key>/M<index>/S<n>` (its species' key and its number): the strain it came of (0 the wild),
 // its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines

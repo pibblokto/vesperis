@@ -15,8 +15,9 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`,
   `modes_signals`, `modes_rogues`, `modes_life` (Z-01: the biota; Z-03: `life search`, `life kit`; Z-07: `life auto`,
   `coastSite`; R-434: `life sight`), `modes_life_look` (Z-02: the forms' plates, strips, distinctness; `everyForm`), `modes_lab` (Z-04:
-  `lab microscope`, `lab time`; `labVial`, `labDenseVial`), `modes_cultures` (Z-05: `lab cultures`, `lab jars`; `labStock`, the
-  lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07: `lab catalogue`),
+  `lab microscope`, `lab time`; `labVial`, `labDenseVial`; R-438's samples, `findAnswerSamples`), `modes_cultures` (Z-05: `lab cultures`,
+  `lab jars`; `labStock`, the lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07:
+  `lab catalogue`),
   `modes_drones`, `modes_ship` (I-02: `ship rooms`, `ship walk`; I-03: `ship light`; I-04: `ship life`),
   `modes_game` (the flow, `Flow`), `modes_input`, `modes_tour` (every state toured, `Tour`: its `STOPS`, then the rows),
   `modes_bench` (`Bench`'s stages), `modes_proof`.
@@ -25,8 +26,9 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 - `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`,
   `unit_life`, `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`,
   `unit_search` (Z-03; R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's
-  vials by world, R-433's collection); the last, `files`
-  (B-440: the player's files left as the unit found them), in `unit.cpp`.
+  vials by world, R-433's collection), `unit_lab_answers` (the group `experiments`: R-435 to R-438 and B-441, the typed warmths, the slide's
+  answers, the partner), `unit_lab_incubator` (the group `incubator`: B-442 and R-439 to R-442, the rows told apart, N's names, the
+  choosers' tabs, K's copies, the jars' bands); the last, `files` (B-440: the player's files left as the unit found them), in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:
@@ -40,7 +42,9 @@ Rules:
 - Outputs go to `shots/tests/`; `tests/` and the grammar are read from the working directory (the repo root, or
   `tools/prove`'s scratch directory). A `TestGame`'s guide, saves, settings, keys, pad, photos and films default there too
   (`game_*`, B-440): the working directory's are the player's. `records check` reads the `test_settings.txt` that `settings` writes.
-- The unit and the flow both write `test_guide.txt` (the root note's rule). A frame of bodies waits for their maps
+- The unit and the flow both write `test_guide.txt` (the root note's rule). `newGame` writes a fresh guide at `guidePath`: a probe on a copy
+  of the player's guide loads it after (`guide.load`). A key acting on the cell under the crosshair: track it first (Enter), its swimmer
+  leaves the crosshair between frames. A frame of bodies waits for their maps
   (`testWaitMapOf`, `mapIfReady`); the bench's rows aboard, for those their view starts (`settleMaps`, B-439).
 - The explorer stands in the ship where its plan says (I-01): a view by its name (`testCabinView`) or a device's stand
   (`testCabinAtDevice`), never at numbers of the harness's (nor a fixture's: read its row); the tour faces every device from its

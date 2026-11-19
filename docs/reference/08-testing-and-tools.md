@@ -1230,9 +1230,12 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   stress) and every way of seeing at every zoom at its first look, the slide at 5 s (`lab_microscope_sample_<what>.png`); then the
   strips: a cell tracked ten seconds (the stage following it), the light's crowd and a drop of food (L or F at the crosshair, 0 to 40
   s, the turning kinds' cells within the spot counted: they must grow), the magnet's turn (M, M again at 8 s: the field's cells'
-  drift along x must turn from + to -), the warm stage (H, 0 to 90 s, the stage's warmth and the stressed counted), a fossil's
-  section at five objectives and in a bright field; then each species' sheet. About 6 s at 1x; exit 1 when a sample is not found or a
-  strip shows nothing of what it should (output: stdout, `shots/tests/lab_microscope_*.png`: 17)
+  drift along x must turn from + to -), the warm stage (H and 30 C over the vial's typed, 0 to 90 s, the stage's warmth and the stressed
+  counted), a fossil's section at five objectives and in a bright field; R-438's three samples more (the food sample's drop a degree over
+  its eater's range, `cool`: still, then the stage typed to its range's middle, its cells moving by 60 s; a dark-dweller's drop, `flee`: L
+  on one of its swimmers, its cells leaving the spot; a still light-feeder's crowd beside an abundant eater, `lit`: L on it, the eaters
+  gathering by 90 s), each strip's line with what the HUD said (R-437); then each species' sheet. About 6 s at 1x; exit 1 when a sample
+  is not found or a strip shows nothing of what it should (output: stdout, `shots/tests/lab_microscope_*.png`: 20)
 * `lab time`: Z-04: the densest slide (`labDenseVial`: the scan's first world with an abundant swimmer that turns to light, its
   large armoured cells in a crowd of small ones) in each way at x100 and x400 and under the electron at x200 and x1,000, ten frames
   each, the frame's parts timed: the specimens made, the slide drawn, the mush, the whole frame (at 4x about 10 ms in phase contrast
@@ -1248,7 +1251,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   its hot edge giving a strain). Under a second (output: stdout, `shots/tests/lab_cultures.png`)
 * `lab jars`: Z-05: the scan region's first living worlds whose wet silt holds three bands (two of water, then one of each other
   chemistry), each made a jar in a game and drawn on the incubator's jars page at 0, 5, 10 and 20 minutes (its bands printed: the tone,
-  the depth in the silt, when it is full), then the shelf seen from the laboratory at twenty minutes, at 2x (output: stdout,
+  the depth in the silt, when it is full; R-439: on the page each band come in numbered by the glass and named under the list), then the
+  shelf seen from the laboratory at twenty minutes, at 2x (output: stdout,
   `shots/tests/lab_jars.png`, `lab_jars_shelf.png`)
 * `lab tree` (`modes_tree.cpp`): Z-06: a sequenced set in a game: the flow's world's species (the scan's first felisian world, where the
   flow lands and samples), home's world's, a kin star's (home's genesis across stars), a world of a genesis of its own, a mirrored life's,

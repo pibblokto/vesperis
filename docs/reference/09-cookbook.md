@@ -422,7 +422,7 @@ fixture's footprint is a collider (`ShipCollider`), so keep it off the rooms' wa
 box's face (`screenOn`) or lies on a desk (`screenTop`), in its device's bank as dealt. A thing the frame fills (I-04's prints, the
 garden, Z-05's flasks and jars, Z-06's tree wall) is a fixture with a `marker` of a `ShipPieceKind` appended, drawn by its case in
 `game/cabin_life.cpp`; its own tones are homes past the banks (32-47, `ShipBanks`), asked only for what is drawn in front of the eye and
-after the screens near them (rules-life-lab.md). A place the explorer looks from is a view (`shipViews`: `THE <WHAT>`, the harness's
+after the screens near them (rules-life-cultures.md). A place the explorer looks from is a view (`shipViews`: `THE <WHAT>`, the harness's
 `testCabinView`). Then `unit ship`, `ship rooms`, `ship light` (its finishes lit) and `ship life` (a filled piece).
 
 ## Add a lab device (Z-04 to Z-06)

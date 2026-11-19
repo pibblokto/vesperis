@@ -2,7 +2,9 @@
 // world's living water, acid, ammonia and hydrocarbon life, a dormant world's spores, old rock's fossils, a prebiotic world's protocells, and
 // living samples whose cells turn to light and to the field), each put on the stage as the cold store's vial; frames of every way of seeing at
 // every zoom, a cell tracked, the light's crowd, the magnet's turn, the warm stage, a drop of food, a fossil's section; what each sample is
-// made into (life/slides.h) and the sheets of what was seen (game/microscope.cpp)
+// made into (life/slides.h) and the sheets of what was seen (game/microscope.cpp). R-438: the warm stage's warmth typed; three samples more for the
+// slide's answers (a drop too warm for its eater, cooled into its range; a dark-dweller's, its swimmers fleeing the light; a still light-feeder's
+// crowd beside an eater, lit), each a strip with what the HUD said (R-437)
 #include "harness/harness.h"
 #include "life/slides.h"
 #include "life/morphs.h"
@@ -74,10 +76,57 @@ void findSamples(LabSample (&out)[LAB_COUNT], bool (&found)[LAB_COUNT]) {
     }
 }
 
+// R-438: the scan region's first samples for the slide's new answers: the food sample's drop made too warm for its eater (its range's top passed:
+// still, woken cooled into it), a dark-dweller's drop (its swimmers flee the light), a still light-feeder's crowd beside an abundant eater that swims
+enum LabAnswer { LA_COOL = 0, LA_FLEE, LA_LIT, LA_COUNT };
+const char* const LA_NAMES[LA_COUNT] = {"cool", "flee", "lit"};
+void findAnswerSamples(const LabSample& food, bool foodFound, LabSample (&out)[LA_COUNT], bool (&found)[LA_COUNT]) {
+    for (bool& f : found) f = false;
+    if (foodFound) {   // the food sample's world and eater, its drop over the eater's range by a degree
+        out[LA_COOL] = food;
+        auto L = lifeOf(food.sys);
+        const Biota& B = L->bodies[food.body];
+        out[LA_COOL].hab.meanC = B.species[food.species].tMax + 1;
+        out[LA_COOL].sample = sampleOf(B, out[LA_COOL].hab);
+        for (const Held& H : out[LA_COOL].sample.held) if (H.species == food.species && H.state == SS_LIVING) found[LA_COOL] = true;
+    }
+    auto all = [&] { return found[LA_FLEE] && found[LA_LIT]; };
+    for (auto& [x, z, s, scanned] : scanSystems(150, 340, 20, 160, [&] { return !all(); })) {
+        const StarSystem& sys = scanned;
+        auto L = lifeOf(sys);
+        for (int i = 0; i < (int)sys.bodies.size() && !all(); i++) {
+            const Biota& B = L->bodies[i];
+            if (B.species.empty() || !livingStage(B.stage)) continue;
+            const std::vector<Morph> forms = morphsOf(sys, i);
+            auto drop = [](const Microbe& m) { return m.niche == NI_LIQUID || m.niche == NI_SILT || m.niche == NI_SOIL || m.niche == NI_MAT || m.niche == NI_SPRING; };
+            for (const Microbe& m : B.species) {
+                if (m.state != SS_LIVING || m.index >= (int)forms.size() || m.abundance < 0.25) continue;
+                if (!found[LA_FLEE] && m.motion != MO_NONE && forms[m.index].speed >= 8 && m.way != LW_LIGHT && !(m.taxis & (TX_LIGHT | TX_FIELD)) &&
+                    (m.niche == NI_SOIL || m.niche == NI_SILT))
+                    found[LA_FLEE] = sampleWith(sys, i, B, m.index, out[LA_FLEE]);
+                if (!found[LA_LIT] && m.way == LW_LIGHT && m.motion == MO_NONE && drop(m)) {   // with an eater that swims in its drop
+                    LabSample c;
+                    if (!sampleWith(sys, i, B, m.index, c)) continue;
+                    for (const Held& H : c.sample.held) {
+                        const Microbe& e = B.species[H.species];
+                        if (H.active && e.motion != MO_NONE && (e.taxis & TX_FOOD) && !(e.taxis & TX_FIELD) && e.abundance >= 0.25 && H.species < (int)forms.size() &&
+                            forms[H.species].speed >= 8) {
+                            out[LA_LIT] = c; found[LA_LIT] = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct Lab {
     TestGame game;
     Input in;
     struct Panel { std::vector<uint32_t> px; std::string label; };
+    std::vector<std::string> said;   // R-437: the HUD's lines as the frames said them
+    void note() { const std::string s = game.testStatusKept().first; if (!s.empty() && (said.empty() || said.back() != s)) said.push_back(s); }
+    std::string saidLine() { std::string l; for (const std::string& s : said) l += (l.empty() ? "" : " | ") + s; said.clear(); return l; }
     Lab() {
         game.savePrefix = "shots/tests/lab_save"; game.settingsPath = "shots/tests/lab_settings.txt"; game.guidePath = "shots/tests/lab_guide.txt";
         game.keysPath = "shots/tests/test_keys.txt";
@@ -88,12 +137,19 @@ struct Lab {
     // the slide at a time: a frame for what is seen (its first sights said), the status cleared, the frame drawn
     void at(double t) {
         game.testScope().t = t;
-        game.frame(in, 0); in.newFrame();
+        game.frame(in, 0); in.newFrame(); note();
         game.testClearStatus();
-        game.frame(in, 0); in.newFrame();
+        game.frame(in, 0); in.newFrame(); note();
     }
     Panel panel(const std::string& label) { Panel p; p.px.assign(game.output(), game.output() + (size_t)FBW * FBH); p.label = label; return p; }
-    void press(int key) { game.testClearStatus(); pressKey(game, in, key); }
+    void press(int key) { game.testClearStatus(); pressKey(game, in, key); note(); }
+    // R-438: the stage's warmth typed (H, its digits, Enter)
+    void typeWarmth(int c) {
+        press(KEY_H);
+        if (c < 0) press(KEY_MINUS);
+        for (char ch : std::to_string(std::abs(c))) press(KEY_0 + (ch - '0'));
+        press(KEY_ENTER);
+    }
     // panels in a grid, `cols` across, each labelled
     void sheet(const std::vector<Panel>& ps, int cols, const std::string& title, const std::string& fn) {
         if (ps.empty()) return;
@@ -170,10 +226,21 @@ int labMicroscope() {
         v.name = fmt("%s (%s)", upper(NICHE_NAMES[S[w].hab.niche]).c_str(), upper(LAB_NAMES[w]).c_str()); v.readingC = S[w].hab.meanC; v.activity = S[w].sample.activity;
         g.testColdStore().push_back(v);
     }
+    LabSample A[LA_COUNT];   // R-438
+    bool aFound[LA_COUNT];
+    findAnswerSamples(S[LAB_FOOD], found[LAB_FOOD], A, aFound);
+    for (int w = 0; w < LA_COUNT; w++) {
+        if (!aFound[w]) { printf("lab microscope: no %s sample in the scan region\n", LA_NAMES[w]); missing++; continue; }
+        Vial v;
+        v.sx = A[w].sys.star.sx; v.sy = A[w].sys.star.sy; v.sz = A[w].sys.star.sz; v.body = A[w].body; v.hab = A[w].hab;
+        v.name = fmt("%s (%s)", upper(NICHE_NAMES[A[w].hab.niche]).c_str(), upper(LA_NAMES[w]).c_str()); v.readingC = A[w].hab.meanC; v.activity = A[w].sample.activity;
+        g.testColdStore().push_back(v);
+    }
     g.openScreen(GameState::MICROSCOPE);
     int vial = 0, bad = 0;
-    int at[LAB_COUNT];
+    int at[LAB_COUNT], aAt[LA_COUNT];
     for (int w = 0; w < LAB_COUNT; w++) at[w] = found[w] ? vial++ : -1;
+    for (int w = 0; w < LA_COUNT; w++) aAt[w] = aFound[w] ? vial++ : -1;
     // each sample: its mount, then every way of seeing at every zoom at its first look (the slide at 5 s)
     for (int w = 0; w < LAB_COUNT; w++) {
         if (at[w] < 0) continue;
@@ -204,20 +271,22 @@ int labMicroscope() {
     }
     // the strips: a sample put on the stage again, the view on the first cell of its species of interest at the step whose view holds about
     // a dozen of its bodies' height (`up` steps closer), its depth in focus; then what is done to it
-    auto stage = [&](int w, int up) -> bool {
-        if (at[w] < 0 || !g.testScopeStage(at[w])) return false;
+    auto stageOn = [&](int vialAt, int species, int up) -> bool {
+        if (vialAt < 0 || !g.testScopeStage(vialAt)) return false;
         const MicroscopeState& M = g.testScope();
         for (const SlideKind& K : M.mount.kinds) {
-            if (K.species != S[w].species) continue;
+            if (K.species != species) continue;
             const SlideCell& c = M.mount.cells[K.first];
             const double mag = magnificationFor(M.forms[K.species], M.seeing, 0.08);
             int best = 0;
             for (int i = 0; i < SCOPE_LIGHT_STEPS; i++) if (std::fabs(std::log(SCOPE_LIGHT[i] / mag)) < std::fabs(std::log(SCOPE_LIGHT[best] / mag))) best = i;
             g.testScopeView(M.seeing, std::max(0, std::min(SCOPE_LIGHT_STEPS - 1, best + up)), c.x, c.y, c.z);
+            lab.said.clear();
             return true;
         }
         return false;
     };
+    auto stage = [&](int w, int up) { return at[w] >= 0 && stageOn(at[w], S[w].species, up); };
     auto strip = [&](const char* what, std::vector<Lab::Panel>& ps) { lab.sheet(ps, (int)ps.size(), fmt("lab microscope: %s", what), fmt("shots/tests/lab_microscope_%s.png", what)); };
     {   // a cell tracked: Enter on the one under the crosshair, the stage following it for ten seconds
         std::vector<Lab::Panel> ps;
@@ -271,7 +340,8 @@ int labMicroscope() {
             last = n;
             ps.push_back(lab.panel(fmt("T %.0f S: %d IN IT", t, n)));
         }
-        printf("%s (%s): %d of the turning kinds' cells within it at 0 s, %d at 40 s\n", pass == 0 ? "light" : "food", LAB_NAMES[w], first, last);
+        printf("%s (%s): %d of the turning kinds' cells within it at 0 s, %d at 40 s; said: %s\n", pass == 0 ? "light" : "food", LAB_NAMES[w], first, last,
+               lab.saidLine().c_str());
         if (last <= first) bad++;
         strip(pass == 0 ? "light" : "food", ps);
     }
@@ -294,7 +364,8 @@ int labMicroscope() {
             for (double t : {0.0, 3.0, 6.0}) { lab.at(t); before = heading(); ps.push_back(lab.panel(fmt("T %.0f S: %+.0f UM/S", t, before))); }
             g.testScope().t = 8; lab.press(KEY_M);
             for (double t : {8.5, 9.5, 11.0, 15.0}) { lab.at(t); after = heading(); ps.push_back(lab.panel(fmt("T %.1f S: %+.0f UM/S", t, after))); }
-            printf("magnet (%s): the field's cells drifting %+.1f um/s along x before the turn, %+.1f after\n", LAB_NAMES[LAB_MAGNET], before, after);
+            printf("magnet (%s): the field's cells drifting %+.1f um/s along x before the turn, %+.1f after; said: %s\n", LAB_NAMES[LAB_MAGNET], before, after,
+                   lab.saidLine().c_str());
             if (!(before > 0 && after < 0)) bad++;
             strip("magnet", ps);
         }
@@ -303,7 +374,7 @@ int labMicroscope() {
         std::vector<Lab::Panel> ps;
         if (stage(LAB_WARM, 1)) {
             lab.at(0);
-            lab.press(KEY_H);
+            lab.typeWarmth((int)std::lround(g.testScope().mount.stageC + 30));   // R-438: the warm stage's 30 C over the vial's, typed
             for (double t : {0.0, 15.0, 30.0, 45.0, 60.0, 90.0}) {
                 lab.at(t);
                 const SlideState st = slideStateAt(g.testScope().mount, g.testScope().events, t);
@@ -311,7 +382,83 @@ int labMicroscope() {
                 for (const Specimen& s : g.testScope().shown) stressed += s.act != AN_LIVE || s.form == CF_SPORE || s.form == CF_CYST || s.form == CF_GHOST;
                 ps.push_back(lab.panel(fmt("T %.0f S: %.0f C, %d", t, st.stageC, stressed)));
             }
+            printf("warm (%s): the stage typed to %.0f C; said: %s\n", LAB_NAMES[LAB_WARM], g.testScope().mount.stageC + 30, lab.saidLine().c_str());
             strip("warm", ps);
+        }
+    }
+    // R-438: the slide's new answers. Each kind's copies of a species in the view: how many move (not still), how many within a radius of a place
+    auto movingShare = [&](int species) {
+        const MicroscopeState& M = g.testScope();
+        int n = 0, moving = 0;
+        for (size_t i = 0; i < M.shown.size(); i++) if (M.mount.kinds[M.mount.cells[M.refs[i].cell].kind].species == species) { n++; moving += !M.shown[i].still; }
+        return n ? 100 * moving / n : 0;
+    };
+    auto within = [&](double x, double y, double r, bool eaters, int species) {
+        const MicroscopeState& M = g.testScope();
+        int n = 0;
+        for (size_t i = 0; i < M.shown.size(); i++) {
+            const SlideKind& K = M.mount.kinds[M.mount.cells[M.refs[i].cell].kind];
+            if (eaters ? !((K.taxis & TX_FOOD) && !(K.taxis & TX_FIELD) && K.lives && K.speed > 0) : K.species != species) continue;
+            n += std::hypot(M.refs[i].x - x, M.refs[i].y - y) <= r;
+        }
+        return n;
+    };
+    {   // the cool sample: its eater still at the vial's warmth (a degree over its range's top), the stage typed to its range's middle: it wakes
+        std::vector<Lab::Panel> ps;
+        if (stageOn(aAt[LA_COOL], A[LA_COOL].species, 1)) {
+            const MicroscopeState& M = g.testScope();
+            double mid = M.mount.stageC;
+            for (const SlideKind& K : M.mount.kinds) if (K.species == A[LA_COOL].species) mid = std::round((K.tMin + K.tMax) / 2);
+            lab.at(0);
+            const int before = movingShare(A[LA_COOL].species);
+            ps.push_back(lab.panel(fmt("T 0 S: %.0f C, %d%% MOVING", slideStateAt(M.mount, M.events, 0).stageC, before)));
+            lab.at(5); lab.typeWarmth((int)mid);
+            int after = 0;
+            for (double t : {15.0, 30.0, 45.0, 60.0}) {
+                lab.at(t);
+                after = movingShare(A[LA_COOL].species);
+                ps.push_back(lab.panel(fmt("T %.0f S: %.0f C, %d%% MOVING", t, slideStateAt(M.mount, M.events, t).stageC, after)));
+            }
+            printf("cool (%s): its eater still at %.1f C, %d%% of its cells moving; the stage typed to %.0f C, %d%% moving by 60 s; said: %s\n", LA_NAMES[LA_COOL],
+                   A[LA_COOL].hab.meanC, before, mid, after, lab.saidLine().c_str());
+            if (!(before < 5 && after > 50)) bad++;
+            strip("cool", ps);
+        }
+    }
+    {   // the dark-dweller's drop: L on one of its swimmers, its cells leaving the spot
+        std::vector<Lab::Panel> ps;
+        if (stageOn(aAt[LA_FLEE], A[LA_FLEE].species, -1)) {
+            lab.at(0);
+            lab.press(KEY_L);
+            const SlideState st = slideStateAt(g.testScope().mount, g.testScope().events, 1);
+            int first = 0, last = 0;
+            for (double t : {0.0, 5.0, 10.0, 20.0}) {
+                lab.at(t);
+                last = within(st.spotX, st.spotY, st.spotR, false, A[LA_FLEE].species);
+                if (t == 0) first = last;
+                ps.push_back(lab.panel(fmt("T %.0f S: %d IN IT", t, last)));
+            }
+            printf("flee (%s): the dark-dweller's cells in the spot %d at 0 s, %d at 20 s; said: %s\n", LA_NAMES[LA_FLEE], first, last, lab.saidLine().c_str());
+            if (!(first > 0 && last * 2 <= first)) bad++;
+            strip("flee", ps);
+        }
+    }
+    {   // the lit light-feeders: L on the still light-feeders' crowd, the eaters gathering round them after ten seconds (Engelmann's)
+        std::vector<Lab::Panel> ps;
+        if (stageOn(aAt[LA_LIT], A[LA_LIT].species, -1)) {
+            lab.at(0);
+            lab.press(KEY_L);
+            const SlideState st = slideStateAt(g.testScope().mount, g.testScope().events, 1);
+            int first = 0, last = 0;
+            for (double t : {0.0, 8.0, 20.0, 45.0, 90.0}) {
+                lab.at(t);
+                last = within(st.spotX, st.spotY, st.spotR * 2, true, -1);
+                if (t == 0) first = last;
+                ps.push_back(lab.panel(fmt("T %.0f S: %d EATERS NEAR", t, last)));
+            }
+            printf("lit (%s): the eaters near the lit light-feeders %d at 0 s, %d at 90 s; said: %s\n", LA_NAMES[LA_LIT], first, last, lab.saidLine().c_str());
+            if (!(last > first)) bad++;
+            strip("lit", ps);
         }
     }
     {   // a fossil's section: the old rock's thin section at each objective, then in a bright field

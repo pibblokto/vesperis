@@ -152,6 +152,8 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-443 | S4 | bench | The ship's rows run slow now and then in `bench check`: `library 4x` past its 2.8 ms in 4 of 26 runs of B-437's build (3.02-3.44 ms), 1 of 16 before, never twice in a row. Steadily B-437's layer adds 0.1-0.2 ms (2.03 to 2.18). | resolved 2026-11-18 (B-439: new budgets) |
 | KI-444 | S4 | bench | `surface 4x` has the tightest budget: 4.5 ms, 1.30 times its median of 3.45 since 1.4.0 began (F-11 set it at 1.5 times F-10's 2.97). Over it once in 18 runs with the machine in use, as 1.4.0's D-03. | open, found by B-439 (2026-11-18) |
 | KI-445 | S4 | code | game.h is 60.8 KB with R-432 to R-434, past the 60 KB at which `PLAN-screens.md` section 8 said to revisit `Game`'s shape (a row of methods a screen); its screens stay rows, nothing moved yet. | closed 2026-11-19 (the user raised the mark to 70 KB) |
+| KI-446 | S4 | harness | A battery item differs once and matches its snapshot alone: `rogues` in R-438's run (the giant's orbit, the radar lock's rows), `sweeps` in R-442's (`trait_fog_seas`, 650 px, step 14): a moving frame, not run `twice`. | open, found in R-438 (2026-11-19) |
+| KI-447 | S4 | game | The tree of kin's leaves and the sequencer's title still say UNNAMED for a species with no name (B-442 gave the lab's rows its look): two of a world read alike on the tree; its look needs each leaf's form, its world drawn. | open, found in B-442 (2026-11-19) |
 
 ## The long rows, continued
 

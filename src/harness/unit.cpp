@@ -140,6 +140,8 @@ const UnitGroup UNIT_GROUPS[] = {
     {"ship", "unit_ship.cpp", 1, 2, unitShip},
     {"search", "unit_search.cpp", 1, 2, unitSearch},
     {"lab", "unit_lab.cpp", 1, 2, unitLab},
+    {"experiments", "unit_lab_answers.cpp", 1, 2, unitLabAnswers},   // R-435 to R-438, B-441
+    {"incubator", "unit_lab_incubator.cpp", 1, 2, unitLabIncubator},   // B-442, R-439 to R-442
     {"files", "unit.cpp", 1, 2, unitFiles},   // B-440: last, after every group's games
 };
 

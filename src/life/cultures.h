@@ -19,6 +19,8 @@ enum CultureCell { CC_WATER = 0, CC_ACID, CC_AMMONIA, CC_CRYOSTAT, CC_COUNT };
 extern const char* const CULTURE_CELL_NAMES[CC_COUNT];   // "WATER", "ACID", "AMMONIA", "CRYOSTAT" (the screen's medium line holds the longest)
 int cellChemistry(int cell);
 int chemistryCell(int chemistry);   // the cell a chemistry's life grows in (none: water's)
+// a species' rate against its three temperatures, 0 to 1 (Rosso et al. 1993); R-438: the slide's pace reads it too
+double cardinalRate(double T, double lo, double opt, double hi);
 void cellRange(int cell, double& loC, double& hiC);
 enum CultureLight { CL_DARK = 0, CL_WHITE, CL_RED, CL_BLUE, CL_COUNT };
 extern const char* const CULTURE_LIGHT_NAMES[CL_COUNT];   // "DARK", "WHITE", "RED", "BLUE"

@@ -550,22 +550,31 @@ and the player's deck in the library (14: R-431, the player's screen), none with
 world and line, the slide's clock; the crosshair, the species under it, the scale bar; the keys' two lines in turn). Its keys: 1-6
 the ways (`V` the next, Shift+V the one before; SECTION refused for a drop), `+`/`-`, the wheel or Page Up/Down the zoom, `[`/`]` the
 focus, the arrows and the mouse the stage (the electron's mouse turns and tilts; the mouse rests while a cell is tracked, the arrows let
-it go), Enter tracks the cell under the crosshair or lets it go, `L` a spot of light at the crosshair (again: away), `M` the magnet beside the stage (again: turned half round), `H` the warm stage
-on and off, `F` a drop of food, Tab the sheet of the species under it, `N` names it, `P` a micrograph (the screenshot's key), Ctrl+S
-saves. Its lists (R-432): `CAM 06 MICROSCOPE` over two tabs, Tab between them; THE VIALS opens on its worlds, a folder each in the
+it go), Enter tracks the cell under the crosshair or lets it go, `L` a spot of light at the crosshair (again: away), `M` the magnet
+beside the stage, turned half round, taken away (R-436), `H` the stage's warmth typed (R-438: digits and the minus sign, Up and Down a
+degree, Enter sets it, Esc keeps it; Shift+H the vial's again), `F` a drop of broth (again: the slide rinsed); the HUD's panel (STAGE,
+LIGHT, FOOD, MAGNET) says what is on the slide, its lines what each is for and what the view's cells answered (R-437); Tab the sheet of the
+species under it, `N` names it, `K` keeps it in a folder (R-440: a copy picked out of the drop alone; UNSORTED, the explorer's folders, A
+NEW FOLDER), `P` a micrograph (the screenshot's key), Ctrl+S saves. Its lists (R-432): `CAM 06 MICROSCOPE` over two tabs, Tab
+between them; THE VIALS opens on its worlds, a folder each in the
 cold store's order (its name and where it is, `23 VIALS - 9 READ STRONG`), Enter opens a world's vials (each its line and the activity it
 read), Enter puts one on the stage, Backspace (or Delete) empties it (its world's folder going with its last), Page Up/Down ten; THE
 CULTURES (R-433) holds THE FLASKS (a drop of a culture as it is), UNSORTED (the collection's new) and the explorer's folders: `N` makes a
 folder (`NAME THE NEW FOLDER`), on one of the explorer's `R` renames it and Backspace removes it once empty (`ONLY AN EMPTY FOLDER IS
 REMOVED - M MOVES ITS CULTURES OUT`); in a folder Enter puts a kept culture's drop on the stage, `M` moves it (a chooser of the folders,
-`MOVE IT TO:`), Backspace discards it; Esc goes back a level, E reopens on what was last on the stage. The controller: A tracks, B the lists, X the
+`MOVE IT TO:`), `C` copies it (R-440, `COPY IT TO:`), Backspace discards it; Esc goes back a level, E reopens on what was last on the
+stage. The controller: A tracks, B the lists, X the
 next way, the bumpers zoom, the triggers focus, SELECT the sheet, the sticks the stage. Z-05: the incubator (16, `INCUBATOR - E TO OPEN
 IT`; amber, its home key 20), a screen over the room (`INCUBATOR`, `13-life.md`): its twelve flasks (each its species in its stage's
 colour), the chosen one's curve on a log scale and its lines, its medium; Up/Down the flask, Left/Right the medium's field (its cell,
-warmth, light, energy, salt), `+`/`-` change it (Shift ten degrees), `W` as its world, `F` a fresh broth, Enter the chooser (R-432: its
+warmth, light, energy, salt), `+`/`-` change it (Shift ten degrees; R-435: a digit begins its warmth typed, Enter sets it, Esc keeps
+it), `W` as its world, `F` a fresh broth, Enter the chooser (R-432: its
 folders first, a world's, the flasks', the collection's; a species seen in a vial, a row a species and its state, a flask's culture, or
-R-433's kept culture in the medium it grew in; on a culture a second), Backspace (or Delete) empties it, `N` names its strain, Tab the jars (Enter a
-world's jar from a vial of wet silt, a mat or soil; Backspace empties one), Ctrl+S saves. The controller: A puts in, B back, X as its
+R-433's kept culture in the medium it grew in; on a culture a second; R-441: Tab between THE VIALS and THE CULTURES, opening on the one last
+shown), Backspace (or Delete) empties it, `N` names its organism (R-442: of two, or a strain, the one chosen first), `K` keeps a copy in a
+folder (R-440: of two either alone or both), Tab the jars (Enter a
+world's jar from a vial of wet silt, a mat or soil; Backspace empties one; R-439: its bands numbered and named as they come in), Ctrl+S
+saves. The controller: A puts in, B back, X as its
 world, Y a fresh broth, the bumpers lower and raise, SELECT the jars. Its flasks glow in the room by their cultures and lights, the jars
 on their shelf by their bands. Z-06: the sequencer (17, `SEQUENCER - E TO READ A GENOME`; magenta, its home key 47), a screen over the room
 (`SEQUENCER`, `13-life.md`): Enter the chooser (a species seen in a vial or growing in a flask) and Enter again reads it, 90 seconds on the

@@ -14,11 +14,13 @@ and from Z-03 the surface and the game.
   `filmGlowColour` for the lamp's ultraviolet)
 - `slides` (Z-04: a vial's slide: `mountOf` its mount (the preparation, each species' tile and cells, the first look), `SlideEvent`
   what is done to it, `slideStateAt`, `mountSpecimens` the specimens in a view at a time, `mountSpecimen` a tracked copy,
-  `depthOfField`; Z-05: a `Held`'s form and dividing share, a culture's drop)
+  `depthOfField`; Z-05: a `Held`'s form and dividing share, a culture's drop; R-438: the stage set to a warmth, a kind's pace clock
+  (`PaceClock`, `Specimen::clock`), every turner answering, the dark's fleeing, lit light-feeders' gift; R-437: `slideAnswer`,
+  `slideScentUm`)
 - `cultures` (Z-05: a flask's culture: `Medium` (the cells, lights, energies, salts), `CultureKind`, `growthIn` a species' rate and crowd in
   a medium, `pairOf` two in a flask, `CultureEvent` what is done to a flask, `runCulture` its laws laid out, `cultureAt` its state at a time,
   `cultureStagesBy`, `applyStrain`; `mediumOfPlace` AS ITS WORLD) and `jars` (Z-05: a world in a jar: `jarRecipe` its bands, `jarAt` them at a
-  time)
+  time; R-439: `JarLayer`, `jarLayerOf` a band's place by what its species lives on, each place's bands under the one before)
 - `sequences` (Z-06: a species' genome and its place in its genesis's tree: `Lineage`, `lineageOf`, `shipLineage`; `commonAncestorGyr`,
   `treeBefore` the tree's order; the marker's letters `markerLetter`, `markerOf`, `markerAlike`; `genomeLetters`, `watermarkLetters`,
   `alphabetOf`)
@@ -59,7 +61,9 @@ and from Z-03 the surface and the game.
 - A sample is a pure function of its microhabitat and the biota (`SALT_SAMPLE` by the place and the species' index): nothing of it is
   saved but the place and the microhabitat (the vial's line). So is a slide's mount (`mountOf`); where its cells are and what they do
   is closed-form from its events and the clock (`mountSpecimens`). The Specimen's and the Slide's Z-04 fields (`still`, `wander`,
-  `vx`/`vy`, `blurUm`, `lod`, `step`) default to the plates' drawing: `life_look` holds them.
+  `vx`/`vy`, `blurUm`, `lod`, `step`; R-438's `clock`) default to the plates' drawing: `life_look` holds them. A slide with no setting of its
+  stage keeps each kind's clock the slide's (its frames as before R-438); a kind's answer (`slideAnswer`) must be what its copies do (a
+  magnetotactic kind answers the field alone, as its copies' branch in `copyAt` does).
 - A `thread_local` named inside a pool's lambda is each worker's own: bind it to a reference first (`drawElectron`'s scratch). Red snow (`TR_SNOW_ALGAE`) puts the snow among a world's habitats and
   makes its snow species a red alga of the melt (the fixes after the draws); its cysts are carried as any spore former's.
 - A culture is closed-form from its events (`runCulture`: segments, each one law; `cultureAt` a binary search and a formula): nothing is

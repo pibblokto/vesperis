@@ -239,6 +239,8 @@ const CultureSeg* segAt(const std::vector<CultureSeg>& v, double t) {
 }
 }   // namespace
 
+double cardinalRate(double T, double lo, double opt, double hi) { return cardinal(T, lo, opt, hi); }
+
 int cellChemistry(int cell) { return cell == CC_ACID ? CH_ACID : (cell == CC_AMMONIA ? CH_AMMONIA : (cell == CC_CRYOSTAT ? CH_HYDROCARBON : CH_WATER)); }
 int chemistryCell(int chemistry) { return chemistry == CH_ACID ? CC_ACID : (chemistry == CH_AMMONIA ? CC_AMMONIA : (chemistry == CH_HYDROCARBON ? CC_CRYOSTAT : CC_WATER)); }
 void cellRange(int cell, double& loC, double& hiC) {

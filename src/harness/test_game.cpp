@@ -947,13 +947,20 @@ std::string TestGame::testSelection() const {
         case GameState::DRONES: return fmt("top %d", bay.listTop);
         case GameState::AUTO: return fmt("row %d", autoSel);
         case GameState::MICROSCOPE:   // Z-04: the lists (R-432: the tab, the folder, its row), or the slide: its way and magnification, a cell tracked, the sheet up
-            return scope.page == 0 ? fmt("%s folder %d%s%s", scope.tab ? "cultures" : "vials", scope.folder, scope.open ? fmt(" row %d", scope.sel).c_str() : "", scope.moving ? " moving" : "")
-                                   : fmt("%s %d %s x%.0f focus %.1f%s%s, %d events", scope.flask >= 0 ? "flask" : (scope.kept >= 0 ? "kept" : "vial"),
+            return scope.page == 0 ? fmt("%s folder %d%s%s", scope.tab ? "cultures" : "vials", scope.folder, scope.open ? fmt(" row %d", scope.sel).c_str() : "",
+                                         scope.moving ? (scope.copying ? " copying" : " moving") : "")
+                                   : fmt("%s %d %s x%.0f focus %.1f%s%s%s, %d events, %d kept", scope.flask >= 0 ? "flask" : (scope.kept >= 0 ? "kept" : "vial"),
                                          scope.flask >= 0 ? scope.flask : (scope.kept >= 0 ? scope.kept : scope.vial),
-                                         SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "", (int)scope.events.size());
-        case GameState::INCUBATOR:   // Z-05: the page, the flask and the medium's field, the chooser's row
-            return incub.choosing ? fmt("choosing folder %d of %d%s", incub.pages.folder, (int)incub.pages.folders.size(), incub.pages.open ? fmt(" row %d", incub.choiceSel).c_str() : "")
-                                  : (incub.page == 1 ? fmt("jars row %d of %d", incub.jar, (int)lab.jars.size()) : fmt("flask %d field %d, %d in it", incub.sel, incub.field, lab.flasks[incub.sel].n));
+                                         SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "",
+                                         keep.open ? " keeping" : "", (int)scope.events.size(), (int)lab.kept.size());   // R-440: K's folders, the collection
+        case GameState::INCUBATOR:   // Z-05: the page, the flask and the medium's field, the chooser's row; R-440 to R-442: its tab, N's and K's rows,
+            // K's folders, the collection
+            if (keep.open) return fmt("keeping row %d, %d kept", keep.sel, (int)lab.kept.size());
+            if (incub.pick) return fmt("picking %s row %d of %d", incub.pick == PICK_NAME ? "a name" : "a copy", incub.pickSel, (int)incub.pickLines.size());
+            return incub.choosing ? fmt("choosing tab %d folder %d of %d%s", incub.pages.tab, incub.pages.folder, (int)incub.pages.folders.size(),
+                                        incub.pages.open ? fmt(" row %d", incub.choiceSel).c_str() : "")
+                                  : (incub.page == 1 ? fmt("jars row %d of %d", incub.jar, (int)lab.jars.size())
+                                                     : fmt("flask %d field %d, %d in it, %d kept", incub.sel, incub.field, lab.flasks[incub.sel].n, (int)lab.kept.size()));
         case GameState::CATALOGUE:   // Z-07: its order, the row chosen; on a sheet its way of seeing
             return cat.page == 1 ? fmt("%s row %d of %d, its sheet in %s", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size(), SEEING_NAMES[cat.seeing])
                                  : fmt("%s row %d of %d", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size());

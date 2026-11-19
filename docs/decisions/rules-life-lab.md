@@ -1,7 +1,8 @@
-# Rules: the search and the laboratory
+# Rules: the search and the microscope
 
-Finding the living small and studying it aboard (1.5.0, R-425: Z-03 to Z-07; R-432, R-433), a line each with its entries (`log/`); a
-replaced one moves to `superseded.md`. Where life is: `rules-life.md`; the activity vision: `rules-surface.md`.
+Finding the living small and looking at it aboard (1.5.0, R-425: Z-03, Z-04; R-432, R-435 to R-438), a line each with its entries (`log/`); a
+replaced one moves to `superseded.md`. Where life is: `rules-life.md`; the incubator, the jars and the collection: `rules-life-cultures.md`; the
+sequencer, the tree and the record: `rules-life-record.md`; the activity vision: `rules-surface.md`.
 
 ## The search
 - A sample is `sampleOf` its microhabitat and its world's biota, the microhabitat its square metre's: what the world fixes, not the landing's grid [Z-03]
@@ -18,43 +19,20 @@ replaced one moves to `superseded.md`. Where life is: `rules-life.md`; the activ
 - Prepared by tens: the most crowded species a sixteenth of the glass (a body over 20 um as 20), none over an eighth; each species a tile of its own [Z-04]
 - A tile holds a hundred bodies' worth at the species' density, 160 cells at most, a cell at least, 1.5 mm at most (a rare one found by a look round) [Z-04]
 - What is done to a slide is its events on its clock; where a cell is and what it does is closed-form: the same skipped to, stepped and at one thread [Z-04]
-- A turning cell answers within its reach and the share that makes a crowd a cell deep; the field's U-turns alternate their side (their steps cancel) [Z-04]
-- Spores, cysts, the inactive and microcolonies are still (the jiggle); a stressed kind acts from where it is and ends still in its form [Z-04]
+- Every cell within its reach that turns to the light or the food answers, packed round it to twice its radius; a field-turner answers the field alone [R-438]
+- A kind moves while the stage's warmth is in its range, at its cardinal pace (its species' speed at the vial's warmth); past its top stressed [R-438]
+- The dark's swimmers (soil, silt, a vent, rock, a plume; no light-feeders) flee a bright spot; one on live light-feeders draws the eaters from 10 s [R-438]
+- Spores, cysts and microcolonies are still (the jiggle); a stressed kind, moving or still, acts from where it is and ends still in its form [Z-04]
+- L and F are undone by their keys; M put beside the stage, turned half round, taken away; H types the stage's warmth, Shift+H the vial's [R-435, R-436]
+- What each thing done is for is said as it is done; each kind in view is told once a slide as it answers, its sheet's answers kept (`answers`) [R-437]
 - The new fields' defaults draw as Z-02's plates (`life_look` the same); `step` 2 at 3x-4x only; the electron's meshes on the pool, in row bands [Z-04]
 - What is seen of a species is the guide's (`microbe` by `<body>/M<index>`): a part only when seen in its way, in focus, big enough; the sheet no more [Z-04]
 - A form's first sight is said and logged (FORM); N names a species (`TEXT_SPECIES`); P's photograph is the micrograph (its caption the slide's) [Z-04]
 
-## The incubator and the jars
-- A screen over the room (`INCUBATOR`, E at its cabinet); its flasks, the jars and the lab's clock (the drones' kind) are the save's own lines [Z-05]
-- A culture is closed-form from its events on the lab's clock (`runCulture`): the same skipped, stepped, and laid out again from its saved events [Z-05]
-- A flask takes a species seen in a vial (never a fossil or a protocell) or a flask's culture, at AS ITS WORLD (`mediumOfPlace`) first [Z-05]
-- A species' pace is its seed's: its crowd at its best in 8-20 minutes; spores wake in 20-60 s where the medium suits and feeds them [Z-05]
-- Two in a flask: mirrored hands ignore each other, an eater and a smaller cell cycle, a light-feeder or a fermenter feeds, the rest compete [Z-05]
-- A strain is twelve generations at a range's edge, one value moved: its event at its time, its record the guide's (`strain`, named with N) [Z-05]
-- What a flask comes to is said and logged as the clock reaches it (WOKEN, STRAIN; the glow said); what its curve shows goes to the sheet [Z-05]
-- A jar is a world's (eight places): its bands a pure function of its sample and its age since made, every band in by twenty minutes [Z-05]
-- The flasks' and jars' tones are homes past the banks (`ShipBanks`, 32-47), asked in front of the eye only and after the screens near them [Z-05]
-- A flask's drop on the microscope is its culture as it is; a vial's and a flask's slides read one list of species, keys and worlds [Z-05]
-- Every species and strain a flask grows (its curve past its lag) is kept once with its media, its flask emptied or not; staged, put in, read [R-433]
-- The collection's folders are the explorer's (N, R; M moves; Backspace removes an empty one): the save's `keptfolder` and `kept` lines [R-433]
-
-## The sequencer and the tree
-- A screen over the room (`SEQUENCER`, E at the bow bench): a species seen in a vial or growing in a flask, never a fossil or a protocell [Z-06]
-- Its reading is SEQUENCE_S on the lab's clock, its line the save's (`seq`); its end told as the clock reaches it, the screen open or not [Z-06]
-- Read: the sheet's kin (`SEEN_KIN`), the log's KIN (its nearest kin read and their ancestor, or the geneses met), a made one's watermark kept [Z-06]
-- The tree (`TREE`): every species read and the ship's own at its root, a genesis a clade; Enter a kin's world's star the remote target [Z-06]
-- A watermark sits after its people's records in the decoder: the language's count leaves it out, the history never reads it [Z-06]
-
-## The record
-- The catalogue (the guide's row): every species with a sheet, a friend's lent in cyan, by world or by kin; nothing of it saved [Z-07]
-- A sheet's form is drawn live in the catalogue's own framebuffer (its way's banks), in a way it was seen in [Z-07]
-- Every count of the living small is the explorer's own, in the other screens' words (the catalogue's rows, the tree's geneses) [Z-07]
-- A sample is counted and logged (SAMPLE) as taken, its world kept; auto-explore's at the water and springs (no lab screen opened) [Z-07]
-
 [Z-03]: log/7-1.5.0.md
 [Z-04]: log/7-1.5.0.md
-[Z-05]: log/7-1.5.0.md
-[Z-06]: log/7-1.5.0.md
-[Z-07]: log/7-1.5.0.md
 [R-432]: log/7-1.5.0.md
-[R-433]: log/7-1.5.0.md
+[R-435]: log/7-1.5.0.md
+[R-436]: log/7-1.5.0.md
+[R-437]: log/7-1.5.0.md
+[R-438]: log/7-1.5.0.md

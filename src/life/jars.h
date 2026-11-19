@@ -10,8 +10,13 @@
 
 // a band's tone: its pigment's (1-7: green .. black), else the iron's rust, the sulphur's white, the deep's grey, the foot's black
 enum JarTone { JT_RUST = PG_COUNT, JT_SULPHUR, JT_GREY, JT_BLACK, JT_COUNT };
-// a band: where it lies in the silt (0 its top .. 1 its foot), its colour and its tone, when it is full (s from the jar's making), its species
-struct JarBand { double top = 0, bottom = 0; RGB col; int tone = JT_GREY; double fullS = 600; int species = -1; };
+// R-439: a band's place, top to bottom, by what its species lives on: the light's oxygen-makers; the air's edge (the iron's and every other eater
+// of a chemical that needs air); the light without air; the sulphide's; the deep (a chemical without air); the foot (the dead, without air).
+// The guide's `jarband` lines keep it: append-only
+enum JarLayer { JL_OXYGEN = 0, JL_EDGE, JL_DARK_LIGHT, JL_SULPHIDE, JL_DEEP, JL_FOOT, JL_COUNT };
+// a band: where it lies in the silt (0 its top .. 1 its foot), its colour and its tone, when it is full (s from the jar's making), its species,
+// its place (R-439)
+struct JarBand { double top = 0, bottom = 0; RGB col; int tone = JT_GREY; double fullS = 600; int species = -1; int layer = JL_DEEP, substrate = SU_NONE; };
 struct JarRecipe {
     RGB water, silt;            // the liquid's colour (tinted by what floats in it), the silt's
     double waterShare = 0.28;   // the water's share of the column, over the silt
@@ -22,5 +27,7 @@ JarRecipe jarRecipe(const Biota& B, const Sample& s, const Microhabitat& h);
 struct JarNow { double cloud = 1; std::vector<double> strength; };
 JarNow jarAt(const JarRecipe& r, double t);
 constexpr double JAR_SETTLED_S = 1200;   // twenty minutes: every band in
+// R-439: a species' band's place in a jar (-1 none: an eater of what breathes air, a grazer)
+int jarLayerOf(const Microbe& m);
 // whether a niche's sample makes a jar (wet silt, a mat, soil)
 inline bool jarNiche(int niche) { return niche == NI_SILT || niche == NI_MAT || niche == NI_SOIL; }

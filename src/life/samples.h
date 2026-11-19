@@ -35,6 +35,9 @@ struct Held {
     // Z-05: a culture's (a flask's drop): the form its cells are in (-1 its state's), the share found dividing (-1 a sample's few)
     int form = -1;
     double dividing = -1;
+    // R-438: a culture's verdict whether its cells live (1: waiting for their warmth, hungry or in the dark) or die (0: too hot, the wrong salt
+    // or solvent); -1 a sample's, its drop's salt deciding (the slide's stage sets their warmth)
+    int alive = -1;
 };
 struct Sample {
     std::vector<Held> held;   // in the world's order

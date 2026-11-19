@@ -37,6 +37,22 @@ void Game::renderIncubator() {
     drawText(canvas, UW - 6 - textWidth(page), 4, page, HUD_DIM);
     if (incub.page == 1) renderIncubatorJars(); else renderIncubatorFlasks();
     if (incub.choosing) renderIncubatorChooser();
+    if (incub.pick) renderIncubatorPick();   // R-440, R-442: what K keeps or N names
+    renderKeepPick(incColour());             // R-440: the folder a copy goes in
+}
+
+// R-440, R-442: what N names or K keeps of the flask chosen, its rows over the page
+void Game::renderIncubatorPick() {
+    const int n = (int)incub.pickLines.size(), x0 = 36, x1 = UW - 36, h = n * 9 + 34, y0 = (UH - h) / 2;
+    drawPanel(canvas, x0, y0, x1, y0 + h, rgb(0, 0, 0), 235, incColour());
+    drawText(canvas, x0 + 8, y0 + 6, fmt(incub.pick == PICK_NAME ? "NAME IN FLASK %d:" : "KEEP A COPY FROM FLASK %d:", incub.sel + 1).c_str(), incColour());
+    incub.pickSel = clampi(incub.pickSel, 0, std::max(0, n - 1));
+    for (int i = 0; i < n; i++) {
+        const int y = y0 + 20 + i * 9;
+        if (i == incub.pickSel) drawText(canvas, x0 + 6, y, ">", incColour());
+        drawText(canvas, x0 + 14, y, fitText(incub.pickLines[i], x1 - x0 - 22).c_str(), i == incub.pickSel ? HUD_WHITE : HUD_GREEN);
+    }
+    drawTextCentered(canvas, (x0 + x1) / 2, y0 + h - 11, "ENTER CHOOSES IT  ESC BACK", HUD_DIM);
 }
 
 void Game::renderIncubatorFlasks() {
@@ -50,8 +66,8 @@ void Game::renderIncubatorFlasks() {
         drawText(canvas, lx + 8, y, fmt("%d", i + 1).c_str(), sel ? HUD_WHITE : HUD_DIM);
         if (F.n == 0 || !F.made) { drawText(canvas, lx + 24, y, "-", HUD_DIM); continue; }
         const CultureNow now = flaskNow(i);
-        const std::string both = F.n > 1 ? F.label[0] + " + " + F.label[1] : F.label[0];
-        const std::string& name = fitted(both, F.label[0], listW - 26);
+        const std::string both = F.n > 1 ? F.label[0] + " + " + F.label[1] : F.label[0], first = F.n > 1 ? F.label[0] + " +" : F.label[0];
+        const std::string& name = fitted(both, first, listW - 26);   // B-442: a second never hidden (its first and a plus)
         drawText(canvas, lx + 24, y, name.c_str(), sel ? HUD_WHITE : stageColour(now.one[0].stage));
     }
     // the chosen flask: its curve, its lines
@@ -125,6 +141,7 @@ void Game::renderIncubatorFlasks() {
         const Medium& m = F.medium;
         const int y = UH - 30;
         std::string f[5] = {CULTURE_CELL_NAMES[m.cell], fmt("%.0f C", m.tempC), CULTURE_LIGHT_NAMES[m.light], CULTURE_ENERGY_NAMES[m.energy], CULTURE_SALT_NAMES[m.salt]};
+        if (incub.typing) f[1] = incub.typed + "_ C";   // R-435: its warmth as typed
         int x = 6;
         drawText(canvas, x, y, "MEDIUM:", HUD_DIM); x += textWidth("MEDIUM: ");
         for (int k = 0; k < 5; k++) {
@@ -134,8 +151,11 @@ void Game::renderIncubatorFlasks() {
             x += textWidth(f[k].c_str()) + 8;
         }
     }
-    const bool second = ((int)(realTime / 4)) & 1;
-    drawTextCentered(canvas, UW / 2, UH - 12, second ? "ENTER PUT IN  W AS ITS WORLD  F FRESH  N NAME" : "<- -> THE MEDIUM  + - CHANGE  BACKSPACE EMPTIES", HUD_DIM);
+    const int phase = ((int)(realTime / 4)) % 4;   // R-435: a third line, the digits; R-440, R-442: a fourth, N and K
+    const char* const LINES[4] = {"<- -> THE MEDIUM  + - CHANGE  BACKSPACE EMPTIES", "ENTER PUT IN  W AS ITS WORLD  F FRESH BROTH",
+                                  "0-9 TYPE ITS WARMTH  ENTER SETS IT", "N NAMES IT  K KEEPS A COPY IN A FOLDER"};
+    const std::string keys = incub.typing ? fmt("TYPE THE WARMTH  ENTER SETS IT  ESC KEEPS %.0f C", F.medium.tempC) : std::string(LINES[phase]);
+    drawTextCentered(canvas, UW / 2, UH - 12, keys.c_str(), incub.typing ? HUD_AMBER : HUD_DIM);
 }
 
 void Game::renderIncubatorJars() {
@@ -152,10 +172,15 @@ void Game::renderIncubatorJars() {
         drawText(canvas, lx + 24, y, name.c_str(), sel ? HUD_WHITE : HUD_GREEN);
     }
     // the chosen jar, as it stands: its water over its silt, its bands coming in
-    const int x0 = UW - 70, y0 = 20, w = 40, h = 150;
+    const int x0 = UW - 70, y0 = 20, w = 40, h = 150, gy = ly + JAR_PLACES * rowH + 4, gw = x0 - 18 - lx;
     drawRectRGB(canvas, x0 - 2, y0 - 2, x0 + w + 1, y0 + h + 1, rgb(90, 100, 104));
     if (incub.jar >= (int)lab.jars.size()) {
         drawTextCentered(canvas, x0 + w / 2, y0 + h / 2 - 4, "EMPTY", HUD_DIM);
+        // R-439: what a jar is for
+        const std::vector<std::string> what = wrapText("A JAR STANDS A WORLD'S WET SILT IN WATER UNDER A LIGHT. OVER TWENTY MINUTES ITS LIFE SORTS ITSELF INTO BANDS BY "
+                                                       "WHAT EACH KIND LIVES ON: LIGHT AND AIR AT THE TOP, IRON AND SULPHIDE BELOW, THE EATERS OF THE DEAD AT THE FOOT.",
+                                                       gw / 6);
+        for (size_t i = 0; i < what.size() && gy + (int)i * 9 < UH - 40; i++) drawText(canvas, lx, gy + (int)i * 9, what[i].c_str(), HUD_DIM);
         drawText(canvas, 6, UH - 30, "ENTER: A JAR OF A VIAL'S WET SILT, A MAT OR SOIL", HUD_DIM);
     } else {
         Jar& J = lab.jars[incub.jar];
@@ -181,6 +206,32 @@ void Game::renderIncubatorJars() {
             }
         }
         fillRectRGB(canvas, x0 + 5, y0 + 3, x0 + 6, y0 + h - 4, rgb(150, 160, 160));   // the glass's highlight
+        // R-439: each band come in marked beside the glass (its number, a bracket in its colour, a faint one's too) and named under the list: who it
+        // is (where seen) and how it lives, top to bottom
+        int in = 0, listed = 0;
+        const int rows = (UH - 34 - (gy + 10)) / 9;
+        for (size_t b = 0; b < J.recipe.bands.size() && b < now.strength.size(); b++) {
+            if (now.strength[b] < 0.5) continue;
+            in++;
+            const JarBand& B = J.recipe.bands[b];
+            const int ya = y0 + waterH + (int)std::lround(B.top * (h - waterH)), yb = std::max(ya, y0 + waterH + (int)std::lround(B.bottom * (h - waterH)) - 1);
+            const float lift = std::max(1.0f, 0.55f / std::max(0.05f, std::max(B.col.r, std::max(B.col.g, B.col.b))));   // a dark band's mark bright enough to see
+            fillRectRGB(canvas, x0 - 6, ya, x0 - 5, yb, rgbOf(B.col, lift));
+            drawText(canvas, x0 - 14, (ya + yb) / 2 - 3, fmt("%d", (int)b + 1).c_str(), HUD_WHITE);
+            if (listed >= rows) continue;
+            const int y = gy + 10 + listed * 9;
+            if (listed == rows - 1 && in < (int)J.recipe.bands.size()) {   // the last row the rest
+                int rest = 0;
+                for (size_t c = b; c < J.recipe.bands.size() && c < now.strength.size(); c++) rest += now.strength[c] >= 0.5;
+                if (rest > 1) { drawText(canvas, lx, y, fmt("AND %d MORE BANDS", rest).c_str(), HUD_DIM); listed++; continue; }
+            }
+            drawText(canvas, lx, y, fmt("%d", (int)b + 1).c_str(), rgbOf(B.col, std::max(lift, 1.2f)));   // its number in its colour
+            drawText(canvas, lx + 12, y, fitText(jarBandWords(J, (int)b), gw - 12).c_str(), HUD_GREEN);
+            listed++;
+        }
+        const char* head = J.recipe.bands.empty() ? (age >= JAR_SETTLED_S ? "NOTHING IN IT MAKES A BAND OF ITS OWN" : "ITS BANDS COME IN AS IT SETTLES")
+                         : (in == 0 ? "ITS BANDS COME IN AS IT SETTLES" : "ITS BANDS, WHAT EACH LIVES ON:");
+        drawText(canvas, lx, gy, head, HUD_DIM);
         const std::string st = age >= JAR_SETTLED_S ? "SETTLED" : fmt("SETTLING: %d OF 20 MIN", (int)(age / 60));
         drawText(canvas, 6, UH - 30, fitted(J.name + " - " + st, st, x0 - 14).c_str(), HUD_GREEN);
     }

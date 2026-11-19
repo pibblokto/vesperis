@@ -28,8 +28,10 @@ cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by 
   watermarks (`shardWatermarkAdd`). Z-07: `catalogue` (the state `CATALOGUE`, the guide's row: every species with a sheet and a friend's
   lent, by world or by kin, a sheet beside its form drawn live; `guide_screens`' LIFE page on the statistics (`renderStatsLife`)).
   `lab_lists` (R-432, R-433): the lists in folders (the vials a folder a world, the cultures' folders, the choosers' folders and their
-  keys and rows) and the culture collection (every species and strain a flask grows, kept: `keepCulture` from `updateLab`; its folders;
-  a kept culture on the stage; its `keptfolder` and `kept` lines through the incubator's)
+  keys and rows; R-441, the choosers' two tabs, `chooserTabs`; B-442, rows alike told apart, `apartRows`) and the culture collection (every
+  species and strain a flask grows, kept: `keepCulture` from `updateLab`, B-441's pair with it once; R-440, kept by hand: `keepOpen`,
+  `keepKeys`, `keptAdd`, a copy in a folder from the microscope's K or a flask's, the lists' C; its folders; a kept culture on the stage;
+  its `keptfolder` and `kept` lines through the incubator's)
 - The ship: `ship_plan` (I-01's rows; I-02's three decks and eight spaces: rooms, ways (the arches, the stair's landings, the lift),
   windows, fixtures, lamps and views; the mesh built once from them; the walk and the stair; the routes; the sight; the banks'
   dealing; I-03's finishes, the lamps' light on the vertices, the sun's patches, the hull outside; I-04's explorer's things),
@@ -75,6 +77,8 @@ cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by 
   explorer's place kept.
 - A place in the ship is the plan's (a view, a device's stand, a fixture's row), never a number in code; drawing moved into the
   rows keeps each expression's shape (lessons.md, "Proving and timing").
+- A species with no name is its look in the lab's rows (`flaskSpeciesWords`, B-442), never UNNAMED alone: two of a vial read alike else.
+  K's chooser of folders (`keep`) is the game's, over the microscope's slide or the incubator's page, each closing it on entering.
 - The incubator's lines are its state row's (`save`, `load`, `reset`); a flask's culture is made again from its species and events
   (`flaskMake`: its kinds read from their worlds) whenever they change or after a load, never saved. The lab's tones (the flasks', the
   jars') are homes past the banks (32-47): ask them only for what is drawn, in front of the eye, after the screens near them.
@@ -87,10 +91,14 @@ cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by 
   lines through `sheetLinesOf` (the microscope's). Every count of the living small is the explorer's own and the other screens' (the LIFE
   page's geneses the tree's: it builds the tree first). A sample is counted and logged where it is taken (`sampleTaken`).
 - The microscope's slide is made again from its vial (`microscopeStage`), a flask's culture (`microscopeStageFlask`) or a kept culture
-  (`microscopeStageKept`, R-433); each fills `scope.species`, `keys` and `worlds`, which the sheet and the record read. Its lists' folders
+  (`microscopeStageKept`, R-433; B-441: with its partner); each fills `scope.species`, `keys` and `worlds`, which the sheet and the record read,
+  and the drop's liquid range (`stageLo`, `stageHi`: R-438's typed warmth, H; a flask's its digits, R-435). Its lists' folders
   are made from the cold store and the lab each frame (`vialFolders`, `cultureFolders`): a row is a vial's, a flask's or a kept culture's
   index by its folder's id (FOLDER_WORLD, FOLDER_FLASKS, a collection's), never stored. Its frame's specimens are made in the update
   (`microscopeFrame`) and only drawn by the render (a text entry over it draws the last ones). Its clock is the slide's own (real
-  seconds on its page, stopped under the electron); the harness skips it (`testScopeSkip`) or sets the view (`testScopeView`).
+  seconds on its page, stopped under the electron); the harness skips it (`testScopeSkip`) or sets the view (`testScopeView`). R-437: what the
+  view's kinds answer (`microscopeAnswers`, after `microscopeSee`) is the game's, not the slide's: told once a slide (`scope.told`), its lines
+  queued (`scope.said`), the sheets' `answers` saved two seconds apart at most; a frame closed-form in the clock forgets them first
+  (`testScopeFresh`).
 
 More (the HUD's colours, sound): `docs/reference/lessons.md`, "Game, screens and sound".

@@ -49,6 +49,11 @@ struct ChooserPage {
     std::vector<LabFolder> folders;
     bool open = false;
     int folder = 0, top = 0;
+    // R-441: its folders in two tabs (`chooserTabs`): the vials' worlds (0) and the cultures (1, the flasks' and the collection's), `folders` the
+    // one shown
+    bool tabbed = false;
+    int tab = 0;
+    std::vector<LabFolder> tabs[2];
 };
 
 struct Input; struct RGBCanvas;
@@ -57,6 +62,12 @@ std::string labFolderWhere(const std::string& key);   // a world's place in a fo
 int chooserKeys(const Input& in, ChooserPage& P, int& sel);
 // its page drawn in a panel's box: the folders (a name and its count each) or the open one's rows (`lines`, by the chooser's row)
 void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, int sel, int& top, const std::vector<std::string>& lines, uint32_t colour);
+// R-441: its folders put in the two tabs, the one asked for shown (the other where it holds none); a tab shown
+void chooserTabs(ChooserPage& P, int tab);
+void chooserTab(ChooserPage& P, int tab);
+// B-442: a chooser's rows that read the same in one folder (`keys`) told apart: each its form's colour and motion (`traits`) after its look, then
+// its place among those still alike; the rows' words each its look and the rest
+void apartRows(std::vector<std::string>& looks, const std::vector<std::string>& rests, const std::vector<std::string>& keys, const std::vector<std::string>& traits);
 
 // the magnifications the zoom steps through: the light ways' objectives (x40, x100, x400, x1,000) with the camera's steps between and on the oil
 // one (x2,000, x4,000); the electron's x200 (a large cell whole) to x40,000
@@ -99,7 +110,22 @@ struct MicroscopeState {
     int folder = 0, folderTop = 0;
     int kept = -1;
     bool moving = false; int moveSel = 0;
+    bool copying = false;         // R-440: M's chooser copying (C), the culture kept where it is too
+    // R-438: the stage's warmth being typed (H) and what is typed so far; the drop's liquid range (its chemistry's cell's)
+    bool typing = false; std::string typed;
+    double stageLo = -20, stageHi = 125;
+    // R-437: what each kind of the slide was told doing (its SlideAnswerBits, SCOPE_LOOKED once looked at), when each experiment began (by
+    // SlideDo, on the slide's clock; -1 none going), whether the view answered it and whether its while was judged (the kinds in view then
+    // kept as not answering it), the lines waiting their turn on the HUD, when the magnet was last put or turned (its field's lines drawn a
+    // while), the sheets' answers changed since the guide was last saved (saved two seconds apart at most)
+    std::vector<uint32_t> told;
+    double tried[SD_COUNT] = {-1, -1, -1, -1};
+    bool answered[SD_COUNT] = {}, judged[SD_COUNT] = {};
+    std::vector<std::string> said;
+    double fieldShown = -100;
+    bool answersDirty = false; double answersSavedAt = -100;
 };
+constexpr uint32_t SCOPE_LOOKED = 1u << 31;   // R-437: a kind's told bits once it was first in view (its state as found, not said)
 
 // Z-05: the incubator (game/incubator.cpp, incubator_draw.cpp): twelve flasks, each a medium and a culture of one or two species put in it on the
 // lab's clock; the jars' shelf, a world's silt in a column a world
@@ -137,13 +163,17 @@ struct Jar {
     Microhabitat hab;
     std::string name;
     double t0 = 0;
-    // made again (not saved): its sample's bands
+    // made again (not saved): its sample's bands, each band's species' plan (R-439: its words); whether its settling was told (at a load, by its
+    // age then)
     bool made = false;
     JarRecipe recipe;
+    std::vector<int> plans;
+    bool told = false;
 };
 // the incubator's screen: its page (the flasks, the jars), the flask chosen and the medium's field, the chooser of what goes in (a vial's species
 // seen, a flask's culture) and its rows
 struct IncubatorChoice { int vial = -1, species = -1, flask = -1, who = -1; std::string line; int kept = -1; };   // R-433: or a kept culture
+enum IncubatorPick { PICK_NONE = 0, PICK_NAME, PICK_KEEP };
 struct IncubatorState {
     int page = 0;                 // 0 the flasks, 1 the jars
     int sel = 0, field = 1;       // the flask, the medium's field (0 the cell .. 4 the salt)
@@ -152,6 +182,13 @@ struct IncubatorState {
     int choiceSel = 0, choiceTop = 0;
     std::vector<IncubatorChoice> choices;
     ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
+    bool typing = false; std::string typed;   // R-435: the flask's warmth being typed (its digits) and what is typed so far
+    // R-440, R-442: what N names (each species, a strain) or K keeps (each of two alone, both) of the flask chosen, from rows over its page; R-441:
+    // the chooser's tab last shown (0 the vials, 1 the cultures)
+    int pick = PICK_NONE, pickSel = 0;
+    std::vector<std::string> pickLines, pickKeys;
+    std::vector<char> pickStrain;
+    int lastTab = 0;
 };
 // Z-06: the sequencer (game/sequencer.cpp): a species seen in a vial or a flask's read in SEQUENCE_S on the lab's clock (saved: what is on it,
 // when its reading began, whether its result was told), its screen's chooser; made again from those: its lineage, its genome's length, its
@@ -172,6 +209,7 @@ struct SequencerState {
     std::string name, world, mark;
     std::vector<std::string> result;
     ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
+    int lastTab = 0;              // R-441: its tab last shown
 };
 // the tree of kin's screen (game/tree_screen.cpp): every species sequenced and the ship's own, a leaf each in the tree's order (home's genesis
 // first, then by genesis, deep branch, a kin cell's boxes, the system's line, the world, its comb), the common ancestor of each with the one
@@ -200,8 +238,19 @@ struct KeptCulture {
     int folder = 0;
     double t = 0;
     int plan = -1;
+    // B-441: grown on its partner's gift (alone in its medium it starves): kept with it, staged and put in with it; R-440: a pair kept by hand
+    bool paired = false; FlaskSpecies partner;
+    int partnerPlan = -1;   // its plan, looked up once (the list's words)
+};
+// R-440: a culture kept by hand (K on the microscope's slide or a flask), a copy: what is kept (one species, or a pair), the folder chooser's row
+// (UNSORTED, the explorer's folders, A NEW FOLDER) over the screen it was asked on; `pending` while a new folder's name is typed for it
+struct KeepPick {
+    bool open = false, pending = false;
+    KeptCulture what;
+    int sel = 0;
 };
 struct CultureFolder { int id = 0; std::string name; };
+bool sameCulture(const KeptCulture& a, const KeptCulture& b);   // R-440: one species alone, or the same two either way round (lab_lists.cpp)
 struct LabState {
     double clock = 0;             // the lab's clock (s): real seconds while the game simulates, saved
     Flask flasks[INCUBATOR_FLASKS];

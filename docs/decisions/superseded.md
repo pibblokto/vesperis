@@ -171,6 +171,10 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   [Z-03]; replaced by [R-432]
 - E opens the microscope on the cold store's vials; Enter puts one on the stage, Backspace empties it (its place freed); Esc from the
   slide to the vials, then aboard [Z-04]; replaced by [R-432]
+- A turning cell answers within its reach and the share that makes a crowd a cell deep; the field's U-turns alternate their side (their
+  steps cancel) [Z-04]; replaced by [R-438]
+- Spores, cysts, the inactive and microcolonies are still (the jiggle); a stressed kind acts from where it is and ends still in its form
+  [Z-04]; replaced by [R-438]
 
 ## The harness and the proof
 
@@ -364,5 +368,6 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [R-430]: log/7-1.5.0.md
 [R-431]: log/7-1.5.0.md
 [R-432]: log/7-1.5.0.md
+[R-438]: log/7-1.5.0.md
 [Z-03]: log/7-1.5.0.md
 [Z-04]: log/7-1.5.0.md

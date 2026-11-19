@@ -567,20 +567,27 @@ void keysRecording(Tour& t) { t.keys("SPACE SPACE HOME END RIGHT LEFT DOWN UP PG
 void keysInstruments(Tour& t) { t.keys("DOWN UP ENTER,DOWN,UP,LEFT,RIGHT,1,2,9,0,ENTER,SPACE,ESC"); }
 void keysDrones(Tour& t) { t.keys("DOWN UP ENTER"); }
 void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
-// the flasks: down to the culture, the medium's fields and their changes (ten degrees with Shift), as its world, a fresh broth, a name refused
-// (no strain yet); up to the empty flask, Enter (the chooser; R-432: its folders), Enter (the first folder) and Enter (put in), Enter (a second:
-// the chooser) and Esc; Tab the jars, Enter (the chooser of wet silt, or its refusal) and Esc, Tab back; Backspace empties the second flask
-void keysIncubator(Tour& t) { t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N UP ENTER ENTER ENTER ENTER ESC TAB ENTER ESC TAB DOWN BACKSPACE"); }
+// the flasks: down to the culture, the medium's fields and their changes (ten degrees with Shift), as its world, a fresh broth, its organism's
+// name begun and left (R-442: N, Esc); up to the empty flask, Enter (the chooser; R-432: its folders), Enter (the first folder) and Enter (put
+// in), Enter (a second: the chooser), Tab (R-441: the cultures) and Esc; R-435: its warmth typed (37, then 150 refused and Esc); R-440: a copy
+// kept in a new folder (K, N, its name, Enter); Tab the jars, Enter (the chooser of wet silt, or its refusal) and Esc, Tab back; Backspace
+// empties the second flask
+void keysIncubator(Tour& t) {
+    t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N,ESC UP ENTER ENTER ENTER ENTER TAB ESC 3 7 ENTER 1 5 0 ENTER ESC K,N,A,B,ENTER TAB ENTER ESC TAB "
+           "DOWN BACKSPACE");
+}
 // Z-07: the catalogue: a species down, its sheet (Enter), the next species and back on it, the next way of seeing, back to the list; by kin and
 // by world again; a name typed (N) and the list again
 void keysCatalogue(Tour& t) { t.keys("DOWN UP PGDN PGUP ENTER,DOWN,UP,V,V,ESC TAB TAB N,A,B,ENTER"); }
 // R-432: the vials' worlds (two vials of two worlds), the first world's vials, its vial on the stage: each way of seeing (a drop's section
-// refused), the next and the one before, the zoom, the focus, the stage moved, a cell tracked and let go, the four things done to the slide (on
-// and off, or turned), the sheet, a name typed, a micrograph; back to the world's vials (the state stays the microscope's, its pages its own),
-// the vial emptied (its world's folder gone with it); Tab the cultures (R-433: a folder made, its name typed, renamed, removed; the flasks'
-// folder refused, empty), Tab back to the vials
+// refused), the next and the one before, the zoom, the focus, the stage moved, a cell tracked, kept (R-440: K, Enter) and let go, the four
+// things done to the slide (the light on and off, the magnet's three presses, R-438's warmth typed and the vial's again, a drop and the slide
+// rinsed), the sheet, a name typed, a micrograph; back to the world's vials (the state stays the microscope's, its pages its own), the vial
+// emptied (its world's folder gone with it); Tab the cultures (R-433: a folder made, its name typed, renamed, removed; the flasks' folder
+// refused, empty), Tab back to the vials
 void keysMicroscope(Tour& t) {
-    t.keys("DOWN UP ENTER DOWN UP ENTER 1 2 3 4 5 6 V SHIFT+V EQUAL EQUAL MINUS LBRACKET RBRACKET LEFT RIGHT UP DOWN ENTER ENTER L L M M H H F TAB TAB N,A,B,ENTER P ESC "
+    t.keys("DOWN UP ENTER DOWN UP ENTER 1 2 3 4 5 6 V SHIFT+V EQUAL EQUAL MINUS LBRACKET RBRACKET LEFT RIGHT UP DOWN ENTER K ENTER ENTER L L M M M H 4 0 ENTER SHIFT+H F F TAB TAB "
+           "N,A,B,ENTER P ESC "
            "BACKSPACE TAB N,A,B,ENTER R,C,ENTER BACKSPACE DOWN ENTER TAB");
 }
 

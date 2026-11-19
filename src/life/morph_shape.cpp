@@ -275,8 +275,9 @@ double motionRadius(const Morph& m) {
     }
 }
 
-Pose poseAt(const Morph& m, const Specimen& sp, double t) {
+Pose poseAt(const Morph& m, const Specimen& sp, double tSlide) {
     Pose P; P.x = sp.x; P.y = sp.y; P.angle = sp.angle;
+    const double t = sp.clock >= 0 ? sp.clock : tSlide;   // R-438: its moves by its own clock (its kind's pace), its jiggle by the slide's
     const uint64_t h = mix64(sp.seed ^ 0x5EED0F7E57ULL);
     const double R = motionRadius(m) * sp.wander, body = std::max(m.lengthUm, m.widthUm);
     const bool drift = sp.vx != 0 || sp.vy != 0;
@@ -332,8 +333,8 @@ Pose poseAt(const Morph& m, const Specimen& sp, double t) {
         }
         default: {   // Brownian: a jiggle of its place and its heading, the smaller the more
             const double a = 0.06 + 0.25 / std::sqrt(std::max(0.2, body));
-            P.x += a * smoothNoise(h, t, 6.0); P.y += a * smoothNoise(h ^ 0x77ULL, t, 6.0);
-            P.angle = sp.angle + (body < 5 ? 0.12 : 0.02) * smoothNoise(h ^ 0x99ULL, t, 2.5);
+            P.x += a * smoothNoise(h, tSlide, 6.0); P.y += a * smoothNoise(h ^ 0x77ULL, tSlide, 6.0);
+            P.angle = sp.angle + (body < 5 ? 0.12 : 0.02) * smoothNoise(h ^ 0x99ULL, tSlide, 2.5);
         }
     }
     P.roll = t * (motion == MO_HELICAL ? 4.0 : (motion == MO_ROLLING ? 0.25 + m.speed / std::max(1.0, body) : 0.0)) + h01(h >> 3) * TAU;

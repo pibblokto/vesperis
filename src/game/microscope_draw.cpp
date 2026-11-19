@@ -1,7 +1,8 @@
 // Z-04: the microscope's picture (microscope.cpp; lab_state.h): a camera entered, the slide drawn by life/morph_draw in the framebuffer with every
 // bank the slide's (its way of seeing's ramps; neither the space view nor the cabin drawn), the mush as the scenes', the HUD on the canvas: its
-// camera's lines (the way and the magnification, the focus, the stage's warmth, the preparation, the field, the slide's clock), the crosshair
-// and the species under it, the spot and the food's drop, the scale bar; the cold store's list on its first page, a species' sheet on Tab
+// camera's lines (the way and the magnification, the focus, the preparation, the four things done: R-437, the stage's warmth, the light, the
+// food, the magnet; the slide's clock), the crosshair and the species under it, the spot and the food's drop named where they lie (the food's
+// scent spreading), the magnet beside the view with its field's lines a while, the scale bar; the lists on its first page, a sheet on Tab
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -38,7 +39,7 @@ void Game::renderMicroscope() {
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0, settings.dither);
     if (!slide) renderMicroscopeList();
-    else if (!photoMode) { renderMicroscopeHUD(); if (scope.sheet) renderMicroscopeSheet(); }
+    else if (!photoMode) { renderMicroscopeHUD(); if (scope.sheet) renderMicroscopeSheet(); renderKeepPick(scopeColour()); }   // R-440: K's folders
     drawCommonHUD(false);   // the status; no warp's line (the slide runs on real seconds, its column there)
 }
 
@@ -53,22 +54,39 @@ void Game::renderMicroscopeHUD() {
     drawTextShadow(canvas, 12, 18, fmt("%s X%s", WAY_WORDS[scope.seeing], thousands(std::round(mag)).c_str()).c_str(), HUD_CYAN, HUD_SHADOW);
     if (scope.seeing != WS_ELECTRON && scope.seeing != WS_SECTION) drawTextShadow(canvas, 12, 26, fmt("FOCUS %.1f UM", scope.focus).c_str(), fd, HUD_SHADOW);
     const SlideState st = slideStateAt(scope.mount, scope.events, scope.t);
-    {   // the stage's warmth (amber while it changes), the preparation, the magnet's field
-        const bool moving = std::fabs(st.stageC - (st.warming ? scope.mount.stageC + 30 : scope.mount.stageC)) > 0.5;
-        std::string s = fmt("STAGE %.0f C", st.stageC) + (st.warming ? (moving ? " WARMING" : " WARM") : (moving ? " COOLING" : ""));
-        drawTextShadow(canvas, 12, 34, s.c_str(), st.warming || moving ? HUD_AMBER : fd, HUD_SHADOW);
+    const uint32_t lightCol = rgb(255, 240, 170), north = rgb(225, 80, 70), south = rgb(110, 150, 235);
+    const bool fieldRight = std::cos(st.field) > 0;
+    {   // the preparation; R-437, the four things done, a line each: the stage's warmth (amber while it eases, is set off the vial's or typed), the
+        // light, the food, the magnet (its field's way)
         const int p = scope.mount.prep;
         const std::string prep = scope.mount.section ? "A THIN SECTION OF THE ROCK" :
                                  (p > 0 ? fmt("CONCENTRATED X%s", thousands(std::pow(10.0, p)).c_str()) : (p < 0 ? fmt("DILUTED 1:%s", thousands(std::pow(10.0, -p)).c_str()) : "A DROP AS TAKEN"));
-        drawTextShadow(canvas, 12, 42, prep.c_str(), fd, HUD_SHADOW);
-        if (st.magnet) {
-            const int ax = 12 + textWidth("FIELD") + 14, ay = 53, r = 7;
-            const double c = std::cos(st.field), sn = std::sin(st.field);
-            const int bx = ax + (int)std::lround(c * r), by = ay + (int)std::lround(sn * r);
-            drawLineRGB(canvas, ax - (int)std::lround(c * r), ay - (int)std::lround(sn * r), bx, by, HUD_AMBER);
-            for (int k : {-1, 1}) drawLineRGB(canvas, bx, by, bx - (int)std::lround(std::cos(st.field + k * 0.5) * 4), by - (int)std::lround(std::sin(st.field + k * 0.5) * 4), HUD_AMBER);
-            drawTextShadow(canvas, 12, 50, "FIELD", fd, HUD_SHADOW);
-        }
+        drawTextShadow(canvas, 12, 34, prep.c_str(), fd, HUD_SHADOW);
+        const bool easing = std::fabs(st.stageC - st.setC) > 0.5, setOff = std::fabs(st.setC - scope.mount.stageC) >= 0.05;
+        std::string s = fmt("STAGE %.0f C", st.stageC);
+        if (scope.typing) s += " > " + scope.typed + "_ C";
+        else if (easing) s += fmt(" > %.0f C %s", st.setC, st.setC > st.stageC ? "WARMING" : "COOLING");
+        drawTextShadow(canvas, 12, 42, s.c_str(), scope.typing || easing || setOff ? HUD_AMBER : fd, HUD_SHADOW);
+        drawTextShadow(canvas, 12, 50, st.spot ? "LIGHT  A SPOT ON THE SLIDE" : "LIGHT  -", st.spot ? lightCol : fd, HUD_SHADOW);
+        drawTextShadow(canvas, 12, 58, st.food ? "FOOD   A DROP OF BROTH" : "FOOD   -", st.food ? HUD_GREEN : fd, HUD_SHADOW);
+        drawTextShadow(canvas, 12, 66, st.magnet ? (fieldRight ? "MAGNET FIELD TO THE RIGHT" : "MAGNET FIELD TO THE LEFT") : "MAGNET -", st.magnet ? HUD_AMBER : fd, HUD_SHADOW);
+    }
+    if (st.magnet && scope.seeing != WS_ELECTRON) {   // R-436: the magnet beside the view, the pole facing the slide (N: its field away from it,
+        // to the right; turned, S: toward it, to the left), its field's lines across the view a while after it is put or turned
+        const int y = UH / 2, x0 = 2, xm = 12, x1 = 22;
+        fillRectRGB(canvas, x0, y - 4, xm - 1, y + 4, fieldRight ? south : north);
+        fillRectRGB(canvas, xm, y - 4, x1, y + 4, fieldRight ? north : south);
+        drawText(canvas, x0 + 2, y - 3, fieldRight ? "S" : "N", HUD_WHITE);
+        drawText(canvas, xm + 2, y - 3, fieldRight ? "N" : "S", HUD_WHITE);
+        if (scope.t - scope.fieldShown < 4)
+            for (int k = -2; k <= 2; k++) {
+                const int ly = y + k * 34;
+                for (int x = 30; x + 12 < UW - 12; x += 24) {
+                    drawLineRGB(canvas, x, ly, x + 12, ly, HUD_AMBER);
+                    const int hx = fieldRight ? x + 12 : x, dir = fieldRight ? -1 : 1;
+                    drawLineRGB(canvas, hx, ly, hx + dir * 3, ly - 2, HUD_AMBER); drawLineRGB(canvas, hx, ly, hx + dir * 3, ly + 2, HUD_AMBER);
+                }
+            }
     }
     {   // the right: the epoch, the vial's world and its line, the slide's clock
         const std::string ep = epocString();
@@ -81,17 +99,23 @@ void Game::renderMicroscopeHUD() {
     }
     // the spot of light and the food's drop where they lie (the light ways)
     if (scope.seeing != WS_ELECTRON) {
-        auto ring = [&](double x, double y, double r, uint32_t col) {
+        // a ring (every `gap` of its 32 arcs drawn), R-437: named beside it
+        auto ring = [&](double x, double y, double r, uint32_t col, int gap, const char* name) {
             const double sx = UW * 0.5 + (x - scope.cx) / um, sy = UH * 0.5 + (y - scope.cy) / um, sr = std::max(3.0, r / um);
             if (sx < -sr || sx > UW + sr || sy < -sr || sy > UH + sr) return;
-            for (int k = 0; k < 32; k += 2) {
+            for (int k = 0; k < 32; k += gap) {
                 const double a0 = k * TAU / 32, a1 = (k + 1) * TAU / 32;
                 drawLineRGB(canvas, (int)std::lround(sx + std::cos(a0) * sr), (int)std::lround(sy + std::sin(a0) * sr), (int)std::lround(sx + std::cos(a1) * sr),
                             (int)std::lround(sy + std::sin(a1) * sr), col);
             }
+            if (name) drawTextShadow(canvas, (int)std::lround(sx + sr * 0.72) + 2, (int)std::lround(sy - sr * 0.72) - 9, name, col, HUD_SHADOW);
         };
-        if (st.spot) ring(st.spotX, st.spotY, st.spotR, rgb(255, 240, 170));
-        if (st.food) ring(st.foodX, st.foodY, st.foodR, HUD_GREEN);
+        if (st.spot) ring(st.spotX, st.spotY, st.spotR, lightCol, 2, "LIGHT");
+        if (st.food) {
+            ring(st.foodX, st.foodY, st.foodR, HUD_GREEN, 2, "FOOD");
+            const double front = slideScentUm(scope.t - st.foodT);   // its scent's front, spreading
+            if (front > st.foodR * 1.5 && front / um < UW) ring(st.foodX, st.foodY, front, rgb(70, 150, 90), 4, nullptr);
+        }
     }
     {   // the crosshair, cyan while tracking
         const int cx = UW / 2, cy = UH / 2;
@@ -117,9 +141,12 @@ void Game::renderMicroscopeHUD() {
             drawTextShadow(canvas, UW / 2 - textWidth(form.c_str()) / 2, UH - 34, form.c_str(), col, HUD_SHADOW);
         }
     }
-    if (realTime >= statusUntil) {   // the keys, two lines in turn (the controller's are its Y page)
-        const char* keys = scope.tracking ? "ENTER LETS IT GO  TAB ITS SHEET  N NAMES IT"
-                                          : (std::fmod(realTime, 8.0) < 4 ? "1-6 WAYS  +/- ZOOM  [ ] FOCUS  ENTER TRACKS" : "L LIGHT  M MAGNET  H WARMTH  F FOOD  TAB SHEET");
+    if (scope.typing) drawTextCentered(canvas, UW / 2, UH - 10, fmt("TYPE THE WARMTH  ENTER SETS IT  ESC KEEPS %.0f C", st.setC).c_str(), HUD_AMBER);   // R-438
+    else if (realTime >= statusUntil) {   // the keys, two lines in turn (the controller's are its Y page)
+        const int phase = (int)(std::fmod(realTime, sp >= 0 ? 12.0 : 8.0) / 4);   // R-440: a third with a cell under the crosshair, K
+        const char* keys = scope.tracking ? "ENTER LETS IT GO  TAB SHEET  N NAMES  K KEEPS IT"
+                                          : (phase == 0 ? "1-6 WAYS  +/- ZOOM  [ ] FOCUS  ENTER TRACKS"
+                                                        : (phase == 1 ? "L LIGHT  M MAGNET  H WARMTH  F FOOD  TAB SHEET" : "TAB ITS SHEET  N NAMES IT  K KEEPS IT"));
         drawTextCentered(canvas, UW / 2, UH - 10, keys, fd);
     }
 }
@@ -175,13 +202,13 @@ void Game::renderMicroscopeList() {
         if (20 + textWidth(line.c_str()) + 12 <= UW - 14 - textWidth(right.c_str())) drawText(canvas, UW - 14 - textWidth(right.c_str()), y, right.c_str(), rc);   // never cut
     }
     const char* keys = f.id == FOLDER_WORLD ? "ENTER ON THE STAGE  BACKSPACE EMPTIES IT  ESC BACK"
-                     : (f.id == FOLDER_FLASKS ? "ENTER A DROP OF IT ON THE STAGE  ESC BACK" : "ENTER ON THE STAGE  M MOVES  BACKSPACE DISCARDS");
+                     : (f.id == FOLDER_FLASKS ? "ENTER A DROP OF IT ON THE STAGE  ESC BACK" : "ENTER STAGE  M MOVES  C COPIES  BACKSPACE DISCARDS");
     drawTextCentered(canvas, UW / 2, bottom - 10, keys, HUD_DIM);
     if (!scope.moving) return;
     // R-433: M's chooser over the list: UNSORTED and the explorer's folders, the culture's own marked
     const int n2 = 1 + (int)lab.folders.size(), x0 = 70, x1 = UW - 70, h = std::min(10, n2) * rowH + 30, y0 = (UH - h) / 2;
     drawPanel(canvas, x0, y0, x1, y0 + h, rgb(0, 0, 0), 235, scopeColour());
-    drawText(canvas, x0 + 8, y0 + 6, "MOVE IT TO:", scopeColour());
+    drawText(canvas, x0 + 8, y0 + 6, scope.copying ? "COPY IT TO:" : "MOVE IT TO:", scopeColour());
     scope.moveSel = clampi(scope.moveSel, 0, n2 - 1);
     const int first = std::max(0, std::min(scope.moveSel - 5, n2 - 10));
     const int kf = lab.kept[f.rows[scope.sel]].folder;
@@ -247,7 +274,7 @@ void Game::renderMicroscopeSheet() {
         const uint32_t col = i == 0 ? HUD_WHITE : (i == 1 ? HUD_DIM : (lines[i].rfind("MORE IN:", 0) == 0 ? HUD_DIM : HUD_GREEN));
         for (const std::string& w : wrapText(lines[i], 26)) out.push_back({w, col});
     }
-    const int x0 = UW - 172, y0 = 44, h = (int)out.size() * 9 + 10;
+    const int h = (int)out.size() * 9 + 10, x0 = UW - 172, y0 = std::max(14, std::min(44, UH - 8 - h));   // R-437: its answers may lengthen it
     drawPanel(canvas, x0, y0, UW - 8, y0 + h, rgb(0, 0, 0), 205, scopeColour());
     for (size_t i = 0; i < out.size(); i++) drawText(canvas, x0 + 6, y0 + 6 + (int)i * 9, out[i].first.c_str(), out[i].second);
 }

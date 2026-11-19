@@ -125,7 +125,7 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_PERIOD) && textBuffer.size() < 28) textBuffer += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !textBuffer.empty()) textBuffer.pop_back();
     if (textKind == TEXT_MARK && in.wasPressed(KEY_TAB)) { textMarkKind = (textMarkKind + 1) % (MARK_PLACE + 1); audio.beep = BEEP_UI; }   // R-408: what the mark marks
-    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); textMark = -1; textGalaxyMark = -1; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); textMark = -1; textGalaxyMark = -1; keep.pending = false; return; }
     if (!in.wasPressed(KEY_ENTER)) return;
     std::string text = textBuffer;
     while (!text.empty() && text.back() == ' ') text.pop_back();
@@ -168,9 +168,11 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             logEvent("NOTE", fmt("NAMED A STORM %s", text.c_str()));
             break;
         }
-        case TEXT_SPECIES: {   // Z-04: the species under the microscope's crosshair
+        case TEXT_SPECIES: {   // Z-04: the species under the microscope's crosshair; R-442: a flask's
             if (text.empty() || textSpeciesKey.empty()) return;
             guide.names[textSpeciesKey] = text; guide.save(guidePath);
+            for (int i = 0; i < INCUBATOR_FLASKS; i++) lab.flasks[i].made = false;   // the flasks' lines say its name
+            flaskMadeAll();
             status(fmt("THE SPECIES IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A SPECIES %s", text.c_str()));
             break;
@@ -185,9 +187,12 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             break;
         }
         case TEXT_FOLDER: {   // R-433: a folder of the culture collection made (and chosen on the microscope's cultures) or renamed
+            const bool keeping = keep.pending;   // R-440: made for a copy K keeps, kept in it
+            keep.pending = false;
             if (text.empty()) return;
             if (textFolderId >= 0) { folderRename(textFolderId, text); break; }
             const int id = folderNew(text);
+            if (id >= 0 && keeping) { keptAdd(keep.what, id); break; }
             for (size_t f = 0; f < lab.folders.size(); f++) if (id >= 0 && lab.folders[f].id == id) { scope.tab = 1; scope.open = false; scope.folder = 2 + (int)f; }
             break;
         }

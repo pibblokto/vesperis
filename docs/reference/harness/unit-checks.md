@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-47 groups, 463 checks in their order; a group's heading gives its file, its function, the render scale it
+49 groups, 473 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -605,6 +605,22 @@ starts at and its count.
 - lab: mirrored species ignore each other in a flask (Z-06)
 - lab: the sequencer told at its reading's end; home's species at the tree's root (Z-06)
 - lab: a friend's sheets lent, in cyan and no count; the record's lines byte-stable (Z-07)
+
+## experiments (`unit_lab_answers.cpp`, `unitLabAnswers`, 1x): 5
+
+- experiments: the stage set to a warmth: a kind still out of its range moves in it, at its warmth's pace, stressed past its top, still in the cold (R-438)
+- experiments: every cell within its reach answers: into the light, to the food; the dark's flee the light; lit light-feeders draw the eaters (R-438)
+- experiments: the microscope's keys: the magnet's three presses, the food rinsed, the stage's warmth typed and kept; what answers told and kept (R-436, R-437)
+- experiments: the incubator's warmth typed: set as one change, refused past its cell's range, kept by Esc, below zero (R-435)
+- experiments: a culture grown on its partner kept with it: staged and put in together, saved, the pair kept once; alone on the stage its cells live (B-441)
+
+## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 5
+
+- incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)
+- incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)
+- incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too, the jars' one list (R-441)
+- incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
+- incubator: the jars made clear: bands in their places, none over another, an eater that needs air at the air's edge; kept on the sheets; a jar's settling said once (R-439)
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

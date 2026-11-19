@@ -313,8 +313,17 @@ public:
     bool testScopeStageKept(int k) { return microscopeStageKept(k); }
     bool testFlaskPutKept(int flask, int k) { IncubatorChoice c; c.kept = k; return flaskPut(flask, c); }
     void testFlaskEmpty(int i) { flaskEmpty(i); }
+    // R-435 to R-438: the slide's told answers forgotten (a frame with no history: the closed-form check's), the lines waiting; the choosers made
+    void testScopeFresh() { scope.told.clear(); scope.said.clear(); for (int d = 0; d < SD_COUNT; d++) { scope.tried[d] = -1; scope.answered[d] = scope.judged[d] = false; } }
+    std::vector<std::string>& testScopeSaid() { return scope.said; }
     std::vector<IncubatorChoice>& testIncubatorChoices(int page) { incub.page = page; incubatorChoices(); return incub.choices; }
     std::vector<SequencerChoice>& testSequencerChoices() { sequencerChoices(); return lab.seq.choices; }
+    // B-442, R-439 to R-442: K's folder chooser (what it keeps), a kept culture copied to a folder, the jars page's bands to their sheets, any
+    // species' sheet lines
+    KeepPick& testKeep() { return keep; }
+    void testKeptCopy(int k, int id) { keptCopy(k, id); }
+    void testJarSeen(int j) { jarSeen(j); }
+    std::vector<std::string> testSheetLinesOf(const std::string& key, const Microbe& s, const Morph& m, const MicrobeSheet& seen) const { return sheetLinesOf(key, s, m, "A WORLD", seen); }
     // Z-06: the sequencer: a species put on it (its world and index), its save line, its result told on the lab's clock (the skip hook's); the tree
     // built from the guide, its leaves, a leaf's nearest kin; the decoder's world opened (a watermark among its records)
     bool testSeqPut(int64_t sx, int64_t sy, int64_t sz, int body, int species) { FlaskSpecies w; w.sx = sx; w.sy = sy; w.sz = sz; w.body = body; w.species = species; return sequencerPut(w); }

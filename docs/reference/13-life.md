@@ -290,18 +290,34 @@ cell thicker than the drop pressed under the cover. Some of a colony former's ar
 look: the most crowded kind's first cell (a section's first fossil), its way (`seeingsFor`, never the electron's), the magnification
 that holds its body in a sixth of the view's height, its depth in focus.
 
-**The events** (`SlideEvent`, on the slide's clock): `L` a spot of light at the crosshair (a ring on the HUD, the field brighter in
-it), `M` the magnet beside the stage and then turned half round, `H` the stage warmed 30 C over the vial's (eased in and out, 12 s),
-`F` a drop of food at the crosshair. `slideStateAt` folds them; `mountSpecimens` gives the specimens in a view at a time, closed-form:
-a copy that turns to light or food (`TX_LIGHT`, `TX_FOOD`), alive, moving, within its reach (four radii of the spot, or what it swims
-in 25 s, to twelve) and of the share that makes a crowd a cell deep (`answering`) runs to a point of it at its speed, its wander
-narrowed as it goes (`Specimen::wander`, its heading turned by its drift `vx`, `vy`); a magnetotactic one swims along the field from
-the magnet's coming, a U-turn of 1.6 s at each turn (its side alternating, so its sideways steps cancel); a kind stressed when the
-warmth passes its top (+2 C) does its act from where it is (2-12 s apart) and ends still in its form. A spore, a cyst, a cell that
-does not grow at the warmth, a microcolony are still (`Specimen::still`: the jiggle alone, the beat stopped). The depth's blur
-(`Specimen::blurUm`: past half the depth of field, `depthOfField(mag)`: 25 um at x40, about one at x1,000) spreads a cell's edges and
-fades it; a copy whose own extent (its wander placed) misses the view is left out; past 3,000 of a kind in a view an even share of its
-copies is drawn. Under the electron the slide's clock stops (a fixed sample).
+**The events** (`SlideEvent`, on the slide's clock): `L` a spot of light at the crosshair (named LIGHT on the HUD, the field brighter in it;
+`L` again takes it away), `M` the magnet beside the stage, turned half round, taken away (R-436: drawn at the view's left edge, its pole
+facing the slide lit, its field's lines across the view four seconds after each press), `H` the stage's warmth typed (R-435: within the
+drop's liquid range, its chemistry's cell's; Shift+H the vial's again; eased to it, 12 s), `F` a drop of broth at the crosshair (named
+FOOD, its scent's front spreading as a fainter ring, `slideScentUm`; `F` again rinses the slide). `slideStateAt` folds them;
+`mountSpecimens` gives the specimens in a view at a time, closed-form. R-438: a kind lives on the slide where its drop suits it (`lives`:
+a culture's verdict, `Held::alive`, else the vial's salt) and moves while the stage's warmth is in its range, at its pace there (its
+cardinal curve's, `cardinalRate`, against the vial's warmth's: its species' speed is its speed there; 0.2 to 2), by its own clock
+(`PaceClock`: the slide's till the stage is set, then a table through each easing; `Specimen::clock` carries it to the pose). Every copy of
+a kind that turns to light or food (`TX_LIGHT`, `TX_FOOD`), within its reach (four radii of the spot, or what it swims in 25 s, to twelve),
+runs to a point of the crowd it joins (packed to twice the spot's radius) as it senses it: the light at once, the food as its scent's front
+reaches it (a diffusion of 1,000 um2/s); its wander narrowed as it goes (`Specimen::wander`, its heading turned by its drift `vx`, `vy`). A
+swimmer of the dark (of soil, silt, a vent, rock or a plume, no light-feeder) inside a spot swims out past its edge; an eater beside a
+spot on living light-feeders is drawn to them from ten seconds on (Engelmann 1882). A magnetotactic one answers the field alone: it swims
+along it from the magnet's coming, a U-turn of 1.6 s at each turn (its side alternating, so its sideways steps cancel), let go when the
+magnet is taken away. A kind whose warmth passes its top (+2 C) going up, or is set warmer still over it, does its act from where it is
+(2-12 s apart), moving or still, and ends still in its form. A spore, a cyst, a cell out of its range of warmth, a microcolony are still
+(`Specimen::still`: the jiggle alone, the beat stopped). The depth's blur (`Specimen::blurUm`: past half the depth of field,
+`depthOfField(mag)`: 25 um at x40, about one at x1,000) spreads a cell's edges and fades it; a copy whose own extent (its wander placed)
+misses the view is left out; past 3,000 of a kind in a view an even share of its copies is drawn. Under the electron the slide's clock
+stops (a fixed sample).
+
+**What it answered** (R-437, `slideAnswer`: a kind's bits at a time): what each thing done is for is said as it is done ("A SPOT OF LIGHT
+- A LIGHT-FEEDER SWIMS INTO IT"); each kind in view is told once a slide as it answers (into the light, out of it, to the food, round
+the lit cells, along the field; moving at a warmth, stopped in the cold or the heat, its stress's act), its state as found not said, a
+change of it said; an experiment no kind in view answered in its while (15 s; the food's while its scent crossing half the view, to 45 s;
+the warmth's once the stage settles) is said ("NOTHING IN VIEW ANSWERS THE LIGHT"; the magnet's with "MAGNETOTACTIC CELLS LIVE IN SILT AND
+MUD"), the moving kinds in view not answering it kept so. The lines wait their turn (`MicroscopeState::said`), four seconds each.
 
 **The view** (`MicroscopeState`, `lab_state.h`): 1-6 the ways (V the next; SECTION a section's only), `+`/`-`, the wheel or Page
 Up/Down the zoom (x40, x100, x200, x400, x1,000, x2,000, x4,000; the electron x200 to x40,000), its shown magnification eased; `[` and
@@ -319,8 +335,9 @@ living slide, its flagella in a dark field at 8 pixels, its DNA in the glow at 6
 after `microbes 1`). A form's first sight is said (`A FORM NOT SEEN BEFORE: A CURVED ROD, 2.4 UM BY 0.6 UM`) and logged (`FORM`).
 Tab shows the sheet of the species under the crosshair: its name (UNNAMED, or the explorer's: `N`, a text entry of `TEXT_SPECIES`) and
 world (or UNKNOWN), then only what was seen (a spore's coat, a fossil's outline, or the cell's form, colour, motion, flagella, DNA and
-wall, the forms it was seen as) and the ways that would show more. `P` takes a micrograph to the gallery (the photograph's key, its
-caption the way, the magnification, the species and the vial).
+wall, the forms it was seen as; R-437, what it answered: TO LIGHT, TO FOOD, TO THE FIELD, or NO ANSWER SEEN, and WARMTH, the stage's
+warmths it was seen moving and still at and its stress's, the guide's `answers` line after the sheets) and the ways that would show more.
+`P` takes a micrograph to the gallery (the photograph's key, its caption the way, the magnification, the species and the vial).
 
 ## The incubator (`life/cultures.h`, `life/jars.h`, `game/incubator.cpp`)
 
@@ -335,7 +352,13 @@ its warmth; its light, dark, white, red or blue; its energy, a substrate or the 
 (`CultureEvent`: started, the medium changed, a fresh broth, a second added, a strain) and AS ITS WORLD (`mediumOfPlace`: the vial's
 chemistry's cell, the warmth read at the take, the sun's light where it reached the place, the place's energy, a spring's sulphide, a
 plume's hydrogen, a rust world's iron, else the broth; its salt), the first guess a species goes in at. Enter puts in a species seen in a
-vial (only what the microscope showed of it: never a fossil or a protocell) or a flask's culture; on a culture a second.
+vial (only what the microscope showed of it: never a fossil or a protocell), a flask's culture or a kept one; on a culture a second. The
+chooser (R-432's folders) has two tabs (R-441): THE VIALS, the raw samples by world, and THE CULTURES, the flasks and the collection's
+folders; Tab between them, the chooser opening on the one last shown (the sequencer's alike, each species once among the vials and once
+in each of the cultures' folders). A species with no name is its look in every row (B-442, `flaskSpeciesWords`): a flask "A ROD + A
+SPHERE" (its first and a plus where both do not fit), a chooser's row sized ("A ROD, 2.5 UM BY 1.2 UM - FROM ACID FROM A LAKE"), two
+rows of a folder alike its forms' colour and motion, then a number (`apartRows`). N names a flask's organism (R-442): of one at once, of
+two (or a strain) the one chosen first; the name is the guide's, the microscope's.
 
 **A culture** is closed-form from its events (`runCulture` lays its laws out as segments, `cultureAt` reads one): a lag (Baranyi and
 Roberts 1994), the logistic rise at the medium's rate (the species' cardinal temperatures, Rosso et al. 1993; its energy; a light-feeder's
@@ -356,29 +379,44 @@ the loser falls once the winner holds half its crowd). The screen says the pair 
 **Strains:** a culture growing at its range's edge (its warmth past half its rate, a salt one step out, a light its pigment takes poorly)
 counts its generations; at twelve a strain arises (`STRAIN_GENERATIONS`, Lenski and Travisano 1994): its highest warmth up, its lowest
 down or its cells a quarter bigger (Atkinson 1994), its salt taken in, or its pigment the light's. The clock passing its time appends the
-event (at that time) and the guide's `strain` line (`<body>/M<index>/S<n>`, its parent and its move); N names it (`TEXT_STRAIN`).
+event (at that time) and the guide's `strain` line (`<body>/M<index>/S<n>`, its parent and its move); N names it (`TEXT_STRAIN`: the
+strain's row among N's).
 
 **The screen:** the flasks (each its species, in its stage's colour), the chosen one's curve on a log scale since it was started (a
 pair's two, spores dotted), its species' stages and pace, its pair, what it came to (woken, a strain, the glow), its medium (the field
-chosen lit: Left and Right, `+`/`-`, Shift ten degrees; W as its world again; F a hundredth into fresh broth, a serial transfer;
-Backspace empties it); Tab the jars. The microscope's list holds the flasks after the vials: Enter puts a drop of the culture as it is on
-the stage (its cells, a quarter of them dividing while it grows, its spores, its lysed, the gatherers' slugs and stalks). What the curve
-shows of a species goes to its sheet (`MicrobeSheet::stages`, its quickest doubling seen and the medium of it: the sheet's `STAGES SEEN`
-and `GROWS` lines). In the room the flasks' liquids take their culture's tone (its pigment's, a broth's cloud), lit through by their light,
+chosen lit: Left and Right, `+`/`-`, Shift ten degrees; R-435, its warmth typed: a digit begins it, Enter sets it as one change within
+its cell's range, Esc keeps it; W as its world again; F a hundredth into fresh broth, a serial transfer; Backspace empties it); N names,
+K keeps a copy (the collection); Tab the jars. The microscope's list holds the flasks after the vials: Enter puts a drop of the culture
+as it is on the stage (its cells, a quarter of them dividing while it grows, its spores, its lysed, the gatherers' slugs and stalks).
+What the curve shows of a species goes to its sheet (`MicrobeSheet::stages`, its quickest doubling seen and the medium of it: the sheet's
+`STAGES SEEN` and `GROWS` lines). In the room the flasks' liquids take their culture's tone (its pigment's, a broth's cloud), lit through by their light,
 aglow with a crowd's own; their tones and the jars' are homes past the banks (`ShipBanks`' 32 to 47), dealt a free bank while in view.
 
 **The jars** (`jarRecipe`, `jarAt`): a vial of wet silt, a mat or soil in a column, a world's one (eight places): the silt settles in its
-first minutes and its living species come up in bands by what each lives on (the oxygen-making light-feeders at the top, the others of the
-light under them, the iron's rust, the sulphide's white, the deep's grey, the black of the anaerobes at the foot), each by its crowd,
-all in by twenty minutes (Winogradsky's column).
+first minutes and its living species come up in bands by what each lives on, each by its crowd, all in by twenty minutes (Winogradsky's
+column). R-439, a band's place (`JarLayer`, `jarLayerOf`), top to bottom: the oxygen-making light-feeders; the air's edge (the iron's rust
+and every other eater of a chemical that needs air, a methane-eater's grey); the light-feeders without air; the sulphide's white; the
+deep's grey (a chemical without air, a stone's grey lighter than the silt); the black of the dead's eaters without air at the foot. Each
+place's bands lie under the one before, never over another. The page numbers a band come in beside the glass (a bar in its colour, a
+dark one's lit) and names it under the list: its species' name, its look where seen (else AN UNSEEN KIND), what it lives on ("1 A PLATE
+COLONY: LIGHT, MAKES OXYGEN"); an empty place says what a jar does; its settling is said once ("THE JAR OF WET SILT HAS SETTLED - 2
+BANDS"). A band seen on the page goes to its species' sheet (`jarSeen`; `MicrobeSheet::jarLayer`, the guide's `jarband` line): "IN A JAR:
+AT THE TOP, LIVES ON LIGHT, MAKES OXYGEN".
 
 **The collection** (R-433, `game/lab_lists.cpp`): every species and strain a flask grows, kept frozen as labs keep their stocks. A
 species is kept once its curve passes its lag (`cultureStagesBy`'s GROWING), a strain as it arises (`keepCulture` from `updateLab`;
 the flask's `FT_KEPT` bits say so), each once, with the medium it grew in and its world's; emptying the flask keeps it. A kept
 culture is worked as a world's species: the microscope shows a drop of it growing (`microscopeStageKept`: a tenth of its crowd in that
-medium, more of it dividing), the incubator puts it in a flask in that medium, the sequencer reads its species. The explorer sorts it:
-UNSORTED, then the explorer's folders (N makes one, R renames it, M moves a culture, Backspace removes an empty folder or discards a
-culture). The save's `keptfolder` and `kept` lines.
+medium, more of it dividing), the incubator puts it in a flask in that medium, the sequencer reads its species. A kept culture is one
+species or a pair (R-440), a pair one entry either way round ("A ROD + A SPHERE"). B-441: a species that grew on its partner's gift
+(alone it does not grow in that medium, fed it does) is kept with that partner (`KeptCulture::paired`), staged and put in together; the
+pair once (a load merges two kept each way round). The explorer keeps by hand too (R-440, `keepOpen`, `keptAdd`): K on the microscope
+keeps the species under the crosshair alone, a copy picked out of the drop (a vial's in its place's medium, a culture's in its own); K on a
+flask its one species, or of two either alone or both; each into a folder chosen (UNSORTED, the explorer's, A NEW FOLDER: N, its name
+typed, the copy kept in it), never twice in a folder; the vial, the flask and the folder keep theirs. A fossil, a protocell and a dead
+culture are not kept. The explorer sorts them: UNSORTED, then the explorer's folders (N makes one, R renames it, M moves a culture, C
+copies it, Backspace removes an empty folder or discards a culture). The save's `keptfolder` and `kept` lines (a partner's six fields
+after its time).
 
 ## The genomes and the tree (`life/sequences.h`, `game/sequencer.cpp`, `game/tree_screen.cpp`, `peoples/made.h`)
 
