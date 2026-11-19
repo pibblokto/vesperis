@@ -70,10 +70,13 @@ const Lineage& Game::lineageOfKey(const std::string& key) {
     return tree.known[key] = L;
 }
 
-// the chooser's rows: each species seen in a cold store's vial (never a fossil or a protocell: no genome to read), then each flask's
+// the chooser's rows: each species seen in a cold store's vial (never a fossil or a protocell: no genome to read), then each flask's, then (R-433)
+// the collection's (a strain read as its species); R-432: in folders, a world's, the flasks', the collection's
 void Game::sequencerChoices() {
     SequencerState& Q = lab.seq;
     Q.choices.clear(); Q.choiceSel = 0; Q.choiceTop = 0;
+    Q.pages = ChooserPage();
+    std::vector<std::string> keys;
     LabSystems systems;
     std::set<std::string> listed;
     for (const Vial& V : coldStore) {
@@ -87,7 +90,7 @@ void Game::sequencerChoices() {
             if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM) || !listed.insert(key).second) continue;   // only what was seen of it, each once
             SequencerChoice c; c.who.sx = V.sx; c.who.sy = V.sy; c.who.sz = V.sz; c.who.body = V.body; c.who.species = H.species;
             c.line = flaskSpeciesName(c.who) + " - FROM " + V.name + ((it->second.seen & SEEN_KIN) ? " (READ)" : "");
-            Q.choices.push_back(c);
+            Q.choices.push_back(c); keys.push_back(Guide::bodyKey(V.sx, V.sy, V.sz, V.body));
         }
     }
     for (int f = 0; f < INCUBATOR_FLASKS; f++)
@@ -98,8 +101,19 @@ void Game::sequencerChoices() {
             const auto it = guide.microbes.find(key);
             SequencerChoice c; c.who = w;
             c.line = fmt("FLASK %d: ", f + 1) + flaskSpeciesName(w) + (it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "");
-            Q.choices.push_back(c);
+            Q.choices.push_back(c); keys.push_back("FLASKS");
         }
+    for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order
+        for (int k : F.id >= 0 ? F.rows : std::vector<int>()) {
+            FlaskSpecies w = lab.kept[k].who; w.strain = w.strainIn = 0;
+            const std::string key = flaskSpeciesKey(w);
+            if (!listed.insert(key).second) continue;
+            const auto it = guide.microbes.find(key);
+            SequencerChoice c; c.who = w;
+            c.line = keptName(k) + (it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "");
+            Q.choices.push_back(c); keys.push_back(keptFolderKey(k));
+        }
+    Q.pages.folders = chooserFolders(keys);
 }
 
 // what is on it made again (not saved): its lineage, its genome's length, its name and world, a made one's watermark (its letters drawn)
@@ -208,11 +222,10 @@ void Game::sequencerEnter() {
 
 void Game::updateSequencer(const Input& in, double dt, double realDt) {
     SequencerState& Q = lab.seq;
-    if (Q.choosing) {
-        const int n = (int)Q.choices.size();
-        if (in.wasPressed(KEY_ESCAPE) || n == 0) { Q.choosing = false; return; }
-        menuStep(in, Q.choiceSel, n);
-        if (enterKey(in)) { Q.choosing = false; sequencerPut(Q.choices[Q.choiceSel].who); }
+    if (Q.choosing) {   // R-432: its folders, then the rows of the one open
+        const int r = Q.choices.empty() ? -2 : chooserKeys(in, Q.pages, Q.choiceSel);
+        if (r == -2) { Q.choosing = false; return; }
+        if (r >= 0 && r < (int)Q.choices.size()) { Q.choosing = false; sequencerPut(Q.choices[r].who); }
         return;
     }
     if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
@@ -294,22 +307,20 @@ void Game::renderSequencer() {
         else drawText(canvas, 6, y, fmt("READING: %.0f SECONDS TO GO", std::ceil(std::max(0.0, Q.t0 + SEQUENCE_S - lab.clock))).c_str(), HUD_DIM);
     }
     drawTextCentered(canvas, UW / 2, UH - 12, "ENTER A SPECIES  BACKSPACE TAKES IT OFF  TAB THE TREE", HUD_DIM);
-    if (Q.choosing) {   // the chooser over it
-        const int n = (int)Q.choices.size(), rowsN = 14, x0 = 20, y0 = 30;
-        drawPanel(canvas, x0 - 6, y0 - 14, UW - x0 + 6, y0 + rowsN * 9 + 6, rgb(10, 8, 12), 235, seqColour(0.6f));
-        drawText(canvas, x0, y0 - 10, "WHAT TO READ", seqColour());
-        int top = std::max(0, std::min(Q.choiceSel - rowsN / 2, n - rowsN));
-        for (int r = 0; r < rowsN && top + r < n; r++) {
-            const int i = top + r;
-            drawText(canvas, x0, y0 + r * 9, fitText(Q.choices[i].line, UW - 2 * x0 - 8).c_str(), i == Q.choiceSel ? HUD_WHITE : HUD_GREEN);
-            if (i == Q.choiceSel) drawText(canvas, x0 - 6, y0 + r * 9, ">", seqColour());
-        }
+    if (Q.choosing) {   // the chooser over it (R-432: its folders, then the open one's rows)
+        const int rowsN = 14, x0 = 20, y0 = 30;
+        drawPanel(canvas, x0 - 6, y0 - 14, UW - x0 + 6, y0 + rowsN * 9 + 18, rgb(10, 8, 12), 235, seqColour(0.6f));
+        const std::string head = Q.pages.open && Q.pages.folder < (int)Q.pages.folders.size() ? "WHAT TO READ: " + Q.pages.folders[Q.pages.folder].name : std::string("WHAT TO READ");
+        drawText(canvas, x0, y0 - 10, fitText(head, UW - 2 * x0).c_str(), seqColour());
+        std::vector<std::string> lines;
+        for (const SequencerChoice& c : Q.choices) lines.push_back(c.line);
+        drawChooser(canvas, x0 - 6, y0, UW - x0, y0 + rowsN * 9 + 14, lab.seq.pages, lab.seq.choiceSel, lab.seq.choiceTop, lines, seqColour());
     }
 }
 
 void Game::sequencerPad(PadMenu& m) const {
     m.title = "THE SEQUENCER";
-    if (lab.seq.choosing) { m.item("READ IT", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
+    if (lab.seq.choosing) { m.item(lab.seq.pages.open ? "READ IT" : "OPEN THE FOLDER", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
     m.item("A SPECIES TO READ", KEY_ENTER); m.item("TAKE IT OFF", KEY_BACKSPACE); m.item("THE TREE OF KIN", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "READ"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "TREE");
 }

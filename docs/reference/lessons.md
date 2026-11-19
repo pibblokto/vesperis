@@ -117,6 +117,9 @@ Contents:
   two peoples, the wet dam, the radar salts): pin them again by scans.
 - Keep one `Game` alive in the harness (a second corrupts the first); reach its state through TestGame's hooks
   (`src/harness/test_game.h`), never from the game's own files; join worker threads at exit (`atexit`).
+- A game writes where its paths say, and `Game`'s are the player's files in the working directory: a check's second game that set
+  none saved its guide over the user's in the repo root, and the battery never saw it, reading only `shots/` (B-440). `TestGame`
+  defaults every path under `shots/tests/`; the unit's `files` group holds the player's files as it found them.
 - The flow's frames are 1x, the unit's and the modes' 4x; a mode's checks may also run in the unit. A `Game`'s `applySettings`
   sets the global render scale and mush (its settings say 4x): every group of the unit after a scripted game draws at 4x, so
   `UNIT_GROUPS` states each group's starting scale and mush, and a group alone draws as in the full run (E-03).
@@ -268,6 +271,9 @@ Contents:
 - A sea's beach carries no water in its vertices: its wet edge is the sea's level (and the tide) against the height (Z-03).
 - The capsule's screen draws no status: a line it must show is its caption's own (the scoop's), or every status of the moment would
   take the caption (Z-03).
+- A read on the pool must touch no lazy cache: `readSample`'s ruins' walls fill the ruins' cells as they are asked for, so the activity
+  vision leaves them to the main thread after (`wallsDone`, the vial's own read unchanged: 194 places the same, 5 walls). A read is
+  about 20 us: 384 a frame cost a millisecond at 1x, and the reach's 5,284 metres fill in 14 frames (R-434).
 
 ## Generation: the worlds
 
@@ -395,6 +401,9 @@ Contents:
   a flag added to a field's bits keeps the older lines readable.
 - A tile, a cap or a clamp of a place's size keeps its count with it: a species' tile clamped to its longest kept its 160 cells and
   packed them 178 times too densely (53 s for a sheet of frames).
+- A list's folders made each frame from what they hold keep an index, not the folder: a world's folder goes with its last vial and the
+  index then opens the next world's, so emptying the last closes the folder (R-432). A new step in a scripted run takes its frames from
+  a wait after it, or every later frame moves in time (the flow's three keys: its printout after the laboratory the same).
 - A `thread_local` named inside a pool's lambda is each worker's own (empty): bind it to a reference outside (Z-04's crash).
 - A tree drawn from its leaves' neighbours: sort the leaves so every clade is a run (`treeBefore`), keep each pair of neighbours' join;
   the node of a run is its highest join, its two sides the runs either side of it (a Cartesian tree), drawn by recursion (Z-06's tree).

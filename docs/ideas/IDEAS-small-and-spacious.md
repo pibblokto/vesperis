@@ -342,7 +342,7 @@ it by an arch, and the spiral stair in it joins the decks.
   springs' bands in the planet function, by the Q protocol.
 * **The game:** `samples` (the kit, the cold store), `microscope` with `microscope_draw`, `incubator`, `sequencer`, `tree_screen`,
   `lab_state.h`; for the ship, `ship_plan` (the rows), `cabin` (the walk, the draw) and `ship_light`. game.h passes 48 KB
-  (PLAN-screens.md section 8 revisits at 60 KB).
+  (PLAN-screens.md section 8 revisits at 60 KB; the user raised the mark to 70 KB on 2026-11-19, KI-445).
 * **States and rows:** MICROSCOPE, INCUBATOR, SEQUENCER, TREE and CATALOGUE before `GameState::COUNT`; the devices before
   `FACE_COUNT`; a `TextKind` for a species and one for a strain.
 * **The guide:** `M` keys and a format line, `microbes 1`. **The save:** the lab's lines, through a state row's `save`, `load` and

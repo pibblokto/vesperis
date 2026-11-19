@@ -547,15 +547,19 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     if (!ok) { check("the player: through a flight to a landing (C-11)", false, "no modern age world"); return; }
     const BodyGen g = BodyGen::make(sys.bodies[W.body]);
     std::shared_ptr<const RecordCatalogue> C = recordsOf(g, W.which);
-    int piece = -1, rec = -1, heard = -1;
+    int piece = -1, caught = -1, rec = -1, heard = -1;   // R-431: a piece held and one the radar caught; a recording held and one caught (the decoder's)
     for (int i = 0; i < C->count; i++) {
         const RecordEntry& e = C->entries[i];
         if (e.last) continue;
         if (e.category == RC_MUSIC && piece < 0) piece = i;
+        else if (e.category == RC_MUSIC && caught < 0) caught = i;
         else if (e.category == RC_TEXT && recordMediumSounds(e.medium) && rec < 0) rec = i;
         else if (e.category == RC_TEXT && !recordMediumSounds(e.medium) && heard < 0) heard = i;
     }
-    if (piece < 0 || rec < 0 || heard < 0) { check("the player: through a flight to a landing (C-11)", false, fmt("records: piece %d recording %d heard %d", piece, rec, heard)); return; }
+    if (piece < 0 || caught < 0 || rec < 0 || heard < 0) {
+        check("the player: through a flight to a landing (C-11)", false, fmt("records: piece %d caught %d recording %d heard %d", piece, caught, rec, heard));
+        return;
+    }
     remove("shots/tests/test_player_guide.txt");
     TestGame game;
     game.savePrefix = "shots/tests/test_save";
@@ -569,18 +573,30 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     const std::string key = Guide::bodyKey(s.sx, s.sy, s.sz, W.body) + "/S";
     game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, piece)));
     game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, rec)));
+    game.guide.heard.insert(key + std::to_string(shardWorldIndex(W.which, caught)));
     game.guide.heard.insert(key + std::to_string(shardWorldIndex(W.which, heard)));
+    // R-431: the decoder keeps to its records (Tab at its worlds turns to no player); the deck opens the player on its worlds, a world's music
     game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_TAB); run(0.1);
+    const bool decoderAlone = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
+    press(KEY_ESCAPE); run(0.1);
+    game.testCabinAtDevice(FACE_DECK); run(0.2); press(KEY_E); run(0.1);
+    const bool atWorlds = game.state == GameState::PLAYER && game.testPlayerLevel() == 0;
+    const int worlds = game.testPlayerWorlds();
+    press(KEY_ENTER); run(0.1);
+    const bool inWorld = game.testPlayerLevel() == 1;
     const int n = game.testPlayerItems();
-    int pi = -1, ri = -1, hi = -1;
+    int pi = -1, hi = -1, other = 0;
     for (int i = 0; i < n; i++) {
         const std::string l = game.testPlayerItemLine(i);
-        if (l.find(" music") != std::string::npos) pi = i;
-        else if (l.find("off the air") != std::string::npos) hi = i;
-        else ri = i;
+        if (l.find(" music off the air") != std::string::npos) hi = i;
+        else if (l.find(" music") != std::string::npos) pi = i;
+        else other++;
     }
-    check("the player: lists the pieces, the recordings and what the radar caught (C-11)", n == 3 && pi >= 0 && ri >= 0 && hi >= 0 && game.testShardsTop() == 1,
-          fmt("%d items on the page%s; %s", n, game.testShardsTop() == 1 ? "" : " (NOT the player's page)", n > 0 ? game.testPlayerItemLine(0).c_str() : "-"));
+    check("the player: its own screen at the deck, by world, the worlds' music alone (R-431)",
+          decoderAlone && atWorlds && worlds == 1 && inWorld && n == 2 && pi >= 0 && hi >= 0 && other == 0,
+          fmt("the decoder %s; the deck %s, %d world%s, %s; %d pieces (%s held, %s caught by the radar), %d else; %s", decoderAlone ? "alone" : "NOT ALONE",
+              atWorlds ? "on the player's worlds" : "NOT ON THE PLAYER'S WORLDS", worlds, worlds == 1 ? "" : "S", inWorld ? "opened" : "NOT OPENED", n, pi >= 0 ? "one" : "NONE",
+              hi >= 0 ? "one" : "NONE", other, n > 0 ? game.testPlayerItemLine(0).c_str() : "-"));
     for (int k = 0; k < pi; k++) press(KEY_DOWN);
     press(KEY_ENTER);
     // the world's records are written on a thread the first time: the wait held at one instant (frames at dt 0), so a
@@ -588,58 +604,48 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     for (const double tw = nowSec(); game.testPlayerWaiting() && nowSec() - tw < 20;) { std::this_thread::sleep_for(std::chrono::milliseconds(2)); game.frame(gi, 0); gi.newFrame(); }
     run(0.3);
     const bool playing0 = game.testPlayerPlaying() == pi && game.testPlayerOwnsPiece();
-    press(KEY_TAB); press(KEY_ESCAPE); run(0.2);
+    press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.2);   // the worlds, then away
     const bool afterClose = game.state == GameState::SPACE && game.testPlayerOwnsPiece();
     press(KEY_R); press(KEY_N); run(0.2); press(KEY_ENTER); run(0.2); press(KEY_V); run(2.0);   // the nearest star, the drive
     const bool flying = game.testShipMode() == (int)ShipState::VIMANA;
     const double t1 = game.testPlayerT(); run(1.0); const double t2 = game.testPlayerT();
     const std::string hud = game.testPlayerHud();
     const bool through = flying && game.testPlayerOwnsPiece() && t2 > t1 + 0.9 && !hud.empty();
-    const std::string infoFlight = game.testPlayerInfo();
     // its end: the list moves on
     double secs = 0; { const std::string inf = game.testPlayerInfo(); const size_t of = inf.find(" of "); if (of != std::string::npos) secs = atof(inf.c_str() + of + 4); }
     game.testPlayerSkipTo(std::max(0.0, secs - 0.2)); run(2.2);
     const int next = game.testPlayerPlaying();
     // the next down the list, or the list's end
-    const bool movedOn = game.testPlayerFinished() == 1 && (pi + 1 < n ? next == pi + 1 && (game.testPlayerOwnsSpeech() || game.testPlayerOwnsPiece()) : next < 0);
-    // the recording through the flight too
-    game.testPlayerPlay(ri); run(0.3);
-    const double r1 = game.testPlayerT(); run(1.0); const double r2 = game.testPlayerT();
-    const bool recThrough = game.testShipMode() == (int)ShipState::VIMANA && game.testPlayerOwnsSpeech() && r2 > r1 + 0.9 && game.audio.medium == C->entries[rec].medium;
+    const bool movedOn = game.testPlayerFinished() == 1 && (pi + 1 < n ? next == pi + 1 && game.testPlayerOwnsPiece() : next < 0);
     // held while the decoder plays a record of its own, taken up where it was
+    game.testPlayerPlay(pi); run(0.3);
     game.testPlayerSkipTo(3.0); run(0.1);
     const double heldAt0 = game.testPlayerT();
     game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
-    if (game.testShardsTop() == 1) press(KEY_TAB);
     press(KEY_ENTER); run(0.1); game.testShardsOpenIndex(piece); run(0.3);
-    const bool heldNow = game.testPlayerHeld() && !game.testPlayerOwnsPiece() && !game.testPlayerOwnsSpeech() && game.audio.piece;
+    const bool heldNow = game.testPlayerHeld() && !game.testPlayerOwnsPiece() && game.audio.piece;
     const double heldAt = game.testPlayerT(); run(1.0);
     const bool kept = game.testPlayerHeld() && std::fabs(game.testPlayerT() - heldAt) < 1e-6;
     press(KEY_ESCAPE); run(1.0 / 30);
-    const bool resumed = !game.testPlayerHeld() && (game.testPlayerOwnsSpeech() || game.testPlayerOwnsPiece()) && std::fabs(game.testPlayerT() - heldAt) < 0.1 &&
-                         (game.testPlayerOwnsSpeech() ? std::fabs(game.audio.speechFrom - heldAt) < 0.1 : game.audio.pieceFrom > 0);
+    const bool resumed = !game.testPlayerHeld() && game.testPlayerOwnsPiece() && std::fabs(game.testPlayerT() - heldAt) < 0.1 && game.audio.pieceFrom > 0;
     press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
     // the synth begins where it is told
-    double beat = -1, said = -1;
+    double beat = -1;
     {
         const Lore L = loreQuick(sys, sys.bodies[W.body], g, W.which); const Tradition T = traditionOf(g, L);
         Shard sh = shardDrawOf(g, L, piece); sh.recordAge = C->entries[piece].age;
         Piece P; pieceOf(T, sh, P);
         AudioSynth syn; AudioState st; st.piece = &P; st.tradition = &T; st.pieceStart = true; st.pieceFrom = std::min(16.0, P.beats * 0.5);
         std::vector<float> buf(512); syn.render(buf.data(), (int)buf.size(), 22050, st); beat = st.pieceBeat - std::min(16.0, P.beats * 0.5);
-        const Tongue tg = tongueOf(g, L); const Voice V = voiceOf(g, L, tg);
-        std::vector<DecodedWord> w; for (const char* x : {"one", "two", "three", "four", "five", "six"}) { DecodedWord d; d.ours = d.theirs = x; d.known = true; w.push_back(d); }
-        Speech S; speechOf(V, w, 77, S);
-        AudioSynth syn2; AudioState st2; st2.speech = &S; st2.voice = &V; st2.speechStart = true; st2.speechFrom = S.seconds * 0.5;
-        syn2.render(buf.data(), (int)buf.size(), 22050, st2); said = st2.speechT - S.seconds * 0.5;
     }
-    check("the player: held by the decoder's own record, taken up where it was (C-11)", heldNow && kept && resumed && beat >= 0 && beat < 0.2 && said >= 0 && said < 0.1,
-            fmt("held %s at %.2f s (%.2f before the decoder), kept %s, resumed %s; the synth begun %.3f beats and %.3f s past where it was told", heldNow ? "yes" : "NO", heldAt, heldAt0,
-                    kept ? "yes" : "NO", resumed ? "yes" : "NO", beat, said));
+    check("the player: held by the decoder's own record, taken up where it was (C-11)", heldNow && kept && resumed && beat >= 0 && beat < 0.2,
+            fmt("held %s at %.2f s (%.2f before the decoder), kept %s, resumed %s; the synth begun %.3f beats past where it was told", heldNow ? "yes" : "NO", heldAt, heldAt0,
+                    kept ? "yes" : "NO", resumed ? "yes" : "NO", beat));
     // what the radar caught: off the air
     game.testPlayerPlay(hi); run(0.2);
-    const bool air = game.testPlayerOwnsSpeech() && game.audio.medium == MEDIUM_AIR;
-    check("the player: a recording the radar caught plays as kept off the air (C-11)", air, game.testPlayerInfo());
+    for (const double tw = nowSec(); game.testPlayerWaiting() && nowSec() - tw < 20;) { std::this_thread::sleep_for(std::chrono::milliseconds(2)); game.frame(gi, 0); gi.newFrame(); }
+    const bool air = game.testPlayerOwnsPiece() && game.audio.medium == MEDIUM_AIR;
+    check("the player: a piece the radar caught plays as kept off the air (C-11)", air, game.testPlayerInfo());
     // a landing stops it
     game.testPlayerPlay(pi); run(0.2);
     const bool before = game.testPlayerOwnsPiece();
@@ -652,13 +658,11 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     }
     run(0.1); press(KEY_ENTER); run(0.5);
     const bool landed = game.state == GameState::DESCENT || game.state == GameState::SURFACE;
-    const bool stopped = landed && game.testPlayerPlaying() < 0 && !game.testPlayerOwnsPiece() && !game.testPlayerOwnsSpeech();
-    check("the player: plays on through a Vimana flight, stops at a landing (C-11)", playing0 && afterClose && through && movedOn && recThrough && before && stopped,
-            fmt("the piece played %s, after the decoder %s, in the flight %s (%.1f -> %.1f s, the HUD '%s'), at its end %s (item %d of %d); the recording in the flight %s (%.1f -> %.1f s, medium "
-                "%d); the landing %s (state %d)",
-                    playing0 ? "yes" : "NO", afterClose ? "on" : "OFF", through ? "on" : "OFF", t1, t2, hud.c_str(), movedOn ? "the list on" : "NOT MOVED ON", next, n, recThrough ? "on" : "OFF", r1,
-                    r2, game.audio.medium, stopped ? "stopped it" : "DID NOT STOP IT", (int)game.state));
-    (void)infoFlight;
+    const bool stopped = landed && game.testPlayerPlaying() < 0 && !game.testPlayerOwnsPiece();
+    check("the player: plays on through a Vimana flight, stops at a landing (C-11)", playing0 && afterClose && through && movedOn && before && stopped,
+            fmt("the piece played %s, after the screen %s, in the flight %s (%.1f -> %.1f s, the HUD '%s'), at its end %s (item %d of %d); the landing %s (state %d)",
+                    playing0 ? "yes" : "NO", afterClose ? "on" : "OFF", through ? "on" : "OFF", t1, t2, hud.c_str(), movedOn ? "the list on" : "NOT MOVED ON", next, n,
+                    stopped ? "stopped it" : "DID NOT STOP IT", (int)game.state));
     remove("shots/tests/test_player_guide.txt");
 }
 

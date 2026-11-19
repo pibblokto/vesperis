@@ -11,6 +11,7 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - Every mode is a `MODES` row in `main.cpp` (name, group, arguments, line, file, function); no argument runs `stars`, an unknown one exits 0 [E-01], [E-03]
 - No extern harness symbol shares an engine symbol's name; the harness has no dynamically initialised global of its own [E-03]
 - The harness builds `TestGame`s (`test_game.h`): the hooks are its, none in game files; the game reads only `harness` [E-05]
+- A `TestGame`'s files (guide, saves, settings, keys, pad, photos, films) default under `shots/tests/`: the working directory's are the player's [B-440]
 - Shared declarations go in `harness.h` (sections by file), pins in `test_worlds.h`, scenes in `scenes_table.h`; a file over 100 KB is split [E-03]
 - Scripted games move by `pressKey`, `runFrames`; the unit and `<mode> check` share one `Check`; `findScene` finds scenes [E-03]
 - Outputs go to `shots/tests/` (~2 GB: never copied whole), not the player's `shots/`; the flow's charts are `starmap_*`, not `chart_*` [O7-01], [F-01], [G-06]
@@ -18,8 +19,9 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - The harness has no platform: the window's frame is traced (`VESPERIS_TRACE=1 ./vesperis`), not benched [F-01], [F-08]
 
 ## The unit, the flow and the tour
-- The unit is `UNIT_GROUPS` (41, in run order), each stating the scale and mush it starts at in the full run: a group alone gives the same results [E-03]
+- The unit is `UNIT_GROUPS` (in run order: `unit list`), each with the scale and mush it starts at in the full run: a group alone gives the same results [E-03]
 - A check over a region states the count it expects, so a thinner galaxy fails instead of testing less [E-01], [E-03]
+- The unit's last group, `files`, holds the player's files in the working directory as the unit found them before its first [B-440]
 - A target an unfinished item owns prints `FAIL(<item>)` and is not counted: the exit code follows the targets in force [O6-01]
 - Unit checks about giants read every giant (the made classes too), not the gas giant's type [P-07]
 - The flow only reports: a landing in the sea or a buggy at 0 km/h still exits 0, so its status lines are read [G-04]
@@ -67,3 +69,4 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 [U-06]: log/6-1.4.0.md
 [U-03]: log/6-1.4.0.md
 [B-438]: log/7-1.5.0.md
+[B-440]: log/7-1.5.0.md

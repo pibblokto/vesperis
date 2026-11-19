@@ -261,22 +261,8 @@ void unitShip(const Check& check) {
         check("ship: no patch of the sun over an arch, a window or a hole (B-434)", over == 0 && onArchWalls > 0,
               fmt("%d suns, %zu patches (%d on a wall with an arch), %zu points in the holes: %d covered%s", suns, patches, onArchWalls, holes.size(), over, first.c_str()));
     }
-    {   // I-04: life aboard: each room's sound as the frame sets it (`Game::aboardSounds`: the engine room's hum the loudest, the dome's the
-        // quietest, the bubbling only in the laboratory, the water only in the hall, the music fuller only in the library); the home world's
-        // garden found and grown by the days played; the photographs' wall, the shelves, the case's display, the beds and the core in the plan
-        double hum[SHIP_ROOMS] = {};
-        int loudest = -1, quietest = -1, bubbles = 0, water = 0, full = 0;
-        for (int r = 0; r < SHIP_ROOMS; r++) {
-            if (r == ROOM_STAIR) continue;
-            AudioState a;
-            Game::aboardSounds(a, r, false, false, ShipState::PARKED);
-            hum[r] = a.hum;
-            if (loudest < 0 || a.hum > hum[loudest]) loudest = r;
-            if (quietest < 0 || a.hum < hum[quietest]) quietest = r;
-            if (a.bubbles > 0) bubbles += r == ROOM_LAB ? 1 : 100;
-            if (a.water > 0) water += r == ROOM_HALL ? 1 : 100;
-            if (a.musicFull > 0) full += r == ROOM_LIBRARY ? 1 : 100;
-        }
+    {   // I-04: life aboard: the home world's garden found and grown by the time played (R-429); the photographs' wall, the shelves, the
+        // case's display, the beds and the core in the plan (R-430: the rooms' own sounds gone, the hum the same in every room)
         TestGame game;
         game.savePrefix = "shots/tests/unit_ship_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_ship_guide.txt";
         game.keysPath = "shots/tests/test_keys.txt";
@@ -285,20 +271,99 @@ void unitShip(const Check& check) {
         Input in;
         game.testCabinView("THE GARDEN"); game.frame(in, 1.0 / 30); in.newFrame();
         const bool home = game.testGardenHome();
-        game.testSetTime(EXPEDITION_T0); const double g0 = game.testGardenGrowth();
-        game.testSetTime(EXPEDITION_T0 + 60 * 86400.0); const double g60 = game.testGardenGrowth();
-        int prints = 0, shelves = 0, display = 0, beds = 0, core = 0;
+        game.testGardenPlanted(); const double g0 = game.testGardenGrowth();
+        game.testSetPlayed(GARDEN_GROW_S); const double g60 = game.testGardenGrowth();
+        int prints = 0, shelves = 0, display = 0, beds = 0, core = 0, vehicles = 0, rings = 0;
         for (const ShipFixture& F : shipFixtures()) {
             prints += F.kind == FX_PRINTS; shelves += F.kind == FX_SHELF; display += F.kind == FX_DISPLAY; beds += F.kind == FX_BED; core += F.kind == FX_CORE;
+            vehicles += F.kind == FX_VEHICLE && F.room == ROOM_MAINTENANCE; rings += F.kind == FX_RING && F.room != SHIP_OUTSIDE;   // R-427
         }
         remove(game.guidePath.c_str());
-        check("ship: life aboard: the rooms' sounds, the garden, the explorer's things", loudest == ROOM_ENGINE && quietest == ROOM_OBSERVATORY && bubbles == 1 && water == 1 &&
-                  full == 1 && home && g60 > g0 + 0.4 && prints == 1 && shelves == 4 && display == 1 && beds == 4 && core == 1,
-              fmt("the hum loudest in the %s (%.2f), quietest in the %s (%.2f); the bubbling %s, the water %s, the music fuller %s; the home world's garden %s, grown %.2f at the "
-                  "start and %.2f two months on; %d photographs' wall, %d shelves, %d case's display, %d beds, %d core",
-                  shipRooms()[loudest].name + 4, hum[loudest], shipRooms()[quietest].name + 4, hum[quietest], bubbles == 1 ? "in the laboratory alone" : "ELSEWHERE TOO",
-                  water == 1 ? "in the hall alone" : "ELSEWHERE TOO", full == 1 ? "in the library alone" : "ELSEWHERE TOO", home ? "found" : "NOT FOUND", g0, g60, prints, shelves,
-                  display, beds, core));
+        check("ship: life aboard: the garden, the explorer's things", home && g60 > g0 + 0.4 && prints == 1 && shelves == 4 && display == 1 && beds == 4 && core == 1 &&
+                  vehicles == 2 && rings == 0,
+              fmt("the home world's garden %s, grown %.2f at the start and %.2f an hour of play on; %d photographs' wall, %d shelves, %d case's display, %d beds, %d core; "
+                  "%d vehicles in the maintenance room, %d drive's ring aboard",
+                  home ? "found" : "NOT FOUND", g0, g60, prints, shelves, display, beds, core, vehicles, rings));
+    }
+    {   // R-429: a bed grown by the time played to its full height and no further; E at it trims it back to its start (that bed alone), again
+        // refused until it grows; grown back an hour on; the save's line keeps the time played and the trims
+        TestGame game;
+        game.savePrefix = "shots/tests/unit_ship_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_ship_guide.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        game.testGardenPlanted();
+        const double start = game.testGardenGrowth(3);
+        game.testSetPlayed(GARDEN_GROW_S * 0.5); const double half = game.testGardenGrowth(3);
+        game.testSetPlayed(GARDEN_GROW_S); const double full = game.testGardenGrowth(3);
+        game.testSetPlayed(GARDEN_GROW_S * 3); const double later = game.testGardenGrowth(3);
+        game.testCabinAtDevice(FACE_BED_4); game.frame(in, 1.0 / 30); in.newFrame();
+        const bool faced = game.testCabinFacing() == FACE_BED_4;
+        pressKey(game, in, KEY_E);
+        const double cut = game.testGardenGrowth(3), other = game.testGardenGrowth(0);
+        pressKey(game, in, KEY_E);
+        const std::string again = game.testStatus();
+        const double still = game.testGardenGrowth(3);
+        game.saveSlot(7);
+        TestGame back;
+        back.savePrefix = game.savePrefix; back.settingsPath = game.settingsPath; back.guidePath = game.guidePath; back.keysPath = game.keysPath;
+        const bool loaded = back.loadSlot(7);
+        const bool kept = loaded && std::fabs(back.testPlayed() - game.testPlayed()) < 1e-6 && std::fabs(back.testGardenGrowth(3) - cut) < 1e-3 &&
+                          std::fabs(back.testGardenGrowth(0) - other) < 1e-9;
+        game.testSetPlayed(game.testPlayed() + GARDEN_GROW_S); const double regrown = game.testGardenGrowth(3);
+        remove((game.savePrefix + "_7.txt").c_str()); remove(game.guidePath.c_str());
+        const bool grows = std::fabs(start - GARDEN_START) < 1e-9 && half > start + 0.2 && half < full - 0.2 && std::fabs(full - 1) < 1e-9 && later == full;
+        const bool trims = faced && cut < GARDEN_START + 0.01 && std::fabs(other - 1) < 1e-9 && std::fabs(still - cut) < 1e-6 && again.find("NOTHING TO TRIM") != std::string::npos;
+        check("ship: a bed grown by the time played, trimmed back by E, kept by the save (R-429)", grows && trims && kept && std::fabs(regrown - 1) < 1e-9,
+              fmt("grown %.2f as planted, %.2f half an hour on, %.2f an hour on, %.2f three hours on; E at the bed %s: %.2f (the others %.2f), again '%s'; "
+                  "%.2f an hour later; the save %s",
+                  start, half, full, later, faced ? "faced" : "NOT FACED", cut, other, again.c_str(), regrown, kept ? "kept it" : "DID NOT KEEP IT"));
+    }
+    {   // R-428: the wall shows the newest twelve until the explorer hangs one at it (E: its screen), then theirs: the oldest hung in the first
+        // frame, the second taken down; a photograph taken after moves it no more; the prints in their frames; the save's line keeps it
+        const std::string gallery = "shots/tests/unit_wall_gallery";
+        makeDir(gallery);
+        auto photo = [&](int n) {
+            std::vector<uint32_t> px((size_t)128 * 80, 0xFF000000u | (uint32_t)(n * 17 % 256) | (uint32_t)(n * 61 % 256) << 8 | (uint32_t)(n * 97 % 256) << 16);
+            writePNG(fmt("%s/screenshot_%d.png", gallery.c_str(), n).c_str(), px.data(), 128, 80);   // a print is made of 64 x 64 at least
+            std::ofstream c(fmt("%s/screenshot_%d.txt", gallery.c_str(), n)); c << "PHOTOGRAPH " << n << "\n";
+        };
+        for (int n = 0; n < 20; n++) { remove(fmt("%s/screenshot_%d.png", gallery.c_str(), n).c_str()); remove(fmt("%s/screenshot_%d.txt", gallery.c_str(), n).c_str()); }
+        for (int n = 0; n < 14; n++) photo(n);
+        TestGame game;
+        game.savePrefix = "shots/tests/unit_ship_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_ship_guide.txt";
+        game.keysPath = "shots/tests/test_keys.txt"; game.shotsDir = gallery;
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        game.testCabinAtDevice(FACE_PRINTS); game.frame(in, 1.0 / 30); in.newFrame();
+        game.testWaitPrints();
+        const int printed0 = game.testPrints(), first0 = game.testPrintAt(0);
+        const bool newest = printed0 == SHIP_PRINTS && first0 == 13 && game.testPrintAt(11) == 2 && !game.testWallChosen();
+        pressKey(game, in, KEY_E);
+        const bool screen = game.state == GameState::WALL && game.testWallLevel() == 0;
+        pressKey(game, in, KEY_ENTER);
+        for (int i = 0; i < 13; i++) pressKey(game, in, KEY_RIGHT);
+        pressKey(game, in, KEY_ENTER);
+        pressKey(game, in, KEY_RIGHT); pressKey(game, in, KEY_BACKSPACE);
+        pressKey(game, in, KEY_ESCAPE);
+        const bool closed = game.state == GameState::SPACE;
+        photo(14); game.noteScreenshot();   // a photograph taken after
+        game.frame(in, 1.0 / 30); in.newFrame(); game.testWaitPrints();
+        bool kept = game.testWallChosen() && game.testPrintAt(0) == 0 && game.testPrintAt(1) < 0 && game.testPrints() == SHIP_PRINTS - 1;
+        for (int k = 2; k < SHIP_PRINTS; k++) kept = kept && game.testPrintAt(k) == 13 - k;
+        game.saveSlot(7);
+        TestGame back;
+        back.savePrefix = game.savePrefix; back.settingsPath = game.settingsPath; back.guidePath = game.guidePath; back.keysPath = game.keysPath; back.shotsDir = gallery;
+        bool saved = back.loadSlot(7) && back.testWallChosen();
+        for (int k = 0; k < SHIP_PRINTS; k++) saved = saved && back.testWallNumber(k) == game.testWallNumber(k);
+        remove((game.savePrefix + "_7.txt").c_str()); remove(game.guidePath.c_str());
+        check("ship: the wall hung by the explorer, kept by the save (R-428)", newest && screen && closed && kept && saved,
+              fmt("the newest twelve %s (%d prints, the first %d); E %s; the oldest hung in the first frame and the second taken down: %s (%d prints, the first %d); "
+                  "after a new photograph %s; the save %s",
+                  newest ? "printed" : "NOT PRINTED", printed0, first0, screen ? "the wall's screen" : "NOT THE WALL'S SCREEN", closed ? "closed" : "NOT CLOSED",
+                  game.testPrints(), game.testPrintAt(0), kept ? "kept" : "NOT KEPT", saved ? "kept it" : "DID NOT KEEP IT"));
     }
     {   // a save of the 5 m room (its cabin line, no place line) loads at the bridge's start with its light and hull; a save of the ship
         // keeps the room and the place

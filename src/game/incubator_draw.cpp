@@ -187,20 +187,15 @@ void Game::renderIncubatorJars() {
     drawTextCentered(canvas, UW / 2, UH - 12, "ENTER A JAR FROM A VIAL  BACKSPACE EMPTIES IT", HUD_DIM);
 }
 
+// the chooser (R-432: its folders, a world's, the flasks', the collection's; then the open one's rows)
 void Game::renderIncubatorChooser() {
-    const int x0 = 20, y0 = 30, x1 = UW - 20, y1 = UH - 26, rowH = 9;
+    const int x0 = 20, y0 = 30, x1 = UW - 20, y1 = UH - 26;
     drawPanel(canvas, x0, y0, x1, y1, rgb(0, 0, 0), 235, incColour());
-    drawText(canvas, x0 + 8, y0 + 6, incub.page == 1 ? "A JAR FROM:" : fmt("INTO FLASK %d:", incub.sel + 1).c_str(), incColour());
-    const int n = (int)incub.choices.size(), rows = (y1 - 12 - (y0 + 20)) / rowH;
-    incub.choiceSel = clampi(incub.choiceSel, 0, std::max(0, n - 1));
-    if (incub.choiceSel < incub.choiceTop) incub.choiceTop = incub.choiceSel;
-    if (incub.choiceSel >= incub.choiceTop + rows) incub.choiceTop = incub.choiceSel - rows + 1;
-    for (int i = incub.choiceTop; i < n && i < incub.choiceTop + rows; i++) {
-        const int y = y0 + 20 + (i - incub.choiceTop) * rowH;
-        const bool sel = i == incub.choiceSel;
-        if (sel) drawText(canvas, x0 + 6, y, ">", incColour());
-        const std::string& line = fitted(incub.choices[i].line, incub.choices[i].line.substr(0, incub.choices[i].line.find(" - ")), x1 - x0 - 24);
-        drawText(canvas, x0 + 14, y, line.c_str(), sel ? HUD_WHITE : HUD_GREEN);
-    }
-    drawTextCentered(canvas, UW / 2, y1 - 10, "ENTER PUTS IT IN  ESC BACK", HUD_DIM);
+    const std::string what = incub.page == 1 ? "A JAR FROM" : fmt("INTO FLASK %d", incub.sel + 1);
+    const ChooserPage& P = incub.pages;
+    const std::string head = P.open && P.folder < (int)P.folders.size() ? what + ": " + P.folders[P.folder].name : what + ":";
+    drawText(canvas, x0 + 8, y0 + 6, fitText(head, x1 - x0 - 16).c_str(), incColour());
+    std::vector<std::string> lines;
+    for (const IncubatorChoice& c : incub.choices) lines.push_back(c.line);
+    drawChooser(canvas, x0 + 6, y0 + 20, x1 - 8, y1, incub.pages, incub.choiceSel, incub.choiceTop, lines, incColour());
 }

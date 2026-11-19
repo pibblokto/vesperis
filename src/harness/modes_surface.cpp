@@ -761,6 +761,28 @@ int runScene(int argc, char** argv) {
         StarSystem sys; SurfaceView sv; double t = 0;
         if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no body\n"); return 1; }
         if (sc.uv) { sv.uvLamp = true; sv.lamp = false; printf("  the lamp's ultraviolet on\n"); }   // Z-03
+        if (sc.sight) {   // R-434: the activity vision, its square metres read a share a frame until all are
+            sv.sight = true;
+            Framebuffer w; int frames = 0;
+            for (; frames < 40; frames++) {
+                sv.render(w, t, nb.stars, sr, 1.0);
+                if (sv.testSightMissing() == 0) break;
+            }
+            int read = 0, faint = 0, strong = 0; sv.testSightCounts(read, faint, strong);
+            printf("  the activity vision: %d square metres read in %d frames, %d faint, %d strong\n", read, frames + 1, faint, strong);
+            if (std::getenv("VESPERIS_TRACE")) {   // a steady frame with it and without it, the best of ten each (the mush and the colours with them)
+                double on = 1e9, off = 1e9;
+                std::vector<uint32_t> px((size_t)FBW * FBH);
+                for (int k = 0; k < 20; k++) {
+                    sv.sight = k % 2 == 0;
+                    const double t1 = nowSec();
+                    sv.render(w, t, nb.stars, sr, 1.0); w.mush(2); w.toRGB(px.data(), 1.0);
+                    (sv.sight ? on : off) = std::min(sv.sight ? on : off, (nowSec() - t1) * 1000);
+                }
+                sv.sight = true;
+                fprintf(stderr, "  the activity vision's frame at %dx: %.2f ms, %.2f without it\n", FB_SCALE, on, off);
+            }
+        }
         if (warm > 0) {
             Input in;
             for (double w = 0; w < warm; w += 0.05) { t += 0.05; sv.update(0.05, in, t, false); }

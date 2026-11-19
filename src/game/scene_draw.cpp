@@ -93,11 +93,12 @@ void Game::keepFlightBand() {
 
 void Game::renderSurfaceScene() {
     surf.floodlights = state == GameState::DESCENT || state == GameState::ASCENT;   // D-04: the capsule's, on its way down and up
+    surf.sight = visionMode == VISION_ACTIVITY && state == GameState::SURFACE;   // R-434: the activity vision's pass, on the ground alone
     surf.render(fb, t, nb.stars, spaceR, fade);
     fb.mush(surf.valid && hasOpaqueDeck(surf.site.gen.type) ? 3 : 2);   // the thick air blurs everything
     bool feed = surf.inVehicle() && !surf.chaseCam && !photoMode && surf.cameraOverrideAlt < 0;   // driving is seen through the nose camera; R-403: flying too
     if (feed) surf.cameraFeed(fb, realTime);
-    else if (visionMode != 0) applyVision();
+    else if (visionMode != 0 && visionMode != VISION_ACTIVITY) applyVision();   // R-434: the activity vision's colours are its pass's
     fb.toRGB(rgbBuf.data(), visionMode == 1 ? 1.25 : 1.0, settings.dither);
 }
 

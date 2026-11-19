@@ -14,9 +14,11 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   `drawSky`, meteors, `drawVeil`), `surface_effects` (vents, geysers, spores, `drawWeather`)
 - `site` (`SurfaceSite`, `TerrainCache`: the sun, `groundHeight`, `sampleAt`, the roads and marks near), `flora` (`forTrees`,
   `forLogs`, `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`), `bestiary` (`Bestiary::make`), `buggy`
-  (`updateBuggy`, `cameraFeed`), `drone` (`deployDrone`), `forms_draw` (a settlement's forms), `textures` (`buildMesoTile`)
+  (`updateBuggy`, `cameraFeed`), `drone` (`deployDrone`), `vehicle_shape.h` (R-427: the buggy's and the drone's stations, wheels,
+  pods and skids, which the ship's maintenance room builds its models from), `forms_draw` (a settlement's forms), `textures`
+  (`buildMesoTile`)
 - `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC`; the films under the lamp's ultraviolet:
-  `filmNicheOf`, `prepareFilmGlow`, `drawFilmGlow`)
+  `filmNicheOf`, `prepareFilmGlow`, `drawFilmGlow`; R-434: the activity vision, `prepareSight` and `drawSight`)
 
 ## Rules and traps
 - One planet function (`src/galaxy/planetmap`): the surface samples it and keeps no copy. A material never follows a faded
@@ -37,6 +39,9 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   on its own grid (rocks, domes, trees, chimneys): a sample is its square metre's from any landing (`life search`'s second read).
 - The ultraviolet's pass runs only while it is on, and its ramp (bank 15) is set only then: off, the frame is the old one to the
   bit (the unit's `search` group). It reads the frame's grid made on the main thread; its rows are pure.
+- The activity vision reads its square metres on the pool with `readSample(x, z, false, false)`: the ruins' cells fill as they are
+  asked for, so the walls are the main thread's after (`wallsDone`); the vial's own read (`walls` true) is unchanged. Its metres are
+  the local metres' (cleared at `init` and `reanchor`, and read again past a quarter metre of tide).
 - A new vehicle: the cookbook's "Add a vehicle".
 
 More, with the numbers: `docs/reference/lessons.md`, "The surface".

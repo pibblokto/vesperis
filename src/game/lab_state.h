@@ -34,6 +34,30 @@ struct LabSystems {
     }
 };
 
+// R-432: a list in folders (the microscope's vials by world, its cultures by folder; the incubator's and the sequencer's choosers): each folder its
+// name, its second line and its rows (a vial's place in the cold store, a flask's number, a kept culture's place in the collection, a chooser's
+// row), a world's key where it is a world's, a collection's folder's id (0 UNSORTED; FOLDER_WORLD and FOLDER_FLASKS the others)
+constexpr int FOLDER_WORLD = -1, FOLDER_FLASKS = -2;
+struct LabFolder {
+    std::string name, line, key;
+    int id = FOLDER_WORLD;
+    bool foreign = false;         // its world's name a friend's (cyan)
+    std::vector<int> rows;
+};
+// a chooser's folders and its page: the folders shown, or the one open (its row chosen the chooser's `choiceSel`, an index into its rows)
+struct ChooserPage {
+    std::vector<LabFolder> folders;
+    bool open = false;
+    int folder = 0, top = 0;
+};
+
+struct Input; struct RGBCanvas;
+std::string labFolderWhere(const std::string& key);   // a world's place in a folder's head ("  (+195 +0 +46 / 3)"), lab_lists.cpp
+// a chooser's keys over its folders: the row chosen (Enter on it) as its index in the chooser's rows, -1 none yet, -2 Esc on the folders
+int chooserKeys(const Input& in, ChooserPage& P, int& sel);
+// its page drawn in a panel's box: the folders (a name and its count each) or the open one's rows (`lines`, by the chooser's row)
+void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, int sel, int& top, const std::vector<std::string>& lines, uint32_t colour);
+
 // the magnifications the zoom steps through: the light ways' objectives (x40, x100, x400, x1,000) with the camera's steps between and on the oil
 // one (x2,000, x4,000); the electron's x200 (a large cell whole) to x40,000
 constexpr int SCOPE_LIGHT_STEPS = 7, SCOPE_ELECTRON_STEPS = 7;
@@ -41,8 +65,8 @@ constexpr double SCOPE_LIGHT[SCOPE_LIGHT_STEPS] = {40, 100, 200, 400, 1000, 2000
 constexpr double SCOPE_ELECTRON[SCOPE_ELECTRON_STEPS] = {200, 500, 1000, 3000, 10000, 20000, 40000};
 
 struct MicroscopeState {
-    int page = 0;                 // 0 the cold store's vials and the flasks, 1 the slide
-    int sel = 0, top = 0;         // the list's row (the vials', then the flasks') and the first one shown
+    int page = 0;                 // 0 the lists (R-432: the vials by world, the cultures by folder), 1 the slide
+    int sel = 0, top = 0;         // the open folder's row chosen (an index into its rows) and the first one shown
     int vial = -1;                // the cold store's place on the stage (-1 none)
     int flask = -1;               // Z-05: or the flask whose drop is (-1 none)
     StarSystem sys; int body = -1;
@@ -67,6 +91,14 @@ struct MicroscopeState {
     // the frame's: its specimens and what each is, the one under the crosshair (-1 none)
     std::vector<Specimen> shown; std::vector<SlideRef> refs;
     int under = -1;
+    // R-432: the lists' tab (0 the vials, a folder a world; 1 the cultures: the flasks, R-433's collection by folder), a folder open or the folders
+    // shown, the folder chosen and the first shown; R-433: a kept culture on the stage (its place in the collection, -1 none), M's chooser of
+    // the folder it moves to
+    int tab = 0;
+    bool open = false;
+    int folder = 0, folderTop = 0;
+    int kept = -1;
+    bool moving = false; int moveSel = 0;
 };
 
 // Z-05: the incubator (game/incubator.cpp, incubator_draw.cpp): twelve flasks, each a medium and a culture of one or two species put in it on the
@@ -80,8 +112,9 @@ struct FlaskSpecies {
     int strainIn = 0;    // the strain it was put in as (the flask's strains after it are its events)
     bool sameSpecies(const FlaskSpecies& o) const { return sx == o.sx && sy == o.sy && sz == o.sz && body == o.body && species == o.species; }
 };
-// the moments a flask's culture told (its HUD lines, the log's): its spores woke, its crowd glowing
-enum FlaskTold : uint32_t { FT_WOKEN = 1, FT_GLOW = 2 };
+// the moments a flask's culture told (its HUD lines, the log's): its spores woke, its crowd glowing; R-433: FT_KEPT << k, its k-th species kept
+// in the collection as it grew (cleared by a strain of it arising: the strain is kept as it grows on)
+enum FlaskTold : uint32_t { FT_WOKEN = 1, FT_GLOW = 2, FT_KEPT = 4 };
 struct Flask {
     int n = 0;                          // its species (0: empty)
     FlaskSpecies who[2];
@@ -110,7 +143,7 @@ struct Jar {
 };
 // the incubator's screen: its page (the flasks, the jars), the flask chosen and the medium's field, the chooser of what goes in (a vial's species
 // seen, a flask's culture) and its rows
-struct IncubatorChoice { int vial = -1, species = -1, flask = -1, who = -1; std::string line; };
+struct IncubatorChoice { int vial = -1, species = -1, flask = -1, who = -1; std::string line; int kept = -1; };   // R-433: or a kept culture
 struct IncubatorState {
     int page = 0;                 // 0 the flasks, 1 the jars
     int sel = 0, field = 1;       // the flask, the medium's field (0 the cell .. 4 the salt)
@@ -118,6 +151,7 @@ struct IncubatorState {
     bool choosing = false;        // what goes in the flask (or the jar), chosen from the rows
     int choiceSel = 0, choiceTop = 0;
     std::vector<IncubatorChoice> choices;
+    ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
 };
 // Z-06: the sequencer (game/sequencer.cpp): a species seen in a vial or a flask's read in SEQUENCE_S on the lab's clock (saved: what is on it,
 // when its reading began, whether its result was told), its screen's chooser; made again from those: its lineage, its genome's length, its
@@ -137,6 +171,7 @@ struct SequencerState {
     bool artificial = false;      // a people's made species: its genome too regular, a watermark in it
     std::string name, world, mark;
     std::vector<std::string> result;
+    ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
 };
 // the tree of kin's screen (game/tree_screen.cpp): every species sequenced and the ship's own, a leaf each in the tree's order (home's genesis
 // first, then by genesis, deep branch, a kin cell's boxes, the system's line, the world, its comb), the common ancestor of each with the one
@@ -155,11 +190,25 @@ struct TreeState {
     int sel = 0, top = 0;
     std::map<std::string, Lineage> known;   // the lineages read so far (a sequenced species' world drawn once), by key
 };
+// R-433: the culture collection (game/lab_lists.cpp): every species and strain grown in a flask, kept frozen as labs keep their stocks, without
+// limit and after its flask is emptied: its world's species and its strain (the one it goes in as), the medium it grew in and its world's (AS
+// ITS WORLD), the explorer's folder it is in (0 UNSORTED), when it was kept; its form's plan made again (not saved: its row's words). The
+// explorer's folders, each its id (never reused while it stands) and its name; the save's `kept` and `keptfolder` lines
+struct KeptCulture {
+    FlaskSpecies who;
+    Medium medium, asWorld;
+    int folder = 0;
+    double t = 0;
+    int plan = -1;
+};
+struct CultureFolder { int id = 0; std::string name; };
 struct LabState {
     double clock = 0;             // the lab's clock (s): real seconds while the game simulates, saved
     Flask flasks[INCUBATOR_FLASKS];
     std::vector<Jar> jars;
     SequencerState seq;           // Z-06
+    std::vector<KeptCulture> kept;          // R-433
+    std::vector<CultureFolder> folders;
 };
 // Z-07: the catalogue (game/catalogue.cpp), the guide's page of every species seen (the guide's sheets; a friend's lent ones in cyan): its rows by
 // world (a world's head, its species) or by kin (the sequenced in the tree's order, a genesis's head; then those not read), a species' sheet

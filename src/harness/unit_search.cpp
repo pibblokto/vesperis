@@ -1,5 +1,6 @@
 // Z-03: the unit's search (group `search`): a sample a pure function of its place, a sterile world's holding nothing alive, the lamp's
-// ultraviolet absent to the bit when off, the kit's count (the vials, the refusals, the climb aboard, the save's lines)
+// ultraviolet absent to the bit when off, the kit's count (the vials, the refusals, the climb aboard, the save's lines); R-434: the activity
+// vision as a vial reads
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "harness/scenes_table.h"
@@ -87,6 +88,63 @@ void unitSearch(const Check& check) {
               fmt("the mats at night: %d pixels glowing with it on, %s off again%s; a magma ocean's ground the same with it on: %s", glowing, offSame ? "the same" : "DIFFERENT",
                   steady ? "" : " (the frame not steady)", sterileSame ? "yes" : "NO"));
     }
+    {   // R-434: the activity vision. A read on the pool finished on the main thread (`wallsDone`) is the vial's own microhabitat at every place of
+        // a ruined desert (its old walls among them) and of a superhabitable shelf; on the shelf by day the square metres within reach read a
+        // share a frame until all are, each the heat a vial taken at its middle reads; the frame with it on all in bank 15, off again the same
+        // to the bit as before it
+        auto frameOf = [](SurfaceView& sv, double t, StarNeighborhood& nb, SpaceRenderer& sr, std::vector<uint32_t>& rgb, std::vector<Pix>& idx) {
+            Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0);
+            idx = fb.idx;
+            fb.mush(2); rgb.resize((size_t)FBW * FBH); fb.toRGB(rgb.data(), 1.0);
+        };
+        int places = 0, sameHab = 0, walls = 0;
+        for (const char* name : {"civilisation_desert", "sight_shelf"}) {
+            const CmpScene* sc = findScene(name);
+            StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0;
+            if (!sc || !setupSceneForType(sc->type, sc->latDeg, sc->alt, sc->yawOff, sc->pitch, sv, sys, nb, t, sc->wantMat)) continue;
+            for (int k = 0; k < 97; k++) {
+                const double r = 120.0 * std::sqrt(k / 96.0), a = k * 2.399963, x = sv.player.x + r * std::sin(a), z = sv.player.z + r * std::cos(a);
+                const SampleRead full = sv.readSample(x, z, false), part = sv.readSample(x, z, false, false);
+                const Microhabitat h = sv.wallsDone(part, x, z), &f = full.hab;
+                places++; walls += full.ok && f.niche == NI_RUINS;
+                sameHab += full.ok == part.ok && (!full.ok || (h.niche == f.niche && h.meanC == f.meanC && h.salt == f.salt && h.shade == f.shade && h.bloom == f.bloom &&
+                                                               h.oldRock == f.oldRock && h.place == f.place));
+            }
+        }
+        int frames = 0, read = 0, agree = 0, asked = 0, bank15 = 0, faint = 0, strong = 0;
+        bool offSame = false;
+        {
+            const CmpScene* sc = findScene("sight_shelf");
+            StarSystem sys; SurfaceView sv; StarNeighborhood nb; SpaceRenderer sr; double t = 0;
+            if (sc && setupSceneForType(sc->type, sc->latDeg, sc->alt, sc->yawOff, sc->pitch, sv, sys, nb, t, sc->wantMat)) {
+                std::vector<uint32_t> a, b, c; std::vector<Pix> ia, ib, ic;
+                frameOf(sv, t, nb, sr, a, ia);
+                sv.sight = true;
+                for (; frames < 40 && (frames == 0 || sv.testSightMissing() > 0); frames++) frameOf(sv, t, nb, sr, b, ib);
+                frameOf(sv, t, nb, sr, b, ib);
+                for (Pix p : ib) bank15 += bankOf(p) == 15;
+                sv.testSightCounts(read, faint, strong);
+                const Biota& B = sv.biota();
+                const int ex = (int)std::floor(sv.player.x), ez = (int)std::floor(sv.player.z);
+                for (int dz = -40; dz <= 40; dz += 3)
+                    for (int dx = -40; dx <= 40; dx += 3) {
+                        const double x = ex + dx + 0.5, z = ez + dz + 0.5;
+                        const float h = sv.sightHeatAt(x, z);
+                        if (h < 0) continue;
+                        const SampleRead r = sv.readSample(x, z, false);
+                        asked++;
+                        agree += h == (r.ok ? SurfaceView::sightHeatOf(sampleOf(B, r.hab)) : 0.0f);
+                    }
+                sv.sight = false; frameOf(sv, t, nb, sr, c, ic);
+                offSame = a == c && ia == ic;
+            }
+        }
+        check("search: the activity vision as a vial reads, its frame in bank 15, absent to the bit when off (R-434)",
+              places == 194 && sameHab == places && walls > 0 && read > 5000 && agree == asked && asked > 500 && strong > 0 && bank15 == (int)FBW * FBH && offSame,
+              fmt("the walls finished on the main thread the same at %d of %d places (%d old walls); %d square metres read in %d frames (%d faint, %d strong), "
+                  "%d of %d as a vial reads them; %d of %d pixels in bank 15, off again %s",
+                  sameHab, places, walls, read, frames, faint, strong, agree, asked, bank15, (int)FBW * FBH, offSame ? "the same" : "DIFFERENT"));
+    }
     {   // the kit on a living world: eight vials, the ninth refused, none from the buggy's seat (a buggy unfolded at the capsule), the cold store's
         // places counted with the vials in hand; the climb aboard: the vials to the cold store, its line; the save's lines loaded back
         TestGame game;
@@ -109,9 +167,9 @@ void unitSearch(const Check& check) {
             ninth = game.testStatus().find("EIGHT VIALS ARE FULL") != std::string::npos && (int)game.testKit().size() == 8;
             const std::vector<Vial> eight = game.testKit();
             game.testKit().resize(2);
-            game.testColdStore().assign(COLD_STORE - 2, eight[0]);
+            game.testColdStore().assign(200, eight[0]);   // R-432: the cold store past its old 64 places takes the vial still
             pressKey(game, in, KEY_O);
-            full = game.testStatus().find("COLD STORE ABOARD IS FULL") != std::string::npos && game.testKit().size() == 2;
+            full = game.testKit().size() == 3;
             game.testColdStore().clear(); game.testKit() = eight; game.testKit().resize(3);
             pressKey(game, in, KEY_B); runFrames(game, in, 2.5); game.testWalkToBuggy(); pressKey(game, in, KEY_E); runFrames(game, in, 0.2);
             pressKey(game, in, KEY_O);
@@ -129,8 +187,8 @@ void unitSearch(const Check& check) {
                 loaded = was[i].name == game.testColdStore()[i].name && was[i].hab.place == game.testColdStore()[i].hab.place && was[i].hab.meanC == game.testColdStore()[i].hab.meanC &&
                          was[i].unit.x == game.testColdStore()[i].unit.x && was[i].activity == game.testColdStore()[i].activity;
         }
-        check("search: the kit's count, its refusals, the cold store and its lines (Z-03)", filled == 8 && ninth && full && buggy && stored && loaded,
-              fmt("%d vials filled (the first: %s), the ninth refused %d, a full cold store refused %d, from the buggy refused %d, the climb aboard %d ('%s'), loaded back %d",
+        check("search: the kit's count, its refusals, the cold store without limit and its lines (Z-03, R-432)", filled == 8 && ninth && full && buggy && stored && loaded,
+              fmt("%d vials filled (the first: %s), the ninth refused %d, taken with 200 in the cold store %d, from the buggy refused %d, the climb aboard %d ('%s'), loaded back %d",
                   filled, first.c_str(), ninth, full, buggy, stored, store.c_str(), loaded));
     }
 }

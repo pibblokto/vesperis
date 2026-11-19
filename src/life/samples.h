@@ -40,6 +40,7 @@ struct Sample {
     std::vector<Held> held;   // in the world's order
     int activity = VA_NONE;
     bool organics = false;    // a sterile world's: organics fallen from space, cooked (the furnaces' and the dead rocks' grains alone)
+    double activeLog = -1;    // R-434: the crowd at work, log10 cells a millilitre (-1 none at work): what the activity's words are read from
     int living() const { int n = 0; for (const Held& h : held) n += h.state == SS_LIVING; return n; }
 };
 

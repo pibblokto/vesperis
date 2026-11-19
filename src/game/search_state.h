@@ -1,6 +1,7 @@
 // Z-03: the search's state (game/search.cpp): the kit's vials on the ground and the lab's cold store aboard (R-425; docs/ideas/
 // ITERATION-1.5.0.md, Z-03). A vial keeps its place and its microhabitat (what it holds is `sampleOf` of them and its world's biota: a pure
-// function, made again when it is looked at), the name and the temperature the HUD gave, the activity read; a save line each (`vial`)
+// function, made again when it is looked at), the name and the temperature the HUD gave, the activity read; a save line each (`vial`). R-432:
+// the cold store has no limit
 #pragma once
 #include "life/samples.h"
 #include <cstdint>
@@ -18,5 +19,4 @@ struct Vial {
     int activity = VA_NONE;
     double t = 0;                     // the game's time at the take
 };
-constexpr int KIT_VIALS = 8;      // a descent's vials, refilled aboard
-constexpr int COLD_STORE = 64;    // the cold store's places
+constexpr int KIT_VIALS = 8;      // a descent's vials, refilled aboard (R-432: the cold store holds any number)

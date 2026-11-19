@@ -84,6 +84,10 @@ constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
      &G::updateTree, &G::renderTree, nullptr, nullptr, &G::treePad, &G::treeEnter, BACK_OPENER},
     {S::CATALOGUE, "CATALOGUE", ST_OVERLAY, PCX_SCREEN,   // Z-07: the guide's catalogue, as its log and its statistics
      &G::updateCatalogue, &G::renderCatalogue, nullptr, nullptr, &G::cataloguePad, &G::catalogueEnter, BACK_SCENE},
+    {S::PLAYER, "PLAYER", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_TAKES_SYNTH | ST_SHIP_MOVES, PCX_SCREEN,   // R-431: the deck's, the decoder's page before
+     &G::updatePlayerScreen, &G::renderPlayerScreen, nullptr, nullptr, &G::playerPad, &G::playerEnter, to(S::SPACE)},
+    {S::WALL, "WALL", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // R-428: the quarters' wall, over the room
+     &G::updateWall, &G::renderWall, nullptr, nullptr, &G::wallPad, &G::wallEnter, to(S::SPACE)},
 };
 
 namespace {

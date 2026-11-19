@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-46 groups, 456 checks in their order; a group's heading gives its file, its function, the render scale it
+47 groups, 463 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -337,9 +337,9 @@ starts at and its count.
 
 - the player: through a flight to a landing (C-11)
 - the player: through a flight to a landing (C-11)
-- the player: lists the pieces, the recordings and what the radar caught (C-11)
+- the player: its own screen at the deck, by world, the worlds' music alone (R-431)
 - the player: held by the decoder's own record, taken up where it was (C-11)
-- the player: a recording the radar caught plays as kept off the air (C-11)
+- the player: a piece the radar caught plays as kept off the air (C-11)
 - the player: plays on through a Vimana flight, stops at a landing (C-11)
 
 ## drones (`modes_drones.cpp`, `droneChecks`, 1x): 4
@@ -561,7 +561,7 @@ starts at and its count.
 - the title keeps the game's place through its help and credits: a save there, and Enter (B-432)
 - a new expedition and a load note the system they put the ship in (B-433)
 
-## ship (`unit_ship.cpp`, `unitShip`, 1x): 13
+## ship (`unit_ship.cpp`, `unitShip`, 1x): 15
 
 - ship: every room reachable from the bridge
 - ship: every device in a room and reachable
@@ -574,24 +574,29 @@ starts at and its count.
 - ship: nothing dimmed whatever the outside shows (B-437)
 - ship: the lamps' pools and the sun's patches
 - ship: no patch of the sun over an arch, a window or a hole (B-434)
-- ship: life aboard: the rooms' sounds, the garden, the explorer's things
+- ship: life aboard: the garden, the explorer's things
+- ship: a bed grown by the time played, trimmed back by E, kept by the save (R-429)
+- ship: the wall hung by the explorer, kept by the save (R-428)
 - ship: a save keeps the room and the place; the 5 m room's at the bridge's start
 
-## search (`unit_search.cpp`, `unitSearch`, 1x): 4
+## search (`unit_search.cpp`, `unitSearch`, 1x): 5
 
 - search: a sample a pure function of its place (Z-03)
 - search: a sterile world's samples hold nothing alive (Z-03)
 - search: the lamp's ultraviolet absent to the bit when off (Z-03)
-- search: the kit's count, its refusals, the cold store and its lines (Z-03)
+- search: the activity vision as a vial reads, its frame in bank 15, absent to the bit when off (R-434)
+- search: the kit's count, its refusals, the cold store without limit and its lines (Z-03, R-432)
 
-## lab (`unit_lab.cpp`, `unitLab`, 1x): 14
+## lab (`unit_lab.cpp`, `unitLab`, 1x): 16
 
 - lab: a slide's frame closed-form in its clock, the same at any thread count (Z-04)
 - lab: a sheet's lines only by what was seen (Z-04)
 - lab: the guide's save byte-stable with its species (Z-04)
 - lab: Backspace on the list empties a vial, a bloom kept in a vial's line (Z-04)
+- lab: the vials by world past the cold store's old 64 places, the choosers by world a row a species (R-432)
 - lab: a culture's state closed-form from its events (Z-05)
 - lab: the lab's save round-trip (Z-05)
+- lab: the culture collection: kept as grown, in a folder, on the stage, into a flask, chosen, saved (R-433)
 - lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
 - lab: two in a flask, the four ways (Z-05)
 - lab: a species' genome a pure function of it and its genesis (Z-06)
@@ -600,3 +605,8 @@ starts at and its count.
 - lab: mirrored species ignore each other in a flask (Z-06)
 - lab: the sequencer told at its reading's end; home's species at the tree's root (Z-06)
 - lab: a friend's sheets lent, in cyan and no count; the record's lines byte-stable (Z-07)
+
+## files (`unit.cpp`, `unitFiles`, 1x): 2
+
+- files: a test game's under shots/tests (B-440)
+- files: the player's untouched (B-440)

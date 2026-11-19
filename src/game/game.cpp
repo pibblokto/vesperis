@@ -153,6 +153,8 @@ void Game::newGame() {
     almanacRunning = false;
     resetExpedition(true);
     cabin = Cabin();   // I-02: a new expedition starts on the bridge, facing the great window
+    played = 0; for (double& b : bedTrimmed) b = 0;   // R-429: its garden as planted
+    wall = ShipWall(); prints.stale = true;           // R-428: its wall the newest twelve
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -275,6 +277,7 @@ void Game::frame(const Input& inRaw, double realDt) {
     if (realDt > 0.1) realDt = 0.1;
     realTime += realDt;
     lastRealDt = realDt;
+    if (state != GameState::TITLE) played += realDt;   // R-429: the time played, the garden's clock
     Input in = inRaw;        // R-418: the controller's buttons become this frame's keys (game/pad.cpp)
     padFrame(in, realDt);
     if (ax.on && !autoTakeover(in, realDt)) autoInput(in, realDt);   // the explorer plays on its own (any key, click or button gives the controls back)

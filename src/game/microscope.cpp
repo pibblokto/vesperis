@@ -1,6 +1,6 @@
 // Z-04: the microscope (R-425; docs/ideas/ITERATION-1.5.0.md Z-04, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h), the laboratory's first
-// device: a camera entered from its bench (E). Its first page is the cold store's vials (Enter puts one on the stage, Backspace empties it and
-// frees its place); the slide's page shows the vial's mount (life/slides.h) in six ways of seeing (1-6, V), zoomed (+ and -, the wheel), focused
+// device: a camera entered from its bench (E). Its first page is its lists (R-432: the cold store's vials a folder a world, Enter putting one
+// on the stage, Backspace emptying it; the cultures, R-433's collection among them, by folder: lab_lists.cpp); the slide's page shows the vial's mount (life/slides.h) in six ways of seeing (1-6, V), zoomed (+ and -, the wheel), focused
 // through the drop ([ and ]), panned (the arrows, the mouse; the electron's cell turned by the mouse), a cell tracked (Enter), and the four things
 // done to it (L a spot of light, M the magnet turned, H the stage warmed, F a drop of food). What is seen of each species is kept in the guide
 // (its sheet's lines), a form's first sight said and logged (FORM); N names the species under the crosshair, Tab shows its sheet, P a micrograph
@@ -36,23 +36,99 @@ double Game::microscopeStepMag(int seeing, int step) const {
     return seeing == WS_ELECTRON ? SCOPE_ELECTRON[clampi(step, 0, SCOPE_ELECTRON_STEPS - 1)] : SCOPE_LIGHT[clampi(step, 0, SCOPE_LIGHT_STEPS - 1)];
 }
 
-// U-05: E at the microscope: the vials' page, on the vial last looked at
+// U-05: E at the microscope: its lists, on what was last on the stage (R-432: in its folder)
 void Game::microscopeEnter() {
-    scope.page = 0; scope.sheet = false;
-    scope.sel = clampi(scope.vial >= 0 ? scope.vial : scope.sel, 0, std::max(0, microscopeRows() - 1));
+    scope.page = 0; scope.sheet = false; scope.moving = false;
+    microscopeFind();
 }
 
-// Z-05: the list's rows: the cold store's vials, then each flask with a culture in it
-int Game::microscopeRows() const {
-    int n = (int)coldStore.size();
-    for (const Flask& F : lab.flasks) n += F.n > 0;
-    return n;
+// R-432: the lists on what is (or was last) on the stage: its tab and its folder open on its row (a vial's world, the flasks, a kept culture's
+// folder); with nothing there, the folders of the tab last shown
+void Game::microscopeFind() {
+    if (scope.vial >= 0 && scope.vial < (int)coldStore.size()) {
+        const std::vector<LabFolder> F = vialFolders();
+        for (int f = 0; f < (int)F.size(); f++)
+            for (int r = 0; r < (int)F[f].rows.size(); r++)
+                if (F[f].rows[r] == scope.vial) { scope.tab = 0; scope.folder = f; scope.open = true; scope.sel = r; return; }
+    }
+    if (scope.flask >= 0 || scope.kept >= 0) {
+        const std::vector<LabFolder> F = cultureFolders();
+        for (int f = 0; f < (int)F.size(); f++) {
+            const int want = F[f].id == FOLDER_FLASKS ? scope.flask : scope.kept;
+            for (int r = 0; want >= 0 && r < (int)F[f].rows.size(); r++)
+                if (F[f].rows[r] == want) { scope.tab = 1; scope.folder = f; scope.open = true; scope.sel = r; return; }
+        }
+    }
+    scope.open = false;
 }
-int Game::microscopeRowFlask(int row) const {
-    int k = row - (int)coldStore.size();
-    if (k < 0) return -1;
-    for (int i = 0; i < INCUBATOR_FLASKS; i++) if (lab.flasks[i].n > 0 && k-- == 0) return i;
-    return -1;
+
+// R-432: the lists' keys: Tab the other tab; Up and Down (Page Up and Down ten); on the folders Enter opens one and Esc closes the microscope; in a
+// folder Enter puts its row on the stage and Esc goes back to the folders; Backspace empties a vial. R-433, the cultures: N makes a folder; on
+// one of the explorer's R renames it and Backspace removes it once empty; on a kept culture M moves it (a chooser of the folders), Backspace
+// discards it
+void Game::microscopeListKeys(const Input& in) {
+    const std::vector<LabFolder> F = scope.tab == 0 ? vialFolders() : cultureFolders();
+    const int nf = (int)F.size();
+    const bool del = in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE);
+    const LabFolder* open = scope.open && scope.folder < nf && !F[scope.folder].rows.empty() ? &F[scope.folder] : nullptr;
+    if (!open) scope.open = false;
+    if (scope.moving) {   // M's chooser: UNSORTED and the explorer's folders
+        const int n = 1 + (int)lab.folders.size();
+        if (!open || open->id < 0 || in.wasPressed(KEY_ESCAPE)) { scope.moving = false; audio.beep = BEEP_UI; return; }
+        menuStep(in, scope.moveSel, n);
+        if (enterKey(in)) {
+            keptMove(open->rows[clampi(scope.sel, 0, (int)open->rows.size() - 1)], scope.moveSel == 0 ? 0 : lab.folders[clampi(scope.moveSel - 1, 0, n - 2)].id);
+            scope.moving = false; audio.beep = BEEP_UI;
+        }
+        return;
+    }
+    if (in.wasPressed(KEY_TAB)) { scope.tab = 1 - scope.tab; scope.open = false; scope.folder = 0; scope.folderTop = 0; audio.beep = BEEP_UI; return; }
+    if (scope.tab == 1 && in.wasPressed(KEY_N) && !in.ctrl()) { textFolderId = -1; beginTextEntry("NAME THE NEW FOLDER", TEXT_FOLDER, ""); return; }
+    if (!open) {
+        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); audio.beep = BEEP_UI; return; }
+        if (nf == 0) return;
+        menuStep(in, scope.folder, nf);
+        scope.folder = clampi(scope.folder, 0, nf - 1);
+        const LabFolder& f = F[scope.folder];
+        if (enterKey(in)) {
+            if (f.rows.empty()) refuse(f.id == FOLDER_FLASKS ? "NO FLASK HOLDS A CULTURE - THE INCUBATOR GROWS THEM" : "THE FOLDER IS EMPTY", 3);
+            else { scope.open = true; scope.sel = 0; scope.top = 0; audio.beep = BEEP_UI; }
+            return;
+        }
+        const bool own = scope.tab == 1 && f.id > 0;   // the explorer's folders
+        if (own && in.wasPressed(KEY_R) && !in.ctrl()) { textFolderId = f.id; beginTextEntry("RENAME THE FOLDER", TEXT_FOLDER, f.name); return; }
+        if (own && del) { if (folderRemove(f.id)) audio.beep = BEEP_UI; return; }
+        if (del) refuse(scope.tab == 0 ? "ENTER OPENS THE WORLD'S VIALS - BACKSPACE EMPTIES ONE THERE" : "THIS FOLDER STAYS - ONLY YOUR OWN ARE REMOVED", 3);
+        else if (scope.tab == 1 && in.wasPressed(KEY_R) && !in.ctrl()) refuse("THIS FOLDER KEEPS ITS NAME - N MAKES ONE OF YOUR OWN", 3);
+        return;
+    }
+    if (in.wasPressed(KEY_ESCAPE)) { scope.open = false; audio.beep = BEEP_UI; return; }
+    const int n = (int)open->rows.size();
+    menuStep(in, scope.sel, n);
+    if (in.wasPressed(KEY_PAGE_UP)) scope.sel = std::max(0, scope.sel - 10);
+    if (in.wasPressed(KEY_PAGE_DOWN)) scope.sel = std::min(n - 1, scope.sel + 10);
+    scope.sel = clampi(scope.sel, 0, n - 1);
+    const int row = open->rows[scope.sel];
+    if (enterKey(in)) {
+        if (open->id == FOLDER_WORLD ? microscopeStage(row) : (open->id == FOLDER_FLASKS ? microscopeStageFlask(row) : microscopeStageKept(row))) audio.beep = BEEP_UI;
+        return;
+    }
+    if (open->id == FOLDER_WORLD) {   // its world's folder gone with its last vial: back to the worlds
+        if (del) { const bool last = n == 1; microscopeEmpty(row); if (last) scope.open = false; }
+        return;
+    }
+    if (open->id == FOLDER_FLASKS) {
+        if (del) refuse("A FLASK IS EMPTIED AT THE INCUBATOR", 3);
+        else if (in.wasPressed(KEY_M) && !in.ctrl()) refuse("A FLASK'S CULTURE JOINS THE COLLECTION AS IT GROWS", 3);
+        return;
+    }
+    if (del) { keptDiscard(row); audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_M) && !in.ctrl()) {
+        if (lab.folders.empty()) { refuse("NO FOLDER TO MOVE IT TO - N MAKES ONE", 3); return; }
+        scope.moving = true; scope.moveSel = 0;
+        for (size_t d = 0; d < lab.folders.size(); d++) if (lab.folders[d].id == lab.kept[row].folder) scope.moveSel = (int)d + 1;
+        audio.beep = BEEP_UI;
+    }
 }
 
 // a vial on the stage: its world's system (the explorer's own while it is the one there), its biota and forms, its sample and its mount; the
@@ -67,7 +143,7 @@ bool Game::microscopeStage(int vial) {
         scope.sys = StarSystem(); scope.sys.generate(st);
     }
     if (v.body < 0 || v.body >= (int)scope.sys.bodies.size()) { refuse("THE VIAL'S WORLD IS NO LONGER THERE"); return false; }
-    scope.body = v.body; scope.vial = vial; scope.flask = -1;
+    scope.body = v.body; scope.vial = vial; scope.flask = -1; scope.kept = -1;
     scope.life = lifeOf(scope.sys);
     scope.forms = morphsOf(scope.sys, v.body);
     const Biota& B = scope.life->bodies[v.body];
@@ -119,7 +195,7 @@ bool Game::microscopeStageFlask(int i) {
     scope.forms = F.forms;
     scope.sample = S;
     scope.mount = mountOf(B, scope.forms, S, h);
-    scope.vial = -1; scope.flask = i; scope.life.reset(); scope.body = -1;
+    scope.vial = -1; scope.flask = i; scope.kept = -1; scope.life.reset(); scope.body = -1;
     scope.title = fmt("FLASK %d", i + 1);
     scope.line = upper(CULTURE_STAGE_NAMES[now.one[0].stage]) + fmt(", %.0f C", F.medium.tempC);
     microscopeView();
@@ -139,13 +215,12 @@ void Game::microscopeView() {
     microscopeFrame();
 }
 
-// Backspace on the list: the vial emptied, its place in the cold store freed (the stage's vial follows its place)
+// Backspace on a world's vials: the vial emptied (the stage's vial follows its place; the world's folder goes with its last vial)
 void Game::microscopeEmpty(int vial) {
     if (vial < 0 || vial >= (int)coldStore.size()) return;
     coldStore.erase(coldStore.begin() + vial);
     if (scope.vial == vial) scope.vial = -1; else if (scope.vial > vial) scope.vial--;
-    scope.sel = clampi(scope.sel, 0, std::max(0, (int)coldStore.size() - 1));
-    status(fmt("THE VIAL IS EMPTIED - %d OF THE COLD STORE'S %d PLACES FILLED", (int)coldStore.size(), COLD_STORE), 4);
+    status(fmt("THE VIAL IS EMPTIED - %d IN THE COLD STORE", (int)coldStore.size()), 4);
     audio.beep = BEEP_UI;
 }
 
@@ -172,22 +247,11 @@ SlideLook Game::microscopeLook() const {
 
 void Game::updateMicroscope(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_E) && !in.ctrl()) { closeScreen(); audio.beep = BEEP_UI; return; }
-    if (scope.page == 0) {
-        const int n = microscopeRows();
-        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); audio.beep = BEEP_UI; return; }
-        if (n > 0) menuStep(in, scope.sel, n);
-        const int flask = microscopeRowFlask(scope.sel);
-        if (n > 0 && enterKey(in)) { if (flask >= 0 ? microscopeStageFlask(flask) : microscopeStage(scope.sel)) audio.beep = BEEP_UI; return; }
-        if (n > 0 && (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE))) {
-            if (flask >= 0) refuse("A FLASK IS EMPTIED AT THE INCUBATOR", 3); else microscopeEmpty(scope.sel);
-        }
-        return;
-    }
-    if (scope.vial < 0 && scope.flask < 0) { scope.page = 0; return; }
-    if (in.wasPressed(KEY_ESCAPE)) {
+    if (scope.page == 0) { microscopeListKeys(in); return; }
+    if (scope.vial < 0 && scope.flask < 0 && scope.kept < 0) { scope.page = 0; return; }
+    if (in.wasPressed(KEY_ESCAPE)) {   // back to the lists, in the folder of what is on the stage
         scope.page = 0; scope.sheet = false; audio.beep = BEEP_UI;
-        if (scope.vial >= 0) scope.sel = scope.vial;
-        else for (int r = 0; r < microscopeRows(); r++) if (microscopeRowFlask(r) == scope.flask) scope.sel = r;
+        microscopeFind();
         return;
     }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
@@ -294,7 +358,7 @@ void Game::microscopeFrame() {
 // on any slide, its motion on a living one, its flagella in a dark field, its DNA in the glow, its wall under the electron); a form's first sight
 // is the HUD's line and the log's FORM
 void Game::microscopeSee() {
-    if ((scope.vial < 0 && scope.flask < 0) || scope.species.empty()) return;
+    if ((scope.vial < 0 && scope.flask < 0 && scope.kept < 0) || scope.species.empty()) return;
     const SlideLook L = microscopeLook();
     const double um = umPerPxAt(L.mag);
     bool changed = false;
@@ -450,9 +514,25 @@ std::vector<std::string> Game::sheetLinesOf(const std::string& key, const Microb
 // U-04: the microscope's commands (the controller's first page) and its buttons
 void Game::microscopePad(PadMenu& m) const {
     m.title = "THE MICROSCOPE";
-    if (scope.page == 0) {
-        if (!coldStore.empty()) { m.item("PUT IT ON THE STAGE", KEY_ENTER); m.item("EMPTY THE VIAL", KEY_BACKSPACE); }
-        m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
+    if (scope.page == 0) {   // R-432: the lists' (the folders, or a folder's rows; R-433's own folders and kept cultures)
+        if (scope.moving) { m.item("MOVE IT THERE", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
+        const std::vector<LabFolder> F = scope.tab == 0 ? vialFolders() : cultureFolders();
+        const LabFolder* f = scope.folder < (int)F.size() ? &F[scope.folder] : nullptr;
+        if (!scope.open) {
+            if (f) m.item(scope.tab == 0 ? "OPEN THE WORLD'S VIALS" : "OPEN THE FOLDER", KEY_ENTER);
+            if (scope.tab == 1) m.item("A NEW FOLDER", KEY_N);
+            if (f && scope.tab == 1 && f->id > 0) { m.item("RENAME THE FOLDER", KEY_R); m.item("REMOVE THE FOLDER", KEY_BACKSPACE); }
+            m.item(scope.tab == 0 ? "THE CULTURES" : "THE VIALS", KEY_TAB);
+            m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
+            m.button(PR_A, KEY_ENTER, "OPEN"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, scope.tab == 0 ? "CULTURES" : "VIALS");
+            return;
+        }
+        m.item("PUT IT ON THE STAGE", KEY_ENTER);
+        if (f && f->id == FOLDER_WORLD) m.item("EMPTY THE VIAL", KEY_BACKSPACE);
+        if (f && f->id >= 0) { m.item("MOVE IT TO A FOLDER", KEY_M); m.item("DISCARD IT", KEY_BACKSPACE); }
+        if (scope.tab == 1) m.item("A NEW FOLDER", KEY_N);
+        m.item("THE FOLDERS", KEY_ESCAPE);
+        m.button(PR_A, KEY_ENTER, "STAGE"); m.button(PR_B, KEY_ESCAPE, "FOLDERS"); m.button(PR_SELECT, KEY_TAB, scope.tab == 0 ? "CULTURES" : "VIALS");
         return;
     }
     m.item(scope.tracking ? "STOP TRACKING" : "TRACK THE CELL", KEY_ENTER);
@@ -462,10 +542,10 @@ void Game::microscopePad(PadMenu& m) const {
     m.item(st.spot ? "TAKE THE LIGHT AWAY" : "A SPOT OF LIGHT", KEY_L); m.item(st.magnet ? "TURN THE MAGNET" : "THE MAGNET BESIDE THE STAGE", KEY_M);
     m.item(st.warming ? "COOL THE STAGE" : "WARM THE STAGE", KEY_H); m.item("A DROP OF FOOD", KEY_F);
     m.item("ITS SHEET", KEY_TAB); m.item("NAME THE SPECIES", KEY_N); m.item("A MICROGRAPH", KEY_P);
-    m.item("THE VIALS", KEY_ESCAPE);
-    m.button(PR_A, KEY_ENTER, "TRACK"); m.button(PR_B, KEY_ESCAPE, "VIALS"); m.button(PR_X, KEY_V, "WAY"); m.button(PR_SELECT, KEY_TAB, "SHEET");
+    m.item("THE LISTS", KEY_ESCAPE);
+    m.button(PR_A, KEY_ENTER, "TRACK"); m.button(PR_B, KEY_ESCAPE, "LISTS"); m.button(PR_X, KEY_V, "WAY"); m.button(PR_SELECT, KEY_TAB, "SHEET");
     m.button(PR_LB, KEY_MINUS, "ZOOM OUT"); m.button(PR_RB, KEY_EQUAL, "ZOOM IN");
     m.button(PR_LT, KEY_LEFT_BRACKET, "FOCUS DOWN"); m.button(PR_RT, KEY_RIGHT_BRACKET, "FOCUS UP");
-    m.button(PR_START, KEY_ESCAPE, "VIALS");
+    m.button(PR_START, KEY_ESCAPE, "LISTS");
     m.sticks = "STICKS MOVE THE STAGE";
 }

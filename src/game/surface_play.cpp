@@ -63,7 +63,6 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         audio.engine = 0.6 * u; audio.hum = 0.3;
     }
     audio.surfaceOff();   // the capsule hears nothing of the ground, going down or up (its last level went on through the climb)
-    audio.aboardOff();    // I-04: nor the rooms aboard
     surf.update(realDt, in, t, false);
     updateShipMotion(dt);
     if (std::getenv("VESPERIS_TRACE") && transT < 0.05)
@@ -198,17 +197,30 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         }
     }
     if (in.wasPressed(KEY_V) && surf.inVehicle()) { surf.chaseCam = !surf.chaseCam; audio.beep = BEEP_UI; }
-    if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // vision modes
+    if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // vision modes (R-434: from the activity vision to the eye's)
         static const char* const names[] = {"NORMAL VISION", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
-        visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = BEEP_UI;
+        visionMode = visionMode == VISION_ACTIVITY ? 0 : (visionMode + 1) % VISION_ACTIVITY; status(names[visionMode], 3); audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = BEEP_UI; }   // the readings in and out of the view
     if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) {   // the helmet lamp; Z-03: Shift its ultraviolet, the living films' glow
-        if (in.shift()) { surf.uvLamp = !surf.uvLamp; status(surf.uvLamp ? "ULTRAVIOLET ON" : "ULTRAVIOLET OFF", 2); }
+        if (in.shift()) {
+            surf.uvLamp = !surf.uvLamp;
+            const bool was = surf.uvLamp && visionMode == VISION_ACTIVITY;   // R-434: one at a time
+            if (was) visionMode = 0;
+            status(was ? "ULTRAVIOLET ON - NORMAL VISION" : (surf.uvLamp ? "ULTRAVIOLET ON" : "ULTRAVIOLET OFF"), 2);
+        }
         else { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); }
         audio.beep = BEEP_UI;
     }
-    if (in.wasPressed(KEY_O) && !in.ctrl()) takeSample();   // Z-03: a vial of the ground at the crosshair
+    if (in.wasPressed(KEY_O) && !in.ctrl()) {
+        if (in.shift()) {   // R-434: the activity vision, straight to it and back to the eye's
+            visionMode = visionMode == VISION_ACTIVITY ? 0 : VISION_ACTIVITY;
+            const bool uv = visionMode == VISION_ACTIVITY && surf.uvLamp;
+            if (uv) surf.uvLamp = false;
+            status(visionMode == VISION_ACTIVITY ? (uv ? "ACTIVITY VISION - THE ULTRAVIOLET OUT" : "ACTIVITY VISION") : "NORMAL VISION", 3);
+            audio.beep = BEEP_UI;
+        } else takeSample();   // Z-03: a vial of the ground at the crosshair
+    }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
         returnState = GameState::SURFACE;
         openScreen(GameState::SECTOR_MAP);
@@ -344,6 +356,7 @@ void Game::surfacePad(PadMenu& m) const {
     m.item("MARK WHERE THE CROSSHAIR RESTS", KEY_L);
     m.item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
     m.item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
+    m.item(visionMode == VISION_ACTIVITY ? "PUT THE ACTIVITY VISION AWAY" : "THE ACTIVITY VISION", KEY_O, MOD_SHIFT);   // R-434
     if (!surf.inVehicle()) {
         m.item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
         m.item(surf.uvLamp ? "PUT THE ULTRAVIOLET OUT" : "THE LAMP'S ULTRAVIOLET", KEY_U, MOD_SHIFT);

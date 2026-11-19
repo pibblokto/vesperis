@@ -2,7 +2,8 @@
 // (the arches, the spiral stair, the lifter), their windows, what stands in them, its lamps and the places the explorer stands; the
 // mesh drawn from them, built once in ship metres (+x starboard, +y up, +z the bow), the walk they keep, the routes through them and
 // what the eye sees of them. I-01 made the rows (the 1.4.0 cabin its first plan); I-02 the ship on them: the bridge, the hall, the
-// library, the laboratory, the quarters, the hangar, the engine room and the observatory. The devices are `Game::cabinDevices`' rows
+// library, the laboratory, the quarters, the hangar, the engine room (R-427: the maintenance room) and the observatory. The devices are
+// `Game::cabinDevices`' rows
 #pragma once
 #include "core/types.h"
 #include "core/raster.h"
@@ -13,7 +14,7 @@ struct ShipStand { double x, z, yaw, pitch; };
 struct ShipView { const char* name; int room; ShipStand at; };
 
 // the rooms, in the plan's order: a room's number is saved (`cabin_place`), so a new one goes before SHIP_ROOMS
-enum ShipRoomId { ROOM_BRIDGE, ROOM_HALL, ROOM_LIBRARY, ROOM_LAB, ROOM_QUARTERS, ROOM_HANGAR, ROOM_ENGINE, ROOM_OBSERVATORY, ROOM_STAIR, SHIP_ROOMS };
+enum ShipRoomId { ROOM_BRIDGE, ROOM_HALL, ROOM_LIBRARY, ROOM_LAB, ROOM_QUARTERS, ROOM_HANGAR, ROOM_MAINTENANCE, ROOM_OBSERVATORY, ROOM_STAIR, SHIP_ROOMS };   // R-427: the engine room's place
 constexpr ShipView SHIP_START = {"THE START", ROOM_BRIDGE, {0.0, 7.9, 0, 0}};   // where a new expedition stands: the bridge, facing the window
 
 // ---- the rows ---------------------------------------------------------------------------------------------------------------------
@@ -100,7 +101,7 @@ struct ShipStair {
 // shelves of `slots`, behind its glass door) and the jars' shelf (`slots` jars behind its glass). Z-06: the tree of kin's lines over its screen
 // (a box's corners on the screen's face, no faces of its own)
 enum ShipFixtureKind { FX_BOX, FX_SCREEN, FX_CAGE, FX_RACK, FX_TUBE, FX_RING, FX_MAST, FX_SHELF, FX_BED, FX_DECK, FX_LOCKER, FX_PRINTS, FX_DISPLAY, FX_CORE,
-                       FX_STORE, FX_INCUBATOR, FX_JARS, FX_TREE };
+                       FX_STORE, FX_INCUBATOR, FX_JARS, FX_TREE, FX_VEHICLE };   // R-427: a vehicle on its platform (`slots`: 0 the buggy, 1 the drone)
 constexpr int INCUBATOR_FLASKS = 12, JAR_PLACES = 8;   // Z-05: the incubator's flasks (three shelves of four), the jars' places
 // a box's kinds: its corners and height a box's, its faces drawn as a box's (the boxes' shadows, colliders and tops)
 constexpr bool fixtureBoxLike(int kind) {
@@ -143,16 +144,13 @@ struct ShipCollider {
 
 // a lamp, a point of the light's bank; I-03: its light lies on its room as pools, each vertex of the room's surfaces lit by its lamps
 // once with the mesh (the frame scales it by the light's level, U's dimming): a bulb under a ceiling (its pool below it, within `cone` of
-// straight down), the engine room's fuel orb (all round, pulsing with the drive), a glow (a reading lamp, a floor light: all round); its
-// power (at its reach a face toward it takes half of it) and its reach
-enum ShipLampKind { LAMP_BULB, LAMP_ORB, LAMP_GLOW };
+// straight down), a glow (a reading lamp, a floor light: all round); its power (at its reach a face toward it takes half of it) and its
+// reach (R-427: the engine room's fuel orb went with its ring)
+enum ShipLampKind { LAMP_BULB, LAMP_GLOW };
 struct ShipLamp { int room, kind; double x, y, z, power, reach, cone; };
 // I-04: U's night: the bulbs go out, the glows (the reading lamps, the bedside lamp, the picture lamp, the dome's floor lights) keep this
 // share of their light (a vertex's `night`: its glows' light and their share of the fill)
 constexpr double SHIP_NIGHT_GLOW = 0.35;
-// I-04: a room's sound, in levels (the synth is mono): its hum's and the drive's share of the ship's (the engine room's the loudest, the
-// dome's the quietest), the laboratory's bubbling, the garden's water, the player's music fuller (the library's)
-struct ShipRoomSound { double hum, drive, bubbles, water, full; };
 
 template <class Row> struct ShipRows {
     const Row* row; int count;
@@ -176,7 +174,6 @@ const ShipLamp& shipLampIn(int room, int kind);   // a room's lamp of a kind, el
 const ShipOpening& shipLifter();               // the lift to the observatory
 int shipRoomNamed(const char* name);           // -1 when none
 double shipRoomNear(int room, const Vec3& p);   // I-03: how far a place is from a room's bounds (0 within)
-const ShipRoomSound& shipRoomSound(int room);   // I-04: a room's sound (the stair's: the room its eye is in, `shipEyeRoom`)
 
 // ---- the walk ---------------------------------------------------------------------------------------------------------------------
 
@@ -237,7 +234,7 @@ void shipSight(const ShipPlace& p, const Vec3& eye, const Mat3& look, const Proj
 // (`fixture`): the shards on a shelf, the photographs, a bed's plants, the drive's core, the instruments in the case, the deck's reels,
 // the capsule in its cradle and the hatch under it; Z-04: the cold store's door's lamps; Z-05: the incubator's flasks, the jars; Z-06: the tree
 enum ShipPieceKind { PIECE_POLYGON, PIECE_LINE, PIECE_RACK, PIECE_MAST, PIECE_SHELF, PIECE_PRINTS, PIECE_GARDEN, PIECE_CORE, PIECE_DISPLAY, PIECE_DECK, PIECE_CAPSULE,
-                     PIECE_STORE, PIECE_INCUBATOR, PIECE_JARS, PIECE_TREE };
+                     PIECE_STORE, PIECE_INCUBATOR, PIECE_JARS, PIECE_TREE, PIECE_VEHICLE };   // R-427: a vehicle on its platform
 enum ShipMaterial { MAT_HULL, MAT_SOLID, MAT_SCREEN, MAT_PLAIN, MAT_PANE, MAT_TINT, MAT_OUTSIDE, MAT_FEATURE, MAT_GLOW };
 struct ShipPiece {
     int room = 0, kind = PIECE_POLYGON, mat = MAT_HULL, finish = FIN_HULL, bank = 0, device = 0;
@@ -248,8 +245,8 @@ struct ShipPiece {
     int fixture = -1;       // I-04: the fixture a piece the frame fills is (`shipFixtures`' index)
 };
 // a vertex: its place, its grain's u and v (a screen's v is y x 3 and the screens' clock, made in the frame); I-03: the light its room's
-// lamps give it (the bulbs' and the glows' with the room's fill, the orb's), fixed; I-04: the glows' share of it (what U's night keeps)
-struct ShipVert { Vec3 p; double u = 0, v = 0, lamp = 0, glow = 0, night = 0; };
+// lamps give it (the bulbs' and the glows' with the room's fill), fixed; I-04: the glows' share of it (what U's night keeps)
+struct ShipVert { Vec3 p; double u = 0, v = 0, lamp = 0, night = 0; };
 // I-03: where the sun comes in: a window's light between its mullions, a pane of the great window, the oculus (its outline, the way it
 // faces out), or the dome (the observatory's floor lit but in the parapet's shadow)
 struct ShipGlass { int room = 0, n = 0; Vec3 p[16]; Vec3 out; bool dome = false; };
@@ -267,7 +264,7 @@ struct ShipMesh {
 const ShipMesh& shipMesh();   // built once from the rows
 // I-04: what a room's lamps give a place facing `nrm` (none: lit all round), as the mesh's vertices take it: the bulbs' and the glows' with
 // the room's fill, the glows' share of it, the orb's (what the frame fills is lit so)
-void shipLampLight(int room, const Vec3& p, const Vec3* nrm, double& lamp, double& night, double& glow);
+void shipLampLight(int room, const Vec3& p, const Vec3* nrm, double& lamp, double& night);
 
 // ---- the light (I-03) -------------------------------------------------------------------------------------------------------------
 

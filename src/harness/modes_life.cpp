@@ -456,16 +456,81 @@ static int lifeAuto() {
     return good == 2 && places.size() == 2 ? 0 : 1;
 }
 
+// R-434: `life sight`: the activity vision played on the ground, landed where the scenes' `sight_shelf` stands (a superhabitable world's shelf:
+// its dry sand none at work, its wet edge and the sea strong). Shift+O and a second for its square metres to be read (life_sight_on.png, the
+// readings' line); a buggy unfolded and boarded, its nose camera with the vision (life_sight_buggy.png); out of it, the explorer at the nearest
+// square metre the vision shows strong and a vial taken there (its line, and the vision's heat at it: life_sight_sample.png); Shift+O again, the
+// eye's (life_sight_off.png). The exit code: the vial not strong, or the vision's frames not as they should be
+static int lifeSight() {
+    const CmpScene* sc = findScene("sight_shelf");
+    StarSystem sys; SurfaceView look; StarNeighborhood nb; double t0 = 0;
+    if (!sc || !setupSceneForType(sc->type, sc->latDeg, sc->alt, sc->yawOff, sc->pitch, look, sys, nb, t0, sc->wantMat)) { printf("life sight: no site\n"); return 1; }
+    double la, lo; look.site.latLonAt(look.player.x, look.player.z, la, lo);
+    TestGame game;
+    game.savePrefix = "shots/tests/life_sight_save"; game.settingsPath = "shots/tests/life_sight_settings.txt"; game.guidePath = "shots/tests/life_sight_guide.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());
+    game.newGame(); game.setState(GameState::SPACE);
+    Input in;
+    game.testParkAt(sys.star, look.site.body); game.testLandCursor(la / DEG, lo / DEG);
+    pressKey(game, in, KEY_ENTER);
+    for (int n = 0; n < 30 * 40 && game.state != GameState::SURFACE; n++) { game.frame(in, 1.0 / 30); in.newFrame(); }
+    runFrames(game, in, 2.0);
+    const SurfaceView& sv = game.testSurface();
+    printf("life sight: %s body %d (%s), landed at %.3f %.3f\n", sys.star.name.c_str(), look.site.body, KINDS[sys.bodies[look.site.body].type].name, la / DEG, lo / DEG);
+    auto shot = [&](const char* name) {
+        writePNG(fmt("shots/tests/life_sight_%s.png", name).c_str(), game.output(), FBW, FBH);
+        int read = 0, faint = 0, strong = 0; sv.testSightCounts(read, faint, strong);
+        printf("  %-6s %s, vision %d, %d square metres read (%d faint, %d strong): '%s'\n", name, stateName(game.state), game.testVisionMode(), read, faint, strong, game.testStatus().c_str());
+    };
+    auto shiftO = [&] { in.down[KEY_LEFT_SHIFT] = true; pressKey(game, in, KEY_O); in.down[KEY_LEFT_SHIFT] = false; };
+    game.testSurfaceFace(sv.player.yaw, -0.35);
+    shiftO(); runFrames(game, in, 1.0); shot("on");
+    const bool on = game.testVisionMode() == VISION_ACTIVITY && sv.testSightMissing() == 0;
+    pressKey(game, in, KEY_B); runFrames(game, in, 2.5); game.testWalkToBuggy(); pressKey(game, in, KEY_E); runFrames(game, in, 1.0); shot("buggy");
+    const bool driven = sv.inBuggy;
+    pressKey(game, in, KEY_E); runFrames(game, in, 0.5);
+    // the nearest square metre the vision shows strong, within 30 m: the explorer a metre short of its middle, looking at it
+    double bx = 0, bz = 0, bd = 1e9;
+    const double px = std::floor(sv.player.x), pz = std::floor(sv.player.z);
+    for (int dz = -30; dz <= 30; dz++)
+        for (int dx = -30; dx <= 30; dx++) {
+            const double x = px + dx + 0.5, z = pz + dz + 0.5, d = std::hypot(x - sv.player.x, z - sv.player.z);
+            if (d > 2.0 && d < bd && sv.sightHeatAt(x, z) >= 0.62f) { bd = d; bx = x; bz = z; }
+        }
+    std::string line = "-"; float heat = -1; int activity = -1;
+    if (bd < 1e9) {
+        const double yaw = std::atan2(bx - sv.player.x, bz - sv.player.z);
+        game.testWalkTo(bx - std::sin(yaw) * 1.2, bz - std::cos(yaw) * 1.2);
+        game.testSurfaceFace(yaw, -0.95);
+        runFrames(game, in, 0.3);
+        pressKey(game, in, KEY_O); runFrames(game, in, 0.3);
+        if (!game.testKit().empty()) {
+            const Vial& v = game.testKit().back();
+            line = game.testVialLine(v); activity = v.activity;
+            heat = sv.sightHeatAt(game.testRangeX(), game.testRangeZ());
+        }
+        shot("sample");
+    }
+    shiftO(); runFrames(game, in, 0.3); shot("off");
+    const bool off = game.testVisionMode() == 0;
+    pngFlush();
+    printf("life sight: the vision on %s, from the buggy %s; the nearest strong square metre %.1f m off, the vial there: %s (the vision's heat %.2f); off again %s\n",
+           on ? "and read" : "NOT READ", driven ? "yes" : "NO", bd < 1e9 ? bd : -1.0, line.c_str(), heat, off ? "yes" : "NO");
+    return on && driven && off && activity == VA_STRONG ? 0 : 1;
+}
+
 int runLife(int argc, char** argv) {
     const std::string sub = argc > 2 ? argv[2] : "list";
     if (sub == "search") return lifeSearch(argc > 3 ? argv[3] : "all");
     if (sub == "kit") return lifeKit();
     if (sub == "auto") return lifeAuto();
+    if (sub == "sight") return lifeSight();
     if (sub == "list") return lifeList(argc > 3 ? std::max(1, atoi(argv[3])) : 12);
     if (sub == "survey") return lifeSurvey(argc > 3 ? std::max(1, atoi(argv[3])) : 1500);
     if (sub == "kin") return lifeKin(argc > 3 ? std::max(1.0, atof(argv[3])) : 200.0);
     if (sub == "made") return lifeMade(argc > 3 ? std::max(1, atoi(argv[3])) : 100);
     if (sub == "plates" || sub == "strips" || sub == "distinct" || sub == "forms") return runLifeLook(argc, argv);
-    printf("life list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto\n");
+    printf("life list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto | sight\n");
     return 2;
 }

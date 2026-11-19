@@ -300,7 +300,6 @@ void Game::shardsEnter() {
         std::string here = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, ship.parkedBody);
         for (size_t i = 0; i < shardWorldKeys.size(); i++) if (shardWorldKeys[i] == here) { shardWorldSel = (int)i; break; }
     }
-    if (shardsTop == 1) playerBuildList();   // the player's page, as it was left
     returnState = GameState::SPACE;
     audio.beep = BEEP_UI;
 }
@@ -389,30 +388,8 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
         // C-18: the drones brought more while the decoder was open (a record on the screen keeps the count it is read with)
         listShardWorlds();
         if (shardsLevel == 1 && shardWorld.valid) listShardsHeld();
-        if (shardsTop == 1) {   // C-11's player page: its list again, the cursor on its row
-            const std::string selKey = player.sel >= 0 && player.sel < (int)player.items.size() ? playerItemKey(player.items[player.sel]) : std::string();
-            playerBuildList();
-            for (size_t i = 0; i < player.items.size() && !selKey.empty(); i++) if (playerItemKey(player.items[i]) == selKey) { player.sel = (int)i; break; }
-        }
     }
     int nw = (int)shardWorldKeys.size();
-    if (shardsLevel == 0 && in.wasPressed(KEY_TAB)) { shardsTop = 1 - shardsTop; if (shardsTop == 1) playerBuildList(); audio.beep = BEEP_UI; return; }   // the worlds, the player
-    if (shardsLevel == 0 && shardsTop == 1) {   // the ship's player
-        const int n = (int)player.items.size();
-        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }   // it plays on
-        if (n == 0) return;
-        menuStep(in, player.sel, n);
-        if (in.wasPressed(KEY_PAGE_UP)) player.sel = std::max(0, player.sel - 15);
-        if (in.wasPressed(KEY_PAGE_DOWN)) player.sel = std::min(n - 1, player.sel + 15);
-        if (enterKey(in)) { playerPlay(player.sel); audio.beep = BEEP_UI; }
-        if (in.wasPressed(KEY_SPACE) && player.playing >= 0) {
-            player.paused = !player.paused;
-            if (audio.piece == &player.world.piece) audio.piecePause = player.paused;
-            if (audio.speech == &player.world.speech) audio.speechPause = player.paused;
-        }
-        if (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) { playerStop(); audio.beep = BEEP_UI; }
-        return;
-    }
     if (shardsLevel == 0) {
         if (in.wasPressed(KEY_ESCAPE) || (nw == 0 && enterKey(in))) { stopPiece(); closeScreen(); return; }
         if (nw == 0) return;
@@ -515,16 +492,12 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
     }
 }
 
-// U-04: the decoder's commands (the controller's first page), its level's: the player's, the worlds', a world's records, a record's
+// U-04: the decoder's commands (the controller's first page), its level's: the worlds', a world's records, a record's (R-431: the player
+// its own screen's)
 void Game::shardsPad(PadMenu& m) const {
     m.title = "THE DECODER";
-    if (shardsLevel == 0 && shardsTop == 1) {
-        m.item("PLAY FROM HERE", KEY_ENTER);
-        if (player.playing >= 0) { m.item(player.paused ? "GO ON" : "PAUSE", KEY_SPACE); m.item("STOP", KEY_BACKSPACE); }
-        m.item("THE WORLDS", KEY_TAB);
-    } else if (shardsLevel == 0) {
+    if (shardsLevel == 0) {
         if (!shardWorldKeys.empty()) m.item("OPEN THE WORLD", KEY_ENTER);
-        m.item("THE SHIP'S PLAYER", KEY_TAB);
     } else if (shardsLevel == 1) {
         m.item(shardsPage == 2 ? "OPEN THE RECORD THAT TOLD IT" : "READ THE RECORD", KEY_ENTER);
         m.item("THE NEXT PAGE", KEY_TAB); m.item("THE PAGE BEFORE", KEY_TAB, MOD_SHIFT);
@@ -561,7 +534,6 @@ void Game::shardsAway() {
 void Game::renderShards() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
     int nw = (int)shardWorldKeys.size();
-    if (shardsLevel == 0 && shardsTop == 1) { renderPlayerPage(); return; }
     if (shardsLevel == 0) {
         drawText(canvas, 6, 4, "THE SHARD DECODER", HUD_AMBER);
         if (nw == 0) {
@@ -596,7 +568,7 @@ void Game::renderShards() {
                 drawText(canvas, 16, y + 9, row.c_str(), HUD_DIM);
             }
         }
-        drawTextCentered(canvas, UW / 2, UH - 10, nw ? "UP/DOWN  ENTER A WORLD  TAB THE PLAYER  ESC CLOSE" : "TAB THE PLAYER  ESC CLOSE", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, nw ? "UP/DOWN  ENTER A WORLD  ESC CLOSE" : "ESC CLOSE", HUD_DIM);
         return;
     }
     const std::string& key = shardWorld.key;

@@ -217,17 +217,17 @@ void Flow::decoder() {
             game.guide = kept; game.guide.save(game.guidePath);
             remove("shots/tests/test_guide_inbox.txt");
         }
-        {   // the ship's player: Tab at the decoder's worlds turns to it (the pieces and recordings held, what the radar caught); the first
-            // piece played and left playing as the decoder closes: the radar below holds it, the flight carries it on the space HUD, the landing stops it
-            game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
-            press(KEY_TAB); run(0.1);
+        {   // the ship's player (R-431: its own screen at its deck, a folder a world, music alone); its first world's first piece played and
+            // left playing as the screen closes: the radar below holds it, the flight carries it on the space HUD, the landing stops it
+            game.testCabinAtDevice(FACE_DECK); run(0.2); press(KEY_E); run(0.1);
+            const int worlds = game.testPlayerWorlds();
+            press(KEY_ENTER); run(0.1);   // its world (the one under the ship, else the first)
             const int items = game.testPlayerItems();
-            int first = -1; for (int i = 0; i < items && first < 0; i++) if (game.testPlayerItemLine(i).find(" music") != std::string::npos) first = i;
-            for (int k = 0; k < first; k++) press(KEY_DOWN);
-            if (first >= 0) press(KEY_ENTER);
-            run(0.3); shot("player"); printf("  the player's page: %d items, item %d played: %s\n", items, first, game.testPlayerInfo().c_str());
-            press(KEY_TAB); run(0.1); press(KEY_ESCAPE); run(0.1);   // the worlds' page again (the one the decoder opens on), closed: the piece plays on
-            printf("  the decoder closed: %s\n", game.testPlayerInfo().c_str());
+            press(KEY_ENTER);   // its first piece
+            run(0.3); shot("player"); printf("  the player: %d pieces in %d worlds, its first world's first played: %s\n", items, worlds, game.testPlayerInfo().c_str());
+            press(KEY_ESCAPE); run(0.1); press(KEY_ESCAPE); run(0.1);   // the worlds again, closed: the piece plays on
+            printf("  the player closed (state %d): %s\n", (int)game.state, game.testPlayerInfo().c_str());
+            game.testCabinAtDevice(FACE_DECODER);   // where the decoder's player page left the explorer: the stages after see what they saw
         }
         press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
         printf("  decoder: state %d after leaving, %zu shards decoded in the guide\n", (int)game.state, game.guide.decoded.size());
@@ -265,8 +265,7 @@ void Flow::aboard() {
     game.testCabinAtDevice(FACE_DESK); run(0.2); press(KEY_E); run(0.1); shot("aboard_desk");
     printf("  E at the desk: %s\n", game.state == GameState::LOG ? "the log" : "NOT THE LOG"); press(KEY_ESCAPE); run(0.1);
     game.testCabinAtDevice(FACE_DECK); run(0.2); press(KEY_E); run(0.1); shot("aboard_deck");
-    printf("  E at the player's deck: %s\n", game.state == GameState::SHARDS && game.testShardsTop() == 1 ? "the player's page" : "NOT THE PLAYER'S PAGE"); press(KEY_ESCAPE); run(0.1);
-    game.testShardsTop(0);   // the decoder opens on its worlds again for the stages after
+    printf("  E at the player's deck: %s\n", game.state == GameState::PLAYER ? "the player's screen" : "NOT THE PLAYER'S SCREEN"); press(KEY_ESCAPE); run(0.1);   // R-431
     game.testCabinView("THE GARDEN"); run(0.2); shot("aboard_garden");
     game.testCabinView("THE CORE"); run(0.2); shot("aboard_core");
     game.testCabinView("THE START"); run(0.2);
@@ -611,9 +610,10 @@ void Flow::landing() {
         press(KEY_Q); run(3.0); shot("ascent");
         run(6.0); shot("back_in_space");
         printf("  aboard: %d vials in the cold store, %d in the kit\n", (int)game.testColdStore().size(), (int)game.testKit().size());   // Z-03
-        {   // Z-04: the microscope on the first vial: E at it (the cold store's list), Enter (the slide's first look), the sheet of the cell under the
-            // crosshair (Tab); Esc to the list and to the laboratory
+        {   // Z-04: the microscope on the first vial: E at it (R-432: the cold store's vials a folder a world), Enter (the first world's vials), Enter
+            // (the slide's first look), the sheet of the cell under the crosshair (Tab); Esc to the world's vials, to the worlds and to the laboratory
             game.testCabinAtDevice(FACE_MICROSCOPE); run(0.2); press(KEY_E); run(0.1); shot("microscope_list");
+            press(KEY_ENTER); shot("microscope_world");
             press(KEY_ENTER); run(2.0); shot("microscope");
             const MicroscopeState& M = game.testScope();
             int forms = 0;
@@ -622,14 +622,15 @@ void Flow::landing() {
                    stateName(game.state), M.vial, SEEING_NAMES[M.seeing], game.testScopeMag(), M.mount.kinds.size(), M.mount.prep, M.shown.size(), game.guide.microbes.size(), forms,
                    game.testStatus().c_str());
             press(KEY_TAB); run(0.1); shot("microscope_sheet"); press(KEY_TAB);
-            press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
+            press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
         }
-        {   // Z-05: the incubator: E at it, Enter (the chooser: the species seen in the vials), Enter (the first into flask 1, AS ITS WORLD), its clock
-            // skipped twenty minutes (its hook) and the flask read; Tab the jars and back; Esc to the laboratory
-            game.testCabinAtDevice(FACE_INCUBATOR); run(0.2); press(KEY_E); run(0.1);
+        {   // Z-05: the incubator: E at it, Enter (the chooser: the species seen in the vials; R-432: in a folder a world), Enter (the first world's),
+            // Enter (its first into flask 1, AS ITS WORLD), its clock skipped twenty minutes (its hook) and the flask read; Tab the jars and back; Esc
+            // to the laboratory. (R-432's two Enters' frames taken from the waits at the incubator and the sequencer: the frames after them in time)
+            game.testCabinAtDevice(FACE_INCUBATOR); run(0.1); press(KEY_E); run(0.1);
             press(KEY_ENTER); run(0.1); shot("incubator_choose");
             const int choices = (int)game.testIncub().choices.size();
-            press(KEY_ENTER); run(0.1);
+            press(KEY_ENTER); press(KEY_ENTER); run(0.1);
             const Flask& F = game.testLab().flasks[0];
             const double asWorld = F.medium.tempC;
             if (F.n > 0) {   // its warmth turned to its best with the keys (the warmth's field is the screen's first chosen): tens with Shift, then ones
@@ -646,12 +647,13 @@ void Flow::landing() {
             press(KEY_TAB); run(0.1); shot("incubator_jars"); press(KEY_TAB);
             press(KEY_ESCAPE); run(0.1);
         }
-        {   // Z-06: the sequencer: E at it, Enter (the chooser: the species seen), Enter (the first read), its clock skipped halfway and past its
-            // reading (the skip hook), its result; Tab the tree (its leaves, the geneses); Esc back to the sequencer, Esc to the laboratory
-            game.testCabinAtDevice(FACE_SEQUENCER); run(0.2); press(KEY_E); run(0.1);
+        {   // Z-06: the sequencer: E at it, Enter (the chooser: the species seen; R-432: in a folder a world), Enter (the first world's), Enter (its
+            // first read), its clock skipped halfway and past its reading (the skip hook), its result; Tab the tree (its leaves, the geneses); Esc back
+            // to the sequencer, Esc to the laboratory
+            game.testCabinAtDevice(FACE_SEQUENCER); run(0.167); press(KEY_E); run(0.1);
             press(KEY_ENTER); run(0.1); shot("sequencer_choose");
             const int choices = (int)game.testLab().seq.choices.size();
-            press(KEY_ENTER); run(0.1);
+            press(KEY_ENTER); press(KEY_ENTER); run(0.1);
             game.testLabSkip(SEQUENCE_S / 2); run(0.2); shot("sequencer_reading");
             game.testLabSkip(SEQUENCE_S / 2 + 1); run(0.2); shot("sequencer");
             const SequencerState& Q = game.testLab().seq;

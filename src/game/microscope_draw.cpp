@@ -21,7 +21,7 @@ const char* const WAY_WORDS[WS_COUNT] = {"BRIGHT", "PHASE", "DARK", "GLOW", "ELE
 }   // namespace
 
 void Game::renderMicroscope() {
-    const bool slide = scope.page == 1 && ((scope.vial >= 0 && scope.vial < (int)coldStore.size()) || scope.flask >= 0);
+    const bool slide = scope.page == 1 && ((scope.vial >= 0 && scope.vial < (int)coldStore.size()) || scope.flask >= 0 || (scope.kept >= 0 && scope.kept < (int)lab.kept.size()));
     Slide v;
     v.seeing = slide ? scope.seeing : WS_BRIGHT;
     v.umPerPx = umPerPxAt(microscopeMag());
@@ -124,50 +124,118 @@ void Game::renderMicroscopeHUD() {
     }
 }
 
-// the cold store's vials: each its line (the sample's name, the temperature read) and its world, the one on the stage marked; Enter puts one on
-// the stage, Backspace empties it (Z-05: the incubator's flasks after them)
+// R-432: the lists: the tabs (the vials, the cultures) over the folders (renderMicroscopeFolders) or an open folder's rows under its name: a vial's
+// line and the activity it read; a flask's culture and its stage (Z-05); a kept culture's words and its world (R-433); the one on the stage in cyan
 void Game::renderMicroscopeList() {
     const int top = 14, bottom = UH - 16, rowH = 9;
     drawPanel(canvas, 8, top, UW - 8, bottom, rgb(0, 0, 0), 215);
     drawTextShadow(canvas, 16, top + 6, "CAM 06 MICROSCOPE", scopeColour(), HUD_SHADOW);
-    const int nv = (int)coldStore.size(), n = microscopeRows();
-    const std::string head = fmt("THE COLD STORE: %d OF ITS %d PLACES FILLED", nv, COLD_STORE) + (n > nv ? fmt(" - %d FLASKS", n - nv) : std::string());
-    drawText(canvas, 16, top + 18, head.c_str(), HUD_AMBER);
-    if (n == 0) {
-        drawTextCentered(canvas, UW / 2, top + 60, "NO VIALS IN THE COLD STORE", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, top + 72, "ON THE GROUND O TAKES A SAMPLE", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, bottom - 10, "ESC BACK TO THE LABORATORY", HUD_DIM);
-        return;
+    {   // the tabs, the one shown in amber
+        const char* a = scope.tab == 0 ? "THE VIALS" : "VIALS";
+        const char* b = scope.tab == 1 ? "THE CULTURES" : "CULTURES";
+        const int x = UW - 16 - textWidth(b);
+        drawText(canvas, x, top + 6, b, scope.tab == 1 ? HUD_AMBER : HUD_DIM);
+        drawText(canvas, x - 12 - textWidth(a), top + 6, a, scope.tab == 0 ? HUD_AMBER : HUD_DIM);
     }
-    const int rows = (bottom - 14 - (top + 32)) / rowH;
+    const std::vector<LabFolder> F = scope.tab == 0 ? vialFolders() : cultureFolders();
+    const int nf = (int)F.size();
+    if (scope.open && (scope.folder >= nf || F[scope.folder].rows.empty())) scope.open = false;
+    if (!scope.open) { renderMicroscopeFolders(F); return; }
+    const LabFolder& f = F[scope.folder];
+    drawText(canvas, 16, top + 18, fitText(f.name + " - " + f.line, UW - 32).c_str(), HUD_AMBER);
+    const int n = (int)f.rows.size(), rows = (bottom - 14 - (top + 32)) / rowH;
     scope.sel = clampi(scope.sel, 0, n - 1);
     if (scope.sel < scope.top) scope.top = scope.sel;
     if (scope.sel >= scope.top + rows) scope.top = scope.sel - rows + 1;
     scope.top = clampi(scope.top, 0, std::max(0, n - rows));
     for (int i = scope.top; i < n && i < scope.top + rows; i++) {
-        const int y = top + 32 + (i - scope.top) * rowH;
+        const int y = top + 32 + (i - scope.top) * rowH, r = f.rows[i];
         const bool sel = i == scope.sel;
         if (sel) drawText(canvas, 12, y, ">", HUD_AMBER);
-        const int fl = microscopeRowFlask(i);
-        if (fl >= 0) {   // Z-05: a flask's culture, its species and its stage
-            const Flask& F = lab.flasks[fl];
-            const CultureNow now = flaskNow(fl);
-            std::string line = fmt("FLASK %d: ", fl + 1) + F.label[0] + (F.n > 1 ? " + " + F.label[1] : std::string());   // the names that fit (never cut)
-            if (20 + textWidth(line.c_str()) > UW - 14) line = fmt("FLASK %d: ", fl + 1) + F.label[0];
-            if (20 + textWidth(line.c_str()) > UW - 14) line = fmt("FLASK %d", fl + 1);
-            drawText(canvas, 20, y, line.c_str(), sel ? HUD_WHITE : (fl == scope.flask ? HUD_CYAN : HUD_GREEN));
-            const std::string st = CULTURE_STAGE_NAMES[now.one[0].stage];
-            if (20 + textWidth(line.c_str()) + 12 <= UW - 14 - textWidth(st.c_str())) drawText(canvas, UW - 14 - textWidth(st.c_str()), y, st.c_str(), HUD_DIM);
-            continue;
+        std::string line, right; uint32_t rc = HUD_DIM; bool staged = false;
+        if (f.id == FOLDER_WORLD) {   // a vial: its line and its activity
+            const Vial& v = coldStore[r];
+            line = fmt("%s, %.0f C", v.name.c_str(), std::fabs(v.readingC) < 0.5 ? 0.0 : v.readingC);
+            right = VIAL_ACTIVITY_NAMES[v.activity]; rc = v.activity == VA_STRONG ? HUD_AMBER : (v.activity == VA_FAINT ? HUD_GREEN : HUD_DIM);
+            staged = r == scope.vial;
+        } else if (f.id == FOLDER_FLASKS) {   // Z-05: a flask's culture, its species and its stage
+            const Flask& L = lab.flasks[r];
+            line = fmt("FLASK %d: ", r + 1) + L.label[0] + (L.n > 1 ? " + " + L.label[1] : std::string());   // the names that fit (never cut)
+            if (20 + textWidth(line.c_str()) > UW - 14) line = fmt("FLASK %d: ", r + 1) + L.label[0];
+            if (20 + textWidth(line.c_str()) > UW - 14) line = fmt("FLASK %d", r + 1);
+            right = CULTURE_STAGE_NAMES[flaskNow(r).one[0].stage];
+            staged = r == scope.flask;
+        } else {   // R-433: a kept culture, its world
+            line = fitText(keptName(r), UW - 34);
+            const KeptCulture& c = lab.kept[r];
+            right = upper(nameOfKey(Guide::bodyKey(c.who.sx, c.who.sy, c.who.sz, c.who.body)));
+            staged = r == scope.kept;
         }
-        const Vial& v = coldStore[i];
-        const std::string line = fmt("%s, %.0f C", v.name.c_str(), std::fabs(v.readingC) < 0.5 ? 0.0 : v.readingC);
-        drawText(canvas, 20, y, line.c_str(), sel ? HUD_WHITE : (i == scope.vial ? HUD_CYAN : HUD_GREEN));
-        const std::string w = upper(vialWorldName(v));   // its world where it has room after the line (never cut)
-        if (20 + textWidth(line.c_str()) + 12 <= UW - 14 - textWidth(w.c_str())) drawText(canvas, UW - 14 - textWidth(w.c_str()), y, w.c_str(), HUD_DIM);
+        drawText(canvas, 20, y, line.c_str(), sel ? HUD_WHITE : (staged ? HUD_CYAN : HUD_GREEN));
+        if (20 + textWidth(line.c_str()) + 12 <= UW - 14 - textWidth(right.c_str())) drawText(canvas, UW - 14 - textWidth(right.c_str()), y, right.c_str(), rc);   // never cut
     }
-    drawTextCentered(canvas, UW / 2, bottom - 10, microscopeRowFlask(scope.sel) >= 0 ? "ENTER A DROP OF IT ON THE STAGE  ESC BACK" : "ENTER ON THE STAGE  BACKSPACE EMPTIES IT  ESC BACK",
-                     HUD_DIM);
+    const char* keys = f.id == FOLDER_WORLD ? "ENTER ON THE STAGE  BACKSPACE EMPTIES IT  ESC BACK"
+                     : (f.id == FOLDER_FLASKS ? "ENTER A DROP OF IT ON THE STAGE  ESC BACK" : "ENTER ON THE STAGE  M MOVES  BACKSPACE DISCARDS");
+    drawTextCentered(canvas, UW / 2, bottom - 10, keys, HUD_DIM);
+    if (!scope.moving) return;
+    // R-433: M's chooser over the list: UNSORTED and the explorer's folders, the culture's own marked
+    const int n2 = 1 + (int)lab.folders.size(), x0 = 70, x1 = UW - 70, h = std::min(10, n2) * rowH + 30, y0 = (UH - h) / 2;
+    drawPanel(canvas, x0, y0, x1, y0 + h, rgb(0, 0, 0), 235, scopeColour());
+    drawText(canvas, x0 + 8, y0 + 6, "MOVE IT TO:", scopeColour());
+    scope.moveSel = clampi(scope.moveSel, 0, n2 - 1);
+    const int first = std::max(0, std::min(scope.moveSel - 5, n2 - 10));
+    const int kf = lab.kept[f.rows[scope.sel]].folder;
+    for (int i = first; i < n2 && i < first + 10; i++) {
+        const int y = y0 + 18 + (i - first) * rowH;
+        const std::string name = i == 0 ? std::string("UNSORTED") : lab.folders[i - 1].name;
+        const bool here = (i == 0 ? 0 : lab.folders[i - 1].id) == kf;
+        if (i == scope.moveSel) drawText(canvas, x0 + 6, y, ">", scopeColour());
+        drawText(canvas, x0 + 14, y, (name + (here ? "  (HERE)" : "")).c_str(), i == scope.moveSel ? HUD_WHITE : HUD_GREEN);
+    }
+}
+
+// R-432: the folders: the vials' a world each (its name and where it is; its vials, how many read STRONG), the cultures' a line each (the
+// flasks, UNSORTED, the explorer's: its name and its count); the head's count, the keys of the folder chosen
+void Game::renderMicroscopeFolders(const std::vector<LabFolder>& F) {
+    const int top = 14, bottom = UH - 16, nf = (int)F.size();
+    if (scope.tab == 0) {
+        if (nf == 0) {
+            drawText(canvas, 16, top + 18, "THE COLD STORE IS EMPTY", HUD_AMBER);
+            drawTextCentered(canvas, UW / 2, top + 60, "NO VIALS IN THE COLD STORE", HUD_DIM);
+            drawTextCentered(canvas, UW / 2, top + 72, "ON THE GROUND O TAKES A SAMPLE", HUD_DIM);
+            drawTextCentered(canvas, UW / 2, bottom - 10, "TAB THE CULTURES  ESC BACK TO THE LABORATORY", HUD_DIM);
+            return;
+        }
+        drawText(canvas, 16, top + 18, fmt("THE COLD STORE: %d VIAL%s FROM %d WORLD%s", (int)coldStore.size(), coldStore.size() == 1 ? "" : "S", nf, nf == 1 ? "" : "S").c_str(), HUD_AMBER);
+    } else {
+        const int kept = (int)lab.kept.size();
+        drawText(canvas, 16, top + 18, (kept == 0 ? std::string("THE COLLECTION: NOTHING KEPT YET") : fmt("THE COLLECTION: %d CULTURE%s KEPT", kept, kept == 1 ? "" : "S")).c_str(), HUD_AMBER);
+    }
+    const int rowH = scope.tab == 0 ? 19 : 9, rows = (bottom - 14 - (top + 32)) / rowH;
+    scope.folder = clampi(scope.folder, 0, nf - 1);
+    if (scope.folder < scope.folderTop) scope.folderTop = scope.folder;
+    if (scope.folder >= scope.folderTop + rows) scope.folderTop = scope.folder - rows + 1;
+    scope.folderTop = clampi(scope.folderTop, 0, std::max(0, nf - rows));
+    for (int i = scope.folderTop; i < nf && i < scope.folderTop + rows; i++) {
+        const LabFolder& f = F[i];
+        const int y = top + 32 + (i - scope.folderTop) * rowH;
+        const bool sel = i == scope.folder;
+        if (sel) drawText(canvas, 12, y, ">", HUD_AMBER);
+        const uint32_t col = sel ? HUD_WHITE : (f.foreign ? HUD_CYAN : HUD_GREEN);
+        if (scope.tab == 0) {
+            const std::string where = labFolderWhere(f.key);
+            drawText(canvas, 20, y, (trunc(f.name, std::max(8, 49 - (int)where.size())) + where).c_str(), col);
+            drawText(canvas, 20, y + 9, f.line.c_str(), HUD_DIM);
+        } else {
+            drawText(canvas, 20, y, fitText(f.name, UW - 54 - textWidth(f.line.c_str())).c_str(), col);
+            drawText(canvas, UW - 14 - textWidth(f.line.c_str()), y, f.line.c_str(), HUD_DIM);
+        }
+    }
+    const LabFolder& f = F[scope.folder];
+    const char* keys = scope.tab == 0 ? "ENTER OPENS A WORLD  TAB CULTURES  ESC BACK"
+                     : (f.id <= 0 ? "ENTER OPENS  N NEW FOLDER  TAB VIALS  ESC BACK"
+                                  : (f.rows.empty() ? "ENTER OPENS  N NEW  R RENAMES  BACKSPACE REMOVES" : "ENTER OPENS  N NEW  R RENAMES  ESC BACK"));
+    drawTextCentered(canvas, UW / 2, bottom - 10, keys, HUD_DIM);
 }
 
 // a species' sheet, over the slide's right: its lines as seen (sheetLines), wrapped to the panel

@@ -108,7 +108,6 @@ public:
     std::string shotsDir = "shots";
     std::string screenshotCaption() const;
     void noteScreenshot() { guide.screenshots++; guide.save(guidePath); prints.stale = true; }   // I-04: the quarters' wall prints it
-    static void aboardSounds(AudioState& a, int room, bool radarOn, bool playing, int shipMode);   // I-04: a room's sounds (autopilot.cpp)
     std::string starNameOf(const Star& s) const;
     std::string bodyNameOf(int bi) const;
     bool starNamed(const Star& s) const;
@@ -461,16 +460,16 @@ protected:
     std::string worldNameOfKey(const std::string& key) const;
     void shardsEnter(); void openShard(int sel); void updateShards(const Input& in, double dt, double realDt); void renderShards(); void renderPiece(); void shardsAway();
     void shardsPad(PadMenu& m) const;
-    // ---- the ship's player (player.cpp, player_state.h)
+    // ---- the ship's player (player.cpp, player_state.h); R-431: its own screen at the deck (`PLAYER`)
     ShipPlayer player;
-    int shardsTop = 0;                                 // the decoder's first level: 0 the worlds, 1 the player
     void playerBuildList();
     void playerPlay(int item);
     void playerStart();
     void playerStop();
     bool playerOwns() const;
     void updatePlayer(double realDt);
-    void renderPlayerPage();
+    void playerEnter(); void updatePlayerScreen(const Input& in, double dt, double realDt); void renderPlayerScreen(); void playerPad(PadMenu& m) const;
+    void playerWorldRange(int w, int& first, int& end) const;
     std::string playerHudLine() const;
     static std::string playerItemKey(const PlayerItem& it);
     static std::string playerItemTitle(const PlayerItem& it, const std::string* name);
@@ -507,7 +506,9 @@ protected:
     void drawDroneRack(CabinFrame& f);
     void drawDroneLights();
     void drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun);
-    void drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims, ShapeSink& out);
+    void drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims, ShapeSink& out,
+                        const Vec3* bulbAt = nullptr);
+    void drawVehicle(CabinFrame& f, const ShipFixture& F);   // R-427: the buggy or the drone on its platform (vehicles_draw.cpp)
     void drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col);
     void buildDroneMap(int body);
     int droneBayWorld() const;
@@ -746,8 +747,9 @@ protected:
     // ---- where each screen was opened from (`openScreen`, U-05): its way back when its row's is its opener
     GameState openedFrom[STATE_COUNT] = {};
     // ---- life aboard (cabin_life.cpp, aboard_state.h; I-04): the photographs' prints on the quarters' wall (made on a thread of their
-    // own, asked for when the quarters are seen), the home world's garden, the shards held of each world for the shelves (made again when
-    // their count changes), the hatch's drop (a descent's first seconds, seen from the hangar, when boarded at the capsule)
+    // own, asked for when the quarters are seen; R-428: hung by the explorer, wall_screen.cpp), the home world's garden (R-429: trimmed),
+    // the shards held of each world for the shelves (made again when their count changes), the hatch's drop (a descent's first seconds,
+    // seen from the hangar, when boarded at the capsule)
     ShipPrints prints;
     ShipGarden garden;
     GrainTexture leafGrain;
@@ -756,9 +758,10 @@ protected:
     static constexpr double DROP_S = 3.5;
     void lifeSight(CabinFrame& f, std::vector<ShipBankAsk>& asks);
     void printsAsk(); void printsCollect();
+    static std::vector<int> photographNumbers(const std::string& dir);   // R-428: the newest first
     void gardenMake();
     RGB finishColour(int k) const;
-    double gardenGrowth() const;
+    double gardenGrowth(int bed) const; void gardenTrim(int bed);
     bool cabinDropping() const;
     Cabin cabinSeen() const;
     double lifeShade(const CabinFrame& f, int room, const Vec3& p, const Vec3* n, double a) const;
@@ -769,7 +772,7 @@ protected:
     void drawCapsule(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);
     void drawStore(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);   // Z-04: the cold store's door's lamps
     // ---- the search (search.cpp, search_state.h; Z-03): the kit's vials taken on this descent (O on foot, the capsule's scoop in a cloud
-    // world's descent), the cold store they go to at the climb aboard (its 64 places the save's `vial` lines)
+    // world's descent), the cold store they go to at the climb aboard (R-432: any number; the save's `vial` lines)
     std::vector<Vial> kit, coldStore;
     bool scooped = false;   // this descent's scoop taken
     std::string scoopLine; double scoopUntil = 0;   // its line, in the capsule's caption while it lasts (the capsule draws no status)
@@ -809,8 +812,6 @@ protected:
     void renderMicroscopeList(); void renderMicroscopeHUD(); void renderMicroscopeSheet();
     bool microscopeStageFlask(int flask);   // Z-05: a flask's drop on the stage, its culture as it is
     void microscopeView();                  // a new mount's first look
-    int microscopeRows() const;             // the list's rows: the cold store's vials, then the flasks with a culture
-    int microscopeRowFlask(int row) const;  // a row's flask (-1 a vial's)
     // ---- the incubator (incubator.cpp, incubator_draw.cpp, lab_state.h; Z-05): the laboratory's second device, a screen over the room: twelve
     // flasks, each a medium and a culture of one or two species on the lab's clock (its curve, its stages; spores woken, two in a flask, strains
     // named with N), and the jars' shelf (a world's silt in a column, settling in bands); the clock and both saved (`lab`, `flask`, `flaskwho`,
@@ -878,4 +879,22 @@ protected:
     void renderCatalogueSheet();
     double renderCatalogueForm(const Morph& m, const MicrobeSheet& seen, uint64_t seed);
     void renderStatsLife();
+    // ---- the quarters' wall (wall_screen.cpp, aboard_state.h; R-428): its frames as the explorer hangs them (the save's `wall` line);
+    // R-429: the time played, the garden's clock, and each bed's last trim in it (the save's `garden` line; cabin_life.cpp)
+    ShipWall wall;
+    double played = 0;                      // the seconds played (the title's not)
+    double bedTrimmed[GARDEN_BEDS] = {};    // each bed's last trim in `played` (the expedition's start, before any)
+    void wallEnter(); void updateWall(const Input& in, double dt, double realDt); void renderWall(); void wallPad(PadMenu& m) const;
+    int wallNumber(int k) const; void wallOwn();
+    // ---- the laboratory's lists in folders (lab_lists.cpp; R-432, R-433): the vials by world, the cultures (the flasks, the collection's
+    // folders), the choosers' folders; the culture collection: every species and strain grown in a flask kept (the save's `kept` and
+    // `keptfolder` lines) in the explorer's folders, on the stage, into a flask, on the sequencer
+    int textFolderId = -1;   // the folder a text entry of TEXT_FOLDER renames (-1: a new one)
+    std::vector<LabFolder> vialFolders() const; std::vector<LabFolder> cultureFolders() const;
+    std::vector<LabFolder> chooserFolders(const std::vector<std::string>& keys) const; std::string keptFolderKey(int k) const;
+    void keepCulture(int flask, int k); std::string keptName(int k); bool microscopeStageKept(int k);
+    int folderNew(const std::string& name); bool folderRename(int id, const std::string& name); bool folderRemove(int id);
+    void keptMove(int k, int id); void keptDiscard(int k);
+    void keptSave(std::ostream& f) const; bool keptLoad(const std::string& key, std::istream& is);
+    void microscopeListKeys(const Input& in); void microscopeFind(); void renderMicroscopeFolders(const std::vector<LabFolder>& F);
 };

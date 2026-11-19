@@ -66,6 +66,7 @@ public:
     // lights are, so on a dayside they add nothing
     bool lamp = false;
     bool uvLamp = false;        // Z-03: the lamp's ultraviolet (Shift+U on foot): the living films glow within its reach where nothing outshines them
+    bool sight = false;         // R-434: the activity vision (the game's sixth vision, Shift+O): the ground and the water near coloured by their activity
     bool floodlights = false;   // the capsule's floodlights lit (the game sets it while it comes down and goes up; a harness's raised camera has none)
     struct LampLight { Vec3 pos, dir; double cosIn = 1, cosOut = 1, cosSpill = 1, nearM = 1, reach0 = 0, reach = 0, power = 0; };
     LampLight lamps[2];
@@ -371,6 +372,17 @@ private:
     std::vector<RasterParams> formRps;
     FacePattern formPatterns[2][4];
     double waterWdx = 0, waterWdz = 0, waterSunUp = 0;   // the frame's wind direction (sin, cos) and the sun's rise, for waterCorner
+    // R-434: the activity vision (sampling.cpp): the square metres round the eye read as a vial reads them, in a ring SIGHT_N metres a side
+    // anchored in the local metres (a slot its metre's key and the heat of what is at work there: 0 none, -1 not read), the sea level they were
+    // read at (a tide past a quarter metre reads them again); this frame's grid of the drawn ground's or water's height round the eye (corners
+    // 2 m apart); the pass this frame (the vision on, on the ground)
+    static constexpr int SIGHT_N = 128, SIGHT_GRID = 45;
+    std::vector<int64_t> sightKey;
+    std::vector<float> sightHeat;
+    double sightSea = -1e30;
+    int sightCx0 = 0, sightCz0 = 0;
+    float sightTop[SIGHT_GRID * SIGHT_GRID];
+    bool sightFrame = false;
 
 public:
     // ---- the landing, the frame and the camera; the terrain's streaming, the scanner's thread (surface_view.cpp)
@@ -532,8 +544,13 @@ private:
 
 public:
     // ---- Z-03: what a vial takes at a place (its microhabitat, its name, the temperature read), the films under the lamp's ultraviolet (sampling.cpp)
-    SampleRead readSample(double x, double z, bool onWater);
+    SampleRead readSample(double x, double z, bool onWater, bool walls = true);   // R-434: `walls` false leaves the ruins' to the main thread
     double placeMeanC(double x, double z, double h) const;   // the place's own mean temperature the year round
+    bool wallNear(double x, double z);                        // an old wall's foot within 1.2 m (the ruins' cells: the main thread's)
+    Microhabitat wallsDone(const SampleRead& r, double x, double z);   // R-434: a read without the walls finished with them (the main thread)
+    static float sightHeatOf(const Sample& s);               // R-434: the heat a vial's reading shows (0 none at work, 0.25-0.55 faint, 0.62-1 strong)
+    float sightHeatAt(double x, double z) const;             // the square metre's as read so far (-1 not yet)
+    void clearSight();
     const Biota& biota() const;                               // the site's world's
     static int filmNicheOf(const TerrainVertex& v, bool springs, double sea, double& share);   // the films a vertex holds: their niche (-1 none) and its share
     double seaLevelNow() const;
@@ -541,6 +558,8 @@ private:
     void setupFilmGlow();             // at the landing: the films' densities and colour
     void prepareFilmGlow();           // a frame's grid (the main thread, before the pass)
     void drawFilmGlow(Framebuffer& fb);   // the pass: after the old result, absent to the bit when off
+    void prepareSight();              // R-434: the square metres not yet read (the nearest first, on the pool), the frame's grid
+    void drawSight(Framebuffer& fb);  // the pass: the whole frame into the vision's ramp (bank 15), absent to the bit when off
 public:
     // ---- the terrain rings: the material tiles, the vertex, the warm, the bin and the draw, the reflections, the floor, the cached ground (surface_terrain.cpp)
     // O1 (B-302): the rangefinder: march the camera's line of sight over the terrain caches; returns the distance to the
@@ -682,6 +701,8 @@ public:
     static void groupPieces(RuinCell& c);   // `groups` from the pieces' building indices (B-420: and the cell's `Ruin::reach`)
 
     // ---- the harness's: vesperis_test calls these; the game never does
+    int testSightMissing() const;   // R-434: the square metres within the activity vision's reach not yet read
+    void testSightCounts(int& read, int& faint, int& strong) const;   // those read (within reach), faint and strong
     // A-02 (tests): place a settlement of forms with its centre at local (x, z): its layout (the buildings' footprints) and its
     // pieces at the three levels of detail; drawn at any distance (the skyline), its colliders walked into. `testClearPlaced` empties them
     void testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3]);

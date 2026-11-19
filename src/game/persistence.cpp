@@ -150,6 +150,8 @@ bool Game::save(const std::string& path) {
         f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (up ? 1 : 0) << "\n";
         f << "cabin_place " << cabin.room << " " << cabin.stairA << "\n";
     }
+    f << "garden " << played; for (double b : bedTrimmed) f << " " << b; f << "\n";   // R-429: the time played, each bed's last trim in it
+    if (wall.chosen) { f << "wall"; for (int n : wall.frame) f << " " << n; f << "\n"; }   // R-428: the frames as the explorer hung them
     if (probe.active && probe.endClock < 0 && probeHere())   // a falling probe (a last frame held is not kept)
         f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " "
           << probe.startRel.y << " " << probe.startRel.z << " " << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw
@@ -206,7 +208,6 @@ bool Game::load(const std::string& path) {
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
     resetExpedition(false);
     audio.surfaceOff();                                      // B-413: nor the ground's sounds (a ground loaded sets its own)
-    audio.aboardOff();                                       // I-04: nor the rooms aboard (the ship's frame sets them again)
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;
@@ -215,6 +216,8 @@ bool Game::load(const std::string& path) {
     int drDep = 0, drIn = 0; double drX = 0, drZ = 0, drH = 0, drOdo = 0;
     int gen = 1;
     Cabin cab; int cl = 1, cd = 0, cr = 0, cabRoom = -1; double cabStair = 0;
+    double gPlayed = 0, gTrim[GARDEN_BEDS] = {};   // R-429: a save before it plays from 0, its beds as planted
+    ShipWall nwall;                                 // R-428: a save without the line shows the newest twelve
     ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;
     ShipState ns;
     DroneBay nbay; bool nbayBack = false;
@@ -242,6 +245,8 @@ bool Game::load(const std::string& path) {
         else if (key == "gen") is >> gen;
         else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; }
         else if (key == "cabin_place") { is >> cabRoom >> cabStair; if (is.fail()) cabRoom = -1; }
+        else if (key == "garden") { is >> gPlayed; for (double& b : gTrim) is >> b; if (is.fail()) { gPlayed = 0; for (double& b : gTrim) b = 0; } }
+        else if (key == "wall") { for (int& n : nwall.frame) is >> n; nwall.chosen = !is.fail(); if (!nwall.chosen) nwall = ShipWall(); }
         else if (key == "probe") {
             is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >>
                     np.flight.crushBar >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
@@ -298,6 +303,8 @@ bool Game::load(const std::string& path) {
         const Cabin start;
         cabin.x = start.x; cabin.z = start.z; cabin.yaw = start.yaw; cabin.pitch = start.pitch; cabin.room = start.room; cabin.stairA = 0;
     }
+    played = gPlayed; for (int b = 0; b < GARDEN_BEDS; b++) bedTrimmed[b] = gTrim[b];   // R-429
+    wall = nwall; prints.stale = true;   // R-428: its frames printed again
     (void)cr;
     ship.mode = (ShipState::Mode)mode;
     if (ship.mode == ShipState::VIMANA || ship.mode == ShipState::APPROACH) ship.mode = ShipState::STANDBY;

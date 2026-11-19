@@ -601,8 +601,8 @@ int TestGame::testPlayerItems() { playerBuildList(); return (int)player.items.si
 std::string TestGame::testPlayerItemLine(int i) const {
     if (i < 0 || i >= (int)player.items.size()) return std::string();
     const PlayerItem& it = player.items[i];
-    bool foreign = false; const std::string* nm = it.music ? shardNameOf(playerItemKey(it), foreign) : nullptr;
-    return fmt("%s %s%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.music ? "music" : "a recording", it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(),
+    bool foreign = false; const std::string* nm = shardNameOf(playerItemKey(it), foreign);
+    return fmt("%s music%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(),
             it.seconds > 0 ? fmt(", %.1f s", it.seconds).c_str() : "");
 }
 bool TestGame::testPlayerPlay(int item) { if (player.items.empty()) playerBuildList(); if (item < 0 || item >= (int)player.items.size()) return false; playerPlay(item); return true; }
@@ -610,8 +610,7 @@ std::string TestGame::testPlayerInfo() const {
     if (player.playing < 0) return fmt("the player: nothing plays (%d items, %d played to their end)", (int)player.items.size(), player.finished);
     return fmt("the player: item %d '%s - %s', %.1f of %.1f s%s%s%s; the synth's piece %s, speech %s, medium %d; %d played to their end", player.playing, player.title.c_str(), player.people.c_str(),
             player.t, player.secs, player.paused ? ", paused" : "", player.held ? ", held" : "", player.waiting ? ", waiting for its world" : "",
-            audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech == &player.world.speech ? "the player's" : (audio.speech ? "another's" : "none"),
-            audio.medium, player.finished);
+            audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech ? "another's" : "none", audio.medium, player.finished);
 }
 
 std::string TestGame::testAutoInfo() const {
@@ -940,24 +939,25 @@ std::string TestGame::testSelection() const {
         case GameState::CONSOLE: return fmt("'%s', %d lines", consoleInput.c_str(), (int)consoleLines.size());
         case GameState::SECTOR_MAP: return fmt("zoom %d", sectorZoom);
         case GameState::KEYS: return fmt("page %d row %d%s", keysPage, keysPage == 1 ? padUI.screenSel : keysSel, keysCapture || padUI.capture >= 0 ? " capturing" : "");
-        case GameState::SHARDS:
-            return fmt("level %d top %d page %d row %d", shardsLevel, shardsTop, shardsPage, shardsLevel > 0 ? shardSel : (shardsTop == 1 ? player.sel : shardWorldSel));
+        case GameState::SHARDS: return fmt("level %d page %d row %d", shardsLevel, shardsPage, shardsLevel > 0 ? shardSel : shardWorldSel);
         case GameState::ALMANAC: return fmt("row %d free %d", almanacSel, almanacFree);
         case GameState::PROBE: return fmt("clock %.2f%s", probe.clock, probe.endClock >= 0 ? " ended" : "");
         case GameState::RECORDING: return fmt("clock %.2f %s", replay.clock, replay.playing ? "playing" : "paused");
         case GameState::INSTRUMENTS: return fmt("level %d folder %d item %d", icase.level, icase.worldSel, icase.sel);
         case GameState::DRONES: return fmt("top %d", bay.listTop);
         case GameState::AUTO: return fmt("row %d", autoSel);
-        case GameState::MICROSCOPE:   // Z-04: the vials' row, or the slide: its way and magnification, a cell tracked, the sheet up
-            return scope.page == 0 ? fmt("vials row %d of %d", scope.sel, microscopeRows())
-                                   : fmt("%s %d %s x%.0f focus %.1f%s%s, %d events", scope.flask >= 0 ? "flask" : "vial", scope.flask >= 0 ? scope.flask : scope.vial,
+        case GameState::MICROSCOPE:   // Z-04: the lists (R-432: the tab, the folder, its row), or the slide: its way and magnification, a cell tracked, the sheet up
+            return scope.page == 0 ? fmt("%s folder %d%s%s", scope.tab ? "cultures" : "vials", scope.folder, scope.open ? fmt(" row %d", scope.sel).c_str() : "", scope.moving ? " moving" : "")
+                                   : fmt("%s %d %s x%.0f focus %.1f%s%s, %d events", scope.flask >= 0 ? "flask" : (scope.kept >= 0 ? "kept" : "vial"),
+                                         scope.flask >= 0 ? scope.flask : (scope.kept >= 0 ? scope.kept : scope.vial),
                                          SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "", (int)scope.events.size());
         case GameState::INCUBATOR:   // Z-05: the page, the flask and the medium's field, the chooser's row
-            return incub.choosing ? fmt("choosing row %d of %d", incub.choiceSel, (int)incub.choices.size())
+            return incub.choosing ? fmt("choosing folder %d of %d%s", incub.pages.folder, (int)incub.pages.folders.size(), incub.pages.open ? fmt(" row %d", incub.choiceSel).c_str() : "")
                                   : (incub.page == 1 ? fmt("jars row %d of %d", incub.jar, (int)lab.jars.size()) : fmt("flask %d field %d, %d in it", incub.sel, incub.field, lab.flasks[incub.sel].n));
         case GameState::CATALOGUE:   // Z-07: its order, the row chosen; on a sheet its way of seeing
             return cat.page == 1 ? fmt("%s row %d of %d, its sheet in %s", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size(), SEEING_NAMES[cat.seeing])
                                  : fmt("%s row %d of %d", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size());
+        case GameState::PLAYER: return fmt("level %d world %d of %d item %d", player.level, player.worldSel, (int)player.worldFirst.size(), player.sel);   // R-431
         default: break;
     }
     return "?";

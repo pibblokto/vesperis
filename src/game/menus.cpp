@@ -82,7 +82,6 @@ const RowList<SettingRow>& Game::settingRows() {
 void Game::updateTitle(const Input& in, double dt, double realDt) {
     titleYaw += realDt * 0.04;
     titleIdle += realDt; attractT += realDt;
-    audio.aboardOff();   // I-04: the title hears none of the rooms aboard
     { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
     if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; openScreen(GameState::HELP); helpPage = 2; }   // credits
     updateShipMotion(realDt);
@@ -181,7 +180,7 @@ void Game::renderHelp() {
         "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
         "M WAYPOINT  L MARK  U LAMP  K CALL THE CAPSULE",   // Z-04: one line (Z-03's pushed the footer off the page)
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
-        "O / SHIFT+U   A SAMPLE (8 VIALS) / THE LAMP'S UV",   // Z-03
+        "O SAMPLE (8 VIALS)  SHIFT+O ACTIVITY  SHIFT+U UV",   // Z-03; R-434: the activity vision
         "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
         "TAB           THE READINGS: TIME, SUN, AIR, GROUND",
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",

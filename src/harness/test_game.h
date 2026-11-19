@@ -10,6 +10,13 @@
 
 class TestGame : public Game {
 public:
+    // B-440: a test game's files are the harness's, under shots/tests: the working directory's guide, saves, settings, keys, controller
+    // map, photographs and films are the player's when the harness runs in the repo root (a check's second game once saved its guide
+    // over theirs). A check that keeps its own sets them beside these; the unit's `files` group holds the player's untouched
+    TestGame() {
+        guidePath = "shots/tests/game_guide.txt"; savePrefix = "shots/tests/game_save"; settingsPath = "shots/tests/game_settings.txt";
+        keysPath = "shots/tests/game_keys.txt"; padPath = "shots/tests/game_pad.txt"; shotsDir = "shots/tests/game_shots"; moviesDir = "shots/tests/game_movies";
+    }
     // ---- the title's attract mode and the bench's counters (game.cpp; M7-01, M7-02)
     void testAttract(double idleSecs) { titleIdle = idleSecs; }
     const SpaceRenderer::MapStats& testMapStats() const { return spaceR.mapStats; }
@@ -112,8 +119,8 @@ public:
     int testPlayerFinished() const { return player.finished; }
     void testPlayerSkipTo(double t) { player.t = t; player.syncT = -1; }   // the player's clock moved on (a long piece's end without its minutes)
     bool testPlayerOwnsPiece() const { return audio.piece && audio.piece == &player.world.piece; }
-    bool testPlayerOwnsSpeech() const { return audio.speech && audio.speech == &player.world.speech; }
-    int testShardsTop() const { return shardsTop; }
+    int testPlayerLevel() const { return player.level; }            // R-431: its screen's: 0 the worlds, 1 a world's pieces
+    int testPlayerWorlds() const { return (int)player.worldFirst.size(); }
     std::string testPlayerHud() const { return playerHudLine(); }
     int testShipMode() const { return (int)ship.mode; }
     int testWalkToInstrument(int age = -1);    // the explorer before the nearest instrument not taken (of that age, -1 any), facing it: its id, -1 none
@@ -150,7 +157,6 @@ public:
     void testOpenDroneBay() { openScreen(GameState::DRONES); }
     void testOpenShards() { openScreen(GameState::SHARDS); }   // the decoder, which takes the synth
     bool testDroneBayMapped() const { return bay.mapW > 0; }   // the screen's map of its world drawn
-    void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // the decoder's state for the harness
     // ---- star charts (chart_draw.cpp)
     std::string testChartInfo() const;         // C-10: the chart on the screen and the one held up
@@ -297,6 +303,18 @@ public:
     void testFlaskSeen(int i) { flaskSeen(i); }
     bool testScopeStageFlask(int i) { return microscopeStageFlask(i); }
     void testLabSave(std::string& lines) const { incubatorSave(lines); }
+    // R-432, R-433: the lists' folders, the collection's own, a kept culture on the stage, into a flask; the choosers made
+    std::vector<LabFolder> testVialFolders() const { return vialFolders(); }
+    std::vector<LabFolder> testCultureFolders() const { return cultureFolders(); }
+    int testFolderNew(const std::string& name) { return folderNew(name); }
+    bool testFolderRemove(int id) { return folderRemove(id); }
+    void testKeptMove(int k, int id) { keptMove(k, id); }
+    void testKeptDiscard(int k) { keptDiscard(k); }
+    bool testScopeStageKept(int k) { return microscopeStageKept(k); }
+    bool testFlaskPutKept(int flask, int k) { IncubatorChoice c; c.kept = k; return flaskPut(flask, c); }
+    void testFlaskEmpty(int i) { flaskEmpty(i); }
+    std::vector<IncubatorChoice>& testIncubatorChoices(int page) { incub.page = page; incubatorChoices(); return incub.choices; }
+    std::vector<SequencerChoice>& testSequencerChoices() { sequencerChoices(); return lab.seq.choices; }
     // Z-06: the sequencer: a species put on it (its world and index), its save line, its result told on the lab's clock (the skip hook's); the tree
     // built from the guide, its leaves, a leaf's nearest kin; the decoder's world opened (a watermark among its records)
     bool testSeqPut(int64_t sx, int64_t sy, int64_t sz, int body, int species) { FlaskSpecies w; w.sx = sx; w.sy = sy; w.sz = sz; w.body = body; w.species = species; return sequencerPut(w); }
@@ -312,6 +330,7 @@ public:
     // Z-07: the catalogue's state (its rows, its page, its way of seeing) and the statistics' LIFE page
     CatalogueState& testCat() { return cat; }
     bool testStatsLife() const { return statsLife; }
+    int testVisionMode() const { return visionMode; }   // R-434: the activity vision's VISION_ACTIVITY
     void testWalkToBuggy() { if (surf.buggy.deployed) { surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z; } }
     std::string testBuggyInfo() const;
     // the drone
@@ -453,12 +472,19 @@ public:
         printsCollect();
     }
     int testPrints() const { return (int)prints.shown.size(); }
+    int testPrintAt(int k) const { for (const ShipPrint& p : prints.shown) if (p.frame == k) return p.number; return -1; }   // R-428: frame k's print
+    bool testWallChosen() const { return wall.chosen; }
+    int testWallNumber(int k) const { return wallNumber(k); }   // what frame k shows (the newest twelve until the explorer hangs one)
+    int testWallLevel() const { return wall.level; }
     void testCabinDrive(double d) { cabin.drive = d; }
     static constexpr double DROP_SECONDS = Game::DROP_S;
     double testTransT() const { return transT; }
     int testShelfWorlds() const { return (int)shelfCounts.size(); }
     bool testGardenHome() const { return garden.ok; }
-    double testGardenGrowth() const { return gardenGrowth(); }
+    double testGardenGrowth(int bed = GARDEN_BEDS - 1) const { return gardenGrowth(bed); }   // R-429: a bed's (the last: `THE GARDEN`'s view)
+    double testPlayed() const { return played; }
+    void testSetPlayed(double s) { played = s; }
+    void testGardenPlanted() { played = 0; for (double& b : bedTrimmed) b = 0; }   // the time played and every bed as at an expedition's start
     // ---- the almanac (almanac.cpp)
     bool testAlmanacRunning() const { return almanacRunning; }
     double testAlmanacTarget() const { return almanacRunT; }

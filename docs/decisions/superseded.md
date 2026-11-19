@@ -146,6 +146,12 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   31) [I-02], [I-03]; replaced by [B-435]
 - Looking out, the pool leaves out the banks the space view left in the glass's box; 32 banks a frame at most [B-435]; replaced by
   [B-437]
+- The quarters' wall prints the last twelve photographs in one tone, made on a thread when the quarters are seen [I-04]; replaced
+  by [R-428]
+- The garden grows by the days played (the game's days since the expedition began) [I-04]; replaced by [R-429]
+- The drive's level, a flight's, lights the core, the drive's ring and the engine room's fuel orb [I-04]; replaced by [R-427]
+- A room's sound is its row (`Game::aboardSounds`): hum and drive shares, the lab's bubbling, the garden's water, the library's
+  fullness [I-04]; replaced by [R-430]
 
 ## Audio
 
@@ -156,6 +162,15 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - The synth cannot seek: a recording starts from its top, and a radar lock restarts it [C-07]; replaced by [C-11]
 - A drifter (`SIG_ROGUE`, the synth's case 4) sounds as a magnetosphere by its own seed until it has a voice [D-02]; replaced by
   [D-03]
+- The ship's player is a page of the decoder's screen, Tab at its worlds turning to it; it plays the recordings held and caught too
+  [C-11]; replaced by [R-431]
+
+## The search and the laboratory
+
+- Eight vials a descent, the scoop's among them; refused from a vehicle, used up, or the cold store's 64 full with those in hand
+  [Z-03]; replaced by [R-432]
+- E opens the microscope on the cold store's vials; Enter puts one on the stage, Backspace empties it (its place freed); Esc from the
+  slide to the vials, then aboard [Z-04]; replaced by [R-432]
 
 ## The harness and the proof
 
@@ -342,3 +357,12 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [B-434]: log/7-1.5.0.md
 [B-435]: log/7-1.5.0.md
 [B-437]: log/7-1.5.0.md
+[I-04]: log/7-1.5.0.md
+[R-427]: log/7-1.5.0.md
+[R-428]: log/7-1.5.0.md
+[R-429]: log/7-1.5.0.md
+[R-430]: log/7-1.5.0.md
+[R-431]: log/7-1.5.0.md
+[R-432]: log/7-1.5.0.md
+[Z-03]: log/7-1.5.0.md
+[Z-04]: log/7-1.5.0.md

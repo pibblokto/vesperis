@@ -8,7 +8,7 @@
 namespace {
 // a space from its middle: the plan's views
 const char* const MIDDLE[SHIP_ROOMS] = {"THE BRIDGE'S MIDDLE", "THE HALL'S MIDDLE", "THE LIBRARY'S MIDDLE", "THE LABORATORY'S MIDDLE", "THE QUARTERS' MIDDLE",
-                                        "THE HANGAR'S MIDDLE", "THE ENGINE ROOM'S MIDDLE", "THE OBSERVATORY'S MIDDLE", nullptr};
+                                        "THE HANGAR'S MIDDLE", "THE MAINTENANCE ROOM'S MIDDLE", "THE OBSERVATORY'S MIDDLE", nullptr};
 
 // a space from its arch: its first walked way's point inside it, facing in (away from the way)
 bool archStand(int room, ShipStand& at) {
@@ -23,7 +23,7 @@ bool archStand(int room, ShipStand& at) {
     return false;
 }
 
-// a room's name for a file: "THE ENGINE ROOM" -> engine_room
+// a room's name for a file: "THE MAINTENANCE ROOM" -> maintenance_room
 std::string slugOf(const char* name) {
     std::string s = name;
     if (s.rfind("THE ", 0) == 0) s = s.substr(4);
@@ -150,7 +150,7 @@ int walkMode(int argc, char** argv) {
     struct Goal { std::string name; int room; ShipStand at; int facing; };
     std::vector<Goal> goals;
     for (const CabinDevice& d : Game::cabinDevices()) if (d.facing != FACE_NOTHING) goals.push_back({d.use, d.room, d.stand, d.facing});
-    for (const char* v : {"THE LABORATORY'S MIDDLE", "THE QUARTERS' MIDDLE", "THE ENGINE ROOM'S MIDDLE", "THE BRIDGE'S MIDDLE"}) goals.push_back({v, shipView(v).room, shipView(v).at, -1});
+    for (const char* v : {"THE LABORATORY'S MIDDLE", "THE QUARTERS' MIDDLE", "THE MAINTENANCE ROOM'S MIDDLE", "THE BRIDGE'S MIDDLE"}) goals.push_back({v, shipView(v).room, shipView(v).at, -1});
     printf("ship walk: %zu places from the start, auto-explore's hands at 30 frames a second\n", goals.size());
     for (const Goal& g : goals) {
         const double t0 = frames * dt;
@@ -361,7 +361,7 @@ int lifeMode(int argc, char** argv) {
            "the core, the capsule's drop\n", scale);
     // twelve photographs, the oldest first
     const char* const PHOTOS[12] = {"THE FRONT WINDOW", "THE HALL'S MIDDLE", "THE LEFT WINDOW", "OVER THE ROOFS", "THE BRIDGE'S MIDDLE", "THE LIBRARY'S MIDDLE",
-                                    "THE ENGINE ROOM'S MIDDLE", "OVER THE PROW", "THE OBSERVATORY'S MIDDLE", "THE HANGAR'S MIDDLE", "THE RIGHT WINDOW", "TOWARD THE BOW"};
+                                    "THE MAINTENANCE ROOM'S MIDDLE", "OVER THE PROW", "THE OBSERVATORY'S MIDDLE", "THE HANGAR'S MIDDLE", "THE RIGHT WINDOW", "TOWARD THE BOW"};
     game.photoMode = true;   // the HUD out of them
     for (int i = 0; i < 12; i++) {
         game.testCabinView(PHOTOS[i]);
@@ -375,22 +375,24 @@ int lifeMode(int argc, char** argv) {
     game.frame(gi, 0);
     game.testWaitPrints();
     const int printed = game.testPrints();
-    shot("quarters_lit", nullptr, fmt("%d prints on the wall", printed));
+    std::vector<uint32_t> lit, hung;
+    shot("quarters_lit", &lit, fmt("%d prints on the wall", printed));
     if (printed != 12) { fails++; printf("  %-20s %d PRINTS, NOT TWELVE\n", "", printed); }
     pressKey(game, gi, KEY_U); settle(3);
     shot("quarters_night");
     pressKey(game, gi, KEY_U); settle(3);
-    // the garden at the expedition's start and two months on (the ship back at its world's side first)
+    // R-429: the garden as planted and an hour of play on (grown full); the clock and the time played put back after it as I-04's garden
+    // left them, so the frames after are taken when they were (the bed trimmed by E comes last, with the wall)
     game.testCabinView("THE GARDEN");
-    std::vector<uint32_t> young, grown;
-    const double t0 = game.testGameTime();
-    game.testSetTime(EXPEDITION_T0); settle(0.2);
-    shot("garden_day0", &young, fmt("grown %.2f, the home world's flora %s", game.testGardenGrowth(), game.testGardenHome() ? "found" : "NOT FOUND"));
-    game.testSetTime(EXPEDITION_T0 + 60 * 86400.0); settle(0.2);
-    shot("garden_day60", &grown, fmt("grown %.2f", game.testGardenGrowth()));
+    std::vector<uint32_t> young, grown, trimmed;
+    const double t0 = game.testGameTime(), p0 = game.testPlayed();
+    game.testGardenPlanted(); settle(0.2);
+    shot("garden_planted", &young, fmt("grown %.2f, the home world's flora %s", game.testGardenGrowth(), game.testGardenHome() ? "found" : "NOT FOUND"));
+    game.testSetPlayed(GARDEN_GROW_S); settle(0.2);
+    shot("garden_grown", &grown, fmt("grown %.2f", game.testGardenGrowth()));
     differ("the garden grown", young, grown);
     if (!game.testGardenHome()) fails++;
-    game.testSetTime(t0); settle(0.2);
+    game.testSetTime(t0); game.testSetPlayed(p0 + 0.4); settle(0.2);
     // the shelves empty, then sixty-four worlds' shards (a world k holds k % 16 + 1)
     game.testCabinView("AT THE SHELVES");
     std::vector<uint32_t> empty, full;
@@ -451,17 +453,38 @@ int lifeMode(int argc, char** argv) {
     game.testCabinView("THE TREE OF KIN");
     shot("tree");
     game.testStatusPut(keptStatus);
-    // the drive's core and the engine room, at rest and in a flight
+    // the drive's core at rest and in a flight; R-427: the maintenance room, the buggy and the drone on their platforms
     std::vector<uint32_t> rest, flight;
     game.testCabinView("THE CORE");
     shot("core_rest", &rest);
     game.testCabinDrive(1);
     shot("core_flight", &flight);
     differ("the core in a flight", rest, flight);
-    game.testCabinView("THE ENGINE ROOM'S MIDDLE");
-    shot("engine_flight");
     game.testCabinDrive(0);
-    shot("engine_rest");
+    game.testCabinView("THE MAINTENANCE ROOM'S MIDDLE");
+    shot("maintenance");
+    game.testCabinView("THE PLATFORMS");
+    shot("maintenance_platforms");
+    // R-428: E at the wall: its frames as the wall holds them; the photographs for the third frame, the oldest hung there, the sixth taken
+    // down; the wall in the room as the explorer hung it. R-429: the bed in view grown full, then trimmed back by E at it
+    game.testCabinAtDevice(FACE_PRINTS); settle(0.2); pressKey(game, gi, KEY_E);
+    shot("wall_screen", nullptr, game.state == GameState::WALL ? "the wall's screen, the newest twelve" : "NOT THE WALL'S SCREEN");
+    pressKey(game, gi, KEY_RIGHT); pressKey(game, gi, KEY_RIGHT); pressKey(game, gi, KEY_ENTER);
+    for (int i = 0; i < 9; i++) pressKey(game, gi, KEY_RIGHT);
+    shot("wall_pick", nullptr, fmt("level %d, the frame %d", game.testWallLevel(), 3));
+    pressKey(game, gi, KEY_ENTER); pressKey(game, gi, KEY_DOWN); pressKey(game, gi, KEY_LEFT); pressKey(game, gi, KEY_BACKSPACE);
+    const bool asHung = game.testWallChosen() && game.testWallNumber(2) == 0 && game.testWallNumber(5) < 0 && game.testWallNumber(0) == 11;
+    pressKey(game, gi, KEY_ESCAPE);
+    game.testCabinView("THE QUARTERS' WALL"); settle(0.2); game.testWaitPrints(); settle(0.1);
+    shot("wall_hung", &hung, fmt("%d prints; the third frame photograph %d, the sixth %s", game.testPrints(), game.testPrintAt(2), game.testPrintAt(5) < 0 ? "empty" : "NOT EMPTY"));
+    differ("the wall as hung", lit, hung);
+    if (!asHung || game.testPrints() != 11 || game.testPrintAt(2) != 0) { fails++; printf("  %-20s THE WALL NOT AS HUNG\n", ""); }
+    game.testSetPlayed(game.testPlayed() + GARDEN_GROW_S);
+    game.testCabinAtDevice(FACE_BED_4); settle(0.2); pressKey(game, gi, KEY_E);
+    const std::string said = game.testStatus();
+    game.testCabinView("THE GARDEN"); settle(0.2);
+    shot("garden_trimmed", &trimmed, fmt("grown %.2f, '%s'", game.testGardenGrowth(), said.c_str()));
+    differ("the bed trimmed", grown, trimmed);
     // the capsule in its cradle, then the hatch's drop: E at the capsule, Enter on the landing map, five instants of it
     game.testCabinView("THE HATCH'S DROP");
     std::vector<uint32_t> cradle, gone;

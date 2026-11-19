@@ -10,7 +10,7 @@ line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The rest 
 - At a parking the telescope's stabiliser holds parking and view in the body's frame (`tele.parkBF`, `viewBF`); stowed, the lap resumes [R-405]
 
 ## The radar
-- A lock tells the system only (star as named, class, sector, distance, age; a drifter: NO STAR AT THE SOURCE): the sound tells, not the readout [C-07], [D-02]
+- A lock tells the system only (star as named, class, sector, distance, age; a drifter: NO STAR AT THE SOURCE): the sound tells [C-07], [D-02]
 - A signal is found, not handed over: nothing outside the 10-degree lobe, the hold on the loudest in the cone, a false rise never locks [C-07], [C-15], [C-16]
 - `SignalKind` is append-only (`SIG_ROGUE` 4): a new kind needs its `SIGNAL_KIND_NAMES` name, `signalSourceLine`, a synth case, `signals wav` names [D-02]
 - At x1 the radar is exactly C-07's; within 200 ly every transmitter is heard at every gain; a drifter within 180 sqrt((G - 1)p) ly [C-15], [C-16], [D-02]
@@ -26,6 +26,7 @@ line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The rest 
 - The last recording is never signposted and the timeline's end stays hidden until it is read: the reading is the moment [C-12]
 - An instrument is keyed `<body>/I<people x 1000 + age x 100 + slot>`, a storm `<body>/TG` or `<body>/T<id>`: persisted encodings [C-11], [X-04]
 - The ship's player plays in every state but a landing's and the title; the case's ten keys play only the instrument's scale degrees [C-11]
+- The decoder and the player are two screens; the player's, at its deck: a folder a world, music alone, held or caught [R-431]
 
 ## The probe and the photos
 - A probe record keeps numbers, never pictures, replayed by the live `renderProbeFeed`; its profile, layers and image stay as measured [X-04], [F-02]
@@ -82,3 +83,4 @@ line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The rest 
 [D-01]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [I-02]: log/7-1.5.0.md
+[R-431]: log/7-1.5.0.md

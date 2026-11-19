@@ -8,12 +8,13 @@ changing anything there.
   arithmetic.
 - `rules-galaxy.md`: `GEN_VERSION`, draws, hashes and salts, the protected and pinned worlds, stars and drifters.
 - `rules-galaxy-worlds.md`: bodies and orbits, kinds and made kinds, the almanac and the giants.
-- `rules-surface.md`: the planet function, materials and landforms, traits, water and drainage, sights, weather.
+- `rules-surface.md`: the planet function, materials and landforms, traits, water and drainage, sights, the activity vision,
+  weather.
 - `rules-surface-site.md`: the site's caches and threads, the rings, what stands and walks, the vehicles, life.
 - `rules-life.md`: the living small (1.5.0): where life is, its species, the geneses and kin, the spores carried, the cache; the
   forms and the slide; the genomes and the tree, the made species.
-- `rules-life-lab.md`: the search (the samples, the kit, the ultraviolet, the signs) and the laboratory (the microscope, the incubator and
-  the jars, the sequencer and the tree); the record (the catalogue, the counts, the samples logged).
+- `rules-life-lab.md`: the search (the samples, the kit, the ultraviolet, the signs) and the laboratory (the microscope and its lists by
+  world and folder, the incubator and the jars, the culture collection, the sequencer and the tree); the record (the catalogue, the counts).
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and the screens, controls and the frame, auto-explore.

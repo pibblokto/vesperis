@@ -464,7 +464,9 @@ after the save's, read for a key `load` does not know; its row's `reset` runs at
 
 The buggy's pattern: a struct in `surface/surface_types.h`, its own `surface/*.cpp`, the camera branch in `render`, the update
 dispatch, `reanchor` and `init`, the seat's HUD branch in `game/hud.cpp`, the keys and the audio in `game/surface_play.cpp`, a
-save line, and `inVehicle()` wherever "in the buggy" meant "seated".
+save line, and `inVehicle()` wherever "in the buggy" meant "seated". Its shape's stations go in `surface/vehicle_shape.h`, which
+the ship's maintenance room builds its parked model from (`game/vehicles_draw.cpp`, R-427): a vehicle that should stand there too
+gets a model there, a fixture (`vehicleAt`) and a platform.
 
 ## Add a palette effect
 

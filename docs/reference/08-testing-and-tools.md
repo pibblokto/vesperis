@@ -4,7 +4,7 @@ The modes, one line each with its file: `harness/INDEX.md` (`vesperis_test help 
 `harness/unit-checks.md` (`tools/unitchecks.py` writes it). Proving a change, and the proof tools: `harness/proof.md`. This
 note keeps what those do not: what each mode does and writes, by the milestone that made it.
 
-`vesperis_test` (built by `make`) needs no window and writes PNGs into `shots/tests/` (O7-01, 2026-09-27: the harness used to write into `shots/` next to the player's own screenshots, which had grown to 300 files; `shots/` now holds only `screenshot_N.png` and their captions, the harness creates `shots/tests/` and its subfolders, and the CI artefact is `shots/tests/**/*.png`). The paths below and in older reports omit the `tests/`. Add `scale=N` (1-4) to any mode to render at that resolution scale (tests default to 1x for speed; the game defaults to 4x since B-310, 2x before).
+`vesperis_test` (built by `make`) needs no window and writes PNGs into `shots/tests/` (O7-01, 2026-09-27: the harness used to write into `shots/` next to the player's own screenshots, which had grown to 300 files; `shots/` now holds only `screenshot_N.png` and their captions, the harness creates `shots/tests/` and its subfolders, and the CI artefact is `shots/tests/**/*.png`; B-440: a `TestGame`'s guide, saves, settings, keys, controller map, photographs and films default there too, `shots/tests/game_*`, so no check writes the player's files in the working directory). The paths below and in older reports omit the `tests/`. Add `scale=N` (1-4) to any mode to render at that resolution scale (tests default to 1x for speed; the game defaults to 4x since B-310, 2x before).
 
 * `stars`: star and body statistics around the start region, prints four systems in detail (output: stdout)
 * `maps`: generates one planet map per type; M5-08 adds `map_LOCKED_FELISIAN.png` (one locked living world) (output:
@@ -303,14 +303,18 @@ note keeps what those do not: what each mode does and writes, by the milestone t
 * `ship life [scale]` (I-04, `modes_ship.cpp`): life aboard at 2x by default, parked at the start's world. Twelve photographs first
   (twelve of the plan's views, the HUD out, written as the game writes its photographs into `shots/tests/ship_life_gallery`), then the
   quarters' wall lit and by night (`TestGame::testWaitPrints`: only the harness waits for the prints; twelve on the wall or it
-  fails), the garden at the expedition's start and two months on (they must differ; the home world's flora found), the shards'
+  fails); R-429: the garden as planted and an hour of play on (`garden_planted`, `garden_grown`: they must differ; the home world's
+  flora found; the clock and the time played put back after, so the frames after are taken when I-04's were), the shards'
   shelves empty and with sixty-four worlds' shards (a world k holding k mod 16 + 1; they must differ), the library's wall of them,
   the case's twelve instruments, the player's deck, Z-04: the microscope from its stand and the cold store's door empty and with
   forty vials (five of its eight lamps lit; they must differ), Z-05: the incubator empty and stocked (`labStock`: a living world's
   species in the twelve flasks, each in its best medium under the lights in turn, a luminous crowd in the dark, fifteen minutes on;
   they must differ, and twelve filled) and by night, the jars' shelf with four worlds' jars settled, the laboratory's stern bench
-  whole, the drive's core at rest and in a flight (they must differ) and the
-  engine room so, the capsule in its cradle and the hatch's drop at five instants (`E` at the capsule, the landing map's `Enter`; the last must
+  whole, the drive's core at rest and in a flight (they must differ), R-427: the maintenance room from its arch and the buggy on its
+  platform from the walk (`maintenance`, `maintenance_platforms`); R-428: `E` at the wall, its screen (`wall_screen`), the photographs
+  for its third frame (`wall_pick`), the oldest hung there and the sixth frame taken down, the wall so (`wall_hung`: eleven prints, it
+  must differ from the lit wall); R-429: the bed in view grown, trimmed back by `E` (`garden_trimmed`); the capsule in its cradle and
+  the hatch's drop at five instants (`E` at the capsule, the landing map's `Enter`; the last must
   differ from the cradle). Each frame's banks checked by `shipBanksWhole` and its time printed; the exit code counts the failures
   (output: `shots/tests/ship/life_*_<scale>x.png`, stdout)
 * `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
@@ -344,7 +348,7 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   the globe: KI-309) and reads 105, so the count is 1 of 13 (output: `shots/consistency_<TYPE>.png`, stdout)
 * `flow`: scripted expedition: title, list, data, help, guide menu, rename the star by typing; I-04, after the telescope's photograph,
   life aboard (`aboard_wall` its print on the quarters' wall, `E` at the bunk and the almanac's hour's rest from it, the desk's log,
-  the deck's player page, the garden, the core); star map (G-05: `Tab` to the
+  the deck's player (R-431: its own screen, on its worlds), the garden, the core); star map (G-05: `Tab` to the
   galaxy, `starmap_galaxy`, four levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the
   flight, `starmap_flight`: the galaxy page with the line flown; G-06, after the belt and before the probe, which parks the ship
   where it needs it: the chart's cursor 3,000 ly coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab`
@@ -353,10 +357,11 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   arrival, approach, orbit, landing map, descent (I-04: boarded at the capsule, `drop` the hatch's drop two seconds in; save to
   slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
   `surface2`, `Tab` again; Z-03: three vials of the ground a few steps apart, `kit_line` the first's line, the cold store's three
-  printed at `back_in_space`; Z-04: then `E` at the microscope, `microscope_list` the cold store's vials, `Enter` and two seconds of
-  the first's slide, `microscope` with its line (its species, its preparation, the cells in view, the sheets, the log's FORM),
-  `microscope_sheet` with Tab, Esc twice; Z-05: `E` at the incubator, `incubator_choose` its chooser, `Enter` puts the first in flask
-  1 at AS ITS WORLD, its warmth turned to the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook),
+  printed at `back_in_space`; Z-04: then `E` at the microscope, `microscope_list` the cold store's vials (R-432: its worlds),
+  `Enter` (`microscope_world`, the first world's vials), `Enter` and two seconds of the first's slide, `microscope` with its line (its
+  species, its preparation, the cells in view, the sheets, the log's FORM), `microscope_sheet` with Tab, Esc three times; Z-05: `E` at
+  the incubator, `incubator_choose` its chooser (R-432: its folders), `Enter` twice puts the first in flask 1 at AS ITS WORLD (R-432's
+  three keys' frames taken from the waits at the incubator and the sequencer, so the frames after them keep their times), its warmth turned to the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook),
   `incubator` with its line (the species, its medium, its stage, its cells and spores), `incubator_jars` with Tab, Esc), sprint,
   jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase
   view), drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`,
@@ -1065,11 +1070,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   dunes as a slide down a slip face (the hum rising over a second, held three, dying as the sand runs on) at an Earth's grains'
   note and at Titan's, a thin-aired Mars' and a heavy world's gravity, with the note and the loudest frequency; the singing ice at
   dusk's level and at noon's, with the sounds counted; a quake under an air, through the boots of an airless world and on a
-  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them. I-04: each room aboard as the frame
-  sets it (`Game::aboardSounds`, parked and in a flight, eight seconds each), the laboratory's bubbling and the garden's water
-  alone, and the player's music (the flow's world's first piece) on the bridge and in the library with its low end's share; the
-  exit code counts a render over the ground's bound (0.75) (output: `shots/tests/sound_<name>.wav`, `sound_room_<room>[_flight].wav`,
-  `sound_music_<bridge|library>.wav`, stdout (peak, rms))
+  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them (R-430: the rooms aboard, I-04's, gone
+  with their sounds) (output: `shots/tests/sound_<name>.wav`, stdout (peak, rms))
 * `scene singing_dunes | singing_ice | quakes`: Q-03: the sounds' cues on the ground, each on the scan's first world with the
   trait under an air of a third of a bar or more (finders -99, -100, -101): the explorer on a dune's slip face of 15 degrees or
   more (over 4, 8 and 16 m: a face, not a ledge; no hazy world), the frame from the crest, then walking down it; on flat ice with
@@ -1215,6 +1217,11 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   (`TestGame::testAutoWater`: a spring's pool first where one is in reach) and run till it took a sample (150 s at most): the steps it
   went through, the vial's line and its niche, the frame of its look over what it sampled. About 15 s; exit 1 unless both took one
   (output: stdout, `shots/tests/life_auto_water.png`, `life_auto_springs.png`)
+* `life sight`: R-434: the activity vision played (a TestGame) where the scene `sight_shelf` stands (a superhabitable world's shelf):
+  Shift+O and a second for its square metres to be read (`on`, the readings' line), a buggy unfolded and boarded (`buggy`: its nose
+  camera with the vision), out of it the explorer at the nearest square metre the vision shows strong and a vial taken there (`sample`:
+  its line, the vision's heat at it), Shift+O again (`off`); each frame's metres read, faint and strong. Exit 1 unless the vial reads
+  STRONG and the vision went on, through the buggy and off (output: stdout, `shots/tests/life_sight_<on|buggy|sample|off>.png`)
 * `lab microscope` (`modes_lab.cpp`): Z-04: the microscope in a game (a TestGame, `MICROSCOPE`) on eleven samples found in the scan
   region, each a world's square metre that holds its species of interest (`labVial`'s way: its niche, a warmth it grows at, the
   fullest of 400 places): living water, acid, ammonia and hydrocarbon life from a drop, a dormant world's spores, old rock's fossils
@@ -1274,6 +1281,10 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   stromatolites (the white lamp out); a terraced hot spring's bands from 30 m south of its vent (`SCENE_SPRING_BANDS`); red snow
   underfoot, the sun 15 degrees up behind (`SCENE_RED_SNOW`: the first red sample whose ground round it is red at four of nine
   points 30 m apart and level within 8 m) (output: `shots/tests/scene_*.png`)
+* scenes `sight_shelf`, `sight_river`, `sight_flats`, `sight_springs`: R-434: the activity vision by day looking down over its reach (a
+  superhabitable world's shelf, a living world's river bank, an archean's wet flats, a terraced spring's pools), its square metres all
+  read first (the frames it took, the metres faint and strong; under `VESPERIS_TRACE=1` a steady frame's milliseconds with it and
+  without it) (output: `shots/tests/scene_*.png`)
 * `stability <scene> <m/frame> [scale]`: B-319 addition: `skyline flips`, the pixels swapping between the sky and anything else
   per frame (in 1x pixel units) (output: stdout)
 * scenes `felisian_river`, `felisian_lake`: B-320: on the bank of the first river / lake found by `SurfaceSample::waterKind`, on
@@ -2095,7 +2106,8 @@ not one 2 MB file.
 
 * `help [md]`: every mode by group with its arguments, one line and its file (`MODES` in `main.cpp`); `md` the same as a table a
   group, for the docs' index (output: stdout)
-* `unit list`: the unit's 46 groups in its order (Z-03: `search`; Z-04: `lab` last), each with its file (output: stdout)
+* `unit list`: the unit's 47 groups in its order (Z-03: `search`; Z-04: `lab`; B-440: `files` last, the player's files in the working
+  directory held as the unit found them), each with its file (output: stdout)
 * `unit <group> ... [-q]`: those groups alone (`unit noise -q` in half a second); `-q`: stdout silenced while they run, only the
   failures and the count printed (output: stdout, exit code)
 

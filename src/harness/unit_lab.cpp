@@ -1,12 +1,14 @@
 // Z-04: the unit's laboratory (group `lab`): a slide's frame closed-form in its clock (with what was done to it) and the same at any thread
 // count, in every way of seeing; a species' sheet's lines only by what was seen of it; the guide's save byte-stable with its species; the vials'
-// list emptied a vial at a time, a bloom kept in a vial's save line. Z-05: the cultures; Z-06: the genomes, the tree, the sequencer; Z-07: the record
+// list emptied a vial at a time, a bloom kept in a vial's save line. Z-05: the cultures; Z-06: the genomes, the tree, the sequencer; Z-07: the record;
+// R-432: the vials by world; R-433: the culture collection
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "life/slides.h"
 #include "life/cultures.h"
 #include "life/sequences.h"
 #include <fstream>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -138,6 +140,56 @@ void unitLab(const Check& check) {
         check("lab: Backspace on the list empties a vial, a bloom kept in a vial's line (Z-04)", ok && before == 2 && after == 1 && bloom && g.state == GameState::MICROSCOPE,
               fmt("%d vials, %d after Backspace; a bloom through the save's lines %s", before, after, bloom ? "kept" : "LOST"));
     }
+    {   // R-432: the vials by world. Seventy vials of two worlds in the cold store (past its old 64 places, the second world's every other of five),
+        // the microscope opened on its worlds (the first's 42 vials, the second's 28, in the store's order); Enter the first world's vials, Down and
+        // Enter its second on the stage; Esc back to the world's vials on it, Esc to the worlds, Tab the cultures (the flasks, UNSORTED), Esc out.
+        // Every species of the two vials seen: the incubator's chooser a row a species and state in its world's folder, the sequencer's a row a species
+        TestGame g; Input in;
+        g.savePrefix = "shots/tests/unit_lab_save"; g.settingsPath = "shots/tests/test_settings.txt"; g.guidePath = "shots/tests/unit_lab_guide.txt"; g.keysPath = "shots/tests/test_keys.txt";
+        remove(g.guidePath.c_str());
+        g.newGame(); g.setState(GameState::SPACE);
+        StarSystem sys; int bi = -1, b2 = -1;
+        Vial va, vb;
+        bool ok = firstBodyOfType(PT_FELISIAN, sys, bi) && labVial(sys, bi, va);
+        for (int b = 0; ok && b < (int)sys.bodies.size() && b2 < 0; b++) if (b != bi && labVial(sys, b, vb)) b2 = b;
+        ok = ok && b2 >= 0;
+        bool worlds = false, opened = false, staged = false, back = false, folders = false, cultures = false, closed = false;
+        int rowsI = 0, wantI = 0, rowsS = 0, wantS = 0, foldersI = 0, foldersS = 0;
+        if (ok) {
+            for (int k = 0; k < 70; k++) g.testColdStore().push_back(k % 5 == 1 || k % 5 == 3 ? vb : va);
+            g.openScreen(GameState::MICROSCOPE); g.frame(in, 0); in.newFrame();
+            const MicroscopeState& M = g.testScope();
+            const std::vector<LabFolder> F = g.testVialFolders();
+            worlds = F.size() == 2 && F[0].rows.size() == 42 && F[1].rows.size() == 28 && F[0].rows[1] == 2 && F[1].rows[0] == 1 && !M.open && M.tab == 0;
+            pressKey(g, in, KEY_ENTER); opened = M.open && M.folder == 0;
+            pressKey(g, in, KEY_DOWN); pressKey(g, in, KEY_ENTER); staged = M.page == 1 && M.vial == 2;
+            pressKey(g, in, KEY_ESCAPE); back = M.page == 0 && M.open && M.folder == 0 && M.sel == 1;
+            pressKey(g, in, KEY_ESCAPE); folders = M.page == 0 && !M.open;
+            pressKey(g, in, KEY_TAB);
+            const std::vector<LabFolder> C = g.testCultureFolders();
+            cultures = M.tab == 1 && !M.open && C.size() == 2 && C[0].name == "THE FLASKS" && C[1].name == "UNSORTED";
+            pressKey(g, in, KEY_ESCAPE); closed = g.state != GameState::MICROSCOPE;
+            std::set<std::string> byState, bySpecies;
+            for (const Vial* v : {&va, &vb}) {
+                const Biota& B = lifeOf(sys)->bodies[v->body];
+                for (const Held& H : sampleOf(B, v->hab).held) {
+                    if (H.state == SS_FOSSIL || H.state == SS_PROTO) continue;
+                    const std::string key = Guide::bodyKey(v->sx, v->sy, v->sz, v->body) + "/M" + std::to_string(H.species);
+                    g.guide.microbes[key].seen |= SEEN_FORM;
+                    byState.insert(key + (H.state == SS_DORMANT ? "/D" : "")); bySpecies.insert(key);
+                }
+            }
+            wantI = (int)byState.size(); wantS = (int)bySpecies.size();
+            rowsI = (int)g.testIncubatorChoices(0).size(); foldersI = (int)g.testIncub().pages.folders.size();
+            rowsS = (int)g.testSequencerChoices().size(); foldersS = (int)g.testLab().seq.pages.folders.size();
+        }
+        check("lab: the vials by world past the cold store's old 64 places, the choosers by world a row a species (R-432)",
+              ok && worlds && opened && staged && back && folders && cultures && closed && rowsI == wantI && rowsS == wantS && foldersI == 2 && foldersS == 2 && wantS > 0,
+              fmt("70 vials: the worlds %s, Enter %s, its second on the stage %s, Esc back on it %s, the worlds again %s, Tab the cultures %s, closed %s; "
+                  "the incubator's %d rows (%d asked) in %d folders, the sequencer's %d (%d asked) in %d",
+                  worlds ? "42 and 28" : "WRONG", opened ? "opened the first" : "NOT", staged ? "yes" : "NO", back ? "yes" : "NO", folders ? "yes" : "NO", cultures ? "yes" : "NO",
+                  closed ? "yes" : "NO", rowsI, wantI, foldersI, rowsS, wantS, foldersS));
+    }
     // ---- Z-05: the incubator
     // a flask of the vial's first living species in its best medium (its warmth, its energy, its salt, white light for a light-feeder), held at its
     // hot edge from 5 minutes, a fresh broth at 10, the vial's next living species added at 12; the lab's clock run to 40 minutes by the stretches'
@@ -230,6 +282,62 @@ void unitLab(const Check& check) {
         check("lab: the lab's save round-trip (Z-05)", ok && round && sameNow,
               fmt("%d lines (the clock, a flask with its species and events, a jar): loaded and saved again %s; the culture at its clock %s", lines, round ? "the same" : "DIFFERENT",
                   sameNow ? "the same" : "DIFFERENT"));
+        // R-433: the culture collection. Every species and strain the culture grew kept as it grew (each once), kept after its flask is emptied; a
+        // folder made and the first moved into it (removed only once empty); the first on the stage, into another flask in the medium it grew in;
+        // with the cold store and the flasks empty, the choosers' rows the collection's alone; its lines through the save
+        int kept = 0, mine = 0, strains2 = 0, rowsI = 0, rowsS = 0;
+        bool distinct = true, afterEmpty = false, folderOk = false, stage = false, intoFlask = false, chooseOk = false, saved = false;
+        if (ok) {
+            const Flask& A = a.testLab().flasks[0];
+            const FlaskSpecies w0 = A.who[0], w1 = A.who[1];
+            const int n = A.n;
+            const std::vector<KeptCulture>& K = a.testLab().kept;
+            kept = (int)K.size();
+            for (size_t i = 0; i < K.size(); i++) {
+                mine += K[i].who.sameSpecies(w0) || (n > 1 && K[i].who.sameSpecies(w1));
+                strains2 += K[i].who.strain > 0;
+                for (size_t j = 0; j < i; j++) distinct = distinct && !(K[j].who.sameSpecies(K[i].who) && K[j].who.strain == K[i].who.strain);
+            }
+            a.testFlaskEmpty(0);
+            afterEmpty = (int)a.testLab().kept.size() == kept;
+            const int id = a.testFolderNew("GLOWING ONES");
+            a.testKeptMove(0, id);
+            const std::vector<LabFolder> F = a.testCultureFolders();
+            folderOk = id > 0 && F.size() == 3 && F[2].name == "GLOWING ONES" && F[2].id == id && F[2].rows.size() == 1 && F[2].rows[0] == 0 && F[1].rows.size() == K.size() - 1 &&
+                       !a.testFolderRemove(id);
+            stage = a.testScopeStageKept(0) && a.testScope().kept == 0 && a.testScope().page == 1 && a.testScope().species.size() == 1 && !a.testScope().mount.cells.empty();
+            a.testColdStore().clear();
+            for (int i = 0; i < INCUBATOR_FLASKS; i++) a.testFlaskEmpty(i);
+            a.testIncub().sel = 5;
+            const std::vector<IncubatorChoice> IC = a.testIncubatorChoices(0);
+            rowsI = (int)IC.size();
+            chooseOk = rowsI == kept;
+            for (const IncubatorChoice& c : IC) chooseOk = chooseOk && c.kept >= 0;
+            const std::vector<SequencerChoice> SC = a.testSequencerChoices();
+            rowsS = (int)SC.size();
+            for (const LabFolder& f : a.testLab().seq.pages.folders) chooseOk = chooseOk && f.name.rfind("THE COLLECTION: ", 0) == 0;
+            const KeptCulture c0 = a.testLab().kept[0];
+            intoFlask = a.testFlaskPutKept(5, 0) && a.testLab().flasks[5].n == 1 && a.testLab().flasks[5].who[0].sameSpecies(c0.who) &&
+                        a.testLab().flasks[5].who[0].strain == c0.who.strain && a.testLab().flasks[5].medium == c0.medium;
+            a.save("shots/tests/unit_lab_kept.txt");
+            TestGame c; c.savePrefix = "shots/tests/unit_lab_save"; c.settingsPath = "shots/tests/test_settings.txt"; c.guidePath = "shots/tests/unit_lab_guide.txt";
+            c.keysPath = "shots/tests/test_keys.txt";
+            c.newGame(); c.setState(GameState::SPACE);
+            c.load("shots/tests/unit_lab_kept.txt");
+            const std::vector<KeptCulture>& X = c.testLab().kept;
+            const std::vector<KeptCulture>& Y = a.testLab().kept;
+            saved = X.size() == Y.size() && c.testLab().folders.size() == 1 && c.testLab().folders[0].id == id && c.testLab().folders[0].name == "GLOWING ONES";
+            for (size_t i = 0; saved && i < X.size(); i++)
+                saved = X[i].who.sameSpecies(Y[i].who) && X[i].who.strain == Y[i].who.strain && X[i].folder == Y[i].folder && X[i].medium == Y[i].medium &&
+                        X[i].asWorld == Y[i].asWorld && X[i].t == Y[i].t;
+            remove("shots/tests/unit_lab_kept.txt");
+        }
+        check("lab: the culture collection: kept as grown, in a folder, on the stage, into a flask, chosen, saved (R-433)",
+              ok && kept >= 2 && mine == kept && strains2 > 0 && distinct && afterEmpty && folderOk && stage && intoFlask && chooseOk && rowsS > 0 && saved,
+              fmt("%d kept (%d strains), every one the flask's %s, each once %s; after the flask emptied %s; a folder, the first in it %s; on the stage %s; "
+                  "into flask 6 in its medium %s; the choosers' rows the collection's %s (the incubator's %d, the sequencer's %d); through the save %s",
+                  kept, strains2, mine == kept ? "yes" : "NO", distinct ? "yes" : "NO", afterEmpty ? "kept" : "LOST", folderOk ? "yes" : "NO", stage ? "yes" : "NO",
+                  intoFlask ? "yes" : "NO", chooseOk ? "yes" : "NO", rowsI, rowsS, saved ? "the same" : "DIFFERENT"));
     }
     {   // the lab's clock as the drones' bay's: real seconds in a simulating state (the ship's, the incubator's), none in a screen that stops the
         // clock (the Esc menu)

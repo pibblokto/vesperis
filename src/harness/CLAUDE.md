@@ -8,13 +8,13 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   sectors' systems in the two loops' order); each file's shared functions under its name.
 - `test_game.h`, `test_game.cpp`: `TestGame`, the Game the harness builds, and its hooks (`test*`, `setState`).
 - `test_worlds.h`: the pinned worlds and sites, the protected systems (`salt scan`). `scenes_table.h`: the scenes (`CMP_SCENES`,
-  `findScene`), placed by `scenes_setup.cpp` (`setupSceneForType`: its finders by code family, `SceneFind`) and
+  `findScene`; Z-03's `uv` and R-434's `sight` columns), placed by `scenes_setup.cpp` (`setupSceneForType`: its finders by code family, `SceneFind`) and
   `scenes_special.cpp` (fixed places).
 - `frames.cpp`, `audio_util.cpp`: frames to PNG and compared, the clock, the test scale, scripted moves (`pressKey`,
   `runFrames`, `selectRow`: a menu's row by its label); the receiver headless, WAVs, an FFT, a pitch.
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`,
   `modes_signals`, `modes_rogues`, `modes_life` (Z-01: the biota; Z-03: `life search`, `life kit`; Z-07: `life auto`,
-  `coastSite`), `modes_life_look` (Z-02: the forms' plates, strips, distinctness; `everyForm`), `modes_lab` (Z-04:
+  `coastSite`; R-434: `life sight`), `modes_life_look` (Z-02: the forms' plates, strips, distinctness; `everyForm`), `modes_lab` (Z-04:
   `lab microscope`, `lab time`; `labVial`, `labDenseVial`), `modes_cultures` (Z-05: `lab cultures`, `lab jars`; `labStock`, the
   lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07: `lab catalogue`),
   `modes_drones`, `modes_ship` (I-02: `ship rooms`, `ship walk`; I-03: `ship light`; I-04: `ship life`),
@@ -24,7 +24,9 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   `civ_peoples`, `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
 - `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`,
   `unit_life`, `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`,
-  `unit_search` (Z-03), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record).
+  `unit_search` (Z-03; R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's
+  vials by world, R-433's collection); the last, `files`
+  (B-440: the player's files left as the unit found them), in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:
@@ -36,7 +38,8 @@ Rules:
   groups before it leave (a scripted game leaves 4x). A check over a region states the count it expects.
 - A new scene code: a `SceneCode`, a finder in the chain, and out of the trait family's `<= SCENE_STAINED_CRACK` range.
 - Outputs go to `shots/tests/`; `tests/` and the grammar are read from the working directory (the repo root, or
-  `tools/prove`'s scratch directory). `records check` reads the `test_settings.txt` that `settings` writes.
+  `tools/prove`'s scratch directory). A `TestGame`'s guide, saves, settings, keys, pad, photos and films default there too
+  (`game_*`, B-440): the working directory's are the player's. `records check` reads the `test_settings.txt` that `settings` writes.
 - The unit and the flow both write `test_guide.txt` (the root note's rule). A frame of bodies waits for their maps
   (`testWaitMapOf`, `mapIfReady`); the bench's rows aboard, for those their view starts (`settleMaps`, B-439).
 - The explorer stands in the ship where its plan says (I-01): a view by its name (`testCabinView`) or a device's stand

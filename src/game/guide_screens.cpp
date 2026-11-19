@@ -184,6 +184,13 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             logEvent("NOTE", fmt("NAMED A STRAIN %s", text.c_str()));
             break;
         }
+        case TEXT_FOLDER: {   // R-433: a folder of the culture collection made (and chosen on the microscope's cultures) or renamed
+            if (text.empty()) return;
+            if (textFolderId >= 0) { folderRename(textFolderId, text); break; }
+            const int id = folderNew(text);
+            for (size_t f = 0; f < lab.folders.size(); f++) if (id >= 0 && lab.folders[f].id == id) { scope.tab = 1; scope.open = false; scope.folder = 2 + (int)f; }
+            break;
+        }
         case TEXT_PIECE: {   // the piece's name (the shard on the decoder screen)
             if (text.empty() || textShardKey.empty()) return;
             guide.names[textShardKey] = text; guide.save(guidePath);

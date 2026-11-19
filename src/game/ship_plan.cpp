@@ -52,7 +52,7 @@ constexpr ShipRoom observatoryRoom() {
     r.parapet = 0.4; r.domeN = ROUND; r.domeRings = 4;
     return r;
 }
-// the plan: the main deck's five round the hall (two decks high), the hangar and the engine room under them, the observatory over the
+// the plan: the main deck's five round the hall (two decks high), the hangar and the maintenance room under them, the observatory over the
 // hall; 30 m from the bow to the engines, 28.6 across the library and the laboratory, 19.5 from the hangar's floor to the dome's top
 constexpr ShipRoom ROOMS[SHIP_ROOMS] = {
     bridgeRoom(),
@@ -61,7 +61,7 @@ constexpr ShipRoom ROOMS[SHIP_ROOMS] = {
     roomOf("THE LABORATORY", DECK_MAIN, RS_BOX, 6.3, 14.3, -4, 4, 0, 4.2, OUT_BOW | OUT_STERN | OUT_STARBOARD | OUT_FLOOR | OUT_CEILING, FIN_HULL, FIN_HULL),
     roomOf("THE QUARTERS", DECK_MAIN, RS_BOX, -5, 5, -12.3, -6.3, 0, 3.4, OUT_STARBOARD | OUT_STERN | OUT_PORT | OUT_CEILING, FIN_DECK, FIN_PANEL, FIN_PANEL),
     roomOf("THE HANGAR", DECK_LOWER, RS_BOX, -8, 8, -8, 6, -4.9, -0.3, OUT_BOW | OUT_STARBOARD | OUT_PORT | OUT_FLOOR, FIN_HULL, FIN_HULL),
-    roomOf("THE ENGINE ROOM", DECK_LOWER, RS_BOX, -5, 5, -16.3, -8.3, -4.9, -0.3, OUT_STARBOARD | OUT_STERN | OUT_PORT | OUT_FLOOR, FIN_HULL, FIN_HULL),
+    roomOf("THE MAINTENANCE ROOM", DECK_LOWER, RS_BOX, -5, 5, -16.3, -8.3, -4.9, -0.3, OUT_STARBOARD | OUT_STERN | OUT_PORT | OUT_FLOOR, FIN_HULL, FIN_HULL),
     observatoryRoom(),
     roomOf("THE STAIR", DECK_MAIN, RS_STAIR, 0, 1.6, 0, 0, -4.9, 8.6, 0, FIN_DECK, FIN_HULL),
 };
@@ -100,13 +100,13 @@ constexpr ShipOpening lifterOf() {
     o.upPad = "UP TO THE OBSERVATORY"; o.downPad = "DOWN TO THE BRIDGE";
     return o;
 }
-// every room of the main deck opens onto the hall by an arch, the engine room onto the hangar; the well and the oculus seen through
+// every room of the main deck opens onto the hall by an arch, the maintenance room onto the hangar; the well and the oculus seen through
 constexpr ShipOpening OPENINGS[] = {
     archOf(ROOM_HALL, ROOM_BRIDGE, SIDE_BOW, -1.6, 1.6, 3.6),
     archOf(ROOM_HALL, ROOM_LIBRARY, SIDE_PORT, -1.6, 1.6, 3.6),
     archOf(ROOM_HALL, ROOM_LAB, SIDE_STARBOARD, -1.6, 1.6, 3.6),
     archOf(ROOM_HALL, ROOM_QUARTERS, SIDE_STERN, -1.2, 1.2, 3.0),
-    archOf(ROOM_HANGAR, ROOM_ENGINE, SIDE_STERN, -1.6, 1.6, 3.6),
+    archOf(ROOM_HANGAR, ROOM_MAINTENANCE, SIDE_STERN, -1.6, 1.6, 3.6),
     holeOf(OPEN_WELL, ROOM_HALL, ROOM_HANGAR, 0, 0, 1.8),
     holeOf(OPEN_OCULUS, ROOM_HALL, ROOM_OBSERVATORY, 0, 0, 2.0),
     landingOf(ROOM_HANGAR), landingOf(ROOM_HALL), landingOf(ROOM_OBSERVATORY),
@@ -122,8 +122,9 @@ constexpr ShipWindow WINDOWS[] = {
 };
 
 // I-03: each room's lamps (IDEAS 2.4): the bridge dim for the view, the hall warm over its beds, the library warm (its reading lamps), the
-// lab bright, the quarters low, the hangar's work lights (the rack's first: it lights the drones on it), the engine room's work light and
-// the fuel orb in the drive's ring, the dome dark for the eyes: a room, a kind, a place, a power, a reach, a bulb's cone. I-04: the
+// lab bright, the quarters low, the hangar's work lights (the rack's first: it lights the drones on it), the maintenance room's work light
+// (R-427: and a lamp over each platform, the engine room's fuel orb gone), the dome dark for the eyes: a room, a kind, a place, a power,
+// a reach, a bulb's cone. I-04: the
 // quarters' picture lamp over the photographs and the desk's lamp (glows: U's night keeps them), the hangar's over the cradle's new place.
 // Z-05: the incubator's light inside its cabinet and the jars' behind them (glows: the lab lit by them in the dark ship)
 constexpr ShipLamp LAMPS[] = {
@@ -139,16 +140,9 @@ constexpr ShipLamp LAMPS[] = {
     {ROOM_QUARTERS, LAMP_GLOW, -3.15, 2.76, -6.85, 1.4, 1.5, 0},   {ROOM_QUARTERS, LAMP_GLOW, 4.75, 1.12, -10.0, 0.6, 1.2, 0},
     {ROOM_HANGAR, LAMP_BULB, -6.4, -0.45, 0.0, 2.0, 3.5, 0.8},     {ROOM_HANGAR, LAMP_BULB, 4.4, -0.45, 2.4, 3.0, 4.0, 0.75},
     {ROOM_HANGAR, LAMP_BULB, 5.6, -0.45, -3.0, 1.8, 3.5, 0.8},     {ROOM_HANGAR, LAMP_BULB, -4.0, -0.45, -5.5, 1.5, 3.5, 0.8},
-    {ROOM_ENGINE, LAMP_BULB, 0, -0.45, -9.6, 2.4, 3.5, 0.9},       {ROOM_ENGINE, LAMP_ORB, 0, -2.55, -12.3, 2.2, 2.5, 0},
+    {ROOM_MAINTENANCE, LAMP_BULB, 0, -0.45, -9.6, 2.4, 3.5, 0.9},  {ROOM_MAINTENANCE, LAMP_BULB, -2.6, -0.45, -13.2, 2.6, 4.2, 0.8},
+    {ROOM_MAINTENANCE, LAMP_BULB, 2.7, -0.45, -13.0, 2.6, 4.2, 0.8},
     {ROOM_OBSERVATORY, LAMP_GLOW, 0, 8.85, -5.2, 0.6, 1.8, 0},     {ROOM_OBSERVATORY, LAMP_GLOW, 0, 8.85, 5.2, 0.5, 1.8, 0},
-};
-
-// I-04: each room's sound (IDEAS 2.5), in the rooms' order: the hum's and the drive's share of the ship's (the bridge's as before, the
-// engine room's the loudest, the dome's the quietest; the quarters lie over the engine room, the hangar beside it), the laboratory's
-// bubbling, the garden's water in the hall, the player's music fuller in the library; the stair's the hall's (the eye's room instead)
-constexpr ShipRoomSound SOUNDS[SHIP_ROOMS] = {
-    {1.0, 1.0, 0, 0, 0},     {0.85, 0.9, 0, 0.6, 0},  {0.6, 0.75, 0, 0, 1},  {0.9, 0.85, 0.7, 0, 0}, {0.7, 1.1, 0, 0, 0},
-    {1.15, 1.2, 0, 0, 0},    {1.6, 1.5, 0, 0, 0},     {0.35, 0.6, 0, 0, 0},  {0.85, 0.9, 0, 0.3, 0},
 };
 
 constexpr ShipView VIEWS[] = {
@@ -175,7 +169,8 @@ constexpr ShipView VIEWS[] = {
     {"THE LABORATORY'S MIDDLE", ROOM_LAB, {10.3, 0.0, PI / 2, 0.0}},
     {"THE QUARTERS' MIDDLE", ROOM_QUARTERS, {0.0, -9.3, PI, 0.0}},
     {"THE HANGAR'S MIDDLE", ROOM_HANGAR, {-2.5, -4.0, 0.55, 0.05}},
-    {"THE ENGINE ROOM'S MIDDLE", ROOM_ENGINE, {0.0, -9.6, PI, -0.05}},
+    {"THE MAINTENANCE ROOM'S MIDDLE", ROOM_MAINTENANCE, {0.0, -8.45, PI, -0.15}},
+    {"THE PLATFORMS", ROOM_MAINTENANCE, {0.5, -9.9, PI + 0.78, -0.25}},   // R-427: the buggy on its platform, from the walk
     {"THE OBSERVATORY'S MIDDLE", ROOM_OBSERVATORY, {0.0, -3.3, 0.0, 0.35}},
     // I-03: where `ship light` sees the sun's patches fall (the bridge's floor by the great window, the library's under its window) and the
     // hull outside (from the dome the roofs, the ring astern and the mast; from the great window the prow)
@@ -295,7 +290,14 @@ ShipFixture tubeOf(int room, double x0, double y0, double z0, double x1, double 
     f.x[0] = x0; f.y[0] = y0; f.z[0] = z0; f.x[1] = x1; f.y[1] = y1; f.z[1] = z1;
     return f;
 }
-// a ring standing upright across the ship (its axis along z): the drive's
+// R-427: a vehicle standing on its platform: the buggy (0) or the drone (1), its feet at (x, base, z), its nose toward `yaw` (0 the bow)
+ShipFixture vehicleAt(int room, int which, double x, double z, double base, double yaw) {
+    ShipFixture f{};
+    f.room = room; f.kind = FX_VEHICLE; f.device = FACE_NOTHING; f.slots = which; f.open = true;   // the platform under it keeps the walk off
+    f.x[0] = x; f.y[0] = base; f.z[0] = z; f.x[1] = x + std::sin(yaw); f.y[1] = base; f.z[1] = z + std::cos(yaw);
+    return f;
+}
+// a ring standing upright across the ship (its axis along z): the drive's (outside the hull)
 ShipFixture ringOf(int room, double x, double y, double z, double outer, double inner, double depth) {
     ShipFixture f{};
     f.room = room; f.kind = FX_RING; f.device = FACE_NOTHING; f.x[0] = x; f.y[0] = y; f.z[0] = z; f.radius = outer; f.inner = inner; f.depth = depth;
@@ -364,7 +366,7 @@ std::vector<ShipFixture> makeFixtures() {
     v.push_back(fin(boxAt(ROOM_LIBRARY, FACE_NOTHING, -12.2, -2.0, -PI / 2, 1.0, 0.12, lf, 0.9, CONSOLE, {0.85, 0.75, 0.6, 0.6, 0.7}), FIN_FABRIC));
     // the laboratory: its benches along the bow and stern walls, the jars' shelf over the bow bench, the cold store's door by the arch (Z-06
     // brings the rest of its devices). Z-04: the microscope on the stern bench by the arch (its stand, its arm and its head, the eyepieces' tube;
-    // its camera's screen beside it), the cold store's door lit by how full it is (eight lamps, its 64 places an eighth each). Z-05: the jars on
+    // its camera's screen beside it), the cold store's door lit by how full it is (eight lamps, R-432's by doublings). Z-05: the jars on
     // their shelf behind its glass (eight), the incubator on the stern bench past the microscope (its cabinet's three shelves of four flasks
     // behind its glass door, its screen beside it)
     const double af = ROOMS[ROOM_LAB].floor;
@@ -426,10 +428,15 @@ std::vector<ShipFixture> makeFixtures() {
     v.push_back(boxAt(ROOM_HANGAR, FACE_NOTHING, 6.6, -3.0, -PI / 2, 1.2, 0.5, hf, 1.1, AGAINST, {0.9, 0.78, 0.65, 0.65}));
     v.push_back(tubeOf(ROOM_HANGAR, 6.6, hf + 1.36, -4.1, 6.6, hf + 1.36, -1.7, 0.24));
     v.push_back(kindOf(boxAt(ROOM_HANGAR, FACE_NOTHING, -6.0, -7.62, 0, 0.9, 0.38, hf, 2.1, AGAINST, {0.9, 0.8, 0.65, 0.65}), FX_LOCKER));
-    // the engine room: the Vimana drive's ring on its plinth (I-04 lights it)
-    const double ef = ROOMS[ROOM_ENGINE].floor;
-    v.push_back(boxAt(ROOM_ENGINE, FACE_NOTHING, 0, -12.3, 0, 1.3, 0.55, ef, 0.35, CONSOLE, {0.85, 0.75, 0.65, 0.65, 0.7}));
-    v.push_back(ringOf(ROOM_ENGINE, 0, ef + 2.35, -12.3, 2.0, 1.55, 0.5));
+    // R-427: the maintenance room (the engine room's, its drive's ring gone): the buggy and the drone the capsule carries, each on its
+    // platform under its work lamp, the buggy turned to the walk between them, the drone's nose to the arch (its fans over its platform's
+    // edges); a workbench against the stern wall
+    const double mf = ROOMS[ROOM_MAINTENANCE].floor, deck = 0.32;
+    v.push_back(fin(boxAt(ROOM_MAINTENANCE, FACE_NOTHING, -2.6, -13.2, 0.4, 1.35, 2.0, mf, deck, CONSOLE, {0.8, 0.85, 0.7, 0.7, 0.75}), FIN_HULL, FIN_DECK));
+    v.push_back(vehicleAt(ROOM_MAINTENANCE, 0, -2.6, -13.2, mf + deck, 0.4));
+    v.push_back(fin(boxAt(ROOM_MAINTENANCE, FACE_NOTHING, 2.7, -13.0, 0, 1.8, 1.8, mf, deck, CONSOLE, {0.8, 0.85, 0.7, 0.7, 0.75}), FIN_HULL, FIN_DECK));
+    v.push_back(vehicleAt(ROOM_MAINTENANCE, 1, 2.7, -13.0, mf + deck, 0));
+    v.push_back(fin(boxAt(ROOM_MAINTENANCE, FACE_NOTHING, 0, -15.95, 0, 1.3, 0.33, mf, 0.9, AGAINST, {0.9, 0.78, 0.65, 0.65}), FIN_HULL, FIN_DECK));
     // the observatory: the telescope's set and its mount (the pier, the tube raised to the bow), the radar's set, a couch
     const double of = ROOMS[ROOM_OBSERVATORY].floor;
     auto onRing = [](double degs, double r, double& x, double& z) { x = r * std::sin(degs * DEG); z = r * std::cos(degs * DEG); };
@@ -452,7 +459,7 @@ std::vector<ShipFixture> makeFixtures() {
     v.push_back(fin(boxAt(ROOM_OBSERVATORY, FACE_NOTHING, x, z, 160 * DEG + PI, 1.0, 0.12, of, 0.85, CONSOLE, {0.85, 0.75, 0.6, 0.6, 0.7}), FIN_FABRIC));
     // I-03: outside the hull (seen through the windows and the dome): the drive's ring astern on its four struts (its inner face aglow),
     // the radar's mast on the quarters' roof, the drones' door's frame in the hangar's port flank round the rack's ports
-    const ShipRoom& E = ROOMS[ROOM_ENGINE];
+    const ShipRoom& E = ROOMS[ROOM_MAINTENANCE];
     const double ry = (E.floor + E.ceiling) / 2, rz = E.z0 - 0.3 - 0.75;
     v.push_back(fin(ringOf(SHIP_OUTSIDE, 0, ry, rz, 5.2, 4.3, 0.7), FIN_OUTSIDE));
     for (int k = 0; k < 4; k++) {
@@ -1144,6 +1151,7 @@ struct Builder {
         if (F.kind == FX_PRINTS) { marker(PIECE_PRINTS, index, FIN_PRINT); m.finishes[F.room] |= 1u << FIN_DECK; return; }
         if (F.kind == FX_DISPLAY) { marker(PIECE_DISPLAY, index, FIN_BRASS); return; }
         if (F.kind == FX_TREE) { seen = Vec3((F.x[1] + F.x[2]) / 2, F.y[1] + F.height / 2, (F.z[1] + F.z[2]) / 2); marker(PIECE_TREE, index, FIN_PANEL); return; }   // Z-06
+        if (F.kind == FX_VEHICLE) { seen = Vec3(F.x[0], F.y[0] + 1, F.z[0]); marker(PIECE_VEHICLE, index, FIN_DECK); return; }   // R-427: its model the frame's
         if (F.kind == FX_INCUBATOR || F.kind == FX_JARS) {   // Z-05: the cabinet's faces and its inside (its back, its shelves), the shelf's; the flasks or the jars the frame's
             const Vec3 A[4] = {Vec3(F.x[0], F.y[0], F.z[0]), Vec3(F.x[1], F.y[1], F.z[1]), Vec3(F.x[2], F.y[2], F.z[2]), Vec3(F.x[3], F.y[3], F.z[3])};
             auto P = [&](double t, double back, double y) { return A[1] + (A[2] - A[1]) * t + ((A[0] + (A[3] - A[0]) * t) - (A[1] + (A[2] - A[1]) * t)) * back + Vec3(0, y, 0); };
@@ -1268,7 +1276,7 @@ struct Builder {
     }
 
     // I-03: the hull outside (MAT_OUTSIDE, lit by the sun): the main deck's roofs (the bridge's out to its arc, the library's, the
-    // laboratory's, the quarters'), the hall's roof round the dome, the engine room's astern of the quarters, and the prow below the great
+    // laboratory's, the quarters'), the hall's roof round the dome, the maintenance room's astern of the quarters, and the prow below the great
     // window (a fan from the window's foot down to its nose); then what stands outside (the plan's fixtures of SHIP_OUTSIDE)
     void outside() {
         room = SHIP_OUTSIDE; finish = FIN_OUTSIDE; grid = false; cull = true;
@@ -1285,7 +1293,7 @@ struct Builder {
         }
         const ShipRoom& Q = ROOMS[ROOM_QUARTERS];
         roof(Q.x0 - T, Q.x1 + T, Q.z0 - T, hz0, Q.ceiling + T);
-        const ShipRoom& EN = ROOMS[ROOM_ENGINE];
+        const ShipRoom& EN = ROOMS[ROOM_MAINTENANCE];
         roof(EN.x0 - T, EN.x1 + T, EN.z0 - T, Q.z0 - T, EN.ceiling + T);
         const ShipRoom& B = ROOMS[ROOM_BRIDGE];
         const double h = B.bowZ - B.z1, rad = (h * h + B.x1 * B.x1) / (2 * h), cz = B.bowZ - rad, bmax = std::asin(B.x1 / rad);
@@ -1326,8 +1334,8 @@ struct Builder {
     }
 
     // I-03: each vertex of the rooms lit by its room's lamps (the stair's by the room its height is in): the bulbs' and the glows' light
-    // with a share of the room's mean given back by its surfaces, the orb's apart (it pulses with the drive); I-04: the glows' share of it
-    // and of the fill apart too (U's night keeps it), the rooms' fills kept for what the frame lights
+    // with a share of the room's mean given back by its surfaces; I-04: the glows' share of it and of the fill apart too (U's night keeps
+    // it), the rooms' fills kept for what the frame lights
     void light() {
         double sum[SHIP_ROOMS] = {}, sumNight[SHIP_ROOMS] = {}; int count[SHIP_ROOMS] = {};
         auto roomAt = [](int room, double y) -> int {
@@ -1343,7 +1351,7 @@ struct Builder {
                 for (const ShipLamp& L : LAMPS) {
                     if (L.room != lr) continue;
                     const double e = lampOn(L, v.p, line ? nullptr : &pc.nrm);
-                    if (L.kind == LAMP_ORB) v.glow += e; else v.lamp += e;
+                    v.lamp += e;
                     if (L.kind == LAMP_GLOW) v.night += e;
                 }
                 sum[lr] += v.lamp; sumNight[lr] += v.night; count[lr]++;
@@ -1744,7 +1752,6 @@ void shipSight(const ShipPlace& p, const Vec3& eye, const Mat3& look, const Proj
     if (!out.seesOut) out.ox0 = out.oy0 = out.ox1 = out.oy1 = 0;
 }
 
-const ShipRoomSound& shipRoomSound(int room) { return SOUNDS[room >= 0 && room < SHIP_ROOMS ? room : SHIP_START.room]; }
 
 double shipRoomNear(int room, const Vec3& p) {
     if (room < 0 || room >= SHIP_ROOMS) return 1e30;
@@ -1766,14 +1773,14 @@ const ShipMesh& shipMesh() {
     return mesh;
 }
 
-// I-04: a place lit as the mesh's vertices are: its room's lamps (the bulbs and the glows, the glows apart, the orb), the room's fills
-void shipLampLight(int room, const Vec3& p, const Vec3* nrm, double& lamp, double& night, double& glow) {
-    lamp = night = glow = 0;
+// I-04: a place lit as the mesh's vertices are: its room's lamps (the bulbs and the glows, the glows apart), the room's fills
+void shipLampLight(int room, const Vec3& p, const Vec3* nrm, double& lamp, double& night) {
+    lamp = night = 0;
     if (room < 0 || room >= SHIP_ROOMS) return;
     for (const ShipLamp& L : LAMPS) {
         if (L.room != room) continue;
         const double e = lampOn(L, p, nrm);
-        if (L.kind == LAMP_ORB) glow += e; else lamp += e;
+        lamp += e;
         if (L.kind == LAMP_GLOW) night += e;
     }
     const ShipMesh& m = shipMesh();

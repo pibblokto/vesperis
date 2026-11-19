@@ -45,6 +45,10 @@ them (`log/`, by release). A milestone that sets or changes one edits its line h
 - Sights are found in the terrain, not placed: a ~14 km cell's best of each kind (`sightsOfCell`), ruins one by one, a lake on water [O6-03..O6-07], [R-408]
 - O6-06's one landmark a cell and centroid lake live on only in `legacyLandmarkOf`, which moves the explorer's old names to marks [R-408]
 
+## Seeing the ground
+- The activity vision (Shift+O): each metre within 40 m read at its middle as a vial reads it (on the pool, walls after) [R-434]
+- Its pass comes last, every pixel into bank 15 (its ramp the vision's while on); off, neither touches the frame [R-434]
+
 ## Weather
 - Fronts are one function of body, place and time (`galaxy/fronts.*`): the overlay, maps, ground weather, forecast, almanac and `LocalFront` read it [W-03]
 - A front rains only from its line (its forecast time; `THE FRONT CLEARS` is the rain's end); pattern rain reads `env.cloudPattern` alone [W-03]
@@ -74,3 +78,4 @@ them (`log/`, by release). A milestone that sets or changes one edits its line h
 [P-06]: log/6-1.4.0.md
 [Q-01]: log/6-1.4.0.md
 [Q-02]: log/6-1.4.0.md
+[R-434]: log/7-1.5.0.md

@@ -29,7 +29,7 @@ const double SUN_FLOOD = 30;   // I-03: with the hull depolarised the sun's ligh
 // console in its alcove on the bridge, the flight desk, the console arc's three screens, the capsule's cradle in the hangar, the decoder
 // in the library, the radar's and the telescope's sets in the observatory, the case in the library and the drone bay in the hangar
 // (their bodies and screens: the plan's fixtures, ship_plan.cpp; I-02 their rooms); I-04: the bunk (the almanac, to rest until an event)
-// and the desk (the log) in the quarters, the player's deck in the library (the decoder's player page), none with a screen of its own
+// and the desk (the log) in the quarters, the player's deck in the library (R-431: the player's screen), none with a screen of its own
 const RowList<CabinDevice>& Game::cabinDevices() {
     static constexpr auto atGiant = [](const Game& g) {   // the landing screen and the cage serve the probe at a giant
         return g.sys.valid && g.ship.mode == ShipState::PARKED && g.ship.parkedBody >= 0 && g.ship.parkedBelt < 0 && isProbeGiant(g.sys.bodies[g.ship.parkedBody].type);
@@ -89,7 +89,7 @@ const RowList<CabinDevice>& Game::cabinDevices() {
         {FACE_DESK, ROOM_QUARTERS, 4.0, -9.4, 1.6, {3.2, -9.4, PI / 2, -0.4}, "DESK - E TO READ THE LOG", "THE DESK", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
          [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::LOG); }},
         {FACE_DECK, ROOM_LIBRARY, -7.3, 2.7, 1.4, {-8.1, 2.7, PI / 2, -0.45}, "PLAYER'S DECK - E TO PLAY", "THE PLAYER'S DECK", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
-         [](Game& g) { g.shardsTop = 1; g.openScreen(GameState::SHARDS); },   // the decoder's player page (C-11)
+         [](Game& g) { g.openScreen(GameState::PLAYER); },   // R-431: the player's own screen (C-11's decoder page before)
          nullptr, [](const Game& g) { return g.player.playing >= 0 ? "PLAYER'S DECK - E FOR ITS LIST" : nullptr; }},
         {FACE_MICROSCOPE, ROOM_LAB, 9.0, -3.35, 1.5, {9.0, -2.2, PI, -0.5}, "MICROSCOPE - E TO LOOK AT THE VIALS", "THE MICROSCOPE", 31, RGB(0.15f, 0.6f, 0.7f),   // Z-04: teal
          [](Game& g) { g.openScreen(GameState::MICROSCOPE); },
@@ -105,6 +105,19 @@ const RowList<CabinDevice>& Game::cabinDevices() {
         {FACE_TREE, ROOM_LAB, 6.9, 2.85, 1.6, {7.75, 2.85, -PI / 2, -0.05}, "TREE OF KIN - E TO LOOK AT IT", "THE TREE OF KIN", 46, RGB(0.1f, 0.85f, 0.2f),   // Z-06: a deep leaf green (R-404: 0.3 from every other)
          [](Game& g) { g.openScreen(GameState::TREE); },
          [](const Game& g, const CabinFrame& f) { return (g.cabin.facing == FACE_TREE ? 26 : 18) * f.flick; }},   // dim under its lines
+        // R-429: the garden's beds in the hall's corners, in the plan's order (port astern, port forward, starboard astern, starboard
+        // forward), each faced from toward the stair; E trims it back
+        {FACE_BED_1, ROOM_HALL, -4.75, -4.75, 2.6, {-3.2, -3.2, -3 * PI / 4, -0.35}, "GARDEN BED - E TO TRIM IT", "THE GARDEN BED", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
+         [](Game& g) { g.gardenTrim(0); }, nullptr, [](const Game& g) { return g.gardenGrowth(0) < GARDEN_TRIM_MIN ? "GARDEN BED - GROWING BACK" : nullptr; }},
+        {FACE_BED_2, ROOM_HALL, -4.75, 4.75, 2.6, {-3.2, 3.2, -PI / 4, -0.35}, "GARDEN BED - E TO TRIM IT", "THE GARDEN BED", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
+         [](Game& g) { g.gardenTrim(1); }, nullptr, [](const Game& g) { return g.gardenGrowth(1) < GARDEN_TRIM_MIN ? "GARDEN BED - GROWING BACK" : nullptr; }},
+        {FACE_BED_3, ROOM_HALL, 4.75, -4.75, 2.6, {3.2, -3.2, 3 * PI / 4, -0.35}, "GARDEN BED - E TO TRIM IT", "THE GARDEN BED", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
+         [](Game& g) { g.gardenTrim(2); }, nullptr, [](const Game& g) { return g.gardenGrowth(2) < GARDEN_TRIM_MIN ? "GARDEN BED - GROWING BACK" : nullptr; }},
+        {FACE_BED_4, ROOM_HALL, 4.75, 4.75, 2.6, {3.2, 3.2, PI / 4, -0.35}, "GARDEN BED - E TO TRIM IT", "THE GARDEN BED", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
+         [](Game& g) { g.gardenTrim(3); }, nullptr, [](const Game& g) { return g.gardenGrowth(3) < GARDEN_TRIM_MIN ? "GARDEN BED - GROWING BACK" : nullptr; }},
+        // R-428: the quarters' wall of photographs, faced from the room; E hangs them
+        {FACE_PRINTS, ROOM_QUARTERS, -3.15, -6.35, 2.4, {-3.15, -8.1, 0.0, 0.05}, "PHOTOGRAPHS - E TO HANG THEM", "THE PHOTOGRAPHS", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
+         [](Game& g) { g.openScreen(GameState::WALL); }},
     };
     static constexpr RowList<CabinDevice> LIST = rowsOf(ROWS);
     static_assert(devicesWhole(LIST), "a device a row, in CabinFacing's order, with its lines and its act");
@@ -243,6 +256,11 @@ void Game::cabinSight() {
         asks.push_back({BANK_DRONE_PAINT, RGB(0.78f, 0.76f, 0.7f), near});
         for (int k : {FACE_BAY, FACE_TARGET, FACE_RADAR, FACE_GOES, FACE_FLIGHT}) asks.push_back({devices.row[k].bank, devices.row[k].col, near});
     }
+    if (f.sight.seen[ROOM_MAINTENANCE]) {   // R-427: the buggy and the drone on their platforms, in the drones' paint, their tail lights red
+        const double near = shipRoomNear(ROOM_MAINTENANCE, f.eye);
+        asks.push_back({BANK_DRONE_PAINT, RGB(0.78f, 0.76f, 0.7f), near});
+        asks.push_back({devices.row[FACE_RADAR].bank, devices.row[FACE_RADAR].col, near});
+    }
 }
 
 // B-435: the banks dealt once the outside is drawn (it was the cabin's own eleven, and a far finish or screen fell to the hull's grey until
@@ -319,7 +337,7 @@ void Game::drawCabin() {
     f.lit = c.lightLevel;
     f.hullShade = 12 + 30 * f.lit;
     f.flick = 0.9 + 0.1 * std::sin(realTime * 7.0);
-    f.drive = c.drive;   // I-04: the flight's (the core, the drive's glow, the orb)
+    f.drive = c.drive;   // I-04: the flight's (the core, the drive's glow)
     cabinDaylight(f);
     for (double& s : f.screen) s = 0;
     bool devicesSeen = false;   // a device in a seen room: their screens, the decoder's wait, the rack's drones
@@ -342,8 +360,7 @@ void Game::drawCabin() {
         f.shapes.fill(fb);
         setRasterBand(0, 1 << 30);
     });
-    // the lamps of the seen rooms: their points (the bulbs, the glows, the fuel orb pulsing; I-04: a glow kept at U's night, the orb
-    // brighter with the drive)
+    // the lamps of the seen rooms: their points (the bulbs, the glows; I-04: a glow kept at U's night)
     const Mat3& look = f.look; const Vec3& eye = f.eye;
     const double lit = f.lit;
     for (const ShipLamp& L : shipLamps()) {
@@ -351,8 +368,8 @@ void Game::drawCabin() {
         const Vec3 v = look * Vec3(L.x - eye.x, L.y - eye.y, L.z - eye.z);
         if (v.z <= NEAR_Z) continue;
         RVert p; p.x = v.x; p.y = v.y; p.z = v.z;
-        p.shade = L.kind == LAMP_ORB ? std::min(63.0, 40 + 20 * f.pulse + 12 * f.drive) : 20 + 43 * (L.kind == LAMP_GLOW ? lit + (1 - lit) * SHIP_NIGHT_GLOW : lit);
-        rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, L.kind == LAMP_ORB ? 3 : 2);
+        p.shade = 20 + 43 * (L.kind == LAMP_GLOW ? lit + (1 - lit) * SHIP_NIGHT_GLOW : lit);
+        rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 2);
     }
 }
 
@@ -453,7 +470,7 @@ void Game::drawCabinPieces(CabinFrame& f) {
             toView(v.p, q[i]);
             if (how == FIXED) q[i].shade = shade;
             else if (scale < 0) q[i].shade = GLASS_SHEEN * lit * std::min(1.5, v.lamp) * pc.a * pc.b;   // the glass's sheen of the lamps' light
-            else q[i].shade = (SHADE_FULL * (AMBIENT + lit * v.lamp + (1 - lit) * SHIP_NIGHT_GLOW * v.night + f.pulse * (1 + f.drive) * v.glow) + world) * pc.a * pc.b * scale;
+            else q[i].shade = (SHADE_FULL * (AMBIENT + lit * v.lamp + (1 - lit) * SHIP_NIGHT_GLOW * v.night) + world) * pc.a * pc.b * scale;
             q[i].u = v.u;
             q[i].v = pc.mat == MAT_SCREEN ? v.p.y * 3 + realTime * 0.4 : v.v;
         }

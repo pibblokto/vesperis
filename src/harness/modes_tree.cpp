@@ -530,14 +530,16 @@ int labCatalogue() {
         Vial v;
         if (labVial(fs, fb, v)) {
             g.testColdStore().push_back(v);
-            g.testCabinAtDevice(FACE_MICROSCOPE); runFrames(g, in, 0.2); pressKey(g, in, KEY_E); runFrames(g, in, 0.1);
-            pressKey(g, in, KEY_ENTER); runFrames(g, in, 2.0);
+            // R-432: Enter the world's vials, Enter its first on the stage (the frame of the one Enter more taken from the wait before E, the
+            // one Esc more from the wait after: the frames after them keep their times)
+            g.testCabinAtDevice(FACE_MICROSCOPE); runFrames(g, in, 0.167); pressKey(g, in, KEY_E); runFrames(g, in, 0.1);
+            pressKey(g, in, KEY_ENTER); pressKey(g, in, KEY_ENTER); runFrames(g, in, 2.0);
             g.testClearStatus(); g.frame(in, 1.0 / 30); in.newFrame();   // a micrograph as the window writes P's: the frame, its caption beside it
             writePNG(fmt("%s/screenshot_0.png", gallery.c_str()).c_str(), g.output(), FBW, FBH);
             { FILE* sc = fopen(fmt("%s/screenshot_0.txt", gallery.c_str()).c_str(), "w"); if (sc) { fprintf(sc, "%s\n", g.screenshotCaption().c_str()); fclose(sc); } }
             g.noteScreenshot();
             pngFlush();
-            pressKey(g, in, KEY_ESCAPE); pressKey(g, in, KEY_ESCAPE); runFrames(g, in, 0.1);
+            pressKey(g, in, KEY_ESCAPE); pressKey(g, in, KEY_ESCAPE); pressKey(g, in, KEY_ESCAPE); runFrames(g, in, 0.067);
             g.openScreen(GameState::GALLERY); grab(life, "A MICROGRAPH IN THE GALLERY");
             std::ifstream cap(fmt("%s/screenshot_0.txt", gallery.c_str()));
             std::string caption; std::getline(cap, caption);

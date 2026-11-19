@@ -64,7 +64,7 @@ double SurfaceView::placeMeanC(double x, double z, double h) const {
     return std::max(base, -270.0);
 }
 
-SampleRead SurfaceView::readSample(double x, double z, bool onWater) {
+SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls) {
     SampleRead R;
     const Body& b = site.sys->bodies[site.body];
     const Biota& B = biota();
@@ -156,12 +156,11 @@ SampleRead SurfaceView::readSample(double x, double z, bool onWater) {
                 put(NI_PLUME, "FROST FROM A PLUME'S FALL", H.meanC, std::min(readC, 0.0)); return R;
             }
     }
-    // a dead people's walls: their foot (the settlements stand where the world put them, whatever the landing)
+    // a dead people's walls: their foot (the settlements stand where the world put them, whatever the landing); R-434: a read on the pool
+    // leaves them to the main thread (the ruins' cells fill as they are asked for), the place's mean kept for its OLD WALL
     if (B.habitats & nicheBit(NI_RUINS)) {
-        std::vector<Collider> walls;
-        forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) { settlementColliders(r, cell, x, z, walls); });
-        for (const Collider& c : walls)
-            if (std::hypot(c.x - x, c.z - z) < c.r + 1.2) { put(NI_RUINS, "OLD WALL", H.meanC, readC); return R; }
+        if (!walls) { R.wallsAsked = true; R.placeC = H.meanC; }
+        else if (wallNear(x, z)) { put(NI_RUINS, "OLD WALL", H.meanC, readC); return R; }
     }
     // the liquid and its edge
     if (inLiquid) {
@@ -206,6 +205,23 @@ SampleRead SurfaceView::readSample(double x, double z, bool onWater) {
     return R;
 }
 
+// R-434: a read on the pool (`walls` false) finished on the main thread: an old wall's foot near, readSample's OLD WALL (from the place's
+// mean, rounded as it rounds it); else the read's own microhabitat
+Microhabitat SurfaceView::wallsDone(const SampleRead& r, double x, double z) {
+    if (!r.wallsAsked || !wallNear(x, z)) return r.hab;
+    Microhabitat h;
+    h.niche = NI_RUINS; h.meanC = std::round(r.placeC * 10) / 10; h.shade = r.hab.shade; h.oldRock = r.hab.oldRock; h.place = r.hab.place;
+    return h;
+}
+
+bool SurfaceView::wallNear(double x, double z) {
+    std::vector<Collider> walls;
+    forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) { settlementColliders(r, cell, x, z, walls); });
+    for (const Collider& c : walls)
+        if (std::hypot(c.x - x, c.z - z) < c.r + 1.2) return true;
+    return false;
+}
+
 // ---- the lamp's ultraviolet
 int SurfaceView::filmNicheOf(const TerrainVertex& v, bool springs, double sea, double& share) {
     share = 0;
@@ -238,7 +254,7 @@ void SurfaceView::setupFilmGlow() {
 // the frame's grid: the near ring's corners round the eye, their height and their films' glow (their niche's density by their share)
 void SurfaceView::prepareFilmGlow() {
     uvFrame = false;
-    if (!uvLamp || inVehicle() || cameraOverrideAlt >= 0 || freeCam) return;
+    if (!uvLamp || sight || inVehicle() || cameraOverrideAlt >= 0 || freeCam) return;   // R-434: none under the activity vision
     const bool springs = site.gen.hasTrait(TR_HOT_SPRINGS) || (KINDS[site.gen.type].events & EV_SPRINGS);
     const double cs = site.lodN.cellSize, sea = seaLevelNow();
     uvCx0 = (int)std::floor(camPos.x / cs) - UV_GRID / 2; uvCz0 = (int)std::floor(camPos.z / cs) - UV_GRID / 2;
@@ -323,4 +339,178 @@ void SurfaceView::drawFilmGlow(Framebuffer& fb) {
             }
         }
     });
+}
+
+// ---- R-434: the activity vision
+// The game's sixth vision (Shift+O, or V round them): the ground and the water within SIGHT_REACH coloured by the activity a vial would read
+// there, the rest of the frame dimmed, a thermal camera's way. Each square metre is read at its middle as a vial reads it (`readSample`, then
+// `sampleOf`: the crowd at work), the nearest first and a share a frame on the pool (the ruins' walls after, on the main thread), and kept for
+// the landing; the pass is after everything drawn: every pixel into bank 15, whose ramp is the vision's while it is on
+namespace {
+constexpr double SIGHT_REACH = 40.0;
+constexpr int SIGHT_PER_FRAME = 384;   // the square metres read a frame at most
+constexpr int SIGHT_BANK = 15;
+int64_t sightPack(int ix, int iz) { return ((int64_t)ix << 32) ^ (int64_t)(uint32_t)iz; }
+// the square metres within reach, nearest first (ties by their place: the order fixed)
+const std::vector<std::pair<int, int>>& sightRing() {
+    static const std::vector<std::pair<int, int>> ring = [] {
+        std::vector<std::pair<int, int>> v;
+        const int R = (int)SIGHT_REACH + 1;
+        for (int dz = -R; dz <= R; dz++)
+            for (int dx = -R; dx <= R; dx++)
+                if ((dx + 0.5) * (dx + 0.5) + (dz + 0.5) * (dz + 0.5) <= (SIGHT_REACH + 1) * (SIGHT_REACH + 1)) v.push_back({dx, dz});
+        std::stable_sort(v.begin(), v.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+            return (a.first + 0.5) * (a.first + 0.5) + (a.second + 0.5) * (a.second + 0.5) < (b.first + 0.5) * (b.first + 0.5) + (b.second + 0.5) * (b.second + 0.5);
+        });
+        return v;
+    }();
+    return ring;
+}
+}   // namespace
+
+// the heat a reading shows: none at work 0; faint 0.25 (a protocell's chemistry, the threshold) to 0.55; strong 0.62 to 1 (ten thousand times
+// the threshold's crowd)
+float SurfaceView::sightHeatOf(const Sample& s) {
+    if (s.activity == VA_NONE) return 0;
+    if (s.activity == VA_FAINT) return (float)(0.25 + 0.30 * clampd((s.activeLog - 2.0) / 3.5, 0, 1));
+    return (float)(0.62 + 0.38 * clampd((s.activeLog - 5.5) / 4.0, 0, 1));
+}
+
+float SurfaceView::sightHeatAt(double x, double z) const {
+    if (sightKey.empty()) return -1;
+    const int ix = (int)std::floor(x), iz = (int)std::floor(z);
+    const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+    return sightKey[slot] == sightPack(ix, iz) ? sightHeat[slot] : -1.0f;
+}
+
+void SurfaceView::clearSight() {
+    sightKey.assign((size_t)SIGHT_N * SIGHT_N, INT64_MIN);
+    sightHeat.assign((size_t)SIGHT_N * SIGHT_N, -1.0f);
+    sightSea = -1e30;
+}
+
+// the frame's share of the square metres not yet read, the nearest first: each read on the pool as a vial reads it, its walls on the main
+// thread; then the frame's grid of the drawn ground's height, or the water's where it lies over it
+void SurfaceView::prepareSight() {
+    sightFrame = false;
+    if (!sight || cameraOverrideAlt >= 0 || freeCam) return;
+    if (sightKey.empty()) clearSight();
+    const double sea = seaLevelNow();
+    if (std::fabs(sea - sightSea) > 0.25) { clearSight(); sightSea = sea; }
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    std::vector<std::pair<int, int>> todo;
+    for (const std::pair<int, int>& o : sightRing()) {
+        const int ix = ex + o.first, iz = ez + o.second;
+        const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+        if (sightKey[slot] != sightPack(ix, iz)) todo.push_back({ix, iz});
+        if ((int)todo.size() >= SIGHT_PER_FRAME) break;
+    }
+    if (!todo.empty()) {
+        struct Out { SampleRead r; float heat = 0; };
+        std::vector<Out> out(todo.size());
+        const Biota& B = biota();
+        parallelFor((int)todo.size(), 8, [&](int a, int b) {
+            for (int i = a; i < b; i++) {
+                out[i].r = readSample(todo[i].first + 0.5, todo[i].second + 0.5, false, false);
+                if (out[i].r.ok) out[i].heat = sightHeatOf(sampleOf(B, out[i].r.hab));
+            }
+        });
+        for (size_t i = 0; i < todo.size(); i++) {
+            Out& o = out[i];
+            if (o.r.ok && o.r.wallsAsked) o.heat = sightHeatOf(sampleOf(B, wallsDone(o.r, todo[i].first + 0.5, todo[i].second + 0.5)));
+            const size_t slot = (size_t)(todo[i].second & (SIGHT_N - 1)) * SIGHT_N + (size_t)(todo[i].first & (SIGHT_N - 1));
+            sightKey[slot] = sightPack(todo[i].first, todo[i].second);
+            sightHeat[slot] = o.r.ok ? o.heat : 0.0f;
+        }
+    }
+    sightCx0 = (int)std::floor(camPos.x / 2.0) - SIGHT_GRID / 2; sightCz0 = (int)std::floor(camPos.z / 2.0) - SIGHT_GRID / 2;
+    for (int j = 0; j < SIGHT_GRID; j++)
+        for (int i = 0; i < SIGHT_GRID; i++) {
+            const double x = (sightCx0 + i) * 2.0, z = (sightCz0 + j) * 2.0;
+            double top = site.groundHeight(x, z);
+            const double w = site.waterAt(x, z);
+            if (w > -1e8) top = std::max(top, w);
+            if (sea > -1e8) top = std::max(top, sea);
+            sightTop[j * SIGHT_GRID + i] = (float)top;
+        }
+    sightFrame = true;
+}
+
+// after everything drawn: each pixel's luminance (its bank's own ramp) into the vision's ramp, dim; the ground's and the water's own pixels
+// within reach by the heat of their square metres (blended between their middles), the luminance a hair of it; none at work dark but for the
+// ground's shading; a square metre not yet read as the rest. Rows pure: each pixel reads the frame's grid and the read metres and writes itself
+void SurfaceView::drawSight(Framebuffer& fb) {
+    if (!sightFrame) return;
+    float lum[BANKS][64];
+    for (int bk = 0; bk < BANKS; bk++)
+        for (int s = 0; s < 64; s++) {
+            const uint8_t* c = &fb.pal[(bk * 64 + s) * 3];
+            lum[bk][s] = (0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2]) / 255.0f;
+        }
+    // cold violet to red, orange, yellow and white: none at work up to 16, faint 27-42, strong 45-63
+    setRamp(fb.pal, SIGHT_BANK, {{0, RGB(0, 0, 0)}, {6, RGB(0.04f, 0.02f, 0.10f)}, {16, RGB(0.17f, 0.07f, 0.32f)}, {26, RGB(0.56f, 0.09f, 0.30f)},
+                                 {36, RGB(0.86f, 0.24f, 0.10f)}, {46, RGB(0.98f, 0.56f, 0.08f)}, {55, RGB(1.0f, 0.86f, 0.26f)}, {63, RGB(1.0f, 1.0f, 0.86f)}});
+    const Vec3 R0 = camLocal.row(0), R1 = camLocal.row(1), F = camLocal.row(2);
+    const double f = proj.f, pcx = proj.cx, pcy = proj.cy;
+    auto heatAt = [&](int ix, int iz) -> float {
+        const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+        return sightKey[slot] == sightPack(ix, iz) ? sightHeat[slot] : -1.0f;
+    };
+    parallelFor(FBH, 16, [&](int y0, int y1) {
+        for (int py = y0; py < y1; py++)
+            for (int px = 0; px < FBW; px++) {
+                const size_t idx = (size_t)py * FBW + px;
+                const Pix p0 = fb.idx[idx];
+                const float L = lum[bankOf(p0)][std::min(63, intenOf(p0) / INTEN_PER_SHADE)];
+                double shade = 1 + 9 * L;   // the rest, dimmed
+                const float iz = fb.invz[idx];
+                if (iz > 0 && 1.0 / iz <= SIGHT_REACH) {
+                    const double zv = 1.0 / iz, xv = (px + 0.5 - pcx) * zv / f, yv = (pcy - (py + 0.5)) * zv / f;
+                    const Vec3 d = R0 * xv + R1 * yv + F * zv;
+                    const double dist = length(d);
+                    const Vec3 p = camPos + d;
+                    const double gx = p.x / 2.0 - sightCx0, gz = p.z / 2.0 - sightCz0;
+                    const int ix = (int)std::floor(gx), jz = (int)std::floor(gz);
+                    if (dist <= SIGHT_REACH && ix >= 0 && jz >= 0 && ix < SIGHT_GRID - 1 && jz < SIGHT_GRID - 1) {
+                        const double fx = gx - ix, fz = gz - jz;
+                        const float* T = &sightTop[jz * SIGHT_GRID + ix];
+                        const double top = (T[0] * (1 - fx) + T[1] * fx) * (1 - fz) + (T[SIGHT_GRID] * (1 - fx) + T[SIGHT_GRID + 1] * fx) * fz;
+                        const double above = p.y - top;
+                        if (above > -0.6 && above < 0.4) {   // the ground's or the water's own pixel (not a stone, a trunk, the buggy)
+                            const double mx = p.x - 0.5, mz = p.z - 0.5;
+                            const int qx = (int)std::floor(mx), qz = (int)std::floor(mz);
+                            const double ux = mx - qx, uz = mz - qz;
+                            const float h4[4] = {heatAt(qx, qz), heatAt(qx + 1, qz), heatAt(qx, qz + 1), heatAt(qx + 1, qz + 1)};
+                            const double w4[4] = {(1 - ux) * (1 - uz), ux * (1 - uz), (1 - ux) * uz, ux * uz};
+                            double hs = 0, ws = 0;
+                            for (int k = 0; k < 4; k++) if (h4[k] >= 0) { hs += h4[k] * w4[k]; ws += w4[k]; }
+                            if (ws > 0.25) {
+                                const double h = hs / ws;
+                                const double ground = h > 0.01 ? 16 + 47 * h + 4 * (L - 0.5) : 4 + 12 * L;
+                                const double fade = 1 - smoothstep(0.8 * SIGHT_REACH, SIGHT_REACH, dist);
+                                shade += (ground - shade) * fade;
+                            }
+                        }
+                    }
+                }
+                fb.idx[idx] = pixI(SIGHT_BANK, (int)(clampd(shade, 0, 63) * INTEN_PER_SHADE));
+            }
+    });
+}
+
+int SurfaceView::testSightMissing() const {
+    if (sightKey.empty()) return (int)sightRing().size();
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    int n = 0;
+    for (const std::pair<int, int>& o : sightRing()) n += sightHeatAt(ex + o.first + 0.5, ez + o.second + 0.5) < 0;
+    return n;
+}
+void SurfaceView::testSightCounts(int& read, int& faint, int& strong) const {
+    read = faint = strong = 0;
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    for (const std::pair<int, int>& o : sightRing()) {
+        const float h = sightHeatAt(ex + o.first + 0.5, ez + o.second + 0.5);
+        if (h < 0) continue;
+        read++; faint += h >= 0.25f && h < 0.6f; strong += h >= 0.6f;
+    }
 }

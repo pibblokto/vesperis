@@ -229,8 +229,8 @@ bool Game::autoOutingSprings() {
     return true;
 }
 
-// Z-07: room for a sample: a vial in the kit and a place in the cold store for it
-bool Game::autoSampleRoom() const { return (int)kit.size() < KIT_VIALS && (int)(coldStore.size() + kit.size()) < COLD_STORE; }
+// Z-07: room for a sample: a vial in the kit (R-432: the cold store takes any number)
+bool Game::autoSampleRoom() const { return (int)kit.size() < KIT_VIALS; }
 
 // Z-07: a sample where the walk ended (the lab's work stays the explorer's: it opens no screen): the crosshair eased onto the ground or the
 // water a metre or so toward a place, O once where it rests within reach (the take's line said as the explorer's is)

@@ -7,6 +7,7 @@
 // level), a ceiling of 400 m over the ground, no fuel. The skids cannot go under the ground or the water; what the
 // buggy collides with the drone collides with when its hull is at that height, and a hard arrival is a thump.
 #include "surface_view.h"
+#include "vehicle_shape.h"
 #include "core/noise.h"
 #include "core/rng.h"
 #include <cmath>
@@ -15,13 +16,7 @@
 namespace {
 const double TOP = SurfaceView::DRONE_TOP_SPEED, REVERSE = 12.0;   // m/s: 320 km/h, and backwards
 const double CLIMB = 15.0, DESCEND = 12.0;                          // m/s asked for with Space and Shift
-// the hull's stations (metres along the length from the centre) and their half widths and heights: the buggy's wedge, shorter
-const double NOSE_F = 1.25, SHO_F = 0.8, CABF_F = 0.4, CABR_F = -0.6, TAIL_F = -1.2;
-const double NOSE_W = 0.36, SHO_W = 0.7, CAB_W = 0.72, TAIL_W = 0.55;
-const double FLOOR = 0.35, NOSE_B = 0.45, NOSE_T = 0.72, BELT = 0.9, ROOF = 1.35, TAIL_B = 0.42, TAIL_T = 0.98;
-const double CAM_F = 1.21, CAM_U = 0.82;                 // the nose camera's lens (the pod spans 1.07..1.25 x 0.72..0.92)
-const double POD_F = 1.35, POD_S = 1.45, POD_U = 1.05, POD_R = 0.5;   // the thrust pods: fore and aft, sideways, their height and radius
-const double SKID_S = 0.5;                               // the skids' half track
+using namespace DroneShape;   // the hull's stations, the pods, the skids (R-427: shared with the ship's maintenance room)
 }
 
 void SurfaceView::droneFrame(Vec3& fwdT, Vec3& sideT, Vec3& upT) const {

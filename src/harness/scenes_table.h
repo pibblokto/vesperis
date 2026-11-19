@@ -3,7 +3,8 @@
 // view and code (setupSceneForType places it)
 #include "harness/harness.h"
 
-struct CmpScene { const char* name; int type; double latDeg, alt, yawOff, pitch; int wantMat = -1; bool uv = false; };   // Z-03: `uv` the lamp's ultraviolet on
+// Z-03: `uv` the lamp's ultraviolet on; R-434: `sight` the activity vision on (its square metres all read before the frame)
+struct CmpScene { const char* name; int type; double latDeg, alt, yawOff, pitch; int wantMat = -1; bool uv = false; bool sight = false; };
 static const CmpScene CMP_SCENES[] = {
     {"felisian_forest", PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, SCENE_FOREST},
     {"biome_tropical", PT_FELISIAN, 0, 40 * DEG, 0.5, -0.03, SCENE_BIOME - BIO_TROPICAL},
@@ -165,6 +166,12 @@ static const CmpScene CMP_SCENES[] = {
     {"uv_stromatolites", PT_ARCHEAN, 8, -25 * DEG, 0.0, -0.4, SCENE_ARCHEAN_FLATS, true},
     {"spring_bands", -1, 10, 35 * DEG, 0.0, -0.25, SCENE_SPRING_BANDS},
     {"red_snow", -1, 10, 15 * DEG, 2.6, -0.3, SCENE_RED_SNOW},
+    // R-434: the activity vision by day, looking down over the ground within its reach: a superhabitable world's shelf (its dry sand none at
+    // work, its wet edge and the sea strong), a living world's river bank; an archean's wet flats and their mats; a terraced hot spring's pools
+    {"sight_shelf", PT_SUPERHABITABLE, 8, 40 * DEG, 0.0, -0.3, MAT_SAND, false, true},
+    {"sight_river", PT_FELISIAN, 10, 40 * DEG, 0.0, -0.3, SCENE_RIVER, false, true},
+    {"sight_flats", PT_ARCHEAN, 8, 30 * DEG, 0.0, -0.3, SCENE_ARCHEAN_FLATS, false, true},
+    {"sight_springs", -1, 10, 35 * DEG, 0.0, -0.3, SCENE_SPRING_BANDS, false, true},
 };
 
 // E-03: the scene of that name, or none (the names are unique)

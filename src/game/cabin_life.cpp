@@ -15,6 +15,7 @@
 #include <functional>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
 
 namespace {
 Vec3 rowOf(const Mat3& m, int r) { return Vec3(m.m[r][0], m.m[r][1], m.m[r][2]); }
@@ -90,6 +91,34 @@ void toneOf(const std::vector<uint32_t>& px, int w, int h, GrainTexture& out) {
     const double k = 1.0 / std::max(0.25, sorted[(size_t)(0.98 * (sorted.size() - 1))]);
     for (int i = 0; i < 64 * 64; i++) out.v[i] = (int8_t)std::lround((clampd(lum[i] * k, 0, 1) - 0.5) * 126);
 }
+// R-428: a photograph's thumbnail in its colours, each pixel its block's mean
+void thumbOf(const std::vector<uint32_t>& px, int w, int h, std::vector<uint32_t>& out) {
+    out.assign((size_t)PRINT_THUMB_W * PRINT_THUMB_H, 0);
+    for (int j = 0; j < PRINT_THUMB_H; j++)
+        for (int i = 0; i < PRINT_THUMB_W; i++) {
+            const int x0 = i * w / PRINT_THUMB_W, x1 = std::max(x0 + 1, (i + 1) * w / PRINT_THUMB_W), y0 = j * h / PRINT_THUMB_H, y1 = std::max(y0 + 1, (j + 1) * h / PRINT_THUMB_H);
+            double s[4] = {0, 0, 0, 0}; int n = 0;
+            for (int y = y0; y < y1; y++)
+                for (int x = x0; x < x1; x++) { const uint32_t c = px[(size_t)y * w + x]; for (int b = 0; b < 4; b++) s[b] += (c >> (8 * b)) & 255; n++; }
+            uint32_t c = 0;
+            for (int b = 0; b < 4; b++) c |= (uint32_t)std::lround(s[b] / std::max(1, n)) << (8 * b);
+            out[(size_t)j * PRINT_THUMB_W + i] = c;
+        }
+}
+}
+
+// R-428: the photographs' numbers in a directory (`screenshot_<n>.png`), the newest first
+std::vector<int> Game::photographNumbers(const std::string& dir) {
+    std::vector<int> nums;
+    if (DIR* d = opendir(dir.c_str())) {
+        while (dirent* e = readdir(d)) {
+            const std::string n = e->d_name;
+            if (n.rfind("screenshot_", 0) == 0 && n.size() > 15 && n.substr(n.size() - 4) == ".png") nums.push_back(atoi(n.c_str() + 11));
+        }
+        closedir(d);
+    }
+    std::sort(nums.begin(), nums.end(), [](int a, int b) { return a > b; });
+    return nums;
 }
 
 // ---- the frame's asks: the prints made, the garden's home, the shelves' worlds -------------------------------------------------------
@@ -142,31 +171,29 @@ void Game::lifeSight(CabinFrame& f, std::vector<ShipBankAsk>& asks) {
     asks.push_back({dec.bank, dec.col, near});
 }
 
-// the last twelve photographs of the photographs' directory made into prints on a thread of their own (each read, its tone made); the frame
-// never waits for it (`printsCollect` takes what it made)
+// the wall's photographs made into prints on a thread of their own (each read, its tone and its thumbnail made): the frames the explorer
+// hung (R-428), else the directory's newest twelve in order; the frame never waits for it (`printsCollect` takes what it made)
 void Game::printsAsk() {
     if (prints.busy.load(std::memory_order_acquire)) return;
     if (prints.job.joinable()) prints.job.join();
     prints.stale = false; prints.dir = shotsDir;
     prints.busy.store(true, std::memory_order_release);
-    prints.job = std::thread([this, dir = shotsDir]() {
+    std::vector<int> hung;
+    if (wall.chosen) hung.assign(wall.frame, wall.frame + SHIP_PRINTS);
+    prints.job = std::thread([this, dir = shotsDir, hung]() {
         pngFlush();   // a photograph still with the writer is on disk first
-        std::vector<int> nums;
-        if (DIR* d = opendir(dir.c_str())) {
-            while (dirent* e = readdir(d)) {
-                const std::string n = e->d_name;
-                if (n.rfind("screenshot_", 0) == 0 && n.size() > 15 && n.substr(n.size() - 4) == ".png") nums.push_back(atoi(n.c_str() + 11));
-            }
-            closedir(d);
-        }
-        std::sort(nums.begin(), nums.end(), [](int a, int b) { return a > b; });
+        std::vector<std::pair<int, int>> want;   // (its frame, -1 the next free; its number)
+        if (hung.empty()) for (int n : photographNumbers(dir)) want.push_back({-1, n});
+        else for (int k = 0; k < SHIP_PRINTS; k++) if (hung[k] >= 0) want.push_back({k, hung[k]});
         std::vector<ShipPrint> out;
-        for (int n : nums) {
+        for (const auto& fw : want) {
             if ((int)out.size() >= SHIP_PRINTS) break;
             std::vector<uint32_t> px; int w = 0, h = 0;
-            if (!readPNG(fmt("%s/screenshot_%d.png", dir.c_str(), n).c_str(), px, w, h) || w < 64 || h < 64) continue;
-            ShipPrint p; p.number = n;
-            toneOf(px, w, h, p.tone);
+            if (!readPNG(fmt("%s/screenshot_%d.png", dir.c_str(), fw.second).c_str(), px, w, h) || w < 64 || h < 64) continue;
+            ShipPrint p; p.number = fw.second; p.frame = fw.first >= 0 ? fw.first : (int)out.size();
+            toneOf(px, w, h, p.tone); thumbOf(px, w, h, p.thumb);
+            std::ifstream cap(fmt("%s/screenshot_%d.txt", dir.c_str(), fw.second));
+            if (cap) std::getline(cap, p.caption);
             out.push_back(std::move(p));
         }
         prints.made = std::move(out);
@@ -210,11 +237,19 @@ RGB Game::finishColour(int k) const {
     return shipFinishes()[k].col;
 }
 
-// the garden grown by the days played (the game's days since the expedition began, a rest at the bunk's too): a third of its height
-// planted, nine tenths of it after two months
-double Game::gardenGrowth() const {
-    const double days = std::max(0.0, (t - EXPEDITION_T0) / 86400.0);
-    return 0.35 + 0.65 * (1 - std::exp(-days / 25.0));
+// R-429: a bed grown by the time played since it was last trimmed (or the expedition began): a third of its height then, as planted, its
+// full height an hour of play on, eased in and out, and no further
+double Game::gardenGrowth(int bed) const {
+    const double u = clampd((played - bedTrimmed[clampi(bed, 0, GARDEN_BEDS - 1)]) / GARDEN_GROW_S, 0, 1);
+    return GARDEN_START + (1 - GARDEN_START) * u * u * (3 - 2 * u);
+}
+// R-429: E at a bed: trimmed back to its starting size, to grow again
+void Game::gardenTrim(int bed) {
+    if (bed < 0 || bed >= GARDEN_BEDS) return;
+    if (gardenGrowth(bed) < GARDEN_TRIM_MIN) { refuse("NOTHING TO TRIM YET - IT IS GROWING BACK", 3); return; }
+    bedTrimmed[bed] = played;
+    status("THE BED TRIMMED BACK - IT GROWS AGAIN AS YOU PLAY", 4);
+    audio.beep = BEEP_UI;
 }
 
 // the hatch's drop: a descent's first seconds (before its view) with the ship drawn, seen from the hangar
@@ -229,12 +264,11 @@ Cabin Game::cabinSeen() const {
     return v;
 }
 
-// a place's shade as the plan's vertices take theirs: its room's lamps at U's level (the glows' share at its night), the orb's pulse with
-// the drive, a factor
+// a place's shade as the plan's vertices take theirs: its room's lamps at U's level (the glows' share at its night), a factor
 double Game::lifeShade(const CabinFrame& f, int room, const Vec3& p, const Vec3* n, double a) const {
-    double lamp, night, glow;
-    shipLampLight(room, p, n, lamp, night, glow);
-    return CABIN_SHADE_FULL * (CABIN_AMBIENT + f.lit * lamp + (1 - f.lit) * SHIP_NIGHT_GLOW * night + f.pulse * (1 + f.drive) * glow) * a;
+    double lamp, night;
+    shipLampLight(room, p, n, lamp, night);
+    return CABIN_SHADE_FULL * (CABIN_AMBIENT + f.lit * lamp + (1 - f.lit) * SHIP_NIGHT_GLOW * night) * a;
 }
 
 // ---- the pieces ---------------------------------------------------------------------------------------------------------------------
@@ -259,12 +293,13 @@ void Game::drawLifePiece(CabinFrame& f, const ShipPiece& pc, const CabinDraw& d)
         case PIECE_INCUBATOR: drawIncubator(f, F, d); break;
         case PIECE_JARS: drawJars(f, F, d); break;
         case PIECE_TREE: drawTreeWall(f, F, d); break;
+        case PIECE_VEHICLE: drawVehicle(f, F); break;   // R-427: vehicles_draw.cpp
         default: break;
     }
 }
 
-// Z-04: the cold store's door, lit by how full it is: its lamps in a column by its hinge, an eighth of its places each, lit in the microscope's
-// dealt bank (the laboratory's teal) while their eighth holds a vial, dim while it is empty
+// Z-04: the cold store's door, lit by how full it is: its lamps in a column by its hinge, lit in the microscope's dealt bank (the laboratory's
+// teal), dim the rest; R-432: the store without limit, its lamps by doublings (the first lit by a vial, the second by two, the eighth by 128)
 void Game::drawStore(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
     const BoxAt B(F);
     if (dot(B.front(), f.eye - B.at(0.5, 0, 1.2)) <= 0) return;
@@ -274,7 +309,7 @@ void Game::drawStore(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
     const int n = std::max(1, F.slots), held = (int)coldStore.size();
     const double w = B.width(), ta = 0.1, tb = ta + 0.045 / w;
     for (int k = 0; k < n; k++) {
-        const bool lit = held > k * COLD_STORE / n;
+        const bool lit = held >= (1 << k);
         const double y = 0.95 + k * 0.09;
         const Vec3 p[4] = {B.at(ta, -0.035, y), B.at(tb, -0.035, y), B.at(tb, -0.035, y + 0.045), B.at(ta, -0.035, y + 0.045)};
         RVert q[4];
@@ -395,7 +430,9 @@ void Game::drawPrints(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
     const Vec3 along = (b - c) * (1.0 / width);
     const double pw = (width - (F.slots - 1) * gap) / F.slots, ph = (F.height - (F.boards - 1) * gap) / F.boards;
     auto P = [&](double u, double v, double proud) { return c + along * u + Vec3(0, v, 0) + out * proud; };
-    for (int k = 0; k < (int)prints.shown.size() && k < F.slots * F.boards; k++) {
+    for (const ShipPrint& sp : prints.shown) {
+        const int k = sp.frame;   // R-428: its frame (the explorer's, or its place among the newest)
+        if (k < 0 || k >= F.slots * F.boards) continue;
         const int row = k / F.slots, col = k % F.slots;
         const double u0 = col * (pw + gap), u1 = u0 + pw, v1 = F.height - row * (ph + gap), v0 = v1 - ph;
         const Vec3 fr[4] = {P(u0 - 0.035, v0 - 0.035, 0.01), P(u1 + 0.035, v0 - 0.035, 0.01), P(u1 + 0.035, v1 + 0.035, 0.01), P(u0 - 0.035, v1 + 0.035, 0.01)};
@@ -407,7 +444,7 @@ void Game::drawPrints(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
         double mean = 0;
         for (int i = 0; i < 4; i++) { q[i] = vertAt(f, pt[i], lifeShade(f, F.room, pt[i], &out, 0.95)); q[i].u = tu[i]; q[i].v = tv[i]; mean += q[i].shade / 4; }
         RasterParams pr = d.plain[FIN_PRINT];
-        pr.grain = &prints.shown[k].tone; pr.grainScale = 1; pr.grainWeight = clampd(mean / 79, 0, 1);
+        pr.grain = &sp.tone; pr.grainScale = 1; pr.grainWeight = clampd(mean / 79, 0, 1);
         f.shapes.polygon(q, 4, pr);
     }
 }
@@ -516,16 +553,16 @@ void Game::drawDeck(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
     f.shapes.point(lamp, BANK_LIGHT, true, 1);
 }
 
-// a bed of the garden: three of the home world's plants (its two silhouettes, their looks and colours), grown by the days played and
-// swaying in the air system's draught, and low tufts on its soil; a plant a tapered trunk (four faces) and a canopy of leaf clusters,
-// each a disc facing the eye, laid out by its silhouette (round, a cone, a flat crown, a tuft)
+// a bed of the garden: three of the home world's plants (its two silhouettes, their looks and colours), grown by the time played since the
+// bed was trimmed (R-429) and swaying in the air system's draught, and low tufts on its soil; a plant a tapered trunk (four faces) and a
+// canopy of leaf clusters, each a disc facing the eye, laid out by its silhouette (round, a cone, a flat crown, a tuft)
 void Game::drawGarden(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
     if (!garden.ok) return;
     const BoxAt B(F);
     const Vec3 mid = B.at(0.5, 0.5, F.height);
-    const double soil = mid.y, g = gardenGrowth();
-    const Vec3 right = rowOf(f.look, 0), upv = rowOf(f.look, 1);
     const int bed = F.slots;
+    const double soil = mid.y, g = gardenGrowth(bed);
+    const Vec3 right = rowOf(f.look, 0), upv = rowOf(f.look, 1);
     const Vec3 draught = normalize(Vec3(-mid.z, 0, mid.x));   // round the hall, from the air system's vents
     RasterParams leaf[2];   // the two greens with the leaves' own grain
     for (int i = 0; i < 2; i++) { leaf[i] = d.fin[i ? FIN_PLANT2 : FIN_PLANT]; leaf[i].grain = &leafGrain; leaf[i].grainScale = 22.0 * FB_SCALE; leaf[i].grainWeight = 1; }

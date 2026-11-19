@@ -67,7 +67,7 @@ void Game::renderSpaceHUD() {
     drawTextShadow(canvas, 8, 16, line2.c_str(), HUD_DIM, HUD_SHADOW);
     if (player.playing >= 0 && player.playing < (int)player.items.size()) {   // the ship's player, under the system's lines
         const uint32_t col = player.held || player.paused || player.waiting ? HUD_DIM : HUD_GREEN;
-        drawRecordKindGlyph(canvas, 8, 24, player.items[player.playing].music ? RC_MUSIC : RC_TEXT, col);
+        drawRecordKindGlyph(canvas, 8, 24, RC_MUSIC, col);
         drawTextShadow(canvas, 17, 24, playerHudLine().c_str(), col, HUD_SHADOW);
     }
     // mode
@@ -499,8 +499,8 @@ void Game::drawReadings() {
         if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) pack({fmt("JET ALT %.0f M", pl.altAboveGround), fmt("VS %+.1f", pl.vy)}, HUD_AMBER);
         if (pl.autoWalk > 0) row(fmt("AUTOWALK %d", pl.autoWalk), HUD_GREEN);
         if (!kit.empty()) row(fmt("VIALS %d OF %d FILLED", (int)kit.size(), KIT_VIALS), HUD_GREEN);   // Z-03
-        static const char* const vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
-        if (visionMode > 0 && visionMode < 5) row(vn[visionMode], HUD_CYAN);
+        static const char* const vn[VISION_MODES] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION", "ACTIVITY VISION"};
+        if (visionMode > 0 && visionMode < VISION_MODES) row(vn[visionMode], HUD_CYAN);
     }
     const bool seat = surf.inVehicle() && !surf.chaseCam;
     const int y0 = seat ? 44 : 36, maxRows = (UH - 56 - y0) / 8 - 1;   // under the pan gauge in a vehicle; over the prompts and the stamina on foot

@@ -56,7 +56,8 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   notes; `lab catalogue`, `life auto`. R-425 and R-426 are done: all eleven milestones. Their entries are
   `docs/decisions/log/7-1.5.0.md`, their rules `docs/decisions/rules-life.md`, `rules-life-lab.md`, `rules-game.md`,
   `rules-peoples-grammar.md` and `rules-ship.md`. Committed on the user's word (2026-11-18) with B-434 to B-438 below (0c90433),
-  and B-439 after it: two commits on the branch, not pushed.
+  B-439 after it (455c7ad), and B-440 with R-427 to R-434 below on the user's word (2026-11-19): three commits on the branch, not
+  pushed.
 - **Fixed before the release** (2026-11-18, the user's reports in play): B-434, the laboratory's sunlight over its arch from the
   hall (a room's sun patches cast onto its surfaces' own pieces, round their holes); B-435, far things aboard grey until near (the
   ship's banks dealt once the outside is drawn: every bank the glass does not show; KI-439's flasks with it); B-436, a small moon
@@ -65,11 +66,25 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   what the glass shows; B-438 (KI-442), a world's season step kept by its seed, not its index (the harness's sweeps with it: every
   globe drawn with its map). Then B-439 (KI-443), on the user's word: the bench's ship rows budgeted again on the dressed ship
   (set on I-02's bare rooms, the library's had come to 1.27 times its median), each timed once the maps its view starts are made.
-  Their B files, and entries in `docs/decisions/log/7-1.5.0.md`.
+  Then B-440, found reading the user's play files: a unit run from the repo root had written a test's guide over the user's
+  `guide.txt` (lost: a check's second game kept the game's paths); a test game's files all default under `shots/tests/`, the unit's
+  `files` group holds the player's (KI-421's probe images with it). Their B files, and entries in `docs/decisions/log/7-1.5.0.md`.
+- **Requests aboard** (2026-11-18, the user's after walking the ship; R files and entries in `7-1.5.0.md`): R-427, the maintenance
+  room (the engine room's ring, the "weird portal", gone; the buggy and the drone on platforms, the ground's shapes); R-428, the
+  quarters' wall hung by the explorer (`E` at it); R-429, the garden's beds grown by the time played, trimmed back by `E`; R-430,
+  the ship quiet but its hum (I-04's room sounds gone: 1.4.0's audio again); R-431, the decoder and the player apart (the player
+  its own screen at the deck, a folder a world, music alone).
+- **Requests for the laboratory and the search** (2026-11-19, the user's, talked through first; R files and entries in `7-1.5.0.md`):
+  R-432, the vials by world (the microscope's lists in two tabs, the vials a folder a world; the cold store without limit, the kit's eight
+  kept; the incubator's and the sequencer's choosers in folders); R-433, the culture collection (every species and strain a flask grows
+  kept, worked as a world's: on the stage, into a flask, on the sequencer; the explorer's folders); R-434, the activity vision (Shift+O:
+  the ground and the water within 40 m by the activity a vial would read there, a thermal camera's way).
 - **The ship to walk:** `vesperis_test ship rooms`, `ship light` and `ship life` draw its spaces, their light and what is kept in them
   into `shots/tests/ship/`, and the game walks it (Shift runs, Page Up the lift, U the light, Y the glass hull, E at the bunk, the desk,
-  the deck and the capsule). On the ground O takes a sample and Shift+U lights the ultraviolet; `life kit` plays a landing's kit. In
-  the laboratory E at the microscope opens the cold store's vials and the flasks, E at the incubator its flasks and the jars, E at the
+  the deck (the player), the capsule, the quarters' wall (its photographs hung) and a garden bed (trimmed); the buggy and the drone in
+  the maintenance room astern of the hangar). On the ground O takes a sample, Shift+O the activity vision, Shift+U the ultraviolet;
+  `life kit` plays a landing's kit, `life sight` the vision. In the laboratory E at the microscope opens its lists (the vials by world,
+  the cultures by folder), E at the incubator its flasks and the jars, E at the
   sequencer a genome's reading, E at the tree's screen the tree of kin; `lab microscope`, `lab cultures`, `lab jars` and `lab tree` draw
   them into `shots/tests/`. The guide's THE CATALOGUE lists every species seen and the statistics' `L` their LIFE page (`lab catalogue`).
 - **The plates judged:** the user's verdict on Z-02's plates (`life plates`, `strips`, `forms`), 2026-11-16: "microbes pictures you
@@ -81,10 +96,10 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   (`ITERATION-1.4.0.md`, `IDEAS-worlds-and-wanderers.md`, `PLAN-reorganisation.md`, `PLAN-screens.md`).
 - **Next:** 1.5.0's iteration is done; the release (the `release` skill: the branch merged by its pull request, the tag `v1.5.0`, six
   zips; the Linux builds need Docker, asked first) on the user's word, and commits only when asked.
-- **The proof's base:** `build/prove/b438` (35 items: z07's, with B-434 to B-438's checks and frames: `ship light`'s
-  `lab_arch_sun`, the flow's orbit waiting for its world's map, the sweeps' globes warmed at their season; B-439 moved only the
-  bench, which no item runs).
-- **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; KI-424 (the grammar's picture register, which
+- **The proof's base:** `build/prove/r434` (35 items: r431's, with R-432 to R-434's checks and frames: the microscope's worlds, the
+  choosers' folders, the collection, the activity vision's scenes and `life sight`).
+- **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; B-440's leftovers in their `shots/` (the
+  test's `probe_1` and `probe_2`, theirs to remove); KI-424 (the grammar's picture register, which
   no call expands); KI-425 (the radar's heard list); KI-428 (a T typed at the console warps time); KI-429 (the settings' title over
   their first row); KI-430 (a race in the unit's lent piece frame); KI-431 (the almanac's STOP THE RUN, offered and ignored); KI-435
   (aboard, the local target's HUD label over the ship's walls, found in I-04); KI-436 (a chemotroph world made from a hot tectonic one reads
@@ -92,10 +107,11 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   plates draw spores moving as their cells), found in Z-04; KI-440 (the data sheet's GRAVITY line past the frame's edge), found in
   Z-07; KI-444 (`surface 4x` the bench's tightest budget, 1.30 times its median), found by B-439; offered
   by B-430: the tables' dump as a harness mode for the container, and parallel.h's misleading indentation (38 of the Linux builds'
-  46 warnings); offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant; game.h at 57.3 KB, past
-  the plan's 48 KB (`PLAN-screens.md` section 8 revisits at 60 KB); our Docker images `vesperis-build:arm64` and
-  `:amd64` (removed on the user's word); the old proof kits (`build/p00` to `build/d05`, about 9 GB), deleted only on the user's word.
-- **The disk:** room enough (about 87 GB free); a snapshot and a compare's outputs about 1.2-1.3 GB each (`life_look`'s 60 pictures
-  are 0.2 GB of it).
-- **Next free ids:** bugs B-440, requests R-427, known issues KI-445. Milestone ids go by letter series in
+  46 warnings); offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant; our Docker images
+  `vesperis-build:arm64` and `:amd64` (removed on the user's word); the old proof kits (`build/p00` to `build/d05`, about 9 GB),
+  deleted only on the user's word.
+- **The disk:** about 133 GB free since the old snapshots went on the user's word (2026-11-19: `build/prove` keeps r434 alone,
+  with its logs; their compares' outputs, 25 GB, with them); a snapshot and a compare's outputs about 1.3 GB each
+  (`life_look`'s 60 pictures are 0.2 GB of it).
+- **Next free ids:** bugs B-441, requests R-435, known issues KI-446. Milestone ids go by letter series in
   `docs/ideas/MILESTONES.md` (1.5.0 took Z and I).

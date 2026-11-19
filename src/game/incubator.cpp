@@ -115,12 +115,15 @@ void Game::updateLab(double realDt) {
             F.events.push_back(e);
             const std::string was = F.label[k];
             F.who[k].strain = n;
+            F.told &= ~(FT_KEPT << k);   // R-433: the strain kept in its turn, as it grows
             flaskMake(i);
             const std::string line = fmt("A STRAIN OF %s IN FLASK %d: %s", was.c_str(), i + 1, moveWords(r.what, r.value).c_str());
             status(line + " - N NAMES IT", 6);
             logEvent("STRAIN", line);
             guide.save(guidePath);
         }
+        for (int k = 0; k < F.n; k++)   // R-433: grown (its curve past its lag): kept in the collection
+            if (!(F.told & (FT_KEPT << k)) && (cultureStagesBy(F.run, k, lab.clock) & LC_GROWING)) keepCulture(i, k);
         if (!(F.told & FT_WOKEN)) for (int k = 0; k < F.n; k++) {
             if (F.run.wokeT[k] < 0 || F.run.wokeT[k] > lab.clock) continue;
             F.told |= FT_WOKEN;
@@ -171,9 +174,12 @@ void Game::flaskSeen(int i) {
 // ---- putting in, the medium, emptying -----------------------------------------------------------------------------------------------
 
 // the chooser's rows: for a flask, each living or sleeping species seen in a cold store's vial (never a fossil or a protocell: they do not
-// grow), and each flask's culture (carried over); for the jars, the vials of wet silt, a mat or soil
+// grow), each flask's culture (carried over) and (R-433) each culture of the collection; for the jars, the vials of wet silt, a mat or soil. R-432:
+// in folders, a world's (a row a species and its state, cells or spores, from the first vial holding it), the flasks' and the collection's
 void Game::incubatorChoices() {
     incub.choices.clear(); incub.choiceSel = 0; incub.choiceTop = 0;
+    incub.pages = ChooserPage();
+    std::vector<std::string> keys;
     LabSystems systems;
     if (incub.page == 1) {
         for (int v = 0; v < (int)coldStore.size(); v++) {
@@ -181,10 +187,12 @@ void Game::incubatorChoices() {
             if (!jarNiche(V.hab.niche)) continue;
             IncubatorChoice c; c.vial = v;
             c.line = fmt("%s, %.0f C", V.name.c_str(), std::fabs(V.readingC) < 0.5 ? 0.0 : V.readingC);
-            incub.choices.push_back(c);
+            incub.choices.push_back(c); keys.push_back(Guide::bodyKey(V.sx, V.sy, V.sz, V.body));
         }
+        incub.pages.folders = chooserFolders(keys);
         return;
     }
+    std::map<std::string, int> listed;   // a species' row by its key and its state (its cells and its spores apart)
     for (int v = 0; v < (int)coldStore.size(); v++) {
         const Vial& V = coldStore[v];
         const StarSystem* S = systems.get(sys, V.sx, V.sy, V.sz);
@@ -195,24 +203,32 @@ void Game::incubatorChoices() {
         std::vector<Morph> forms;
         for (const Held& H : smp.held) {
             if (H.state == SS_FOSSIL || H.state == SS_PROTO) continue;
-            const std::string key = Guide::bodyKey(V.sx, V.sy, V.sz, V.body) + "/M" + std::to_string(H.species);
+            const std::string world = Guide::bodyKey(V.sx, V.sy, V.sz, V.body), key = world + "/M" + std::to_string(H.species);
             const auto it = guide.microbes.find(key);
             if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM)) continue;   // only what was seen of it
+            if (!listed.emplace(key + (H.state == SS_DORMANT ? "/D" : ""), (int)incub.choices.size()).second) continue;   // each once
             if (forms.empty()) forms = morphsOf(*S, V.body);
             const Morph& m = forms[H.species];
             const std::string nm = nameOfKey(key);
             IncubatorChoice c; c.vial = v; c.species = H.species;
             c.line = (nm == "UNKNOWN" ? std::string("UNNAMED") : upper(nm)) + " - " + (H.state == SS_DORMANT ? std::string(m.plan >= MP_AMOEBA ? "CYSTS" : "SPORES") + " FROM " : std::string("FROM ")) +
                      V.name;
-            incub.choices.push_back(c);
+            incub.choices.push_back(c); keys.push_back(world);
         }
     }
     for (int f = 0; f < INCUBATOR_FLASKS; f++) {
         if (f == incub.sel || lab.flasks[f].n == 0) continue;
         IncubatorChoice c; c.flask = f;
         c.line = fmt("FLASK %d: %s", f + 1, lab.flasks[f].label[0].c_str()) + (lab.flasks[f].n > 1 ? " AND " + lab.flasks[f].label[1] : std::string());
-        incub.choices.push_back(c);
+        incub.choices.push_back(c); keys.push_back("FLASKS");
     }
+    for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order
+        for (int k : F.id >= 0 ? F.rows : std::vector<int>()) {
+            IncubatorChoice c; c.kept = k;
+            c.line = keptName(k);
+            incub.choices.push_back(c); keys.push_back(keptFolderKey(k));
+        }
+    incub.pages.folders = chooserFolders(keys);
 }
 
 // a choice put in the flask chosen: a vial's species (its first, AS ITS WORLD the medium's first guess; or a second added), or a flask's culture
@@ -227,6 +243,11 @@ bool Game::flaskPut(int i, const IncubatorChoice& c) {
         const Flask& S = lab.flasks[c.flask];
         for (int k = 0; k < S.n; k++) { FlaskSpecies w = S.who[k]; w.strainIn = w.strain; in.push_back(w); }
         if (F.n == 0) { F.medium = S.medium; asWorld = S.asWorld; }
+    } else if (c.kept >= 0 && c.kept < (int)lab.kept.size()) {   // R-433: a kept culture, in the medium it grew in (AS ITS WORLD its world's)
+        const KeptCulture& K = lab.kept[c.kept];
+        FlaskSpecies w = K.who; w.strainIn = w.strain;
+        in.push_back(w);
+        if (F.n == 0) { F.medium = K.medium; asWorld = K.asWorld; }
     } else if (c.vial >= 0 && c.vial < (int)coldStore.size()) {
         const Vial& V = coldStore[c.vial];
         FlaskSpecies w; w.sx = V.sx; w.sy = V.sy; w.sz = V.sz; w.body = V.body; w.species = c.species;
@@ -256,7 +277,7 @@ bool Game::flaskPut(int i, const IncubatorChoice& c) {
         F.events.push_back(e);
     }
     flaskMake(i);
-    if (fresh) status(fmt("FLASK %d: %s PUT IN, AS ITS WORLD", i + 1, F.label[0].c_str()), 4);
+    if (fresh) status(fmt(c.vial >= 0 ? "FLASK %d: %s PUT IN, AS ITS WORLD" : "FLASK %d: %s PUT IN", i + 1, F.label[0].c_str()), 4);
     else status(fmt("FLASK %d: %s ADDED", i + 1, F.label[F.n - 1].c_str()), 4);
     audio.beep = BEEP_UI;
     return true;
@@ -345,12 +366,11 @@ void Game::incubatorEnter() {
 
 void Game::updateIncubator(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_E) && !in.ctrl()) { closeScreen(); audio.beep = BEEP_UI; return; }
-    if (incub.choosing) {
-        const int n = (int)incub.choices.size();
-        if (in.wasPressed(KEY_ESCAPE) || n == 0) { incub.choosing = false; audio.beep = BEEP_UI; return; }
-        menuStep(in, incub.choiceSel, n);
-        if (enterKey(in)) {
-            const IncubatorChoice c = incub.choices[clampi(incub.choiceSel, 0, n - 1)];
+    if (incub.choosing) {   // R-432: its folders, then the rows of the one open
+        const int r = incub.choices.empty() ? -2 : chooserKeys(in, incub.pages, incub.choiceSel);
+        if (r == -2) { incub.choosing = false; audio.beep = BEEP_UI; return; }
+        if (r >= 0 && r < (int)incub.choices.size()) {
+            const IncubatorChoice c = incub.choices[r];
             incub.choosing = false;
             if (incub.page == 1) jarPut(c.vial); else flaskPut(incub.sel, c);
         }
@@ -422,7 +442,7 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
 
 void Game::incubatorPad(PadMenu& m) const {
     m.title = "THE INCUBATOR";
-    if (incub.choosing) { m.item("PUT IT IN", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
+    if (incub.choosing) { m.item(incub.pages.open ? "PUT IT IN" : "OPEN THE FOLDER", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
     if (incub.page == 1) {
         m.item("A JAR FROM A VIAL", KEY_ENTER); m.item("EMPTY THE JAR", KEY_BACKSPACE); m.item("THE FLASKS", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
         m.button(PR_A, KEY_ENTER, "JAR"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "FLASKS");
@@ -462,6 +482,7 @@ void Game::incubatorSave(std::string& lines) const {
     for (const Jar& J : lab.jars)
         f << "jar " << J.sx << " " << J.sy << " " << J.sz << " " << J.body << " " << J.hab.niche << " " << J.hab.meanC << " " << J.hab.salt << " "
           << ((J.hab.shade ? 1 : 0) | (J.hab.bloom ? 2 : 0)) << " " << (J.hab.oldRock ? 1 : 0) << " " << J.hab.place << " " << J.t0 << " " << J.name << "\n";
+    keptSave(f);   // R-433: the collection's folders and cultures
     lines += f.str();
 }
 
@@ -501,7 +522,7 @@ bool Game::incubatorLoad(const std::string& text) {
         if ((int)lab.jars.size() < JAR_PLACES) lab.jars.push_back(J);
         return true;
     }
-    return false;
+    return keptLoad(key, is);   // R-433
 }
 
 void Game::incubatorReset() { lab = LabState(); incub = IncubatorState(); for (Flask& F : lab.flasks) F.made = true; }

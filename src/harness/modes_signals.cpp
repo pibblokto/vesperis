@@ -601,58 +601,5 @@ int runSounds(int argc, char** argv) {
         for (const Ref& rf : R) { AudioSynth s; AudioState a; a.master = 0.8; rf.set(a); RenderStats r = renderReceiver(s, a, 6.0, nullptr); printf(" %s rms %.3f;", rf.name, r.rms); }
         printf("\n");
     }
-    // I-04: the rooms aboard as the ship's frame sets them (`Game::aboardSounds`, the plan's rows): parked, and in a flight (the drive
-    // rising from its start); then the player's music on the bridge and in the library (fuller), the first piece of the flow's world
-    printf("the rooms aboard (I-04), 22,050 Hz mono through the synth at the master's 0.8, eight seconds each:\n");
-    int over = 0;
-    for (int r = 0; r < SHIP_ROOMS; r++) {
-        if (r == ROOM_STAIR) continue;
-        std::string slug = shipRooms()[r].name;
-        if (slug.rfind("THE ", 0) == 0) slug = slug.substr(4);
-        for (char& c : slug) c = c == ' ' ? '_' : (char)tolower((unsigned char)c);
-        RenderStats st[2];
-        for (int flight = 0; flight < 2; flight++) {
-            AudioSynth syn; AudioState a; a.master = 0.8;
-            Game::aboardSounds(a, r, false, false, flight ? ShipState::VIMANA : ShipState::PARKED);
-            std::vector<int16_t> pcm;
-            st[flight] = renderReceiver(syn, a, 8.0, &pcm);
-            writeWav16(fmt("shots/tests/sound_room_%s%s.wav", slug.c_str(), flight ? "_flight" : ""), pcm, 22050);
-            if (st[flight].peak > 0.75 || st[flight].clip) over++;
-        }
-        printf("  %-16s peak %.3f, rms %.3f; in a flight peak %.3f, rms %.3f%s\n", slug.c_str(), st[0].peak, st[0].rms, st[1].peak, st[1].rms,
-               st[0].peak > 0.75 || st[1].peak > 0.75 || st[0].clip || st[1].clip ? " OVER THE GROUND'S BOUND (0.75)" : "");
-    }
-    {   // the rooms' own sounds alone (no hum), beside the ground's
-        struct Own { const char* name; std::function<void(AudioState&)> set; };
-        const Own O[] = {{"the laboratory's bubbling", [](AudioState& a) { a.bubbles = shipRoomSound(ROOM_LAB).bubbles; }},
-                         {"the garden's water", [](AudioState& a) { a.water = shipRoomSound(ROOM_HALL).water; }}};
-        printf("  alone:");
-        for (const Own& o : O) { AudioSynth s; AudioState a; a.master = 0.8; o.set(a); const RenderStats r = renderReceiver(s, a, 8.0, nullptr); printf(" %s peak %.3f, rms %.3f;", o.name, r.peak, r.rms); }
-        printf("\n");
-    }
-    {
-        Star s; StarSystem sys;
-        if (systemAt(151, 0, 25, s, sys, true) && sys.bodies.size() > 1) {
-            const Body& b = sys.bodies[1];
-            const BodyGen g = BodyGen::make(b);
-            const Lore L = loreQuick(sys, b, g, 0);
-            const Tradition T = traditionOf(g, L);
-            Piece P; int at = -1;
-            for (int i = 0; i < L.records && at < 0; i++) { const Shard d = shardDrawOf(g, L, i); if (d.music) { pieceOf(T, d, P); at = i; } }
-            for (int room : {(int)ROOM_BRIDGE, (int)ROOM_LIBRARY}) {
-                AudioSynth syn; AudioState a; a.master = 0.8;
-                Game::aboardSounds(a, room, false, true, ShipState::PARKED);
-                a.piece = &P; a.tradition = &T; a.pieceStart = at >= 0;
-                std::vector<int16_t> pcm;
-                const RenderStats r = renderReceiver(syn, a, 12.0, &pcm);
-                writeWav16(fmt("shots/tests/sound_music_%s.wav", room == ROOM_LIBRARY ? "library" : "bridge"), pcm, 22050);
-                if (r.peak > 0.75 || r.clip) over++;
-                double lp = 0, low = 0, all = 0;   // its low end's share: the energy under about 250 Hz (a one-pole filter's)
-                for (int16_t v : pcm) { const double x = v / 32767.0; lp += (x - lp) * 0.069; low += lp * lp; all += x * x; }
-                printf("  the player's music (record %d) %s: peak %.3f, rms %.3f, its low end %.0f%% of it%s\n", at, room == ROOM_LIBRARY ? "in the library, fuller" : "on the bridge", r.peak, r.rms,
-                       100 * low / std::max(1e-12, all), r.peak > 0.75 || r.clip ? " OVER THE GROUND'S BOUND (0.75)" : "");
-            }
-        } else { printf("  the flow's world not found\n"); over++; }
-    }
-    return over;
+    return 0;
 }

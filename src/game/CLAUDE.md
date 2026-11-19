@@ -1,8 +1,9 @@
 # src/game: the game
 
 `Game` owns the states, the ship, the guide and the audio state; a screen or device is a file of `Game` methods, declared in
-game.h under a `// ----` banner naming that file (the harness's hooks: src/harness/test_game.h). Over 50 KB (read by
-range): chart_draw, shards_screen.
+game.h under a `// ----` banner naming that file (the harness's hooks: src/harness/test_game.h). Past 70 KB of game.h, `Game`'s
+shape is revisited (the user's mark since 2026-11-19, PLAN-screens.md's 60 KB before it: KI-445). Over 50 KB (read by range):
+cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by the guard.
 
 ## Files
 - `game`: `newGame`, `frame` (its order: 07-game-flow-and-controls.md, "The frame"), `handleGlobalKeys`, `refuse`,
@@ -10,10 +11,11 @@ range): chart_draw, shards_screen.
   `TextKind`, the rows of the ways in (`MenuRow`, `ShipRow`, `SettingRow`, `CabinDevice`)
 - A subsystem's state, a `Game` member: `landing_state`, `pad_state`, `chart_state`, `shard_world`, `radar_state`,
   `player_state`, `case_state`, `drone_state`, `telescope_state`, `probe_state`, `autoexplore_state`, `tape_state`,
-  `aboard_state` (I-04: the prints, the garden), `search_state` (Z-03: the vials), `lab_state` (Z-04: the microscope's; Z-05: the flasks, the jars, the lab's clock); a split
+  `aboard_state` (I-04: the prints, the garden; R-428: the wall as hung; R-429: the beds' growth), `search_state` (Z-03: the vials), `lab_state` (Z-04: the microscope's; Z-05: the flasks, the jars, the lab's clock); a split
   one's shared helpers: `autoexplore_internal`, `probe_internal`, `radar_internal`, `audio_internal`
-- Flight, the scenes: `autopilot` (SPACE), `scene_draw`, `hud`, `surface_play` (the capsule, the ground), `sector_map`; `search`
-  (Z-03: the kit's vials, the scoop, the cold store, their save lines)
+- Flight, the scenes: `autopilot` (SPACE), `scene_draw`, `hud`, `surface_play` (the capsule, the ground; R-434: Shift+O the activity
+  vision, `VISION_ACTIVITY`), `sector_map`; `search` (Z-03: the kit's vials, the scoop, the cold store (R-432: any number), their
+  save lines)
 - The laboratory (Z-04): `microscope` (the state `MICROSCOPE`: the vials' list, a vial on the stage, the view, the four things done,
   tracking, what is seen (`microscopeSee`: the guide's `microbe` lines), the sheet's lines, its pad) and `microscope_draw` (the slide in
   the framebuffer, its HUD, the list, the sheet); `cabin_life`'s `drawStore` lights the cold store's door. Z-05: `incubator` (the state
@@ -24,17 +26,23 @@ range): chart_draw, shards_screen.
   `updateLab`), the sheet's kin, the log's KIN, a made species' watermark to the decoder; its `seq` line) and `tree_screen` (the state `TREE`:
   every species read and the ship's own by kinship, Enter a kin's star the remote target); `cabin_life`'s `drawTreeWall`; the decoder's
   watermarks (`shardWatermarkAdd`). Z-07: `catalogue` (the state `CATALOGUE`, the guide's row: every species with a sheet and a friend's
-  lent, by world or by kin, a sheet beside its form drawn live; `guide_screens`' LIFE page on the statistics (`renderStatsLife`))
+  lent, by world or by kin, a sheet beside its form drawn live; `guide_screens`' LIFE page on the statistics (`renderStatsLife`)).
+  `lab_lists` (R-432, R-433): the lists in folders (the vials a folder a world, the cultures' folders, the choosers' folders and their
+  keys and rows) and the culture collection (every species and strain a flask grows, kept: `keepCulture` from `updateLab`; its folders;
+  a kept culture on the stage; its `keptfolder` and `kept` lines through the incubator's)
 - The ship: `ship_plan` (I-01's rows; I-02's three decks and eight spaces: rooms, ways (the arches, the stair's landings, the lift),
   windows, fixtures, lamps and views; the mesh built once from them; the walk and the stair; the routes; the sight; the banks'
-  dealing; I-03's finishes, the lamps' light on the vertices, the sun's patches, the hull outside; I-04's explorer's things and
-  each room's sound), drawn and walked by `cabin`; `cabin_life` (I-04) fills the explorer's things (the photographs' prints,
-  the shelves' shards, the case's instruments, the deck, the garden, the core, the capsule and its drop)
+  dealing; I-03's finishes, the lamps' light on the vertices, the sun's patches, the hull outside; I-04's explorer's things),
+  drawn and walked by `cabin`; `cabin_life` (I-04) fills the explorer's things (the photographs' prints, the shelves' shards, the
+  case's instruments, the deck, the garden (R-429: a bed trimmed by E), the core, the capsule and its drop); `wall_screen` (R-428:
+  the state `WALL`, the quarters' wall hung by the explorer); `vehicles_draw` (R-427: the buggy and the drone on their platforms
+  in the maintenance room, the ground's shapes in the bay drones' primitives)
 - Screens: `cabin` (with SHIPSCREEN, CONSOLE), `menus`, `data_sheet`, `guide_screens` (GUIDE, TEXT_ENTRY, LOG...),
   `star_map`, `galaxy_chart`, `landing_map` + `landing_map_build`, `persistence` (saves, SLOTS), `pad` (the controller)
 - The guide: `guide` (guide.txt), `names` (`starNameOf`, `bodyNameOf`, `logEvent`, `noteVisit`), `marks` (the scanner)
 - Devices: `radar` + `radar_camera`, `telescope`, `probe` + `probe_feed` + `probe_records`, `drones` + `drone_draw`, the
-  decoder `shards_screen` + `history_screen` + `chart_draw` + `medium_draw`, `player`, the case `instruments_screen` +
+  decoder `shards_screen` + `history_screen` + `chart_draw` + `medium_draw`, `player` (R-431: the state `PLAYER` at the deck, a
+  folder a world, music alone), the case `instruments_screen` +
   `instrument_draw`, `almanac`, `autoexplore` + `autoexplore_space` + `autoexplore_ground` + `autoexplore_hands`, `tape` +
   `audio_deck`
 - Sound: `audio` (`AudioState`, the synth), `audio_radar`, `audio_music`, `audio_medium`, `audio_rogue`. `settings`; `ui`
@@ -78,8 +86,10 @@ range): chart_draw, shards_screen.
   reads the sheets through `catalogueSheet` (the explorer's, else a friend's lent: `guide.lentMicrobes`, cyan, in no count) and a sheet's
   lines through `sheetLinesOf` (the microscope's). Every count of the living small is the explorer's own and the other screens' (the LIFE
   page's geneses the tree's: it builds the tree first). A sample is counted and logged where it is taken (`sampleTaken`).
-- The microscope's slide is made again from its vial (`microscopeStage`) or a flask's culture (`microscopeStageFlask`); either fills
-  `scope.species`, `keys` and `worlds`, which the sheet and the record read. Its frame's specimens are made in the update
+- The microscope's slide is made again from its vial (`microscopeStage`), a flask's culture (`microscopeStageFlask`) or a kept culture
+  (`microscopeStageKept`, R-433); each fills `scope.species`, `keys` and `worlds`, which the sheet and the record read. Its lists' folders
+  are made from the cold store and the lab each frame (`vialFolders`, `cultureFolders`): a row is a vial's, a flask's or a kept culture's
+  index by its folder's id (FOLDER_WORLD, FOLDER_FLASKS, a collection's), never stored. Its frame's specimens are made in the update
   (`microscopeFrame`) and only drawn by the render (a text entry over it draws the last ones). Its clock is the slide's own (real
   seconds on its page, stopped under the electron); the harness skips it (`testScopeSkip`) or sets the view (`testScopeView`).
 

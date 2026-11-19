@@ -5,7 +5,8 @@ reads `src/core` and `src/galaxy` alone. Z-01 made the biota (generation 17), Z-
 search (the samples, the kit, the ultraviolet, red snow and the springs' bands), Z-04 the microscope (a vial's slide, what is done to it,
 what is seen of each species), Z-05 the incubator (cultures in twelve flasks, their stages, spores woken, two in a flask, strains) and the
 jars, Z-06 the genomes, the sequencer, the tree of kin and the organisms the late peoples made, Z-07 the record (the catalogue, the LIFE
-page, lending, auto-explore's samples).
+page, lending, auto-explore's samples). Then, on the user's word: R-432 the microscope's lists by world and the cold store without limit,
+R-433 the culture collection, R-434 the activity vision.
 
 <!-- contents -->
 Contents:
@@ -259,11 +260,21 @@ world's cells carry (`filmGlowColour`: chlorophyll's red, the carotenoids' orang
 the old result: its light added to the pixel's, in bank 15 where it is the brighter (the spores', the milky sea's or the lamps'
 ramp on worlds that have one); off, the pass and the ramp touch nothing.
 
+The activity vision (R-434, Shift+O, on foot or from a vehicle's camera) shows where a vial would read activity. Each square metre
+within 40 m is read at its middle as a vial reads it (`readSample`, then `sampleOf`'s crowd at work, `Sample::activeLog`), the nearest
+first, 384 a frame on the pool (the ruins' walls after on the main thread, `wallsDone`): a quarter of a second fills its reach, and the
+metres are kept for the landing (the tide past a quarter metre reads them again). Its pass is the frame's last: every pixel into bank 15,
+the vision's ramp while it is on, a thermal camera's way: the ground's and the water's own pixels within reach by their metres' heat
+(blended between their middles), none at work dark but for the ground's shading, faint red to orange, strong yellow to white by its
+crowd (a mat or wet silt whiter than the soil, the soil than the open water); everything else (the sky, a stone, a trunk, the buggy,
+the ground past the reach) dimmed by its luminance. Off, the pass and the ramp touch nothing; the ultraviolet and it one at a time.
 ## The microscope (`life/slides.h`, `game/microscope.cpp`)
 
 Z-04: the laboratory's first device, a camera entered from the stern bench (`E`; the state `MICROSCOPE`, its row teal). Its first
-page lists the cold store's vials (Enter puts one on the stage; Backspace empties it, freeing its place; the store's door aboard is
-lit by eighths, `drawStore`); the slide's page shows the vial's mount. Nothing of a slide is saved: it is made again from the vial.
+page is its lists (R-432, `game/lab_lists.cpp`): THE VIALS, a folder a world in the cold store's order, each world's vials with the
+activity each read (Enter puts one on the stage; Backspace empties it), and THE CULTURES (R-433): the flasks' cultures and the
+collection by folder. The cold store holds any number of vials (its door's lamps by doublings, `drawStore`); the slide's page shows the
+vial's mount. Nothing of a slide is saved: it is made again from the vial.
 
 **The mount** (`mountOf(biota, forms, sample, microhabitat)`, a pure function of them): a drop under its cover glass (20 um deep), a
 rock's sample a thin section of it (30 um). It is prepared as a microbiologist would, concentrated or diluted by tens (`prep`, -6 to
@@ -361,6 +372,14 @@ first minutes and its living species come up in bands by what each lives on (the
 light under them, the iron's rust, the sulphide's white, the deep's grey, the black of the anaerobes at the foot), each by its crowd,
 all in by twenty minutes (Winogradsky's column).
 
+**The collection** (R-433, `game/lab_lists.cpp`): every species and strain a flask grows, kept frozen as labs keep their stocks. A
+species is kept once its curve passes its lag (`cultureStagesBy`'s GROWING), a strain as it arises (`keepCulture` from `updateLab`;
+the flask's `FT_KEPT` bits say so), each once, with the medium it grew in and its world's; emptying the flask keeps it. A kept
+culture is worked as a world's species: the microscope shows a drop of it growing (`microscopeStageKept`: a tenth of its crowd in that
+medium, more of it dividing), the incubator puts it in a flask in that medium, the sequencer reads its species. The explorer sorts it:
+UNSORTED, then the explorer's folders (N makes one, R renames it, M moves a culture, Backspace removes an empty folder or discards a
+culture). The save's `keptfolder` and `kept` lines.
+
 ## The genomes and the tree (`life/sequences.h`, `game/sequencer.cpp`, `game/tree_screen.cpp`, `peoples/made.h`)
 
 Z-06: a species' genome is a pure function of the species and its genesis. Its alphabet is the genesis's (`alphabetOf`: ACGT, six with
@@ -442,8 +461,8 @@ and jars never travel.
 
 **Auto-explore's samples** (its water outing): it walks to the last dry ground before the water, eases the crosshair a metre down toward it
 and presses O once, the take's line as the explorer's; on a world with springs it goes first to the nearest spring's pool within 450 m (a
-terraced spring's vent, a chemotroph's hot pool, where its landform put the pool), samples at the rim and looks over it. With the kit or
-the cold store full it takes none; the lab's work stays the explorer's (it opens no screen).
+terraced spring's vent, a chemotroph's hot pool, where its landform put the pool), samples at the rim and looks over it. With the kit
+full it takes none; the lab's work stays the explorer's (it opens no screen).
 
 ## Determinism, cost and the cache
 

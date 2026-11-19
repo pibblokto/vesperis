@@ -68,6 +68,7 @@ Sample sampleOf(const Biota& B, const Microhabitat& h) {
     }
     // what the labelled release reads: a crowd at work strong, a few faint; a protocell's chemistry faint too; spores and fossils nothing
     S.activity = activeLog >= 5.5 ? VA_STRONG : (activeLog >= 2.0 || proto ? VA_FAINT : VA_NONE);
+    S.activeLog = activeLog;
     if (B.stage == LS_STERILE && S.held.empty()) S.organics = h01(h.place ^ SALT_COOKED) < 0.3;
     return S;
 }

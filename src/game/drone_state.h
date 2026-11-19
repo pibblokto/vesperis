@@ -29,6 +29,10 @@ struct DronePrim {
     double r = 0.01;
 };
 void droneModel(const DronePose& pose, std::vector<DronePrim>& out);
+// R-427: the buggy and the drone the capsule carries, parked (game/vehicles_draw.cpp): the ground's shapes (surface/vehicle_shape.h) in
+// the same primitives, their feet at y 0
+void buggyModel(std::vector<DronePrim>& out);
+void capsuleDroneModel(std::vector<DronePrim>& out);
 
 constexpr double DRONE_SEARCH_S = 120;     // C-18 (the user's, 2026-10-11): two minutes down there, from the first place a drone searches to its last
 constexpr double DRONE_COOLDOWN_S = 300;   // C-18: five minutes charging from the drones' return to the next launch (real time; the user's, 2026-10-11:

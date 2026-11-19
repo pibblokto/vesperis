@@ -231,4 +231,7 @@ struct SampleRead {
     std::string name;
     double readingC = 0;
     Vec3 unit;
+    // R-434: read without the ruins' walls (the sight's reads on the pool): the walls' check left to the main thread, the place's mean kept for it
+    bool wallsAsked = false;
+    double placeC = 0;
 };

@@ -97,6 +97,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
     setupFilmGlow();   // Z-03: the world's films under the lamp's ultraviolet
+    clearSight();      // R-434: the activity vision's square metres (the local metres' own)
     site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the old roads round the site, before anything samples the ground
     site.clearMarks(); markCheckX = markCheckZ = 1e18;
     site.clearEdits(); workCells.clear(); workNear.clear(); workEdited.clear();
@@ -253,6 +254,7 @@ void SurfaceView::prefetch(double budgetMs) {
 void SurfaceView::reanchor() {
     const auto ta0 = std::chrono::steady_clock::now();   // F-01: the parts' ms under VESPERIS_TRACE (KI-302: a comet's every 0.35 radii)
     joinAhead();   // cell coordinates change with the anchor
+    clearSight();  // R-434: the activity vision's square metres are read again in the new metres
     double lat, lon;
     site.latLonAt(player.x, player.z, lat, lon);
     Vec3 capU = site.unitAt(capsuleX, capsuleZ);
@@ -715,6 +717,8 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
     drawWeather(fb, t);
     drawVeil(fb);
+    prepareSight();   // R-434: the activity vision, after everything drawn (nothing at all with it off)
+    drawSight(fb);
     section(5);
     // what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
     lastRange = cameraOverrideAlt >= 0 ? -1 : rangeToGround(drawRadiusM(), lastRangeX, lastRangeZ, lastRangeWater);

@@ -23,6 +23,7 @@ struct Stop {
     const char* how;
     bool (*open)(Tour&);
     void (*keys)(Tour&);
+    bool (*rowsOpen)(Tour&) = nullptr;   // R-432: the rows' pass's own way in where its commands would never reach a page (else `open`)
 };
 
 
@@ -417,6 +418,13 @@ bool openMicroscope(Tour& t) {
     }
     return t.deviceNamed("THE MICROSCOPE");
 }
+// R-432: for the rows' pass, the microscope opened as above and its first world's first vial put on the stage (Enter, Enter): its commands
+// walk the slide's controller page, as they did when the vials' list was its first page
+bool openMicroscopeStaged(Tour& t) {
+    if (!openMicroscope(t)) return false;
+    t.press(KEY_ENTER); t.press(KEY_ENTER);
+    return true;
+}
 // Z-07: the home system's worlds' species seen under the microscope (the guide's sheets: the first world's first read), then the guide's row
 bool openCatalogue(Tour& t) {
     if (!t.start()) return false;
@@ -463,7 +471,7 @@ void keysSpace(Tour& t) {
 void keysLanding(Tour& t) { t.keys("LEFT RIGHT UP DOWN SHIFT+LEFT C C J R Z Z V V CTRL+T ENTER"); }
 void keysDescent(Tour& t) { t.keys("T ESC H CTRL+S"); }
 void keysSurface(Tour& t) {
-    t.keys("W A S D SPACE C Z 1 0 TAB TAB V V V V V U U X M M R SHIFT+R G J I H N L B E E F K CTRL+S CTRL+L Q");
+    t.keys("W A S D SPACE C Z 1 0 TAB TAB V V V V V SHIFT+O SHIFT+O U U X M M R SHIFT+R G J I H N L B E E F K CTRL+S CTRL+L Q");   // R-434: the activity vision on, off
 }
 void keysAscent(Tour& t) { t.keys("T ESC H CTRL+S"); }
 void keysHelp(Tour& t) { t.keys("SPACE,SPACE,SPACE A"); }
@@ -559,18 +567,21 @@ void keysRecording(Tour& t) { t.keys("SPACE SPACE HOME END RIGHT LEFT DOWN UP PG
 void keysInstruments(Tour& t) { t.keys("DOWN UP ENTER,DOWN,UP,LEFT,RIGHT,1,2,9,0,ENTER,SPACE,ESC"); }
 void keysDrones(Tour& t) { t.keys("DOWN UP ENTER"); }
 void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
-// the vials' list, a vial on the stage: each way of seeing (a drop's section refused), the next and the one before, the zoom, the focus, the
-// stage moved, a cell tracked and let go, the four things done to the slide (on and off, or turned), the sheet, a name typed, a micrograph;
-// back to the list (the state stays the microscope's, its pages its own), a vial emptied
 // the flasks: down to the culture, the medium's fields and their changes (ten degrees with Shift), as its world, a fresh broth, a name refused
-// (no strain yet); up to the empty flask, Enter (the chooser) and Enter (put in), Enter (a second: the chooser) and Esc; Tab the jars, Enter (the
-// chooser of wet silt, or its refusal) and Esc, Tab back; Backspace empties the second flask
-void keysIncubator(Tour& t) { t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N UP ENTER ENTER ENTER ESC TAB ENTER ESC TAB DOWN BACKSPACE"); }
+// (no strain yet); up to the empty flask, Enter (the chooser; R-432: its folders), Enter (the first folder) and Enter (put in), Enter (a second:
+// the chooser) and Esc; Tab the jars, Enter (the chooser of wet silt, or its refusal) and Esc, Tab back; Backspace empties the second flask
+void keysIncubator(Tour& t) { t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N UP ENTER ENTER ENTER ENTER ESC TAB ENTER ESC TAB DOWN BACKSPACE"); }
 // Z-07: the catalogue: a species down, its sheet (Enter), the next species and back on it, the next way of seeing, back to the list; by kin and
 // by world again; a name typed (N) and the list again
 void keysCatalogue(Tour& t) { t.keys("DOWN UP PGDN PGUP ENTER,DOWN,UP,V,V,ESC TAB TAB N,A,B,ENTER"); }
+// R-432: the vials' worlds (two vials of two worlds), the first world's vials, its vial on the stage: each way of seeing (a drop's section
+// refused), the next and the one before, the zoom, the focus, the stage moved, a cell tracked and let go, the four things done to the slide (on
+// and off, or turned), the sheet, a name typed, a micrograph; back to the world's vials (the state stays the microscope's, its pages its own),
+// the vial emptied (its world's folder gone with it); Tab the cultures (R-433: a folder made, its name typed, renamed, removed; the flasks'
+// folder refused, empty), Tab back to the vials
 void keysMicroscope(Tour& t) {
-    t.keys("DOWN UP ENTER 1 2 3 4 5 6 V SHIFT+V EQUAL EQUAL MINUS LBRACKET RBRACKET LEFT RIGHT UP DOWN ENTER ENTER L L M M H H F TAB TAB N,A,B,ENTER P ESC BACKSPACE");
+    t.keys("DOWN UP ENTER DOWN UP ENTER 1 2 3 4 5 6 V SHIFT+V EQUAL EQUAL MINUS LBRACKET RBRACKET LEFT RIGHT UP DOWN ENTER ENTER L L M M H H F TAB TAB N,A,B,ENTER P ESC "
+           "BACKSPACE TAB N,A,B,ENTER R,C,ENTER BACKSPACE DOWN ENTER TAB");
 }
 
 // the stops, in the table's order: how the game opens each state of the first pass and its keys
@@ -604,7 +615,7 @@ constexpr Stop STOPS[] = {
     {GameState::INSTRUMENTS, "two instruments in the guide, then E at the case", openInstruments, keysInstruments},
     {GameState::DRONES, "E at the drone bay", openDrones, keysDrones},
     {GameState::AUTO, "the Esc menu's AUTO-EXPLORE", openAuto, keysAuto},
-    {GameState::MICROSCOPE, "two vials in the cold store, then E at the microscope", openMicroscope, keysMicroscope},
+    {GameState::MICROSCOPE, "two vials in the cold store, then E at the microscope", openMicroscope, keysMicroscope, openMicroscopeStaged},
     {GameState::INCUBATOR, "a seen vial in the cold store and a culture in the second flask, then E at the incubator", openIncubator, keysIncubator},
     {GameState::CATALOGUE, "the home system's species seen (one read) in the guide, then the guide's THE CATALOGUE", openCatalogue, keysCatalogue},
 };
@@ -696,7 +707,7 @@ int runTour(int argc, char** argv) {
         if (!only.empty() && std::find(only.begin(), only.end(), std::string(stateName(s))) == only.end()) continue;
         const bool setup = tourSetupNamed(s);
         if (setup && !r.padMenu) { printf("== %s: %s, toured above (no commands)\n", stateName(s), stopOf(s)->how); reached++; continue; }
-        t.home = s; t.opener = setup ? stopOf(s)->open : openByRow;
+        t.home = s; t.opener = setup ? (stopOf(s)->rowsOpen ? stopOf(s)->rowsOpen : stopOf(s)->open) : openByRow;
         t.steps = 0;
         t.pre = fmt("rows_%02d_%s", (int)s, lowerName(s).c_str());
         printf("== %s: %s\n", stateName(s), setup ? stopOf(s)->how : "its row");

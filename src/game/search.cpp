@@ -13,12 +13,11 @@ std::string Game::vialLine(const Vial& v) const {
     return s.size() <= 52 ? s : head + " - " + VIAL_ACTIVITY_NAMES[v.activity];
 }
 
-// O on foot: the crosshair's spot within 2 m of the feet (a swimmer's water at hand), refused from a vehicle, with the vials used up and with
-// the cold store full (what it would hold counted with the vials in hand)
+// O on foot: the crosshair's spot within 2 m of the feet (a swimmer's water at hand), refused from a vehicle and with the vials used up (R-432:
+// the cold store aboard takes any number)
 void Game::takeSample() {
     if (surf.inVehicle()) { refuse(surf.inBuggy ? "NOT FROM THE BUGGY - GET OUT TO TAKE A SAMPLE" : "NOT FROM THE DRONE - LAND AND GET OUT"); return; }
     if ((int)kit.size() >= KIT_VIALS) { refuse("THE EIGHT VIALS ARE FULL - THE REST ABOARD"); return; }
-    if ((int)(coldStore.size() + kit.size()) >= COLD_STORE) { refuse("THE COLD STORE ABOARD IS FULL"); return; }
     double x = surf.player.x, z = surf.player.z; bool water = true;
     if (!surf.player.swimming) {
         if (surf.lastRange < 0 || std::hypot(surf.lastRangeX - surf.player.x, surf.lastRangeZ - surf.player.z) > 2.0) { refuse("LOOK AT THE GROUND WITHIN 2 M TO TAKE A SAMPLE"); return; }
@@ -50,7 +49,7 @@ void Game::sampleTaken(const Vial& v, const char* how) {
 void Game::scoopClouds(double groundC) {
     scooped = true;
     auto line = [&](const std::string& s) { status(s, 6); scoopLine = s; scoopUntil = realTime + 6; };
-    if ((int)kit.size() >= KIT_VIALS || (int)(coldStore.size() + kit.size()) >= COLD_STORE) { line("THE SCOOP STAYED SHUT - THE COLD STORE IS FULL"); return; }
+    if ((int)kit.size() >= KIT_VIALS) { line("THE SCOOP STAYED SHUT - THE EIGHT VIALS ARE FULL"); return; }
     const Body& b = sys.bodies[surf.site.body];
     const double altKm = groundC > 59 ? std::min(90.0, (groundC - 35.0) / 8.0) : 3.0, cloudC = std::round(groundC - 8.0 * altKm);
     Vial v;
@@ -67,11 +66,11 @@ void Game::scoopClouds(double groundC) {
     line(s.size() <= 52 ? s : head + " - " + VIAL_ACTIVITY_NAMES[v.activity]);
 }
 
-// the climb aboard: the vials to the cold store (none is lost: a sample past its places was refused on the ground)
+// the climb aboard: the vials to the cold store (R-432: every one; it has no limit)
 void Game::storeVials() {
     if (kit.empty()) return;
     const int n = (int)kit.size();
-    for (const Vial& v : kit) if ((int)coldStore.size() < COLD_STORE) coldStore.push_back(v);
+    for (const Vial& v : kit) coldStore.push_back(v);
     kit.clear();
     status(fmt("%d SAMPLE%s TO THE COLD STORE", n, n == 1 ? "" : "S"), 5);
 }
@@ -97,6 +96,6 @@ bool Game::loadVial(const std::string& text) {
     std::getline(is, v.name); if (!v.name.empty() && v.name[0] == ' ') v.name.erase(0, 1);
     v.hab.shade = (shade & 1) != 0; v.hab.bloom = (shade & 2) != 0; v.hab.oldRock = old != 0;
     std::vector<Vial>& to = where == 0 ? kit : coldStore;
-    if ((int)to.size() < (where == 0 ? KIT_VIALS : COLD_STORE)) to.push_back(v);
+    if (where == 1 || (int)to.size() < KIT_VIALS) to.push_back(v);
     return true;
 }

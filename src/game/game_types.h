@@ -26,6 +26,8 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        SEQUENCER,      // Z-06: the laboratory's sequencer (a species' genome read)
                        TREE,           // Z-06: the tree of kin's screen (every species sequenced by kinship)
                        CATALOGUE,      // Z-07: the guide's catalogue of the species seen (by world, by kin)
+                       PLAYER,         // R-431: the ship's player at its deck (its worlds, a world's music)
+                       WALL,           // R-428: the quarters' wall of photographs, hung by the explorer
                        COUNT };        // U-06: no state, their count: a new state goes before it (a state's number is saved)
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
@@ -113,7 +115,10 @@ const char* stateName(GameState s);
 // instruments' case, the drone bay; I-04: the bunk (the almanac's rest), the desk (the log), the player's deck; Z-04: the laboratory's microscope;
 // Z-05: its incubator; Z-06: its sequencer and the tree of kin's screen
 enum CabinFacing { FACE_NOTHING = 0, FACE_GOES, FACE_FLIGHT, FACE_STAR_MAP, FACE_LANDING, FACE_TARGET, FACE_CAGE, FACE_DECODER, FACE_RADAR, FACE_TELESCOPE, FACE_CASE, FACE_BAY,
-                   FACE_BUNK, FACE_DESK, FACE_DECK, FACE_MICROSCOPE, FACE_INCUBATOR, FACE_SEQUENCER, FACE_TREE, FACE_COUNT };
+                   FACE_BUNK, FACE_DESK, FACE_DECK, FACE_MICROSCOPE, FACE_INCUBATOR, FACE_SEQUENCER, FACE_TREE,
+                   FACE_BED_1, FACE_BED_2, FACE_BED_3, FACE_BED_4,   // R-429: the garden's beds, the plan's in their order
+                   FACE_PRINTS,                                      // R-428: the quarters' wall of photographs
+                   FACE_COUNT };
 
 // F-05: what the cabin's bands share, taken once a frame (`drawCabin`): the eye, the light, the screens' flickers, the decoder's wait, and
 // the drones on the rack (where each stands, its pose and its model). I-01: each device's screen's shade (its row's `screen`), and the
@@ -155,8 +160,12 @@ constexpr double EXPEDITION_T0 = 3.6e6;   // the game's clock at an expedition's
 
 // what a text entry names (`Game::textKind`): the star, a world, a note for the log, a star to find, a sector to go to, a mark, a piece
 // of music, a star of the sky (the telescope's), a storm, a place of the galaxy; Z-04: a species under the microscope
+// the ground's vision modes (V round the first five, on foot): the eye's, the radiation visor, supervision, infrared, plant vision; R-434: the
+// activity vision, on and off with Shift+O alone (on foot or from a vehicle; V from it to the eye's): the ground and the water near by their activity
+constexpr int VISION_MODES = 6, VISION_ACTIVITY = 5;
+
 enum TextKind { TEXT_NONE = 0, TEXT_STAR, TEXT_WORLD, TEXT_NOTE, TEXT_FIND_STAR, TEXT_SECTOR, TEXT_MARK, TEXT_PIECE, TEXT_SKY_STAR, TEXT_STORM, TEXT_PLACE,
-                TEXT_SPECIES, TEXT_STRAIN };
+                TEXT_SPECIES, TEXT_STRAIN, TEXT_FOLDER };   // R-433: a folder of the culture collection
 
 // M2: the explorer inside the Stardrifter: in a room of the plan (I-01, `ship_plan.h`), where they stand in it and look; I-02: on the
 // stair, the angle walked round it (its height goes by it)

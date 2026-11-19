@@ -152,12 +152,13 @@ static const Mode MODES[] = {
         {"datasheet", "kinds", "[n]", "Q-01: the n data sheets that run longest, in space and on the ground, a page a frame", "modes_kinds.cpp", runDataSheet},
         {"salt", "kinds", "scan [name|ground|family] [tries]", "E-07: the made kinds against the protected worlds as kindOf walks them: what each reaches and takes, the first salt taking none",
                 "modes_kinds.cpp", runSaltScan},
-        {"life", "life", "list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto",
+        {"life", "life", "list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto | sight",
                 "Z-01: the biota of the worlds nearest home; by kind over the scan region; the geneses and the kin cells. Z-02 (modes_life_look.cpp): the "
                 "forms' plates, the acts' strips, no two alike, every plan's variants in the six ways. Z-03: each microhabitat round the search's scenes "
                 "and what a sample there holds, read again from another landing; the kit played (its frames). Z-06 (modes_tree.cpp): `made`, the made "
                 "species of the late peoples' worlds nearest home and fifty of their watermarks as the decoder reads them, the checks, the repeats at a hundred. "
-                "Z-07: `auto`, auto-explore's water outing on a felisian world and at a terraced spring, run till it takes a sample (its steps, the vial's line)",
+                "Z-07: `auto`, auto-explore's water outing on a felisian world and at a terraced spring, run till it takes a sample (its steps, the vial's line). "
+                "R-434: `sight`, the activity vision played on a superhabitable world's shelf (on, from the buggy, a vial where it shows strong, off)",
                 "modes_life.cpp", runLife},
         {"lab", "life", "microscope | time | cultures | jars | tree | kin [r] | catalogue", "Z-04: the microscope opened on samples of each stage and chemistry: every way of seeing at every zoom, a cell tracked, "
                 "the light's crowd, the magnet's turn, the warm stage, the food, a fossil's section; the mounts and the sheets. `time`: a dense slide's frame "
@@ -170,7 +171,7 @@ static const Mode MODES[] = {
                 "modes_lab.cpp", runLab},
         {"signals", "radio", "[<sx> <sy> <sz>] [reach] [xG] | wav", "C-07: the far signals heard from a sector; their WAVs", "modes_signals.cpp", runSignals},
         {"voice", "radio", "<sx> <sz> <body> [index] [wav]", "C-05: a world's voice, a record spoken", "modes_signals.cpp", runVoice},
-        {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake; I-04: each room aboard, its flight, the library's music", "modes_signals.cpp", runSounds},
+        {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake", "modes_signals.cpp", runSounds},
         {"rogues", "radio", "[ly] | heard | voices | dark", "D-01: the drifters near home; D-02 to D-04: heard, their voices, their dark", "modes_rogues.cpp", runRogues},
         {"peoples", "peoples", "ages | fresh | map | scorched | rogues | <sx> <sz> <body> [second]",
                 "C-13, A-01: the peoples near home by age, a world's peoples, the scorched worlds' and the drifters'", "civ_peoples.cpp", runPeoples},
@@ -271,6 +272,7 @@ int main(int argc, char** argv) {
     std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still writing its histories and works is waited for before their caches go
     makeDir("shots");
     makeDir("shots/tests");   // every harness output lands here; shots/ itself holds the player's screenshots
+    makeDir("shots/tests/game_shots");   // B-440: a test game's photographs and probes' images (TestGame's `shotsDir`)
     Game::musicDirDefault = "shots/tests/tape_none";   // a player's own music folder plays in no check (`tape` reads it on purpose)
     // `scale=N` anywhere on the command line renders at that resolution scale
     std::vector<char*> args;

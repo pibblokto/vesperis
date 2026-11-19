@@ -27,15 +27,17 @@ Contents:
 TITLE -> where the game was (Enter, through the title's help and credits: the ground, the capsule's way down or up, the probe's screen, else SPACE; B-432) ; N starts a new expedition (G-02: parked at the first living world of the pinned home star, `HOME_SX/SY/SZ` in `galaxy/starfield.h`, Heilya at sector 195 0 46; the search of sectors 176..196 x 36..56 for a yellow or orange star with a living world is the fallback when a generation change takes it away)
 SPACE -> LANDING_MAP (C, parked at a landable body) -> DESCENT (Enter) -> SURFACE -> ASCENT (Q/E at the capsule) -> SPACE
 SPACE/SURFACE -> HELP (H, ?, F1), MENU (Esc), DATA (I, F2); SPACE -> SYSTEM_LIST (Tab); MENU -> SETTINGS, SLOTS (save/load pickers)
-SPACE -> SHARDS (C-06: the shard decoder, from its desk in the library (I-02), the flight computer's preferences page or the guide menu; the menu refuses it on the surface; C-04: a piece of music plays there and `N` names it through TEXT_ENTRY, which returns to the decoder; C-05: a text shard speaks there; C-11: `Tab` at its worlds turns to the ship's player)
+SPACE -> SHARDS (C-06: the shard decoder, from its desk in the library (I-02), the flight computer's preferences page or the guide menu; the menu refuses it on the surface; C-04: a piece of music plays there and `N` names it through TEXT_ENTRY, which returns to the decoder; C-05: a text shard speaks there; R-431: the ship's player is a screen of its own, PLAYER)
+SPACE -> PLAYER (R-431: the ship's player at its deck in the library: its worlds, a world's music; Esc back to the worlds, then to SPACE, the player playing on)
+SPACE -> WALL (R-428: the quarters' wall at it: its twelve frames, a frame's photographs; Esc back to the frames, then to SPACE)
 SPACE -> INSTRUMENTS (C-11: the instruments' case in the library (I-02), or the flight computer's devices page: the instruments taken from the ruins, played there; C-18: it opens on its worlds, a folder each people of each, Enter opens one, Esc back to the worlds, Esc again returns to SPACE)
 SPACE -> DRONES (C-18: the drone bay's screen, from its rack in the hangar (I-02) or the flight computer's devices page; Enter sends the drones and returns to SPACE, Esc or E returns to SPACE)
 SPACE/SURFACE/LANDING_MAP -> ALMANAC (W-01: Ctrl+T; DATA -> ALMANAC with T; the flight computer's devices page); Esc returns where it came from, Enter starts a run to the row and returns to the scene
 SPACE -> PROBE (X-01: C parked at a giant launches a probe and shows its camera; C, E at the landing screen or the cage watch a probe that falls; Esc, E or C go back to the cabin, the probe falling on; at its end Enter or Esc let it go)
 GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's screen; Esc or Enter back to the gallery, whose Esc returns to SPACE, a storm named (`N`) or not (B-429); on the ground the gallery says the recordings play on the ship)
 MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's commands' general page too) -> SPACE or SURFACE playing on its own (Enter); Esc back; any key, click, mouse motion or button gives the controls back (R-420: but `M`, a controller's `SELECT`, starts and stops its tape)
-SPACE -> MICROSCOPE (Z-04: E at the laboratory's microscope; its first page the cold store's vials (Z-05: then the flasks with a culture), Enter puts one on the stage (the slide's page; a flask's a drop of its culture), Esc from the slide back to the list, Esc or E from the list (E from the slide too) back to SPACE; N names the species under the crosshair through TEXT_ENTRY, which returns to it)
-SPACE -> INCUBATOR (Z-05: E at the laboratory's incubator, a screen over the room; its flasks, Tab its jars; Enter opens its chooser (Esc back to the flasks), Esc or E back to SPACE; N names a flask's strain through TEXT_ENTRY, which returns to it)
+SPACE -> MICROSCOPE (Z-04: E at the laboratory's microscope; its first page its lists (R-432: Tab between the vials, a folder a world, and the cultures, R-433: the flasks, UNSORTED and the explorer's folders), Enter opens a folder and puts its row on the stage (the slide's page; a flask's a drop of its culture, a kept culture's a drop of it growing), Esc from the slide back to its folder, from a folder to the folders, Esc or E from the folders (E from anywhere) back to SPACE; N names the species under the crosshair through TEXT_ENTRY, which returns to it; R-433: on the cultures N makes a folder and R renames one, through TEXT_ENTRY too)
+SPACE -> INCUBATOR (Z-05: E at the laboratory's incubator, a screen over the room; its flasks, Tab its jars; Enter opens its chooser (R-432: its folders, Enter one and Enter its row; Esc back a level and to the flasks), Esc or E back to SPACE; N names a flask's strain through TEXT_ENTRY, which returns to it)
 SPACE -> SEQUENCER (Z-06: E at the laboratory's sequencer, a screen over the room; Enter opens its chooser (Esc back), Tab the tree, Esc back to SPACE) -> TREE (Tab: back to the sequencer by Esc)
 SPACE -> TREE (Z-06: E at the tree of kin's screen; Tab the sequencer, Esc back to its opener: SPACE, or the sequencer it was opened from)
 GUIDE -> CATALOGUE (Z-07: the guide's THE CATALOGUE, in space or on the ground; Enter a species' sheet (Esc back to the list), Tab by world or by kin, N names a species through TEXT_ENTRY, which returns to it; Esc back to the scene); GUIDE -> STATS, L its LIFE page
@@ -379,15 +381,18 @@ the explorer's way builds them, `marksHere`: reading them built a tile of a degr
 scanner's or a shown mark's first look after a landing frozen for 8 s on a world of nineteen marks) (O6-06's `UNNAMED PEAK` went
 with the landmarks), crossing into another sector on foot or in the buggy shows `ENTERING SECTOR 226:113 - GRASS, GRASSLAND` and
 logs a `SECTOR` entry (`lastSecX/Y`, set silently at landing and after a load), `V` on foot cycles the vision modes (M4-10:
-radiation visor, supervision, infrared, plant vision), `U` on foot the explorer's helmet lamp (D-04, 2026-10-23:
+radiation visor, supervision, infrared, plant vision), `Shift+O` the activity vision on and off (R-434: on foot or from a vehicle's
+camera, `ACTIVITY VISION` in the status and the readings, `V` from it back to the eye's; the ground and the water within 40 m coloured by
+the activity a vial would read there, each square metre read at its middle, the nearest first, about a quarter of a second for all; none
+at work dark, faint red to orange, strong yellow to white, the rest of the view dimmed; the ultraviolet and it one at a time,
+`ACTIVITY VISION - THE ULTRAVIOLET OUT`, `ULTRAVIOLET ON - NORMAL VISION`; `13-life.md`), `U` on foot the explorer's helmet lamp (D-04, 2026-10-23:
 `LAMP ON`/`LAMP OFF`; a cone of light along the view by night, on every night side as in a drifter's dark, nothing while the sun
 is up; the pad's commands `LIGHT THE LAMP`/`PUT THE LAMP OUT`; kept on or off for the session; `06-surface.md`), `Shift+U` its
 ultraviolet (Z-03: `ULTRAVIOLET ON`/`OFF`, `UV ON` in the readings; the living films glow within 18 m where nothing outshines them,
 `13-life.md`), `O` a sample (Z-03: a vial of the ground at the crosshair within 2 m of the feet, a swimmer's water at hand; its line
 `WET SILT AT A LAKE'S EDGE, 9 C - ACTIVITY FAINT`, the word ACTIVITY left out of a line over 52 characters; eight vials a descent,
-`VIALS 3 OF 8 FILLED` in the readings; refused from a vehicle, `THE EIGHT VIALS ARE FULL - THE REST ABOARD`, `THE COLD STORE ABOARD IS
-FULL` with the store's 64 places taken with those in hand, `LOOK AT THE GROUND WITHIN 2 M TO TAKE A SAMPLE`, `THE GROUND IS MOLTEN
-HERE`; the descent through a venusian or an acid world's living clouds takes one by the capsule's scoop, `THE SCOOP: CLOUD DROPLETS AT
+`VIALS 3 OF 8 FILLED` in the readings; refused from a vehicle, `THE EIGHT VIALS ARE FULL - THE REST ABOARD`, `LOOK AT THE GROUND
+WITHIN 2 M TO TAKE A SAMPLE`, `THE GROUND IS MOLTEN HERE` (R-432: the cold store aboard takes any number); the descent through a venusian or an acid world's living clouds takes one by the capsule's scoop, `THE SCOOP: CLOUD DROPLETS AT
 53 KM, 35 C - STRONG` in the capsule's caption; the climb aboard puts them in the cold store, `3 SAMPLES TO THE COLD STORE`), `X` highlights
 nearby creatures and flocks for four seconds with the species name and its state (M4-05, N3-06), `I`/`F2` data sheet, `T` time
 warp (refused when the clock setting is real time; it stops an almanac run), `Ctrl+T` the almanac (W-01, 2026-10-06: the section
@@ -518,13 +523,14 @@ screens to starboard, the GOES console in its alcove to port), **the hall** in t
 stair from the hangar through its floor's well up through the oculus to the dome, the garden's four beds in its corners; every room
 of the main deck opens onto it by an arch), **the library** to port (the decoder's desk, the instruments' case, the shards' shelves,
 the player's deck, a sofa by its long window), **the laboratory** to starboard (its benches, the jars' shelves, the cold store's
-door by the arch (Z-04: its eight lamps lit by how full it is, an eighth of its 64 places each), the microscope on the stern bench
+door by the arch (Z-04: its eight lamps lit by how full it is; R-432: by doublings, the first by a vial, the eighth by 128), the microscope on the stern bench
 with its camera's screen, its long window; Z-05: the incubator past it on the stern bench, its glass door on twelve flasks, its screen
 beside it, and the jars on their shelf; Z-06: the sequencer on the bow bench under the jars' shelf, its screen beside it, and the tree of
 kin's screen on the port wall to the bow of the arch, a tree of what was read glowing on it), **the quarters** aft (the bunk, the desk, the
 photographs, the window astern), and
 below, **the hangar** (16 x 14 m: the capsule in its cradle over the floor's hatch, the drone rack against the port wall by its
-ports, the probe's launcher, the kit's locker) with **the engine room** aft (the Vimana drive's ring), and on top **the
+ports, the probe's launcher, the kit's locker) with **the maintenance room** aft (R-427, the engine room before: the buggy and the
+drone the capsule carries on two platforms under their work lamps, a workbench at the stern wall), and on top **the
 observatory** under its glass dome (the telescope's set and its mount, the radar's set, a couch). Mouse looks (`cabin.yaw/pitch`),
 `W A S D` walk at 1.6 m/s and Shift runs at 3.2 (`shipWalk`: a room's floors and its arches' tunnels, crossing an arch's middle
 changes the room; then its colliders: the fixtures' footprints, the cradle's circle, the rails round the stair's well and the
@@ -536,7 +542,8 @@ the capsule, target data), the capsule's cradle (deploy), the shard decoder (`fa
 be read), the signal radar (`facing` 8: its screen brightens and pulses while the receiver is on; `E` enters the radar camera), the
 telescope's set (`facing` 9: its screen glows while the eye is at the eyepiece; `E` looks through it), the case, the drone bay;
 I-04: the bunk (`facing` 12, `BUNK - E TO REST UNTIL ...`: the almanac, its run watched from the quarters), the desk (13: the log)
-and the player's deck in the library (14: the decoder's player page), none with a screen of its own; Z-04: the microscope (15,
+and the player's deck in the library (14: R-431, the player's screen), none with a screen of its own; R-429: the garden's four beds
+(19 to 22, `GARDEN BED - E TO TRIM IT`); R-428: the quarters' wall (23, `PHOTOGRAPHS - E TO HANG THEM`); Z-04: the microscope (15,
 `MICROSCOPE - E TO LOOK AT THE VIALS`, `THE COLD STORE HOLDS NO VIALS` while it is empty; teal, its home key 31): a camera entered
 (`MICROSCOPE`, `13-life.md`), the slide drawn whole in the framebuffer (every bank the slide's way's), its HUD on the canvas
 (`CAM 06 MICROSCOPE`, the way and the magnification, the focus, the stage's warmth, the preparation, the field's arrow; the vial's
@@ -545,12 +552,19 @@ the ways (`V` the next, Shift+V the one before; SECTION refused for a drop), `+`
 focus, the arrows and the mouse the stage (the electron's mouse turns and tilts; the mouse rests while a cell is tracked, the arrows let
 it go), Enter tracks the cell under the crosshair or lets it go, `L` a spot of light at the crosshair (again: away), `M` the magnet beside the stage (again: turned half round), `H` the warm stage
 on and off, `F` a drop of food, Tab the sheet of the species under it, `N` names it, `P` a micrograph (the screenshot's key), Ctrl+S
-saves; on the vials' page Up/Down, Enter, Backspace (or Delete) empties the vial chosen. The controller: A tracks, B the vials, X the
+saves. Its lists (R-432): `CAM 06 MICROSCOPE` over two tabs, Tab between them; THE VIALS opens on its worlds, a folder each in the
+cold store's order (its name and where it is, `23 VIALS - 9 READ STRONG`), Enter opens a world's vials (each its line and the activity it
+read), Enter puts one on the stage, Backspace (or Delete) empties it (its world's folder going with its last), Page Up/Down ten; THE
+CULTURES (R-433) holds THE FLASKS (a drop of a culture as it is), UNSORTED (the collection's new) and the explorer's folders: `N` makes a
+folder (`NAME THE NEW FOLDER`), on one of the explorer's `R` renames it and Backspace removes it once empty (`ONLY AN EMPTY FOLDER IS
+REMOVED - M MOVES ITS CULTURES OUT`); in a folder Enter puts a kept culture's drop on the stage, `M` moves it (a chooser of the folders,
+`MOVE IT TO:`), Backspace discards it; Esc goes back a level, E reopens on what was last on the stage. The controller: A tracks, B the lists, X the
 next way, the bumpers zoom, the triggers focus, SELECT the sheet, the sticks the stage. Z-05: the incubator (16, `INCUBATOR - E TO OPEN
 IT`; amber, its home key 20), a screen over the room (`INCUBATOR`, `13-life.md`): its twelve flasks (each its species in its stage's
 colour), the chosen one's curve on a log scale and its lines, its medium; Up/Down the flask, Left/Right the medium's field (its cell,
-warmth, light, energy, salt), `+`/`-` change it (Shift ten degrees), `W` as its world, `F` a fresh broth, Enter the chooser (a species seen
-in a vial or a flask's culture; on a culture a second), Backspace (or Delete) empties it, `N` names its strain, Tab the jars (Enter a
+warmth, light, energy, salt), `+`/`-` change it (Shift ten degrees), `W` as its world, `F` a fresh broth, Enter the chooser (R-432: its
+folders first, a world's, the flasks', the collection's; a species seen in a vial, a row a species and its state, a flask's culture, or
+R-433's kept culture in the medium it grew in; on a culture a second), Backspace (or Delete) empties it, `N` names its strain, Tab the jars (Enter a
 world's jar from a vial of wet silt, a mat or soil; Backspace empties one), Ctrl+S saves. The controller: A puts in, B back, X as its
 world, Y a fresh broth, the bumpers lower and raise, SELECT the jars. Its flasks glow in the room by their cultures and lights, the jars
 on their shelf by their bands. Z-06: the sequencer (17, `SEQUENCER - E TO READ A GENOME`; magenta, its home key 47), a screen over the room
@@ -580,15 +594,19 @@ box of the screen); with no window, oculus or dome in view and the hull polarise
 frame by nearness once the outside is drawn (`cabinDeal`: 8 the hull and 10 the light fixed; a seen device's screen its home bank of 9
 and 21-30, the drones' paint and lamps while the rack or the drones are seen, I-03: the seen rooms' finishes and the hull outside; the
 pool every bank but those two, 0 and, looking out, 7, the outside sunk into it and read through its own palette (B-437); the pool's nearest dealt, past it a screen
-dims to the hull's grey) and `cabinPalette` sets their ramps (`02-rendering.md`, "The ship's light"). I-04, life aboard (`game/cabin_life.cpp`): the quarters' wall prints the gallery's last twelve photographs in one tone (the
-newest at the top left, made on a thread when the quarters are seen); the hall's beds grow the home world's flora (the guide's home star's
-first world with flora: its two silhouettes, their looks and colours) by the days played since the expedition began, swaying in the draught;
-the drive's core glows under the floor glass between the bridge's arch and the stair, and with the drive's ring and the orb it brightens in
-a flight (`cabin.drive`, easing up in a flight and down after it); the library's shelves hold the shards, a world's on a board's place (up
+dims to the hull's grey) and `cabinPalette` sets their ramps (`02-rendering.md`, "The ship's light"). I-04, life aboard (`game/cabin_life.cpp`): the quarters' wall prints twelve photographs in one tone (made on a thread when the
+quarters are seen): the gallery's newest, the newest at the top left, until the explorer hangs one; R-428: `E` at the wall opens its
+screen (`WALL`, `game/wall_screen.cpp`: the twelve frames as their thumbnails in colour, the arrows a frame, `ENTER` the photographs,
+the newest first and one shown large, `ENTER` hangs it, `BACKSPACE` takes the frame's down), and from the first change the wall is the
+explorer's (the save's `wall` line), whatever is taken after. The hall's beds grow the home world's flora (the guide's home star's
+first world with flora: its two silhouettes, their looks and colours), swaying in the draught; R-429: each by the time played since it
+was trimmed (a third of its height then, as planted, full an hour of play on, no further; the time played counts every state but the
+title), `E` at a bed trimming it (the save's `garden` line). The drive's core glows under the floor glass between the bridge's arch and
+the stair, and with the drive's ring outside it brightens in a flight (`cabin.drive`, easing up in a flight and down after it); the library's shelves hold the shards, a world's on a board's place (up
 to five tablets) aglow in the decoder's violet by how many of its are held; the case shows its instruments against its lit glass; the deck's
-reels turn while the player plays; the capsule stands in its cradle as the surface draws it. Each room sounds its plan's row
-(`Game::aboardSounds`): the hum's and the drive's shares (the engine room's the loudest, the dome's the quietest), the laboratory's
-bubbling, the garden's water, the player's music fuller in the library. A new expedition starts on the bridge facing the window. The cabin
+reels turn while the player plays; the capsule stands in its cradle as the surface draws it; R-427: the buggy and the drone stand
+in the maintenance room as the ground draws them, at rest (`game/vehicles_draw.cpp`, the shapes `surface/vehicle_shape.h`). R-430: every
+room sounds alike, the hum and the drive in a flight (1.4.0's). A new expedition starts on the bridge facing the window. The cabin
 state is saved (`cabin` line; I-02: `cabin_place`, the room and the stair's angle; a save of the 5 m room, without it, loads at the bridge's
 start).
 
@@ -906,7 +924,7 @@ or stick gives the controls back (`autoTakeover`): that press is not acted on, t
 `AUTO-EXPLORE OFF - THE CONTROLS ARE YOURS`. What it does is the expedition's (the log, the guide, the records it takes, the game's
 autosaves); it names nothing, marks nothing and saves into no slot. `docs/iteration-3/plans/requests/R-419-auto-explore.md`. Z-07: its
 water outing takes a sample (O at the last dry ground before the water, the crosshair eased a metre down; first a spring's pool within
-450 m where the world has springs, at its rim), none with the kit or the cold store full; the vials go to the cold store at the climb
+450 m where the world has springs, at its rim), none with the kit full; the vials go to the cold store at the climb
 aboard as the explorer's, the lab's work left to the explorer (`13-life.md`, "The record").
 
 R-420 (2026-10-19): auto-explore's tape. `M` while auto-explore plays (a controller's `SELECT`, whose own key would end it) starts and
@@ -960,16 +978,18 @@ probe <body> <starSeed> <aimLat> <aimLon> <clock> <launchT> <startRel xyz> <chut
 probetrack <n> <clock yaw pitch ...> <m> <clock t ...>   (X-04: the tracks so far, so the recording goes on after a load)
 vial <0 kit|1 cold store> <sx> <sy> <sz> <body> <unit xyz> <niche> <meanC> <salt> <flags> <oldRock> <place> <readC> <activity> <t> <name>   (Z-03: a vial a line, the kit's then the store's; Z-04: flags 1 shade, 2 a bloom)
 lab <clock>                         (Z-05, the incubator's row's own lines after the save's: the lab's clock, real seconds)
-flask <i> <n> <told> <medium> <asWorld>   (a flask with a culture: its species' count, the moments said (1 woken, 2 its glow); a medium is <cell> <tempC> <light> <energy> <salt>)
+flask <i> <n> <told> <medium> <asWorld>   (a flask with a culture: its species' count, the moments said (1 woken, 2 its glow; R-433: 4 and 8 its species kept); a medium is <cell> <tempC> <light> <energy> <salt>)
 flaskwho <i> <k> <sx> <sy> <sz> <body> <species> <strain> <strainIn>   (each of its species: its world, its index there, its strain now and as put in)
 flaskev <i> <kind> <t> <medium> <who> <what> <value>   (its events in order: 0 started, 1 the medium, 2 a fresh broth, 3 a second added, 4 a strain)
 jar <sx> <sy> <sz> <body> <niche> <meanC> <salt> <flags> <oldRock> <place> <t0> <name>   (a jar on the shelf: its vial's place, when it was made)
+keptfolder <id> <name>              (R-433: a folder of the culture collection, the explorer's)
+kept <folder> <sx> <sy> <sz> <body> <species> <strain> <medium> <asWorld> <t>   (R-433: a kept culture: its folder (0 UNSORTED), its world's species and strain, the medium it grew in and its world's, when kept)
 seq <sx> <sy> <sz> <body> <species> <t0> <told>   (Z-06, the sequencer's row's line: what is on it, when its reading began on the lab's clock, whether it was told)
 ```
 
 Load regenerates the star (D-01: or the drifter, `placeInSector`; the `remote` line likewise) and the system from the sector, restores the ship, drops VIMANA/APPROACH back to STANDBY, and rebuilds the surface site if `surface 1`; a `phase` line resumes the descent or ascent at the same `transT` (the camera path is a function of it). Unknown keys are ignored; the header prefix must match (versions 1 and 2 are read).
 
-The ship's player (C-11, 2026-10-10, `game/player.cpp`): `Tab` at the decoder's worlds turns to THE PLAYER (and back), the page the decoder opens on next. It lists every piece held, every recording held (a text record made on something that sounds: a wax cylinder, a disc, a reel, a drive, a crystal, something that hums) and every recording the radar caught (`Guide::heard`, `AIR:` in cyan: the record's opening as it was on the air), by their worlds and years, a piece by its name or form with its length, a recording by what it was made on, the people at the right; the row under the cursor names its world, what it was made on (or `CAUGHT BY THE RADAR`) and its year. `ENTER` plays one and the list on from it, `SPACE` pauses, `BACKSPACE` stops, `TAB` back to the worlds, `ESC` closes the decoder and it plays on. It plays wherever the ship goes, the cabin, the window, the maps, a Vimana flight: a line under the system's two lines on the space HUD (a note or a page glyph, `A SONG - THE NULO  0:42/1:21`, dim while paused or held); the hum falls to 0.3 and the drive to 0.55 under it. A landing stops it (the descent, the surface, the title). It is held, its place kept, while the decoder plays a record of its own, the radar listens or the gramophone turns, and takes up where it was after (`AudioState::pieceFrom`, `speechFrom`); the synth's piece and speech point into the player's own copy of the world, so nothing the decoder opens moves them.
+The ship's player (C-11, 2026-10-10, `game/player.cpp`; R-431: its own screen, `PLAYER`, at the deck in the library, the decoder's page and its `Tab` no more): it opens on its worlds, a folder each (the world playing, else the one under the ship): its name and where it is, its pieces' count and its peoples. `ENTER` opens a world's music: every piece held and every piece the radar caught (`Guide::heard`, `AIR:` in cyan, as it was on the air), by their peoples and years, a piece by its name or form with its length, the people at the right; the row under the cursor names what it was made on (or `CAUGHT BY THE RADAR`) and its year. Music alone: the recordings and the texts stay the decoder's. `ENTER` plays one and the list on from it, `SPACE` pauses, `BACKSPACE` stops, `ESC` goes back to the worlds and from them closes the screen, and it plays on. It plays wherever the ship goes, the cabin, the window, the maps, a Vimana flight: a line under the system's two lines on the space HUD (a note's glyph, `A SONG - THE NULO  0:42/1:21`, dim while paused or held); the hum falls to 0.3 and the drive to 0.55 under it. A landing stops it (the descent, the surface, the title). It is held, its place kept, while the decoder plays a record of its own, the radar listens or the gramophone turns, and takes up where it was after (`AudioState::pieceFrom`); the synth's piece points into the player's own copy of the world, so nothing the decoder opens moves it.
 
 The drone bay (`DRONES`, C-18, `game/drones.cpp`, `game/drone_draw.cpp`, `civilisations/records-and-grammar.md`): a rack of three shelves against
 the hangar's port wall by its ports (I-02; `facing` 11, `DRONE BAY - E TO SEND THE DRONES`, `E FOLLOWS THE DRONES` while they are

@@ -249,8 +249,9 @@ void Game::drawDroneRack(CabinFrame& f) {
         if (f.here[k]) drawDronePrims(look, eye, Vec3(f.x[k], BASE + SHELF_Y[k] + f.lift[k], RACK_DZ), Vec3(1, 0, 0), Vec3(0, 1, 0), f.pose[k], nullptr, f.prims[k], out);
 }
 
-// a drone's model drawn in the cabin's frame (the ship's metres): its feet at `origin`, its nose along `fwd`; lit by the cabin's lamp, or
-// outside the hull by the sun (`sun`: the ship's metres, toward it)
+// a drone's model drawn in the cabin's frame (the ship's metres): its feet at `origin`, its nose along `fwd`; lit by the cabin's lamp (the
+// rack's room's bulb; R-427: `bulb`'s, the maintenance room's over a platform), or outside the hull by the sun (`sun`: the ship's metres,
+// toward it)
 void Game::drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun) {
     std::vector<DronePrim> prims;
     droneModel(pose, prims);
@@ -261,14 +262,14 @@ void Game::drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, 
 // F-05: a drone's model already made (`droneModel`), so the cabin's frame draws the rack's three without making them again; I-01: its
 // shapes into `out` (the cabin's frame, or the framebuffer at once)
 void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims,
-                          ShapeSink& out) {
+                          ShapeSink& out, const Vec3* bulbAt) {
     const double lit = cabin.lightLevel;
     const Vec3 right = normalize(cross(up, fwd));
     auto toCab = [&](const Vec3& p) { return origin + right * p.x + up * p.y + fwd * p.z; };
     auto toView = [&](const Vec3& p) { return look * (p - eye); };
     const ShipLamp& lamp = shipLampIn(shipFixtureOf(FX_RACK).room, LAMP_BULB);   // the rack's room's bulb (the plan's)
     auto dealt = [&](int home) { return dealtBank(cabinFrame.banks, home); };
-    const Vec3 bulb(lamp.x, lamp.y, lamp.z);
+    const Vec3 bulb = bulbAt ? *bulbAt : Vec3(lamp.x, lamp.y, lamp.z);
     for (const DronePrim& pr : prims) {
         if (pr.kind == 0) {
             const Vec3 n = right * pr.nrm.x + up * pr.nrm.y + fwd * pr.nrm.z;
@@ -281,6 +282,7 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
                 case DM_DARK: rp.bank = 0; base = 6 + 10 * pr.tint; break;
                 case DM_METAL: rp.bank = BANK_HULL; base = (16 + 34 * li) * pr.tint * l; break;
                 case DM_ACCENT: rp.bank = dealt(BANK_BAY); base = (18 + 26 * li) * l; break;
+                case DM_BEACON: rp.bank = dealt(BANK_RED); base = (10 + 18 * li) * pr.tint * l; break;   // R-427: a tail light, unlit
                 default: rp.bank = dealt(BANK_PAINT); base = (14 + 38 * li) * pr.tint * l; break;
             }
             RVert q[6]; bool ok = true;
