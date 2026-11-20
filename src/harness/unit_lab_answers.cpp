@@ -208,15 +208,15 @@ void unitLabAnswers(const Check& check) {
             const std::string key = k >= 0 ? g.testSpeciesKey(S.mount.kinds[k].species) : std::string();
             press(g, in, KEY_L);
             runScope(g, in, S.t + 12, said);
-            told = said.find("GATHERS IN THE LIGHT") != std::string::npos;
+            told = said.find("GATHERS IN LIGHT") != std::string::npos;
             const auto it = g.guide.microbes.find(key);
             sheet = it != g.guide.microbes.end() && (it->second.answers & AW_LIGHT);
             if (k >= 0) for (const std::string& l : g.testSheetLines(S.mount.kinds[k].species)) if (l.rfind("TO LIGHT: ", 0) == 0) words = l;
             press(g, in, KEY_L);
             press(g, in, KEY_M);
             runScope(g, in, S.t + 20, said);
-            field = said.find("SWIMS ALONG THE FIELD") != std::string::npos ||
-                    (said.find("NOTHING IN VIEW FOLLOWS THE FIELD") != std::string::npos && said.find("SILT AND MUD") != std::string::npos);
+            field = said.find("FOLLOWS THE MAGNET") != std::string::npos ||
+                    (said.find("NOTHING IN VIEW FOLLOWS THE MAGNET") != std::string::npos && said.find("SILT AND MUD") != std::string::npos);
             fieldKept = it != g.guide.microbes.end() && (it->second.answers & (AW_FIELD | AW_FIELD_NONE));
             g.guide.save("shots/tests/unit_lab_answers_guide.txt");
             Guide h;

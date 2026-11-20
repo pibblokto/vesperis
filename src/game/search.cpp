@@ -17,10 +17,10 @@ std::string Game::vialLine(const Vial& v) const {
 // the cold store aboard takes any number)
 void Game::takeSample() {
     if (surf.inVehicle()) { refuse(surf.inBuggy ? "NOT FROM THE BUGGY - GET OUT TO TAKE A SAMPLE" : "NOT FROM THE DRONE - LAND AND GET OUT"); return; }
-    if ((int)kit.size() >= KIT_VIALS) { refuse("THE EIGHT VIALS ARE FULL - THE REST ABOARD"); return; }
+    if ((int)kit.size() >= KIT_VIALS) { refuse("EIGHT VIALS ARE FULL - STORE THEM ABOARD"); return; }
     double x = surf.player.x, z = surf.player.z; bool water = true;
     if (!surf.player.swimming) {
-        if (surf.lastRange < 0 || std::hypot(surf.lastRangeX - surf.player.x, surf.lastRangeZ - surf.player.z) > 2.0) { refuse("LOOK AT THE GROUND WITHIN 2 M TO TAKE A SAMPLE"); return; }
+        if (surf.lastRange < 0 || std::hypot(surf.lastRangeX - surf.player.x, surf.lastRangeZ - surf.player.z) > 2.0) { refuse("LOOK AT GROUND WITHIN 2 M TO TAKE A SAMPLE"); return; }
         x = surf.lastRangeX; z = surf.lastRangeZ; water = surf.lastRangeWater;
     }
     const SampleRead r = surf.readSample(x, z, water);

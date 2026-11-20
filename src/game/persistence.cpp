@@ -88,7 +88,7 @@ std::string Game::saveSummary(const std::string& path) const {
     }
     int epoc = 6011 + (int)(st / 1e9);
     int sinister = (int)std::fmod(st / 1e6, 1000.0), medius = (int)std::fmod(st / 1e3, 1000.0);
-    const char* where = phase == (int)GameState::DESCENT ? "DESCENDING" : (phase == (int)GameState::ASCENT ? "ASCENDING" : (surface ? "ON THE SURFACE" : "IN SPACE"));
+    const char* where = phase == (int)GameState::DESCENT ? "DESCENDING" : (phase == (int)GameState::ASCENT ? "ASCENDING" : (surface ? "ON SURFACE" : "IN SPACE"));
     return fmt("%-12.12s %d:%03d.%03d  %s", upper(name).c_str(), epoc, sinister, medius, where);
 }
 
@@ -290,7 +290,7 @@ bool Game::load(const std::string& path) {
     }
     Star s;
     if (!placeInSector(sx, sy, sz, s, true)) {   // the galaxy of generation 11 keeps about half of the old stars near home; D-01: a star, else a drifter
-        status(fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - ITS STAR IS GONE", gen, GEN_VERSION), 8);
+        status(fmt("GALAXY REBUILT (GEN %d, NOW %d) - SAVED STAR GONE", gen, GEN_VERSION), 8);
         return false;
     }
     t = nt; timeWarp = warp; almanacRunning = false;
@@ -381,7 +381,7 @@ bool Game::load(const std::string& path) {
     autosaveTimer = 0;
     visitNoted = false;   // B-433: the system it puts the ship in is noted at the next frame out of the title, as an arrival's is
     migrateLandmarkNames();   // the sights named in this system before are marks now
-    if (gen < 11) { statusNext = fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - THIS STAR IS STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }
-    else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }
+    if (gen < 11) { statusNext = fmt("GALAXY REBUILT (GEN %d, NOW %d) - STAR STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }
+    else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS REGENERATED (GEN %d, NOW %d) - STARS UNCHANGED", gen, GEN_VERSION); statusNextSecs = 8; }
     return true;
 }

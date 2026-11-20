@@ -86,10 +86,10 @@ void Game::droneWorldAsk(int body) {
 
 // the drones sent down (or the refusal's status)
 void Game::droneBayLaunch() {
-    if (bay.out) { refuse("THE DRONES ARE DOWN THERE - THEY COME BACK BY THEMSELVES", 5); return; }
-    if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); refuse(fmt("THE DRONES ARE CHARGING - READY IN %d:%02d", s / 60, s % 60), 5); return; }
+    if (bay.out) { refuse("DRONES ARE AWAY - THEY COME BACK ON THEIR OWN", 5); return; }
+    if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); refuse(fmt("DRONES CHARGING - READY IN %d:%02d", s / 60, s % 60), 5); return; }
     if (!sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) {
-        refuse("THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD", 5); return;
+        refuse("NOT IN ORBIT - APPROACH A WORLD FIRST", 5); return;
     }
     const int b = ship.parkedBody;
     const BodyGen& g = spaceR.genFor(sys.bodies[b]);
@@ -99,7 +99,7 @@ void Game::droneBayLaunch() {
         int left = 0;
         for (const DroneItem& it : bay.world.items)
             if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
-        if (left == 0) { refuse("THE SHIP HOLDS ALL THEY LEFT DOWN THERE", 5); return; }
+        if (left == 0) { refuse("NOTHING LEFT TO BRING", 5); return; }
     }
     bay.out = true; bay.planned = false; bay.recalled = false; bay.clock = 0; bay.back = 0;
     bay.starSeed = sys.star.seed; bay.body = b; bay.worldKey = wk; bay.worldName = upper(bodyNameOf(b));
@@ -111,7 +111,7 @@ void Game::droneBayLaunch() {
     if (bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);
     if (droneWorldHere(sys.star.seed, b)) dronePlanTrip(); else droneWorldAsk(b);
     logEvent("DRONES", fmt("THE THREE DRONES SENT DOWN TO %s FROM ITS ORBIT", bay.worldName.c_str()));
-    status("THE DRONES ARE AWAY - E AT THEIR RACK FOLLOWS THEM", 6);
+    status("DRONES AWAY - E AT DRONE BAY TO FOLLOW", 6);
     audio.beep = BEEP_LOCK;
 }
 
@@ -217,8 +217,8 @@ void Game::droneTripEnd() {
     logEvent("DRONES",
             fmt("THE DRONES CAME BACK FROM %s%s WITH %s FROM %d PLACE%s SEARCHED", bay.worldName.c_str(), bay.recalled ? " AS THE SHIP LEFT" : "", list.c_str(), (int)where.size(),
                     where.size() == 1 ? "" : "S"));
-    if (bay.recalled) status(fmt("THE DRONES CAME BACK AS THE SHIP LEFT: %d FINDS", total), 6);
-    else status(total ? fmt("THE DRONES ARE BACK WITH %d FINDS", total) : std::string("THE DRONES ARE BACK WITH NOTHING"), 5);
+    if (bay.recalled) status(fmt("DRONES CAME BACK AS THE SHIP LEFT: %d FINDS", total), 6);
+    else status(total ? fmt("DRONES BACK WITH %d FINDS", total) : std::string("DRONES BACK WITH NOTHING"), 5);
     if (total) { std::string s; for (size_t i = 0; i < parts.size(); i++) s += (i ? ", " : "") + parts[i]; statusNext = s; statusNextSecs = 5; }
 }
 
@@ -299,8 +299,8 @@ std::string Game::droneStateLine(int k) const {
     const DroneRun& R = bay.run[k];
     if (bay.clock < 0 || !bay.out || R.docked) return droneBayReady() ? "ABOARD, READY" : (bay.out ? "ABOARD" : "ABOARD, CHARGING");
     const double c = bay.clock;
-    if (c < R.out) return "WAITING ITS TURN";
-    if (c < R.out + BAY_OUT_S) return "LEAVING THE BAY";
+    if (c < R.out) return "WAITING";
+    if (c < R.out + BAY_OUT_S) return "LEAVING BAY";
     if (!bay.planned || c < R.down) return "DESCENDING";
     for (size_t i = 0; i < R.stops.size(); i++) {
         const DroneStopRec& s = R.stops[i];
@@ -351,11 +351,11 @@ void Game::updateDroneBay(const Input& in, double dt, double realDt) {
 }
 
 // U-04: the drone bay's commands (the controller's first page)
-void Game::droneBayPad(PadMenu& m) const { m.title = "THE DRONE BAY"; m.item("SEND THE DRONES", KEY_ENTER); m.item("BACK TO THE CABIN", KEY_ESCAPE); }
+void Game::droneBayPad(PadMenu& m) const { m.title = "DRONE BAY"; m.item("SEND DRONES", KEY_ENTER); m.item("BACK", KEY_ESCAPE); }
 
 void Game::renderDroneBay() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
-    drawText(canvas, 6, 4, "THE DRONE BAY", HUD_AMBER);
+    drawText(canvas, 6, 4, "DRONE BAY", HUD_AMBER);
     {   // the bay: out, charging, ready
         std::string st; uint32_t col;
         if (bay.out) { const double in = droneBackIn(); const int s = (int)std::ceil(std::max(0.0, in)); st = in >= 0 ? fmt("BACK IN  %d:%02d", s / 60, s % 60) : std::string("AWAY"); col = HUD_CYAN; }
@@ -369,7 +369,7 @@ void Game::renderDroneBay() {
     bool people = false;
     {
         std::string line;
-        if (!world) line = "NO WORLD UNDER THE SHIP";
+        if (!world) line = "NO WORLD BELOW";
         else {
             people = worldHadCivilisation(spaceR.genFor(sys.bodies[b]));
             line = (bay.out ? "DOWN ON " : "OVER ") + trunc(upper(bodyNameOf(b)), 20);
@@ -459,7 +459,7 @@ void Game::renderDroneBay() {
             fillRectRGB(canvas, x - 1, y - 1, x + 1, y + 1, on ? DRONE_COL[k] : HUD_DIM);
             drawText(canvas, std::min(mx + mw - 6, x + 3), std::max(my, y - 8), fmt("%d", k + 1).c_str(), DRONE_COL[k]);
         }
-    } else drawTextCentered(canvas, mx + mw / 2, my + mh / 2 - 3, world ? "THE MAP IS BEING DRAWN" : "NO WORLD UNDER THE SHIP", HUD_DIM);
+    } else drawTextCentered(canvas, mx + mw / 2, my + mh / 2 - 3, world ? "THE MAP IS BEING DRAWN" : "NO WORLD BELOW", HUD_DIM);
     // ---- under the map: what the ship holds of what the world left, in the decoder's words (its peoples' shards together: the decoder lists
     // each people's apart) and the case's; the finds, the newest first
     {
@@ -471,8 +471,8 @@ void Game::renderDroneBay() {
                     const std::string key = findKeyOf(wk, it.kind, it.index);
                     if (it.kind == DF_INSTRUMENT) { ins++; if (guide.instruments.count(key)) insHeld++; } else { rec++; if (guide.shards.count(key)) recHeld++; }
                 }
-                l1 = fmt("ABOARD: %d OF ITS %d SHARDS", recHeld, rec);
-                l2 = ins ? fmt("AND %d OF ITS %d INSTRUMENTS", insHeld, ins) : std::string("IT LEFT NO INSTRUMENTS");
+                l1 = fmt("ABOARD: %d OF %d SHARDS", recHeld, rec);
+                l2 = ins ? fmt("AND %d OF %d INSTRUMENTS", insHeld, ins) : std::string("NO INSTRUMENTS");
             } else l1 = "READING THE WORLD...";
         }
         drawText(canvas, mx, my + mh + 4, trunc(l1, 33).c_str(), HUD_DIM);
@@ -485,7 +485,7 @@ void Game::renderDroneBay() {
     std::sort(order.begin(), order.end(), [&](int a, int c) { return finds[a]->t > finds[c]->t; });
     const int rows = 4, y0 = my + mh + 24;
     if (finds.empty()) {
-        static const char* const help[] = {"EACH DRONE BRINGS 2 TO 8 OF WHAT", "THE SHIP LACKS, FROM THE PLACES", "THAT KEEP THEM: 2 MINUTES DOWN", "THERE, THEN 5 MINUTES TO CHARGE"};
+        static const char* const help[] = {"EACH DRONE BRINGS 2 TO 8 FINDS", "THE SHIP LACKS. 2 MINUTES DOWN", "THERE, THEN 5 MINUTES CHARGING", ""};
         for (int i = 0; i < rows; i++) drawText(canvas, mx, y0 + i * 9, help[i], HUD_DIM);
     } else {
         bay.listTop = std::max(0, std::min(bay.listTop, (int)finds.size() - rows));
@@ -506,5 +506,5 @@ void Game::renderDroneBay() {
         }
     }
     const bool can = droneBayReady() && world && people;
-    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 10, can ? "ENTER SENDS THE DRONES  UP/DOWN THE FINDS  ESC" : "UP/DOWN THE FINDS  ESC BACK", HUD_DIM);
+    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 10, can ? "ENTER SENDS DRONES  UP/DOWN FINDS  ESC BACK" : "UP/DOWN FINDS  ESC BACK", HUD_DIM);
 }

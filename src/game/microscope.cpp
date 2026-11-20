@@ -19,9 +19,9 @@ const char* const FORM_WORDS[MP_COUNT] = {"A VESICLE", "A VESICLE OF LAYERS", "A
                                           "AN AMOEBA", "A FLAGELLATE", "A CILIATE", "A BOX OF TWO HALVES", "A TEST OF GRAINS", "A LATTICE OF SPINES",
                                           "A CHAMBERED SHELL", "AN ARMOURED CELL", "A ROLLING COLONY", "A PLATE COLONY", "A CHAIN COLONY", "BRANCHING THREADS",
                                           "GATHERING AMOEBAE"};
-const char* const MOTION_WORDS[MO_COUNT] = {"STILL BUT FOR ITS JIGGLE", "RUNS AND TUMBLES", "SWIMS IN A HELIX", "GLIDES", "TWITCHES", "CRAWLS", "ROLLS",
+const char* const MOTION_WORDS[MO_COUNT] = {"STILL, ONLY JIGGLING", "RUNS AND TUMBLES", "SWIMS IN A HELIX", "GLIDES", "TWITCHES", "CRAWLS", "ROLLS",
                                             "TURNS AS A CORKSCREW"};
-const char* const PLACE_WORDS[FV_COUNT] = {"", "AT A POLE", "AT BOTH POLES", "IN A TUFT", "ALL ROUND", "FROM ITS SIDE", "IN A GIRDLE"};
+const char* const PLACE_WORDS[FV_COUNT] = {"", "AT A POLE", "AT BOTH POLES", "IN A TUFT", "ALL ROUND", "FROM THE SIDE", "IN A GIRDLE"};
 const char* const KIND_WORDS[FS_COUNT] = {"WHIPS", "TINSELS", "RIBBONS"};
 const char* const MARK_WORDS[MK_COUNT] = {"SMOOTH", "PORES IN ROWS", "RIBBED", "SPINED", "A LATTICE", "PLATES", "A NET OF RIDGES", "GRAINS GLUED ON"};
 const char* const PIGMENT_WORDS[PG_COUNT] = {"COLOURLESS", "GREEN", "PURPLE", "ORANGE", "RED", "BROWN", "BLUE-GREEN", "BLACK"};
@@ -93,15 +93,15 @@ void Game::microscopeListKeys(const Input& in) {
         scope.folder = clampi(scope.folder, 0, nf - 1);
         const LabFolder& f = F[scope.folder];
         if (enterKey(in)) {
-            if (f.rows.empty()) refuse(f.id == FOLDER_FLASKS ? "NO FLASK HOLDS A CULTURE - THE INCUBATOR GROWS THEM" : "THE FOLDER IS EMPTY", 3);
+            if (f.rows.empty()) refuse(f.id == FOLDER_FLASKS ? "NO CULTURES - GROW ONE IN THE INCUBATOR" : "FOLDER EMPTY", 3);
             else { scope.open = true; scope.sel = 0; scope.top = 0; audio.beep = BEEP_UI; }
             return;
         }
         const bool own = scope.tab == 1 && f.id > 0;   // the explorer's folders
-        if (own && in.wasPressed(KEY_R) && !in.ctrl()) { textFolderId = f.id; beginTextEntry("RENAME THE FOLDER", TEXT_FOLDER, f.name); return; }
+        if (own && in.wasPressed(KEY_R) && !in.ctrl()) { textFolderId = f.id; beginTextEntry("RENAME FOLDER", TEXT_FOLDER, f.name); return; }
         if (own && del) { if (folderRemove(f.id)) audio.beep = BEEP_UI; return; }
-        if (del) refuse(scope.tab == 0 ? "ENTER OPENS THE WORLD'S VIALS - BACKSPACE EMPTIES ONE THERE" : "THIS FOLDER STAYS - ONLY YOUR OWN ARE REMOVED", 3);
-        else if (scope.tab == 1 && in.wasPressed(KEY_R) && !in.ctrl()) refuse("THIS FOLDER KEEPS ITS NAME - N MAKES ONE OF YOUR OWN", 3);
+        if (del) refuse(scope.tab == 0 ? "OPEN THE WORLD (ENTER) TO EMPTY ONE OF ITS VIALS" : "ONLY YOUR OWN FOLDERS CAN BE REMOVED", 3);
+        else if (scope.tab == 1 && in.wasPressed(KEY_R) && !in.ctrl()) refuse("THIS FOLDER CANNOT BE RENAMED - N MAKES YOUR OWN", 3);
         return;
     }
     if (in.wasPressed(KEY_ESCAPE)) { scope.open = false; audio.beep = BEEP_UI; return; }
@@ -120,8 +120,8 @@ void Game::microscopeListKeys(const Input& in) {
         return;
     }
     if (open->id == FOLDER_FLASKS) {
-        if (del) refuse("A FLASK IS EMPTIED AT THE INCUBATOR", 3);
-        else if ((in.wasPressed(KEY_M) || in.wasPressed(KEY_C)) && !in.ctrl()) refuse("A FLASK'S CULTURE JOINS THE COLLECTION AS IT GROWS - K THERE KEEPS A COPY", 3);
+        if (del) refuse("EMPTY FLASKS IN THE INCUBATOR", 3);
+        else if ((in.wasPressed(KEY_M) || in.wasPressed(KEY_C)) && !in.ctrl()) refuse("GROWING CULTURES JOIN THE COLLECTION - K KEEPS A COPY", 3);
         return;
     }
     if (del) { keptDiscard(row); audio.beep = BEEP_UI; return; }
@@ -142,11 +142,11 @@ bool Game::microscopeStage(int vial) {
     if (sys.valid && sys.star.sx == v.sx && sys.star.sy == v.sy && sys.star.sz == v.sz) scope.sys = sys;
     else {
         Star st;
-        if (!placeInSector(v.sx, v.sy, v.sz, st, true)) { refuse("THE VIAL'S WORLD IS NO LONGER THERE"); return false; }
+        if (!placeInSector(v.sx, v.sy, v.sz, st, true)) { refuse("VIAL'S WORLD NO LONGER EXISTS"); return false; }
         scope.sys = StarSystem(); scope.sys.generate(st);
     }
-    if (v.body < 0 || v.body >= (int)scope.sys.bodies.size()) { refuse("THE VIAL'S WORLD IS NO LONGER THERE"); return false; }
-    scope.body = v.body; scope.vial = vial; scope.flask = -1; scope.kept = -1;
+    if (v.body < 0 || v.body >= (int)scope.sys.bodies.size()) { refuse("VIAL'S WORLD NO LONGER EXISTS"); return false; }
+    scope.body = v.body; scope.vial = vial; scope.flask = -1; scope.kept = -1; scope.lineState[0] = scope.lineState[1] = -1;
     scope.life = lifeOf(scope.sys);
     scope.forms = morphsOf(scope.sys, v.body);
     const Biota& B = scope.life->bodies[v.body];
@@ -166,7 +166,7 @@ bool Game::microscopeStageFlask(int i) {
     if (i < 0 || i >= INCUBATOR_FLASKS || lab.flasks[i].n == 0) return false;
     Flask& F = lab.flasks[i];
     if (!F.made) flaskMake(i);
-    if (F.n == 0 || (int)F.forms.size() < F.n) { refuse("THE FLASK'S WORLD IS NO LONGER THERE"); return false; }
+    if (F.n == 0 || (int)F.forms.size() < F.n) { refuse("FLASK'S WORLD NO LONGER EXISTS"); return false; }
     const CultureNow now = flaskNow(i);
     Biota B;
     B.stage = LS_SIMPLE; B.chemistry = F.culture.kind[0].chemistry;
@@ -174,9 +174,15 @@ bool Game::microscopeStageFlask(int i) {
     Sample S;
     double t0 = 0;
     for (const CultureEvent& e : F.events) if (e.kind == CD_START) { t0 = e.t; break; }
+    std::vector<Morph> forms = F.forms;
     for (int k = 0; k < F.n; k++) {
         CultureKind kind = F.culture.kind[k];
         for (const CultureEvent& e : F.events) if (e.kind == CD_STRAIN && e.who == k) applyStrain(kind, e.what, e.value);
+        scope.lineState[k] = -1;   // Y-04: a switched line as its flask's state has it (its genes off there: its form, its moves, its answers)
+        if (!kind.switches.empty() && now.one[k].state >= 0 && k < (int)forms.size()) {
+            switchedLine(kind, forms[k], F.genes[k], (uint32_t)now.one[k].state);
+            scope.lineState[k] = now.one[k].state;
+        }
         Microbe m = kind.s; m.index = k; m.state = SS_LIVING;
         B.species.push_back(m); scope.species.push_back(m);
         scope.keys.push_back(flaskSpeciesKey(F.who[k]));
@@ -197,7 +203,7 @@ bool Game::microscopeStageFlask(int i) {
     Microhabitat h;
     h.niche = NI_LIQUID; h.meanC = F.medium.tempC; h.salt = F.medium.salt;
     h.place = mix64(hashCombine((uint64_t)(i + 1) * 0x9E3779B97F4A7C15ULL, (uint64_t)std::llround(t0 * 1000)));
-    scope.forms = F.forms;
+    scope.forms = forms;
     scope.sample = S;
     scope.mount = mountOf(B, scope.forms, S, h);
     cellRange(F.medium.cell, scope.stageLo, scope.stageHi);
@@ -228,13 +234,13 @@ void Game::microscopeEmpty(int vial) {
     if (vial < 0 || vial >= (int)coldStore.size()) return;
     coldStore.erase(coldStore.begin() + vial);
     if (scope.vial == vial) scope.vial = -1; else if (scope.vial > vial) scope.vial--;
-    status(fmt("THE VIAL IS EMPTIED - %d IN THE COLD STORE", (int)coldStore.size()), 4);
+    status(fmt("VIAL EMPTIED - %d LEFT IN THE COLD STORE", (int)coldStore.size()), 4);
     audio.beep = BEEP_UI;
 }
 
 // a way of seeing chosen: a drop has no thin section; to and from the electron the zoom keeps the nearest magnification its list has
 void Game::microscopeWay(int seeing) {
-    if (seeing == WS_SECTION && !scope.mount.section) { refuse("SECTION IS FOR A THIN SECTION OF ROCK - THIS IS A DROP", 3); return; }
+    if (seeing == WS_SECTION && !scope.mount.section) { refuse("THIN SECTION IS FOR ROCK - THIS IS A DROP", 3); return; }
     if (seeing == scope.seeing) return;
     const double mag = microscopeStepMag(scope.seeing, scope.step);
     const int n = seeing == WS_ELECTRON ? SCOPE_ELECTRON_STEPS : SCOPE_LIGHT_STEPS;
@@ -242,7 +248,7 @@ void Game::microscopeWay(int seeing) {
     for (int i = 0; i < n; i++) if (std::fabs(std::log(microscopeStepMag(seeing, i) / mag)) < std::fabs(std::log(microscopeStepMag(seeing, best) / mag))) best = i;
     scope.seeing = seeing; scope.step = best; scope.logMag = std::log(microscopeStepMag(seeing, best));
     status(fmt("%s X%s", seeing == WS_BRIGHT ? "BRIGHT FIELD" : (seeing == WS_PHASE ? "PHASE CONTRAST" : (seeing == WS_DARK ? "DARK FIELD" :
-                (seeing == WS_GLOW ? "FLUORESCENCE" : (seeing == WS_ELECTRON ? "THE SCANNING ELECTRON MICROSCOPE" : "THE THIN SECTION, POLARISED")))), thousands(microscopeMag()).c_str()), 2);
+                (seeing == WS_GLOW ? "FLUORESCENCE" : (seeing == WS_ELECTRON ? "SCANNING ELECTRON MICROSCOPE" : "THIN SECTION, POLARISED")))), thousands(microscopeMag()).c_str()), 2);
     audio.beep = BEEP_UI;
 }
 
@@ -320,28 +326,28 @@ void Game::updateMicroscope(const Input& in, double dt, double realDt) {
         status(said, 4); audio.beep = BEEP_UI;
     };
     if (in.wasPressed(KEY_L) && !in.ctrl()) {
-        if (st.spot) event(SD_LIGHT, st.spotX, st.spotY, st.spotR, false, "THE LIGHT TAKEN AWAY");
-        else event(SD_LIGHT, scope.cx, scope.cy, UW * um * 0.12, true, "A SPOT OF LIGHT - A LIGHT-FEEDER SWIMS INTO IT");
+        if (st.spot) event(SD_LIGHT, st.spotX, st.spotY, st.spotR, false, "LIGHT OFF");
+        else event(SD_LIGHT, scope.cx, scope.cy, UW * um * 0.12, true, "SPOT OF LIGHT ON - LIGHT-FEEDERS SWIM INTO IT");
     }
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
-        if (!st.magnet) event(SD_MAGNET, 0, 0, 0, true, "THE MAGNET: MAGNETOTACTIC CELLS SWIM ALONG IT");
-        else if (std::cos(st.field) > 0) event(SD_MAGNET, wrapAngle(st.field + PI), 0, 0, true, "THE MAGNET TURNED - ITS FIELD NOW TO THE LEFT");
-        else event(SD_MAGNET, st.field, 0, 0, false, "THE MAGNET TAKEN AWAY");
+        if (!st.magnet) event(SD_MAGNET, 0, 0, 0, true, "MAGNET ON - MAGNETOTACTIC CELLS FOLLOW ITS FIELD");
+        else if (std::cos(st.field) > 0) event(SD_MAGNET, wrapAngle(st.field + PI), 0, 0, true, "MAGNET TURNED - FIELD NOW POINTS LEFT");
+        else event(SD_MAGNET, st.field, 0, 0, false, "MAGNET OFF");
         scope.fieldShown = scope.t;
     }
     if (in.wasPressed(KEY_H) && !in.ctrl()) {
         if (!in.shift()) { scope.typing = true; scope.typed.clear(); audio.beep = BEEP_UI; }
-        else if (std::fabs(st.setC - scope.mount.stageC) < 0.05) refuse("THE STAGE IS AT THE VIAL'S WARMTH - H SETS ANOTHER", 3);
-        else event(SD_WARM, scope.mount.stageC, 0, 0, true, fmt("THE STAGE BACK TO THE VIAL'S %.0f C", scope.mount.stageC));
+        else if (std::fabs(st.setC - scope.mount.stageC) < 0.05) refuse("STAGE AT THE VIAL'S WARMTH - H SETS ANOTHER", 3);
+        else event(SD_WARM, scope.mount.stageC, 0, 0, true, fmt("STAGE BACK TO THE VIAL'S %.0f C", scope.mount.stageC));
     }
     if (in.wasPressed(KEY_F) && !in.ctrl()) {
-        if (st.food) event(SD_FOOD, st.foodX, st.foodY, st.foodR, false, "THE SLIDE RINSED - THE FOOD WASHED AWAY");
-        else event(SD_FOOD, scope.cx, scope.cy, UW * um * 0.08, true, "A DROP OF BROTH - AN EATER SWIMS TO ITS SCENT");
+        if (st.food) event(SD_FOOD, st.foodX, st.foodY, st.foodR, false, "SLIDE RINSED - FOOD WASHED AWAY");
+        else event(SD_FOOD, scope.cx, scope.cy, UW * um * 0.08, true, "DROP OF BROTH ADDED - EATERS SWIM TO ITS SCENT");
     }
     // tracking: Enter takes the cell under the crosshair (or lets it go); the stage and the focus follow it
     if (enterKey(in)) {
         if (scope.tracking) { scope.tracking = false; status("TRACKING OFF", 2); audio.beep = BEEP_UI; }
-        else if (scope.under >= 0 && scope.under < (int)scope.refs.size()) { scope.tracking = true; scope.track = scope.refs[scope.under]; status("TRACKING THE CELL", 2); audio.beep = BEEP_UI; }
+        else if (scope.under >= 0 && scope.under < (int)scope.refs.size()) { scope.tracking = true; scope.track = scope.refs[scope.under]; status("TRACKING CELL", 2); audio.beep = BEEP_UI; }
         else refuse("NO CELL UNDER THE CROSSHAIR TO TRACK", 3);
     }
     if (scope.tracking) {
@@ -358,7 +364,7 @@ void Game::updateMicroscope(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_TAB)) {
         if (scope.sheet) scope.sheet = false;
         else if (microscopeSpeciesUnder() >= 0) { scope.sheet = true; scope.sheetSpecies = microscopeSpeciesUnder(); }
-        else refuse("NO CELL UNDER THE CROSSHAIR - ITS SHEET SHOWS WITH TAB", 3);
+        else refuse("NO CELL UNDER THE CROSSHAIR FOR A SHEET", 3);
         audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
@@ -378,13 +384,13 @@ void Game::microscopeKeep() {
     const int sp = microscopeSpeciesUnder();
     if (sp < 0 || sp >= (int)scope.species.size() || sp >= (int)scope.forms.size()) { refuse("NO CELL UNDER THE CROSSHAIR TO KEEP", 3); return; }
     const Microbe& s = scope.species[sp];
-    if (s.state == SS_FOSSIL) { refuse("A FOSSIL IS NOT KEPT - ONLY WHAT LIVES OR SLEEPS", 3); return; }
-    if (s.state == SS_PROTO) { refuse("A PROTOCELL DOES NOT GROW - IT IS NOT KEPT", 3); return; }
+    if (s.state == SS_FOSSIL) { refuse("FOSSILS CANNOT BE KEPT - ONLY LIVING OR SLEEPING CELLS", 3); return; }
+    if (s.state == SS_PROTO) { refuse("PROTOCELLS DO NOT GROW - NOTHING TO KEEP", 3); return; }
     KeptCulture c;
     if (scope.flask >= 0 && scope.flask < INCUBATOR_FLASKS && sp < lab.flasks[scope.flask].n) {
         const Flask& F = lab.flasks[scope.flask];
         const CultureOne o = flaskNow(scope.flask).one[sp];
-        if (o.stage == SG_DEAD || (o.cells < 1 && o.spores < 1)) { refuse(F.label[sp] + " IS DEAD - NOTHING OF IT TO KEEP", 3); return; }
+        if (o.stage == SG_DEAD || (o.cells < 1 && o.spores < 1)) { refuse(F.label[sp] + " IS DEAD - NOTHING TO KEEP", 3); return; }
         c.who = F.who[sp]; c.medium = F.medium; c.asWorld = F.asWorld;
     } else if (scope.kept >= 0 && scope.kept < (int)lab.kept.size()) {
         const KeptCulture& K = lab.kept[scope.kept];
@@ -392,7 +398,7 @@ void Game::microscopeKeep() {
     } else if (scope.vial >= 0 && scope.vial < (int)coldStore.size()) {
         const Vial& V = coldStore[scope.vial];
         c.who.sx = V.sx; c.who.sy = V.sy; c.who.sz = V.sz; c.who.body = V.body; c.who.species = sp;
-        if (!vialMedium(V, c.asWorld)) { refuse("THE VIAL'S WORLD IS NO LONGER THERE"); return; }
+        if (!vialMedium(V, c.asWorld)) { refuse("VIAL'S WORLD NO LONGER EXISTS"); return; }
         c.medium = c.asWorld;
     } else return;
     c.who.strainIn = c.who.strain;
@@ -457,7 +463,7 @@ void Game::microscopeSee() {
             changed = true;
         }
     }
-    if (firsts > 0) status(firsts == 1 ? "A FORM NOT SEEN BEFORE: " + firstLine : fmt("%d FORMS NOT SEEN BEFORE - THE FIRST: %s", firsts, firstLine.c_str()), 5);
+    if (firsts > 0) status(firsts == 1 ? "NEW FORM: " + firstLine : fmt("%d NEW FORMS - FIRST: %s", firsts, firstLine.c_str()), 5);
     if (changed) guide.save(guidePath);
 }
 
@@ -465,7 +471,7 @@ void Game::microscopeSee() {
 // drop's liquid range; Esc keeps the warmth it has
 void Game::microscopeTypeKeys(const Input& in) {
     const SlideState st = slideStateAt(scope.mount, scope.events, scope.t);
-    if (in.wasPressed(KEY_ESCAPE)) { scope.typing = false; status(fmt("THE STAGE KEEPS %.0f C", st.setC), 2); audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { scope.typing = false; status(fmt("STAGE STAYS AT %.0f C", st.setC), 2); audio.beep = BEEP_UI; return; }
     warmthTyping(in, scope.typed, st.setC);
     if (!enterKey(in)) return;
     scope.typing = false;
@@ -473,13 +479,13 @@ void Game::microscopeTypeKeys(const Input& in) {
     const int v = atoi(scope.typed.c_str());
     if (v < scope.stageLo || v > scope.stageHi) {
         scope.typing = true;
-        refuse(fmt("THE DROP STAYS LIQUID FROM %.0f TO %.0f C", scope.stageLo, scope.stageHi), 3);
+        refuse(fmt("DROP STAYS LIQUID FROM %.0f TO %.0f C", scope.stageLo, scope.stageHi), 3);
         return;
     }
     SlideEvent e; e.kind = SD_WARM; e.t = scope.t; e.x = v;
     scope.events.push_back(e);
     scope.tried[SD_WARM] = scope.t; scope.answered[SD_WARM] = scope.judged[SD_WARM] = false;
-    status(fmt("THE STAGE TO %d C - EACH KIND MOVES IN ITS RANGE", v), 4);
+    status(fmt("STAGE AT %d C - KINDS MOVE ONLY IN THEIR RANGE", v), 4);
     audio.beep = BEEP_UI;
 }
 
@@ -514,11 +520,11 @@ void Game::microscopeAnswers() {
         const uint32_t fresh = a & ~told;
         const std::string who = answerWho(K.species);
         auto say = [&](const std::string& l, int d) { scope.said.push_back(l); scope.answered[d] = true; };
-        if (fresh & SA_LIGHT) say(who + " GATHERS IN THE LIGHT", SD_LIGHT);
-        if (fresh & SA_FLEES) say(who + " FLEES THE LIGHT", SD_LIGHT);
-        if (fresh & SA_LIT) say(who + " GATHERS ROUND THE LIT CELLS", SD_LIGHT);
-        if (fresh & SA_FOOD) say(who + " SWIMS TO THE FOOD", SD_FOOD);
-        if (fresh & SA_FIELD) say(who + " SWIMS ALONG THE FIELD", SD_MAGNET);
+        if (fresh & SA_LIGHT) say(who + " GATHERS IN LIGHT", SD_LIGHT);
+        if (fresh & SA_FLEES) say(who + " FLEES LIGHT", SD_LIGHT);
+        if (fresh & SA_LIT) say(who + " GATHERS ROUND LIT CELLS", SD_LIGHT);
+        if (fresh & SA_FOOD) say(who + " SWIMS TO FOOD", SD_FOOD);
+        if (fresh & SA_FIELD) say(who + " FOLLOWS THE MAGNET", SD_MAGNET);
         if (fresh & SA_MOVING) say(fmt("%s MOVES AT %d C", who.c_str(), stageC), SD_WARM);
         if (fresh & SA_COLD) say(fmt("%s STOPS IN THE COLD AT %d C", who.c_str(), stageC), SD_WARM);
         if (fresh & SA_HOT) say(fmt("%s STOPS IN THE HEAT AT %d C", who.c_str(), stageC), SD_WARM);
@@ -564,9 +570,9 @@ void Game::microscopeAnswers() {
             }
         }
         if (scope.answered[d]) continue;
-        if (d == SD_LIGHT) scope.said.push_back("NOTHING IN VIEW ANSWERS THE LIGHT");
-        else if (d == SD_FOOD) scope.said.push_back("NOTHING IN VIEW FOLLOWS THE FOOD");
-        else if (d == SD_MAGNET) { scope.said.push_back("NOTHING IN VIEW FOLLOWS THE FIELD"); scope.said.push_back("MAGNETOTACTIC CELLS LIVE IN SILT AND MUD"); }
+        if (d == SD_LIGHT) scope.said.push_back("NOTHING IN VIEW ANSWERS LIGHT");
+        else if (d == SD_FOOD) scope.said.push_back("NOTHING IN VIEW FOLLOWS FOOD");
+        else if (d == SD_MAGNET) { scope.said.push_back("NOTHING IN VIEW FOLLOWS THE MAGNET"); scope.said.push_back("MAGNETOTACTIC CELLS LIVE IN SILT AND MUD"); }
         else scope.said.push_back(fmt("NOTHING IN VIEW CHANGES AT %d C", stageC));
     }
     if (scope.answersDirty && realTime - scope.answersSavedAt >= 2) { guide.save(guidePath); scope.answersDirty = false; scope.answersSavedAt = realTime; }
@@ -596,7 +602,7 @@ std::string Game::formWords(int species, int form) const {
 // Z-07: a form in words, of any species' form (the catalogue's); its plan's words alone ("A ROD")
 const char* Game::planWords(int plan) { return FORM_WORDS[clampi(plan, 0, MP_COUNT - 1)]; }
 std::string Game::formWordsOf(const Morph& m, int form) {
-    if (form == CF_SPORE) return fmt("A SPORE, %s, ITS COAT %s", umWords(std::max(0.3, m.widthUm * m.sporeSize)).c_str(), COAT_NAMES[clampi(m.coat, 0, CW_COUNT - 1)]);
+    if (form == CF_SPORE) return fmt("A SPORE, %s, COAT %s", umWords(std::max(0.3, m.widthUm * m.sporeSize)).c_str(), COAT_NAMES[clampi(m.coat, 0, CW_COUNT - 1)]);
     if (form == CF_CYST) return fmt("A CYST, %s ACROSS", umWords(m.widthUm * 0.9).c_str());
     const double L = std::max(m.lengthUm, m.widthUm), W = std::min(m.lengthUm, m.widthUm);
     const std::string what = std::string(form == CF_FOSSIL ? "FOSSIL OF " : (form == CF_GHOST ? "GHOST OF " : "")) + FORM_WORDS[clampi(m.plan, 0, MP_COUNT - 1)];
@@ -649,14 +655,14 @@ std::vector<std::string> Game::sheetLinesOf(const std::string& key, const Microb
     if (seen.seen & SEEN_FLAGELLA) {
         std::string f = m.flagella > 0 ? fmt("FLAGELLA: %d %s, %s", m.flagella, PLACE_WORDS[clampi(m.flagPlace, 0, FV_COUNT - 1)], KIND_WORDS[clampi(m.flagKind, 0, FS_COUNT - 1)])
                                        : std::string("FLAGELLA: NONE");
-        if (m.cilia > 0) f = m.ciliaRows > 0 ? fmt("CILIA IN %d ROWS", m.ciliaRows) : std::string("CILIA OVER ITS EDGE");
+        if (m.cilia > 0) f = m.ciliaRows > 0 ? fmt("CILIA IN %d ROWS", m.ciliaRows) : std::string("CILIA ROUND THE EDGE");
         out.push_back(f);
     }
     if (seen.seen & SEEN_DNA) {
         std::string d = s.state == SS_PROTO ? "DNA: NONE (NO GENOME YET)" : (m.nucleus > 0 ? "DNA: IN A NUCLEUS" : "DNA: A NUCLEOID");
         if (m.plastids > 0) d += ", RED PLASTIDS";
         else if (m.way == LW_LIGHT) d += ", RED ALL THROUGH";
-        if (m.glows) d += ", ITS OWN LIGHT";
+        if (m.glows) d += ", GLOWS";
         out.push_back(d);
     }
     if (seen.seen & SEEN_WALL) {
@@ -677,11 +683,11 @@ std::vector<std::string> Game::sheetLinesOf(const std::string& key, const Microb
     if (seen.answers & (AW_LIGHT | AW_FLEES | AW_LIGHT_NONE))
         out.push_back(std::string("TO LIGHT: ") + (seen.answers & AW_LIGHT ? "GATHERS IN IT" : (seen.answers & AW_FLEES ? "FLEES IT" : "NO ANSWER SEEN")));
     if (seen.answers & (AW_FOOD | AW_LIT | AW_FOOD_NONE)) {
-        std::string f = seen.answers & AW_FOOD ? "FOLLOWS ITS SCENT" : "";
+        std::string f = seen.answers & AW_FOOD ? "FOLLOWS THE SCENT" : "";
         if (seen.answers & AW_LIT) f += std::string(f.empty() ? "" : ", ") + "GATHERS ROUND LIT CELLS";
         out.push_back("TO FOOD: " + (f.empty() ? std::string("NO ANSWER SEEN") : f));
     }
-    if (seen.answers & (AW_FIELD | AW_FIELD_NONE)) out.push_back(std::string("TO THE FIELD: ") + (seen.answers & AW_FIELD ? "SWIMS ALONG IT" : "NO ANSWER SEEN"));
+    if (seen.answers & (AW_FIELD | AW_FIELD_NONE)) out.push_back(std::string("TO THE MAGNET: ") + (seen.answers & AW_FIELD ? "FOLLOWS IT" : "NO ANSWER SEEN"));
     {
         std::string w, still;
         if (seen.movingHi >= seen.movingLo) w = seen.movingHi > seen.movingLo ? fmt("MOVES AT %.0f TO %.0f C", seen.movingLo, seen.movingHi) : fmt("MOVES AT %.0f C", seen.movingLo);
@@ -693,65 +699,65 @@ std::vector<std::string> Game::sheetLinesOf(const std::string& key, const Microb
         if (!w.empty()) out.push_back("WARMTH: " + w);
     }
     if (seen.jarLayer >= 0) {   // R-439: its band in a jar
-        static const char* const WHERE[JL_COUNT] = {"AT THE TOP", "AT THE AIR'S EDGE", "UNDER THE AIR", "BELOW THE AIR", "DEEP", "AT THE FOOT"};
+        static const char* const WHERE[JL_COUNT] = {"AT THE TOP", "WHERE THE AIR ENDS", "JUST BELOW THE AIR", "BELOW THE AIR", "DEEP", "AT THE BOTTOM"};
         out.push_back(std::string("IN A JAR: ") + WHERE[clampi(seen.jarLayer, 0, JL_COUNT - 1)] + ", " + jarWays(seen.jarLayer, s.substrate, true));
     }
-    if (seen.seen & SEEN_KIN) out.push_back("SEQUENCED: ITS KIN ON THE TREE");   // Z-06
-    if (!cell) { out.push_back(spore ? "ITS LIVING CELL NOT SEEN" : "ONLY ITS FOSSILS SEEN"); return out; }
+    if (seen.seen & SEEN_KIN) out.push_back("SEQUENCED: KIN SHOWN ON THE TREE");   // Z-06
+    if (!cell) { out.push_back(spore ? "LIVING CELLS NOT SEEN" : "ONLY FOSSILS SEEN"); return out; }
     std::string more;   // the ways that would show more of it
-    if (!(seen.seen & SEEN_MOTION) && s.state == SS_LIVING) more += " A LIVING SLIDE";
+    if (!(seen.seen & SEEN_MOTION) && s.state == SS_LIVING) more += " LIVING SLIDE";
     if (!(seen.seen & SEEN_FLAGELLA)) more += " DARK";
     if (!(seen.seen & SEEN_DNA)) more += " GLOW";
     if (!(seen.seen & SEEN_WALL)) more += " ELECTRON";
-    if (seen.doublingS <= 0 && s.state != SS_FOSSIL && s.state != SS_PROTO) more += " A CULTURE";   // Z-05
-    if (!(seen.seen & SEEN_KIN) && s.state != SS_FOSSIL && s.state != SS_PROTO) more += " THE SEQUENCER";   // Z-06
+    if (seen.doublingS <= 0 && s.state != SS_FOSSIL && s.state != SS_PROTO) more += " CULTURE";   // Z-05
+    if (!(seen.seen & SEEN_KIN) && s.state != SS_FOSSIL && s.state != SS_PROTO) more += " SEQUENCER";   // Z-06
     if (!more.empty()) out.push_back("MORE IN:" + more);
     return out;
 }
 
 // U-04: the microscope's commands (the controller's first page) and its buttons
 void Game::microscopePad(PadMenu& m) const {
-    m.title = "THE MICROSCOPE";
+    m.title = "MICROSCOPE";
     if (scope.page == 0) {   // R-432: the lists' (the folders, or a folder's rows; R-433's own folders and kept cultures)
         if (scope.moving) { m.item(scope.copying ? "COPY IT THERE" : "MOVE IT THERE", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
         const std::vector<LabFolder> F = scope.tab == 0 ? vialFolders() : cultureFolders();
         const LabFolder* f = scope.folder < (int)F.size() ? &F[scope.folder] : nullptr;
         if (!scope.open) {
-            if (f) m.item(scope.tab == 0 ? "OPEN THE WORLD'S VIALS" : "OPEN THE FOLDER", KEY_ENTER);
-            if (scope.tab == 1) m.item("A NEW FOLDER", KEY_N);
-            if (f && scope.tab == 1 && f->id > 0) { m.item("RENAME THE FOLDER", KEY_R); m.item("REMOVE THE FOLDER", KEY_BACKSPACE); }
-            m.item(scope.tab == 0 ? "THE CULTURES" : "THE VIALS", KEY_TAB);
-            m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
+            if (f) m.item(scope.tab == 0 ? "OPEN WORLD'S VIALS" : "OPEN FOLDER", KEY_ENTER);
+            if (scope.tab == 1) m.item("NEW FOLDER", KEY_N);
+            if (f && scope.tab == 1 && f->id > 0) { m.item("RENAME FOLDER", KEY_R); m.item("REMOVE FOLDER", KEY_BACKSPACE); }
+            m.item(scope.tab == 0 ? "CULTURES" : "VIALS", KEY_TAB);
+            m.item("BACK", KEY_ESCAPE);
             m.button(PR_A, KEY_ENTER, "OPEN"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, scope.tab == 0 ? "CULTURES" : "VIALS");
             return;
         }
-        m.item("PUT IT ON THE STAGE", KEY_ENTER);
-        if (f && f->id == FOLDER_WORLD) m.item("EMPTY THE VIAL", KEY_BACKSPACE);
-        if (f && f->id >= 0) { m.item("MOVE IT TO A FOLDER", KEY_M); m.item("COPY IT TO A FOLDER", KEY_C); m.item("DISCARD IT", KEY_BACKSPACE); }
-        if (scope.tab == 1) m.item("A NEW FOLDER", KEY_N);
-        m.item("THE FOLDERS", KEY_ESCAPE);
+        m.item("PUT ON STAGE", KEY_ENTER);
+        if (f && f->id == FOLDER_WORLD) m.item("EMPTY VIAL", KEY_BACKSPACE);
+        if (f && f->id >= 0) { m.item("MOVE TO FOLDER", KEY_M); m.item("COPY TO FOLDER", KEY_C); m.item("DISCARD", KEY_BACKSPACE); }
+        if (scope.tab == 1) m.item("NEW FOLDER", KEY_N);
+        m.item("FOLDERS", KEY_ESCAPE);
         m.button(PR_A, KEY_ENTER, "STAGE"); m.button(PR_B, KEY_ESCAPE, "FOLDERS"); m.button(PR_SELECT, KEY_TAB, scope.tab == 0 ? "CULTURES" : "VIALS");
         return;
     }
-    if (keep.open) { m.item("KEEP A COPY THERE", KEY_ENTER); m.item("A NEW FOLDER", KEY_N); m.item("BACK", KEY_ESCAPE); return; }   // R-440
+    if (keep.open) { m.item("KEEP A COPY THERE", KEY_ENTER); m.item("NEW FOLDER", KEY_N); m.item("BACK", KEY_ESCAPE); return; }   // R-440
     if (scope.typing) {   // R-438: the stage's warmth typed
-        m.item("SET IT", KEY_ENTER); m.item("A DEGREE WARMER", KEY_UP); m.item("A DEGREE COOLER", KEY_DOWN); m.item("TEN WARMER", KEY_PAGE_UP);
-        m.item("TEN COOLER", KEY_PAGE_DOWN); m.item("KEEP THE WARMTH", KEY_ESCAPE);
+        m.item("SET", KEY_ENTER); m.item("1 DEGREE WARMER", KEY_UP); m.item("1 DEGREE COOLER", KEY_DOWN); m.item("10 WARMER", KEY_PAGE_UP);
+        m.item("10 COOLER", KEY_PAGE_DOWN); m.item("CANCEL", KEY_ESCAPE);
         m.button(PR_A, KEY_ENTER, "SET"); m.button(PR_B, KEY_ESCAPE, "KEEP");
         return;
     }
-    m.item(scope.tracking ? "STOP TRACKING" : "TRACK THE CELL", KEY_ENTER);
-    m.item("THE NEXT WAY OF SEEING", KEY_V);
+    m.item(scope.tracking ? "STOP TRACKING" : "TRACK CELL", KEY_ENTER);
+    m.item("NEXT WAY OF SEEING", KEY_V);
     for (int k = 0; k < WS_COUNT; k++) if (k != WS_SECTION || scope.mount.section) m.item(fmt("%d %s", k + 1, SEEING_NAMES[k]), KEY_1 + k);
     const SlideState st = slideStateAt(scope.mount, scope.events, scope.t);
-    m.item(st.spot ? "TAKE THE LIGHT AWAY" : "A SPOT OF LIGHT", KEY_L);
-    m.item(!st.magnet ? "THE MAGNET BESIDE THE STAGE" : (std::cos(st.field) > 0 ? "TURN THE MAGNET HALF ROUND" : "TAKE THE MAGNET AWAY"), KEY_M);
-    m.item(st.food ? "RINSE THE SLIDE" : "A DROP OF FOOD", KEY_F);
-    if (std::fabs(st.setC - scope.mount.stageC) >= 0.05) m.item("THE STAGE AT THE VIAL'S WARMTH", KEY_H, MOD_SHIFT);
-    m.item("ITS SHEET", KEY_TAB); m.item("NAME THE SPECIES", KEY_N); m.item("A MICROGRAPH", KEY_P);
-    m.item("SET THE STAGE'S WARMTH", KEY_H);   // (last: its entry's page follows)
-    m.item("KEEP IT IN A FOLDER", KEY_K);      // R-440 (after the warmth's: its folders' page follows)
-    m.item("THE LISTS", KEY_ESCAPE);
+    m.item(st.spot ? "LIGHT OFF" : "SPOT OF LIGHT", KEY_L);
+    m.item(!st.magnet ? "MAGNET ON" : (std::cos(st.field) > 0 ? "TURN MAGNET HALF ROUND" : "MAGNET OFF"), KEY_M);
+    m.item(st.food ? "RINSE SLIDE" : "DROP OF FOOD", KEY_F);
+    if (std::fabs(st.setC - scope.mount.stageC) >= 0.05) m.item("STAGE TO VIAL'S WARMTH", KEY_H, MOD_SHIFT);
+    m.item("SHEET", KEY_TAB); m.item("NAME SPECIES", KEY_N); m.item("MICROGRAPH", KEY_P);
+    m.item("SET STAGE WARMTH", KEY_H);   // (last: its entry's page follows)
+    m.item("KEEP IN FOLDER", KEY_K);      // R-440 (after the warmth's: its folders' page follows)
+    m.item("LISTS", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "TRACK"); m.button(PR_B, KEY_ESCAPE, "LISTS"); m.button(PR_X, KEY_V, "WAY"); m.button(PR_SELECT, KEY_TAB, "SHEET");
     m.button(PR_LB, KEY_MINUS, "ZOOM OUT"); m.button(PR_RB, KEY_EQUAL, "ZOOM IN");
     m.button(PR_LT, KEY_LEFT_BRACKET, "FOCUS DOWN"); m.button(PR_RT, KEY_RIGHT_BRACKET, "FOCUS UP");

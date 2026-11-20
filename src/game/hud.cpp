@@ -74,10 +74,10 @@ void Game::renderSpaceHUD() {
     const char* modeName = "STANDBY";
     if (ship.mode == ShipState::VIMANA) modeName = "VIMANA FLIGHT";
     else if (ship.mode == ShipState::APPROACH) modeName = "FINE APPROACH";
-    else if (ship.mode == ShipState::PARKED) modeName = ship.parkedBelt >= 0 ? "IN THE BELT" : (ship.orbiting ? "ORBIT" : "CHASE");
+    else if (ship.mode == ShipState::PARKED) modeName = ship.parkedBelt >= 0 ? "IN BELT" : (ship.orbiting ? "ORBIT" : "CHASE");
     drawTextShadow(canvas, 8, UH - 24, modeName, HUD_AMBER, HUD_SHADOW);
     if (probe.active && probeHere()) {   // the probe falling (or its last frame waiting) while the explorer is in the cabin
-        std::string pl = probe.endClock >= 0 ? "PROBE: SIGNAL LOST - C SHOWS ITS LAST FRAME"
+        std::string pl = probe.endClock >= 0 ? "PROBE: SIGNAL LOST - C SHOWS LAST FRAME"
                                              : fmt("PROBE: %s  %.2f ATM - C WATCHES", probeStageLabel(probe.clock).c_str(), probeBarAt(probe.flight, probe.clock) * 0.98692);
         drawTextShadow(canvas, 8, UH - 32, pl.c_str(), probe.endClock >= 0 ? HUD_RED : HUD_CYAN, HUD_SHADOW);
     }
@@ -117,7 +117,7 @@ void Game::renderSpaceHUD() {
             double d = length(rk.pos - ship.pos);
             std::string lt = fmt("LOCAL: %s %s", trunc(upper(beltNameOf(ship.targetBelt)), 18).c_str(), distanceString(std::max(0.0, d - rk.radiusKm)).c_str());
             drawTextShadow(canvas, UW - 8 - textWidth(lt.c_str()), UH - 24, lt.c_str(), HUD_GREEN, HUD_SHADOW);
-            std::string rs = fmt("ROCK %.1f KM ACROSS%s", 2 * rk.radiusKm, ship.parkedBelt >= 0 ? " - NO GROUND FOR THE CAPSULE" : "");
+            std::string rs = fmt("ROCK %.1f KM ACROSS%s", 2 * rk.radiusKm, ship.parkedBelt >= 0 ? " - NOT LANDABLE" : "");
             drawTextShadow(canvas, UW - 8 - textWidth(rs.c_str()), UH - 32, rs.c_str(), HUD_CYAN, HUD_SHADOW);
             Mat3 cam = viewBasis();
             Vec3 v = cam * (rk.pos - ship.pos);
@@ -251,7 +251,7 @@ void Game::renderSpaceHUD() {
                 const double fromCore = std::sqrt((end.x - GALAXY_CENTRE_SX) * (end.x - GALAXY_CENTRE_SX) + (end.z - GALAXY_CENTRE_SZ) * (end.z - GALAXY_CENTRE_SZ));
                 blendRectRGB(canvas, cx - 128, UH - 72, cx + 128, UH - 41, rgb(0, 0, 0), 150);
                 drawTextCentered(canvas, cx, UH - 69, fmt("JUMP %s LY %s", jumpDigits.c_str(), galacticHeading(ship.pos / SECTOR_KM, dir).c_str()).c_str(), HUD_WHITE);
-                drawTextCentered(canvas, cx, UH - 60, fmt("END: %s - %.0f LY FROM THE CORE", REGION_NAMES[galaxyRegion(ex, ey, ez)], fromCore).c_str(), HUD_CYAN);
+                drawTextCentered(canvas, cx, UH - 60, fmt("END: %s - %.0f LY FROM CORE", REGION_NAMES[galaxyRegion(ex, ey, ez)], fromCore).c_str(), HUD_CYAN);
                 drawTextCentered(canvas, cx, UH - 51, "ENTER JUMPS  BACKSPACE  R CANCELS", HUD_DIM);
             }
         }
@@ -439,7 +439,7 @@ void Game::drawReadings() {
         pack({fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading))), fmt("TRIP %.2f KM", d.odometer / 1000.0)}, HUD_GREEN);
         pack({fmt("ALT %.0f M", d.altAboveGround), fmt("VS %+.1f", d.vy)}, d.ceiling ? HUD_AMBER : HUD_GREEN);
         const std::string st =
-                d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT ITS CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
+                d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
         pack({st, d.lights ? "LIGHTS ON" : ""}, d.landed || d.ceiling ? HUD_AMBER : HUD_GREEN);
     } else if (surf.inBuggy) {   // the buggy's
         const Buggy& b = surf.buggy;

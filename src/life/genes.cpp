@@ -8,9 +8,10 @@
 #include <cstdio>
 #include <cstring>
 
-const char* const GENE_KIND_NAMES[GN_COUNT] = {"VITAL", "QUIET", "ITS WARMTH", "ITS SALT", "ITS SIZE", "ITS PIGMENT", "ITS FOOD", "ITS MOTION",
-                                               "A SENSE", "ITS REST", "ITS GLOW", "ITS SHAPE"};
-const char* const GENE_SENSE_NAMES[SE_COUNT] = {"NOTHING", "THE LIGHT", "AWAY FROM THE LIGHT", "THE FOOD", "THE FIELD", "THE WARMTH"};
+const char* const GENE_KIND_NAMES[GN_COUNT] = {"VITAL", "QUIET", "WARMTH", "SALT", "SIZE", "PIGMENT", "FOOD", "MOTION", "SENSE", "REST", "GLOW",
+                                               "SHAPE"};
+const char* const GENE_SENSE_NAMES[SE_COUNT] = {"NOTHING", "LIGHT", "AWAY FROM LIGHT", "FOOD", "THE MAGNET", "WARMTH"};
+const double GENE_PRICE[GFROM_COUNT] = {0, 0.03, 0.06, 0.10};
 
 namespace {
 // the genes' salts, each decision its own (nothing of generation 17 moves: a species is read, never drawn again)
@@ -119,6 +120,52 @@ double kindSpeed(int motion, const Morph& m) {
 }
 uint32_t senseBit(int s) { return s == SE_LIGHT ? TX_LIGHT : (s == SE_FOOD ? TX_FOOD : (s == SE_FIELD ? TX_FIELD : (s == SE_WARMTH ? TX_WARMTH : 0u))); }
 std::string words(const char* f, double a = 0, double b = 0, double c = 0) { char buf[96]; std::snprintf(buf, sizeof buf, f, a, b, c); return buf; }
+
+// Y-03: a rest put in a line that had none: its donor's way where its family's (spores or cysts, waking), the gatherers' only where it gathers,
+// else its family's own (a large cell's cysts, a small one's spores: the dormant bit reads as either)
+uint32_t restBitsFor(const CultureKind& k, uint32_t donor) {
+    uint32_t b = donor & (LC_DORMANT | LC_SPORULATING | LC_WAKING);
+    if (k.s.plan == MP_GATHERING) b |= donor & (LC_GATHERING | LC_FRUITING);
+    if (!(b & (LC_DORMANT | LC_SPORULATING | LC_GATHERING))) b |= LC_DORMANT | LC_WAKING;
+    return b;
+}
+// Y-03: a moved gene's value its donor's where it is an amount (its warmth's range, its salt's band, its cells' width in its family's, its pace's
+// share of its kind's, its glow and its crowd, its shape's length, a rest's way where it had none); a table's choice is its letters' (after it)
+void donorValue(CultureKind& k, Morph& m, MicrobeGenes& g, const GeneEdit& e, double& paceShare, double& aspect) {
+    const CultureKind& D = e.donorKind;
+    switch (e.donorGene.kind) {
+        case GN_WARMTH: k.s.tMin = D.s.tMin; k.s.tOpt = D.s.tOpt; k.s.tMax = D.s.tMax; break;
+        case GN_SALT: k.s.saltLo = D.s.saltLo; k.s.saltHi = D.s.saltHi; break;
+        case GN_SIZE:
+            if (m.widthUm > 0 && e.donorForm.widthUm > 0) {
+                double lo, hi;
+                familyWidth(k.s.plan, lo, hi);
+                const double f = clampd(e.donorForm.widthUm / m.widthUm, std::min(1.0, lo / m.widthUm), std::max(1.0, hi / m.widthUm));
+                k.bodyUm *= f; m.lengthUm *= f; m.widthUm *= f;
+            }
+            break;
+        case GN_MOTION: {
+            const double b = kindSpeed(D.s.motion, e.donorForm);
+            paceShare = b > 0 && e.donorForm.speed > 0 ? e.donorForm.speed / b : 1;
+            break;
+        }
+        case GN_GLOW: if (D.s.glows) { k.s.glows = m.glows = true; k.quorum = D.quorum; } break;
+        case GN_SHAPE: if (e.donorForm.plan != MP_SPHERE && shapePlan(e.donorForm.plan)) aspect = e.donorForm.aspect; break;
+        case GN_REST: if (!g.restCycle) { g.restCycle = restBitsFor(k, D.s.cycle); g.sporeYears = D.s.sporeYears > 0 ? D.s.sporeYears : 1e3; } break;
+        default: break;   // a pigment, a food, a sense: its letters' choice; a vital or a quiet gene nothing more
+    }
+}
+// Y-03: a gene where none worked, by its letters alone (a copy, a donor not read): a pace at its kind's by its power's weight from their middle,
+// a shape's length by its weight from its middle, a rest its family's way
+void freshValue(const CultureKind& k, MicrobeGenes& g, const GeneCode& c, int kind, const std::string& part, double& paceShare, double& aspect) {
+    const int top = c.letters - 1;
+    switch (kind) {
+        case GN_MOTION: paceShare = std::pow(2.0, (geneWeight(c, part, 2, 4) - 2 * top) / 4.0); break;
+        case GN_SHAPE: aspect = 3 * std::pow(2.0, (geneWeight(c, part, 2, 2) - top) / 2.0); break;
+        case GN_REST: if (!g.restCycle) { g.restCycle = restBitsFor(k, 0); g.sporeYears = 1e3; } break;
+        default: break;
+    }
+}
 }   // namespace
 
 int genePartLetters(int kind) {
@@ -131,6 +178,8 @@ int genePartLetters(int kind) {
         default: return 8;   // vital, quiet
     }
 }
+
+double kindPace(int motion, const Morph& m) { return kindSpeed(motion, m); }
 
 int planMotions(int plan, int* out) {
     int n = 0;
@@ -242,6 +291,7 @@ MicrobeGenes microbeGenesOf(const Microbe& s, const Morph& m, const Genesis& g) 
         if (!has) continue;
         MicrobeGene gene;
         gene.place = p; gene.kind = kind; gene.slot = slot;
+        gene.sw = geneOwnSwitch(kind);   // Y-04: its kind's own switch
         gene.length = (int)std::lround((600 + 3400 * unitFromHash(mix64(hashCombine(g.id ^ SALT_GENE_LENGTH, (uint64_t)p)))) *
                                        (0.9 + 0.2 * unitFromHash(mix64(hashCombine(s.seed ^ SALT_GENE_LENGTH, (uint64_t)p)))));
         const uint64_t h = hashCombine(s.seed ^ SALT_GENE_WILD, (uint64_t)p);
@@ -294,7 +344,14 @@ MicrobeGenes microbeGenesOf(const Microbe& s, const Morph& m, const Genesis& g) 
 
 std::string geneEditsText(const std::vector<GeneEdit>& e) {
     std::string s;
-    for (const GeneEdit& x : e) s += (s.empty() ? "" : ";") + std::to_string(x.place + 1) + "=" + (x.cut ? std::string("-") : x.part);
+    for (const GeneEdit& x : e) {
+        s += (s.empty() ? "" : ";") + std::to_string(x.place + 1);
+        if (x.cut) s += "=-";
+        else if (x.how == GX_MOVED) s += "+" + x.part + "@" + x.donor;                       // Y-03: moved in, its donor's key
+        else if (x.how == GX_COPY) s += "*" + x.part + "@" + std::to_string(x.from + 1);     // a copy of its gene `from`
+        else if (!x.part.empty()) s += "=" + x.part;
+        if (!x.cut && x.sw >= 0 && x.sw < GW_COUNT) s += std::string("~") + GENE_SWITCH_KEYS[x.sw];   // Y-04: its switch
+    }
     return s;
 }
 std::vector<GeneEdit> geneEditsOf(const std::string& text) {
@@ -303,37 +360,104 @@ std::vector<GeneEdit> geneEditsOf(const std::string& text) {
     while (at < text.size()) {
         size_t end = text.find(';', at);
         if (end == std::string::npos) end = text.size();
-        const std::string one = text.substr(at, end - at);
-        const size_t eq = one.find('=');
+        std::string one = text.substr(at, end - at);
+        int sw = -1;   // Y-04: a switch after the rest ("~DARK"); an unknown key read as none
+        const size_t tilde = one.rfind('~');
+        if (tilde != std::string::npos) {
+            const std::string key = one.substr(tilde + 1);
+            for (int i = 0; i < GW_COUNT; i++) if (key == GENE_SWITCH_KEYS[i]) sw = i;
+            one = one.substr(0, tilde);
+        }
+        const size_t eq = one.find_first_of("=+*");
         if (eq != std::string::npos) {
             GeneEdit e;
             e.place = std::atoi(one.c_str()) - 1;
-            const std::string v = one.substr(eq + 1);
-            e.cut = v == "-";
+            const char mark = one[eq];
+            std::string v = one.substr(eq + 1), tail;
+            if (mark != '=') { const size_t a = v.find('@'); if (a != std::string::npos) { tail = v.substr(a + 1); v = v.substr(0, a); } }
+            e.how = mark == '+' ? GX_MOVED : (mark == '*' ? GX_COPY : GX_HAND);
+            e.cut = mark == '=' && v == "-";
             if (!e.cut) for (char ch : v) if (std::strchr(ABC, ch) && ch) e.part += ch;
-            if (e.place >= 0 && e.place < GENE_PLACES && (e.cut || !e.part.empty())) out.push_back(e);
+            if (e.how == GX_MOVED) e.donor = tail;
+            if (e.how == GX_COPY) e.from = std::atoi(tail.c_str()) - 1;
+            if (!e.cut) e.sw = sw;
+            const bool ok = e.how == GX_MOVED ? !e.donor.empty() : (e.how == GX_COPY ? e.from >= 0 && e.from < GENE_PLACES && e.from != e.place : true);
+            if (e.place >= 0 && e.place < GENE_PLACES && (e.cut || !e.part.empty()) && ok) out.push_back(e);
+        } else if (sw >= 0) {   // its switch alone
+            GeneEdit e;
+            e.place = std::atoi(one.c_str()) - 1; e.sw = sw;
+            if (e.place >= 0 && e.place < GENE_PLACES) out.push_back(e);
         }
         at = end + 1;
     }
     return out;
 }
 
-void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<GeneEdit>& edits) {
-    if (!g.valid || edits.empty()) return;
+namespace {
+// Y-04: the work a gene's kind loses off, as its culture reads it
+int workOf(int kind) {
+    switch (kind) {
+        case GN_VITAL: return CX_LIFE;
+        case GN_WARMTH: return CX_WARMTH;
+        case GN_SALT: return CX_SALT;
+        case GN_PIGMENT: return CX_PIGMENT;
+        case GN_FOOD: return CX_FOOD;
+        case GN_REST: return CX_REST;
+        case GN_GLOW: return CX_GLOW;
+        default: return CX_NONE;   // quiet; a motion, a sense, a size, a shape: its drop's alone
+    }
+}
+
+// a line's values from its edits (`applyEdits` without its switches' list: a line in a state takes its genes off with it, `switchedLine`)
+void applyCore(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<GeneEdit>& edits) {
     const Genesis& gen = g.genesis;
     const GeneCode c = geneCodeOf(gen);
     uint32_t senseWas = 0;
     for (const MicrobeGene& G : g.genes) if (G.kind == GN_SENSE && !G.cut) senseWas |= senseBit(geneTable(c, c.sense, G.part, 0, 2));
     bool motion = false, sense = false, reshaped = false;
     std::string motionWas;
-    for (const GeneEdit& e : edits) {
+    double paceShare = -1, aspect = -1;   // Y-03: a motion's pace put in (a share of its kind's), a shape's length put in
+    std::vector<const GeneEdit*> order;   // Y-03: the copies after the rest, so each copies its gene as edited
+    for (const GeneEdit& e : edits) if (e.how != GX_COPY) order.push_back(&e);
+    for (const GeneEdit& e : edits) if (e.how == GX_COPY) order.push_back(&e);
+    for (const GeneEdit* ep : order) {
+        const GeneEdit& e = *ep;
+        if (e.place < 0 || e.place >= GENE_PLACES) continue;
         MicrobeGene* G = g.at(e.place);
-        if (!G || G->cut) continue;   // a gap, or cut out in its parent: nothing there to change
-        if (!e.cut && ((int)e.part.size() != genePartLetters(G->kind) || e.part == G->part)) continue;
-        const std::string was = G->part;
+        // Y-03: a gene moved in or copied, its letters its kind's; where none works (a gap, a gene cut out) it is put there
+        const bool put = !e.cut && (e.how == GX_MOVED || e.how == GX_COPY) && (int)e.part.size() == genePartLetters(c.kind[e.place]);
+        const MicrobeGene* src = e.how == GX_COPY ? g.at(e.from) : (e.read ? &e.donorGene : nullptr);
+        if (put && e.how == GX_COPY && (!src || src->cut || src->kind != c.kind[e.place])) continue;   // nothing of its kind to copy there
+        bool fresh = false;
+        if (put && (!G || G->cut)) {
+            if (!G) {
+                MicrobeGene n; n.place = e.place; n.kind = c.kind[e.place]; n.slot = c.slot[e.place];
+                g.genes.push_back(n);
+                std::sort(g.genes.begin(), g.genes.end(), [](const MicrobeGene& x, const MicrobeGene& y) { return x.place < y.place; });
+                G = g.at(e.place);
+                src = e.how == GX_COPY ? g.at(e.from) : src;   // (the vector moved)
+            }
+            G->cut = false;
+            if (src) G->length = src->length;
+            if (G->length <= 0) G->length = (int)std::lround(600 + 3400 * unitFromHash(mix64(hashCombine(gen.id ^ SALT_GENE_LENGTH, (uint64_t)e.place))));
+            fresh = true;
+        }
+        if (!G || G->cut) continue;   // a gap, or cut out in its parent: nothing there to change by hand
+        if (e.sw >= 0 && e.sw < GW_COUNT && !e.cut && !put) G->sw = e.sw;   // Y-04: its switch set
+        if (!put && !e.cut && ((int)e.part.size() != genePartLetters(G->kind) || e.part == G->part)) continue;
+        const std::string own = fresh ? std::string() : G->part;
+        std::string was = own;
+        if (put) {
+            if (e.how == GX_MOVED) {   // whose it was and how far it came, kept down its lines; Y-04: its switch its donor's
+                G->from = e.far; G->origin = e.origin; G->sw = e.read ? e.donorGene.sw : geneOwnSwitch(G->kind);
+            } else { G->from = src->from; G->origin = src->origin; G->sw = src->sw; }
+            if (e.sw >= 0 && e.sw < GW_COUNT) G->sw = e.sw;
+            if (e.how == GX_MOVED && e.read) { donorValue(k, m, g, e, paceShare, aspect); was = e.donorGene.part; }
+            else if (fresh) { freshValue(k, g, c, G->kind, e.part, paceShare, aspect); was = e.part; }
+        }
         const bool cut = e.cut;
         switch (G->kind) {
-            case GN_VITAL: k.dead = true; break;
+            case GN_VITAL: if (cut || e.part != own) k.dead = true; break;   // (its own letters moved back in: nothing changed)
             case GN_WARMTH:
                 if (cut) { const double best = k.s.tOpt; k.s.tMin = std::max(k.s.tMin, best - 4); k.s.tMax = std::min(k.s.tMax, best + 2); }
                 else {
@@ -387,6 +511,7 @@ void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gen
                 break;
             }
             case GN_SHAPE: {
+                if (!shapePlan(k.s.plan)) break;   // Y-03: a shape shapes only the four small cells' plans (moved into another form: nothing)
                 const int plan = cut ? MP_SPHERE : SHAPE_PLANS[geneTable(c, c.shape, e.part, 0, 2) & 3];
                 if (plan != k.s.plan) {   // its outline drawn again for the new plan (its seed's), its width kept
                     Microbe t = k.s; t.plan = plan;
@@ -397,6 +522,7 @@ void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gen
                     k.s.plan = plan; reshaped = true;
                 }
                 if (!cut && plan != MP_SPHERE) {
+                    if (aspect > 0) m.aspect = aspect;   // Y-03: its donor's length, or its letters' alone
                     const double f = std::pow(2.0, (geneWeight(c, e.part, 2, 2) - geneWeight(c, was, 2, 2)) / 2.0);
                     m.aspect = clampd(m.aspect * f, 1.2, 30); m.lengthUm = m.widthUm * m.aspect;
                 }
@@ -414,7 +540,8 @@ void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gen
         const int kind = run == 0 || nk == 0 ? MO_NONE : kinds[(run - 1) % nk], had = k.s.motion;
         if (kind == MO_NONE) m.speed = 0;
         else {
-            if (kind != had || m.speed <= 0) {
+            if (motion && paceShare > 0) m.speed = kindSpeed(kind, m) * paceShare;   // Y-03: put in: its donor's share of its kind's pace
+            else if (kind != had || m.speed <= 0) {
                 const double b0 = kindSpeed(had, m), b1 = kindSpeed(kind, m);
                 m.speed = b1 * (b0 > 0 && m.speed > 0 ? m.speed / b0 : 1);
             }
@@ -440,6 +567,70 @@ void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gen
         k.s.flees = dark && !(now & (TX_LIGHT | TX_FIELD)) ? 1 : 0;
         if ((now & TX_FIELD) && m.magnetosomes == 0) m.magnetosomes = 8;
         if (!(now & TX_FIELD)) m.magnetosomes = 0;
+    }
+}
+}   // namespace
+
+int geneOwnSwitch(int kind) { return kind == GN_GLOW ? GW_CROWDED : (kind == GN_REST ? GW_STARVING : GW_ALWAYS); }
+
+void applyEdits(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<GeneEdit>& edits) {
+    if (!g.valid || edits.empty()) return;
+    applyCore(k, m, g, edits);
+    // Y-04: its switches as its culture reads them, made again from its genes: each switched from its own to a condition or to NEVER (ALWAYS
+    // works as a rest's own), its glow lit by its switch where that is not its crowd
+    k.switches.clear(); k.glowAny = false;
+    for (const MicrobeGene& G : g.genes) {
+        if (G.cut) continue;
+        if (G.kind == GN_GLOW && G.sw != GW_CROWDED && k.s.glows) k.glowAny = true;
+        if (G.sw == GW_ALWAYS || G.sw == geneOwnSwitch(G.kind)) continue;
+        CultureSwitch w; w.place = G.place; w.when = G.sw; w.work = workOf(G.kind);
+        if (G.kind == GN_REST) w.bits = g.restCycle;
+        k.switches.push_back(w);
+    }
+}
+
+void switchedLine(CultureKind& k, Morph& m, const MicrobeGenes& g, uint32_t state) {
+    std::vector<GeneEdit> off;
+    double price = 0;
+    for (const CultureSwitch& w : k.switches)
+        if (!switchOn(w.when, state)) { GeneEdit e; e.place = w.place; e.cut = true; off.push_back(e); price += w.price; }
+    k.switches.clear();
+    if (off.empty() || !g.valid) return;
+    MicrobeGenes copy = g;
+    applyCore(k, m, copy, off);
+    k.burden = std::max(0.0, k.burden - price);
+}
+
+double genePrice(const CultureKind& wild, const Morph& wildForm, const CultureKind& k, const Morph& m, const MicrobeGene& G) {
+    if (G.cut) return 0;
+    double b = GENE_PRICE[clampi(G.from, 0, GFROM_COUNT - 1)];
+    if (G.kind == GN_MOTION && k.s.motion != MO_NONE && m.speed > 0) {
+        if (wild.s.motion == MO_NONE || wildForm.speed <= 0) b += 0.05;
+        else if (m.speed > wildForm.speed * (1 + 1e-9)) b += 0.04 * std::log2(m.speed / wildForm.speed);
+    }
+    if (G.kind == GN_GLOW && k.s.glows) {
+        const double q = k.glowAny ? 0.005 : k.quorum;   // Y-04: lit by its switch, as at its least crowd
+        if (!wild.s.glows) b += 0.04;
+        else if (q < wild.quorum * (1 - 1e-9)) b += 0.02 * std::log2(wild.quorum / q);
+    }
+    return b;
+}
+double geneBurden(const CultureKind& wild, const Morph& wildForm, const CultureKind& k, const Morph& m, const MicrobeGenes& g) {
+    double b = 0;
+    for (const MicrobeGene& G : g.genes) b += genePrice(wild, wildForm, k, m, G);
+    return std::max(0.0, b);
+}
+
+int geneNeeds(const CultureKind& k, const MicrobeGene& gene) {
+    if (gene.cut) return NEED_NONE;
+    int kinds[4];
+    switch (gene.kind) {
+        case GN_SENSE: return k.s.motion == MO_NONE ? NEED_MOTION : NEED_NONE;
+        case GN_FOOD: return k.s.way != LW_CHEMICAL ? NEED_EATER : NEED_NONE;
+        case GN_PIGMENT: return k.s.way != LW_LIGHT ? NEED_LIGHT : NEED_NONE;
+        case GN_SHAPE: return !shapePlan(k.s.plan) ? NEED_SHAPE : NEED_NONE;
+        case GN_MOTION: return planMotions(k.s.plan, kinds) == 0 ? NEED_MOVER : NEED_NONE;
+        default: return NEED_NONE;
     }
 }
 
@@ -471,7 +662,7 @@ std::vector<int> genesDiffer(const MicrobeGenes& a, const MicrobeGenes& b) {
     std::vector<int> out;
     for (const MicrobeGene& G : a.genes) {
         const MicrobeGene* H = b.at(G.place);
-        if (H && (H->cut != G.cut || (!G.cut && H->part != G.part))) out.push_back(G.place);
+        if (H && (H->cut != G.cut || (!G.cut && (H->part != G.part || H->sw != G.sw)))) out.push_back(G.place);   // (Y-04: or its switch)
     }
     return out;
 }
@@ -480,29 +671,32 @@ std::string geneValueWords(const CultureKind& k, const Morph& m, const MicrobeGe
     if (gene.cut) return "CUT OUT";
     const Microbe& s = k.s;
     switch (gene.kind) {
-        case GN_VITAL: return k.dead ? "CHANGED: IT DOES NOT LIVE" : "A CHANGE KILLS IT";
-        case GN_QUIET: return "NOTHING SEEN WHEN IT CHANGED";
-        case GN_WARMTH: return words("IT GROWS %.0f TO %.0f C, BEST %.0f", s.tMin, s.tMax, s.tOpt);
+        case GN_VITAL: return k.dead ? "CHANGED: CANNOT LIVE" : "A CHANGE KILLS";
+        case GN_QUIET: return "NOTHING SEEN WHEN CHANGED";
+        case GN_WARMTH: return words("GROWS %.0f TO %.0f C, BEST %.0f", s.tMin, s.tMax, s.tOpt);
         case GN_SALT:
             return s.saltLo == s.saltHi ? std::string("IN ") + CULTURE_SALT_NAMES[s.saltLo]
                                         : std::string(CULTURE_SALT_NAMES[s.saltLo]) + " TO " + CULTURE_SALT_NAMES[s.saltHi];
         case GN_SIZE:
-            if (m.lengthUm <= m.widthUm * 1.2) return words(m.widthUm < 10 ? "ITS CELLS %.1f UM ACROSS" : "ITS CELLS %.0f UM ACROSS", m.widthUm);
-            return words(m.widthUm < 10 ? "ITS CELLS %.1f UM BY %.1f UM" : "ITS CELLS %.0f UM BY %.0f UM", m.lengthUm, m.widthUm);
+            if (m.lengthUm <= m.widthUm * 1.2) return words(m.widthUm < 10 ? "CELLS %.1f UM ACROSS" : "CELLS %.0f UM ACROSS", m.widthUm);
+            return words(m.widthUm < 10 ? "CELLS %.1f UM BY %.1f UM" : "CELLS %.0f UM BY %.0f UM", m.lengthUm, m.widthUm);
         case GN_PIGMENT: return s.pigment == PG_NONE ? std::string("NO PIGMENT") : std::string(PIGMENT_NAMES[s.pigment]);
-        case GN_FOOD: return s.substrate == SU_NONE ? std::string("IT BURNS NOTHING") : std::string("IT BURNS ") + SUBSTRATE_NAMES[s.substrate];
+        case GN_FOOD: return s.substrate == SU_NONE ? std::string("BURNS NOTHING") : std::string("BURNS ") + SUBSTRATE_NAMES[s.substrate];
         case GN_MOTION: return s.motion == MO_NONE ? std::string("STILL") : std::string(MOTION_NAMES[s.motion]) + words(m.speed < 10 ? ", %.1f UM/S" : ", %.0f UM/S", m.speed);
         case GN_SENSE: {
             const int t = geneTable(c, c.sense, gene.part, 0, 2);
-            return t == SE_DARK ? std::string("IT FLEES THE LIGHT") : std::string("IT TURNS TO ") + GENE_SENSE_NAMES[t];
+            return t == SE_NONE ? std::string("SENSES NOTHING") : (t == SE_DARK ? std::string("FLEES LIGHT") : (t == SE_FIELD ? std::string("FOLLOWS THE MAGNET")
+                                                                                                                        : std::string("TURNS TO ") + GENE_SENSE_NAMES[t]));
         }
         case GN_REST:
-            if (!keeps(c, geneWeight(c, gene.part))) return "IT DIES AT ITS END";
-            return (s.cycle & LC_GATHERING) ? "IT GATHERS AND FRUITS AT ITS END" : (largeCellPlan(s.plan) ? "CYSTS AT ITS END" : "SPORES AT ITS END");
-        case GN_GLOW: return s.glows ? words("IT GLOWS AT %.1f%% OF ITS CROWD", 100 * k.quorum) : std::string("NO GLOW");
+            if (!keeps(c, geneWeight(c, gene.part))) return "DIES WHEN STARVED";
+            return (s.cycle & LC_GATHERING) ? "GATHERS AND FRUITS WHEN STARVED" : (largeCellPlan(s.plan) ? "CYSTS WHEN STARVED" : "SPORES WHEN STARVED");
+        case GN_GLOW:
+            if (!s.glows) return "NO GLOW";
+            return k.glowAny ? std::string("GLOWS WHEN SWITCHED ON") : words("GLOWS ONCE %.1f%% FULL", 100 * k.quorum);
         case GN_SHAPE:
             if (s.plan == MP_SPHERE) return "A SPHERE";
-            return std::string(s.plan == MP_ROD ? "A ROD" : (s.plan == MP_CURVED ? "A CURVED ROD" : "A SPIRAL")) + words(", %.1f TIMES AS LONG AS WIDE", m.aspect);
+            return std::string(s.plan == MP_ROD ? "A ROD" : (s.plan == MP_CURVED ? "A CURVED ROD" : "A SPIRAL")) + words(", %.1f TIMES LONGER THAN WIDE", m.aspect);
         default: return "";
     }
 }

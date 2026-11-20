@@ -47,12 +47,12 @@ int underVoiceOf(const Signal& s) {
 
 void Game::radarToggle() {
     if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); audio.beep = BEEP_UI; return; }
-    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING IS HEARD IN THE FLIGHT - THE RADAR WAITS FOR THE ARRIVAL"); return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING IS HEARD IN FLIGHT - WAIT FOR ARRIVAL"); return; }
     if (tele.on) telescopeOff();   // W-06: one instrument at the window at a time
     radar.on = true; radar.holdT = 0; radar.locked = -1; radar.lostT = 0; radar.reading = 0; radar.trace.clear(); radar.clarity = 0; radar.best = -1;
     cabin.yaw = 0; cabin.pitch = 0;   // the camera is the ship's: the view is its attitude, turned with the mouse
     radarScan();
-    status("RADAR CAMERA: SWEEP THE SKY, HOLD A RISE TO LOCK", 5);   // under 52 characters: the line's width
+    status("RADAR CAMERA: SWEEP, HOLD A RISE TO LOCK", 5);   // under 52 characters: the line's width
     audio.beep = BEEP_UI;
 }
 
@@ -376,9 +376,9 @@ void Game::radarLock(int idx) {
     (void)content;
     if (fresh) logEvent("SIGNAL", fmt("%s, SECTOR %lld %lld %lld", what.c_str(), (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz));
     else guide.save(guidePath);
-    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES ITS SOURCE"
+    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES IT"
                    : (rogue ? (visited ? "A SIGNAL LOCKED - NO STAR, VISITED - ENTER FLIES" : "A SIGNAL LOCKED - NO STAR THERE - ENTER FLIES")
-                            : (visited ? "A SIGNAL LOCKED - ITS STAR WAS VISITED, ENTER FLIES" : "A SIGNAL LOCKED - ENTER FLIES TO ITS STAR")), 6);
+                            : (visited ? "A SIGNAL LOCKED - STAR VISITED - ENTER FLIES" : "A SIGNAL LOCKED - ENTER FLIES THERE")), 6);
     audio.beep = BEEP_LOCK;
 }
 
@@ -456,7 +456,7 @@ bool Game::updateRadar(const Input& in, double realDt) {
             r.lostT += realDt;
             if (idx < 0 || r.lostT > 1.5) {
                 bool sank = false; for (const Signal& d : r.deep) if (idx < 0 && d.seed == r.lockedSeed && d.kind == r.lockedKind && d.needGain > G) sank = true;
-                r.locked = -1; r.holdT = 0; r.lostT = 0; refuse(sank ? "LOCK LOST - TOO FAINT AT THIS GAIN" : "LOCK LOST - THE BEAM LEFT THE SIGNAL", 3);
+                r.locked = -1; r.holdT = 0; r.lostT = 0; refuse(sank ? "LOCK LOST - TOO FAINT AT THIS GAIN" : "LOCK LOST - BEAM OFF SIGNAL", 3);
             }
         } else r.lostT = 0;
     }

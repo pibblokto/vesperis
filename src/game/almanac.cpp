@@ -79,7 +79,7 @@ void Game::updateAlmanac(const Input& in, double dt, double realDt) {
     }
     if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (!enterKey(in)) return;
-    if (settings.clockMode == 1) { refuse("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); return; }
+    if (settings.clockMode == 1) { refuse("REAL-TIME CLOCK: NO RUN", 3); return; }
     if (almanacSel == n - 1) { AlmanacEvent e; e.kind = AL_FREE; e.t = t + FREE_STEPS[almanacFree]; e.value = FREE_STEPS[almanacFree]; almanacRunTo(e); }
     else almanacRunTo(almanacEvents[almanacSel]);
     const GameState from = openedFrom[(int)GameState::ALMANAC];
@@ -88,15 +88,15 @@ void Game::updateAlmanac(const Input& in, double dt, double realDt) {
 
 // U-04: the almanac's commands (the controller's first page)
 void Game::almanacPad(PadMenu& m) const {
-    m.title = "THE ALMANAC";
-    m.item("RUN THE CLOCK TO IT", KEY_ENTER); if (almanacRunning) m.item("STOP THE RUN", KEY_T); m.item("BACK", KEY_ESCAPE);
+    m.title = "ALMANAC";
+    m.item("RUN CLOCK", KEY_ENTER); if (almanacRunning) m.item("STOP RUN", KEY_T); m.item("BACK", KEY_ESCAPE);
 }
 
 // the ground's state now and when it changes: "DAY  DARK IN 2 H 05 MIN"
 std::string Game::almanacStateLine() const {
     const AlmanacPlace& p = almanacAt;
     if (!p.sys) return "NO SYSTEM HERE";
-    if (!p.ground) return p.body >= 0 ? fmt("%d EVENTS WITHIN 30 DAYS, FROM THE PARKING", (int)almanacEvents.size()) : fmt("%d EVENTS WITHIN 30 DAYS", (int)almanacEvents.size());
+    if (!p.ground) return p.body >= 0 ? fmt("%d EVENTS WITHIN 30 DAYS, FROM ORBIT", (int)almanacEvents.size()) : fmt("%d EVENTS WITHIN 30 DAYS", (int)almanacEvents.size());
     double angR, alt = almanacSunAltitude(p, t, &angR);
     const char* now = alt + angR > 0 ? "DAY" : (p.atmosphere && std::sin(alt) > -0.12 ? "TWILIGHT" : "NIGHT");
     bool dark = alt + angR <= 0 && !(p.atmosphere && std::sin(alt) > -0.12);
@@ -104,7 +104,7 @@ std::string Game::almanacStateLine() const {
     for (const AlmanacEvent& e : almanacEvents)
         if (e.kind == want) return fmt("%s  %s IN %s", now, dark ? "LIGHT" : "DARK", countdownString(e.t - t).c_str());
     const Body& b = p.sys->bodies[p.body];
-    return fmt("%s  %s", now, b.locked ? "THE SUN STANDS STILL HERE" : "NO CHANGE WITHIN 5 DAYS");
+    return fmt("%s  %s", now, b.locked ? "SUN STANDS STILL HERE" : "NO CHANGE WITHIN 5 DAYS");
 }
 
 void Game::renderAlmanac() {
@@ -116,9 +116,9 @@ void Game::renderAlmanac() {
     std::string place;
     if (p.ground && p.sys)
         place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");
-    else if (p.sys && p.body >= 0) place = "THE STARDRIFTER AT " + trunc(upper(bodyNameOf(p.body)), 14);
-    else place = "THE STARDRIFTER";
-    drawText(canvas, x0 + 6, top + 5, ("THE ALMANAC - " + place).c_str(), HUD_AMBER);
+    else if (p.sys && p.body >= 0) place = "STARDRIFTER AT " + trunc(upper(bodyNameOf(p.body)), 14);
+    else place = "STARDRIFTER";
+    drawText(canvas, x0 + 6, top + 5, ("ALMANAC - " + place).c_str(), HUD_AMBER);
     drawText(canvas, x0 + 6, top + 14, almanacStateLine().c_str(), HUD_DIM);
     int n = (int)almanacEvents.size() + 1;
     if (almanacSel < almanacScroll) almanacScroll = almanacSel;
@@ -137,6 +137,6 @@ void Game::renderAlmanac() {
     }
     if (almanacScroll > 0) drawText(canvas, UW - x0 - 10, y0 - 8, "\x02", HUD_DIM);
     if (almanacScroll + ALMANAC_ROWS < n) drawText(canvas, UW - x0 - 10, y0 + ALMANAC_ROWS * 9, "\x03", HUD_DIM);
-    const char* foot = settings.clockMode == 1 ? "REAL-TIME CLOCK: NO RUNNING TO AN EVENT  ESC CLOSE" : "UP/DOWN SELECT  ENTER RUNS TO IT  ESC CLOSE";
+    const char* foot = settings.clockMode == 1 ? "REAL-TIME CLOCK: NO RUN  ESC CLOSE" : "UP/DOWN SELECT  ENTER RUN  ESC CLOSE";
     drawTextCentered(canvas, UW / 2, bottom - 9, foot, HUD_DIM);
 }

@@ -254,15 +254,15 @@ void Game::renderPlayerScreen() {
     const int nw = (int)player.worldFirst.size(), n = (int)player.items.size();
     const int playingWorld = [&] { for (int w = nw - 1; w >= 0; w--) if (player.playing >= player.worldFirst[w]) return w; return -1; }();
     if (n == 0) {
-        drawText(canvas, 6, 4, "THE PLAYER", HUD_AMBER);
+        drawText(canvas, 6, 4, "PLAYER", HUD_AMBER);
         drawTextCentered(canvas, UW / 2, 80, "NOTHING TO PLAY YET", HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, 92, "THE OLD PEOPLES' MUSIC, TAKEN FROM THEIR RUINS", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, 101, "OR CAUGHT BY THE RADAR, PLAYS HERE", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, 92, "MUSIC TAKEN FROM RUINS,", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, 101, "OR CAUGHT BY RADAR, PLAYS HERE", HUD_DIM);
         drawTextCentered(canvas, UW / 2, UH - 10, "ESC CLOSE", HUD_DIM);
         return;
     }
     if (player.level == 0) {
-        drawText(canvas, 6, 4, "THE PLAYER", HUD_AMBER);
+        drawText(canvas, 6, 4, "PLAYER", HUD_AMBER);
         const int page = player.worldSel / PLAYER_WORLD_ROWS, pages = (nw + PLAYER_WORLD_ROWS - 1) / PLAYER_WORLD_ROWS;
         const std::string head = pages > 1 ? fmt("%d PIECES  PAGE %d/%d", n, page + 1, pages) : fmt("%d PIECE%s FROM %d WORLD%s", n, n == 1 ? "" : "S", nw, nw == 1 ? "" : "S");
         drawText(canvas, UW - 6 - textWidth(head.c_str()), 4, head.c_str(), HUD_DIM);
@@ -286,7 +286,7 @@ void Game::renderPlayerScreen() {
     }
     int first, end; playerWorldRange(player.worldSel, first, end);
     const int count = end - first, rows = PLAYER_ROWS;
-    drawText(canvas, 6, 4, ("THE PLAYER - " + trunc(upper(worldNameOfKey(player.items[first].world)), 24)).c_str(), HUD_AMBER);
+    drawText(canvas, 6, 4, ("PLAYER - " + trunc(upper(worldNameOfKey(player.items[first].world)), 24)).c_str(), HUD_AMBER);
     const std::string head = fmt("%d PIECE%s", count, count == 1 ? "" : "S");
     drawText(canvas, UW - 6 - textWidth(head.c_str()), 4, head.c_str(), HUD_DIM);
     if (player.sel < player.top) player.top = player.sel;
@@ -310,7 +310,7 @@ void Game::renderPlayerScreen() {
         fillRectRGB(canvas, UW - 3, y0, UW - 3, y0 + h - 1, HUD_DIM); fillRectRGB(canvas, UW - 3, y0 + off, UW - 2, y0 + off + bar, HUD_GREEN);
     }
     const PlayerItem& s = player.items[std::max(first, std::min(end - 1, player.sel))];
-    const std::string where = (s.heard ? std::string("CAUGHT BY THE RADAR") : (s.medium >= 0 && s.medium < RM_COUNT ? std::string(RECORD_MEDIUM_HUD[s.medium]) : std::string())) +
+    const std::string where = (s.heard ? std::string("CAUGHT BY RADAR") : (s.medium >= 0 && s.medium < RM_COUNT ? std::string(RECORD_MEDIUM_HUD[s.medium]) : std::string())) +
                               fmt(" - YEAR %d", s.year);
     drawText(canvas, 6, UH - 20, trunc(where, 52).c_str(), HUD_DIM);
     drawTextCentered(canvas, UW / 2, UH - 10, "ENTER PLAY  SPACE PAUSE  BACKSPACE STOP  ESC BACK", HUD_DIM);   // 53 characters fill the screen
@@ -318,9 +318,9 @@ void Game::renderPlayerScreen() {
 
 // U-04: the player's commands (the controller's first page), its level's
 void Game::playerPad(PadMenu& m) const {
-    m.title = "THE PLAYER";
-    if (player.level == 0 && !player.worldFirst.empty()) m.item("OPEN THE WORLD", KEY_ENTER);
+    m.title = "PLAYER";
+    if (player.level == 0 && !player.worldFirst.empty()) m.item("OPEN WORLD", KEY_ENTER);
     if (player.level == 1) m.item("PLAY FROM HERE", KEY_ENTER);
     if (player.playing >= 0) { m.item(player.paused ? "GO ON" : "PAUSE", KEY_SPACE); m.item("STOP", KEY_BACKSPACE); }
-    m.item(player.level == 1 ? "BACK TO THE WORLDS" : "CLOSE THE PLAYER", KEY_ESCAPE);
+    m.item(player.level == 1 ? "BACK" : "CLOSE", KEY_ESCAPE);
 }

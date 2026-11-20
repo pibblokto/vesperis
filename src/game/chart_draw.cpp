@@ -361,13 +361,13 @@ std::string Game::figureLabel(const std::string& name, int held) const {
 }
 
 void Game::holdChart(bool up) {
-    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = BEEP_UI; return; }
+    if (!up) { chartUp = false; status("CHART PUT DOWN", 3); audio.beep = BEEP_UI; return; }
     if (!shardWorld.valid || !shardWorld.chart.valid || shardHeld.empty()) return;
     chartHeld = shardWorld.chart; chartHeldKey = shardWorld.key; chartHeldIndex = shardWorld.base + shardHeld[shardSel]; chartHeldPeople = shardWorld.lore.people;   // C-13: the world index
     chartHeldLabels.clear();
     for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, recordsHeld()));
     chartUp = true;
-    status("THE CHART IS HELD UP - ITS FIGURES SHOW ON THE VIEW", 5);   // 50 characters
+    status("CHART HELD UP - FIGURES SHOW ON THE VIEW", 5);   // 50 characters
     audio.beep = BEEP_UI;
 }
 
@@ -804,7 +804,7 @@ void Game::renderChart() {
         drawText(canvas, 170, yy + 9, fmt("%s (%s)", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[m.star.cls].code).c_str(), HUD_WHITE);
         drawText(canvas, 170, yy + 18, (lyHere >= 1000 ? thousands(lyHere) + " LY FROM HERE" : fmt("%.1f LY FROM HERE", lyHere)).c_str(), HUD_WHITE);   // H-05: the far future's far
         drawText(canvas, 170, yy + 27, fmt("SECTOR %lld %lld %lld", (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz).c_str(), HUD_DIM);
-        if (remoteHere || held) drawText(canvas, 170, yy + 36, remoteHere ? (held ? "THE REMOTE TARGET, HELD UP" : "THE REMOTE TARGET") : "HELD UP TO THE SKY", remoteHere ? HUD_CYAN : HUD_GREEN);
+        if (remoteHere || held) drawText(canvas, 170, yy + 36, remoteHere ? (held ? "REMOTE TARGET, HELD UP" : "REMOTE TARGET") : "HELD UP", remoteHere ? HUD_CYAN : HUD_GREEN);
     }
     int read = 0; for (const DecodedWord& w : shardWords) if (w.known) read++;
     if (reading) {
@@ -812,10 +812,10 @@ void Game::renderChart() {
         const int bx0 = 100, bx1 = UW - 12;
         drawRectRGB(canvas, bx0, UH - 22, bx1, UH - 16, HUD_DIM);
         if (u > 0) fillRectRGB(canvas, bx0 + 1, UH - 21, bx0 + 1 + (int)((bx1 - bx0 - 2) * u), UH - 17, HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER SKIPS THE WAIT  ESC STOPS", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER SKIP  ESC STOP", HUD_DIM);
     } else {
-        drawText(canvas, 12, UH - 22, fmt("%d OF %d WORDS READ   THE LANGUAGE %d%% (%d SHARD%s)", read, (int)shardWords.size(), pct, n, n == 1 ? "" : "S").c_str(), HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, held ? "O PUT DOWN  ENTER TARGET THE STAR  LEFT/RIGHT  ESC" : "O HOLD UP  ENTER TARGET THE STAR  LEFT/RIGHT  ESC", HUD_DIM);   // 50 and 49 characters
+        drawText(canvas, 12, UH - 22, fmt("%d OF %d WORDS READ   LANGUAGE %d%% (%d SHARD%s)", read, (int)shardWords.size(), pct, n, n == 1 ? "" : "S").c_str(), HUD_GREEN);
+        drawTextCentered(canvas, UW / 2, UH - 10, held ? "O PUT DOWN  ENTER TARGET STAR  LEFT/RIGHT  ESC" : "O HOLD UP  ENTER TARGET STAR  LEFT/RIGHT  ESC", HUD_DIM);   // 50 and 49 characters
     }
 }
 

@@ -4,7 +4,12 @@ The modes, one line each with its file: `harness/INDEX.md` (`vesperis_test help 
 `harness/unit-checks.md` (`tools/unitchecks.py` writes it). Proving a change, and the proof tools: `harness/proof.md`. This
 note keeps what those do not: what each mode does and writes, by the milestone that made it.
 
-`vesperis_test` (built by `make`) needs no window and writes PNGs into `shots/tests/` (O7-01, 2026-09-27: the harness used to write into `shots/` next to the player's own screenshots, which had grown to 300 files; `shots/` now holds only `screenshot_N.png` and their captions, the harness creates `shots/tests/` and its subfolders, and the CI artefact is `shots/tests/**/*.png`; B-440: a `TestGame`'s guide, saves, settings, keys, controller map, photographs and films default there too, `shots/tests/game_*`, so no check writes the player's files in the working directory). The paths below and in older reports omit the `tests/`. Add `scale=N` (1-4) to any mode to render at that resolution scale (tests default to 1x for speed; the game defaults to 4x since B-310, 2x before).
+`vesperis_test` (built by `make`) needs no window and writes PNGs into `shots/tests/` (O7-01, 2026-09-27: the harness used to write into
+`shots/` next to the player's own screenshots, which had grown to 300 files; `shots/` now holds only `screenshot_N.png` and their
+captions, the harness creates `shots/tests/` and its subfolders, and the CI artefact is `shots/tests/**/*.png`; B-440: a `TestGame`'s
+guide, saves, settings, keys, controller map, photographs and films default there too, `shots/tests/game_*`, so no check writes the
+player's files in the working directory). The paths below and in older reports omit the `tests/`. Add `scale=N` (1-4) to any mode to
+render at that resolution scale (tests default to 1x for speed; the game defaults to 4x since B-310, 2x before).
 
 * `stars`: star and body statistics around the start region, prints four systems in detail (output: stdout)
 * `maps`: generates one planet map per type; M5-08 adds `map_LOCKED_FELISIAN.png` (one locked living world) (output:
@@ -273,7 +278,8 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   and a species put in, a second's chooser left, the jars and their chooser, a flask emptied). U-06: then the rows, every
   row of the table in its order: opened by its row (`openScreen`, from the ship in its parking) or, a scene or a world set up first,
   by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording, Z-04: the microscope with two vials
-  of the home system's first worlds that show something in the cold store, Z-05: the incubator with its culture; the capsule's way down and up, with no commands, are
+  of the home system's first worlds that show something in the cold store, Z-05: the incubator with its culture; the capsule's way down
+  and up, with no commands, are
   toured above), its picture, the controller's pages, then each line of the command menu's first page run
   as the controller runs it (`testPadCommand`: its keys a frame each), each followed by Esc. A state with no stop, a new screen,
   is toured there with no edit. About six minutes; the same twice and by one thread (output: stdout,
@@ -298,7 +304,8 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   a degree of the ship's turn (the pixels that differ printed, as `pngdiff` of the two prints them), the prow from the great window,
   the hull outside from the dome sunlit, depolarised (with the bridge so) and at the test drifter with no sun. Every frame prints
   its daylight (the sun's way and light, the world's light), its patches and its banks, checked by `shipBanksWhole` (each dealt
-  bank one home's, never 0, 8 or 10, nor looking out 7, the outside's, B-437; at most 32 banks in the ship's palette); the exit code counts the failures
+  bank one home's, never 0, 8 or 10, nor looking out 7, the outside's, B-437; at most 32 banks in the ship's palette); the exit code
+  counts the failures
   (output: `shots/tests/ship/light_*_<scale>x.png`, stdout)
 * `ship life [scale]` (I-04, `modes_ship.cpp`): life aboard at 2x by default, parked at the start's world. Twelve photographs first
   (twelve of the plan's views, the HUD out, written as the game writes its photographs into `shots/tests/ship_life_gallery`), then the
@@ -508,13 +515,25 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   ground; the O6 review copies are in `shots/tests/o6/before/` and `after/` (output: `shots/tests/landforms_<TYPE>[_<CLASS>].png`,
   `landforms_site_<name>.png`)
 
-Reference numbers on an Apple M4 (2026-09-26, after M10): space 0.55 / 1.7 / 3.3 / 5.4 ms per frame at 1x / 2x / 3x / 4x; surface 1.4 / 3.2 / 4.2 / 6.5 ms (row bands on up to 8 threads; 3x and 4x evaluate the sky at half resolution); planet map 10-60 ms; first descent frame about 4 ms. After B-310/B-311 (2026-09-27, the default now 4x): space 1.1 / 3.2 / 6.9 / 12.6 ms (a globe filling the view is ray-traced per pixel); surface 2.7 / 5.1 / 6.0 / 10.0 ms (sections at 4x: sky 1.4, warm 0.6, terrain bands 2.9, objects 0.3, flora 0.9, rest 0.5, then the mush and the RGB pass); the dense forest 8.5 / 14.2 ms at 2x / 4x (28 ms at 4x before the band-parallel flora, the spray table and the line clip); the buggy 5.4 / 8.7 ms; descent first frame 22 ms. (Measured once at 640x400 with a temporary build variant, since removed: space 3.8 ms, surface 4.9-6.7 ms.) After O9 (2026-09-28: geomorphing, the leaf clusters, the habitat herds): surface 4x 7.6 ms, the dense forest 7.7 / 12.7 ms at 2x / 4x, the buggy 5.6 / 9.5, space 4x 12.2, the herd scene's draw 0.03 ms with 49 animals at the site.
+Reference numbers on an Apple M4 (2026-09-26, after M10): space 0.55 / 1.7 / 3.3 / 5.4 ms per frame at 1x / 2x / 3x / 4x; surface 1.4 /
+3.2 / 4.2 / 6.5 ms (row bands on up to 8 threads; 3x and 4x evaluate the sky at half resolution); planet map 10-60 ms; first descent
+frame about 4 ms. After B-310/B-311 (2026-09-27, the default now 4x): space 1.1 / 3.2 / 6.9 / 12.6 ms (a globe filling the view is
+ray-traced per pixel); surface 2.7 / 5.1 / 6.0 / 10.0 ms (sections at 4x: sky 1.4, warm 0.6, terrain bands 2.9, objects 0.3, flora 0.9,
+rest 0.5, then the mush and the RGB pass); the dense forest 8.5 / 14.2 ms at 2x / 4x (28 ms at 4x before the band-parallel flora, the
+spray table and the line clip); the buggy 5.4 / 8.7 ms; descent first frame 22 ms. (Measured once at 640x400 with a temporary build
+variant, since removed: space 3.8 ms, surface 4.9-6.7 ms.) After O9 (2026-09-28: geomorphing, the leaf clusters, the habitat herds):
+surface 4x 7.6 ms, the dense forest 7.7 / 12.7 ms at 2x / 4x, the buggy 5.6 / 9.5, space 4x 12.2, the herd scene's draw 0.03 ms with 49
+animals at the site.
 
-The look-comparison sheets in `shots/compare_*.png` and `shots/compare2_*.png` were produced by a temporary `compare`/`sheet` harness and a `-DFB_SCALE=2` build, both removed on 2026-09-26 so that the tree has a single resolution and a single code path until M10 is implemented. The sheets stay as the record of that experiment.
+The look-comparison sheets in `shots/compare_*.png` and `shots/compare2_*.png` were produced by a temporary `compare`/`sheet` harness
+and a `-DFB_SCALE=2` build, both removed on 2026-09-26 so that the tree has a single resolution and a single code path until M10 is
+implemented. The sheets stay as the record of that experiment.
 
-`ctest --test-dir build-cmake` (after a CMake build) runs `flow`, `regress`, `settings`, `landmaps` and `bench` from the source directory. CI (`.github/workflows/ci.yml`) runs the same on macOS and Linux.
+`ctest --test-dir build-cmake` (after a CMake build) runs `flow`, `regress`, `settings`, `landmaps` and `bench` from the source
+directory. CI (`.github/workflows/ci.yml`) runs the same on macOS and Linux.
 
-The window build accepts `--frames N` to run N frames and exit (it writes `shots/screenshot_0.png` on the last frame), which is how the platform layer is smoke-tested without interaction.
+The window build accepts `--frames N` to run N frames and exit (it writes `shots/screenshot_0.png` on the last frame), which is how the
+platform layer is smoke-tested without interaction.
 
 <!-- contents -->
 Contents:
@@ -531,11 +550,16 @@ Contents:
 
 ## Reading the output
 
-Look at the PNGs (they are the real 320x200 frames). Things to check when a rendering change is made: horizon line and floor plane, fog toward the sky colour, sun disc and glow, stars at night only, bodies in the sky with correct phase, HUD legibility, no stripes on the ground (perspective-correct grain), and `flow` still reaching `back_in_space` and `load: 1`.
+Look at the PNGs (they are the real 320x200 frames). Things to check when a rendering change is made: horizon line and floor plane, fog
+toward the sky colour, sun disc and glow, stars at night only, bodies in the sky with correct phase, HUD legibility, no stripes on the
+ground (perspective-correct grain), and `flow` still reaching `back_in_space` and `load: 1`.
 
 ## Adding a test
 
-Add a function in its area's file of `src/harness/` and a row in `MODES` (`src/harness/main.cpp`; the `harness` skill). Reuse `saveFB(fb, path)` and `findTime(site, targetAlt, t0)` (searches one rotation for a sun altitude). Game-level tests use `Game` directly with `Input` and the hooks `testAimAtNearestStar`, `testAimAtBody`, `testLandableBody`, `testStatus`, `testDebugInfo`; set `game.savePrefix` and `game.settingsPath` to files under `shots/` (the constructor reads nothing; only `loadFromDisk()` does).
+Add a function in its area's file of `src/harness/` and a row in `MODES` (`src/harness/main.cpp`; the `harness` skill). Reuse
+`saveFB(fb, path)` and `findTime(site, targetAlt, t0)` (searches one rotation for a sun altitude). Game-level tests use `Game` directly
+with `Input` and the hooks `testAimAtNearestStar`, `testAimAtBody`, `testLandableBody`, `testStatus`, `testDebugInfo`; set
+`game.savePrefix` and `game.settingsPath` to files under `shots/` (the constructor reads nothing; only `loadFromDisk()` does).
 
 ## Debugging habits that worked
 
@@ -545,13 +569,34 @@ Add a function in its area's file of `src/harness/` and a row in `MODES` (`src/h
 
 ## Builds and packages (M6-03, M6-04)
 
-`make` is the quick path on macOS. `cmake -B build-cmake && cmake --build build-cmake` builds the core library, the harness and the game (raylib from `find_package`/pkg-config; `-DVESPERIS_FETCH_RAYLIB=ON` downloads and builds raylib 5.5, the default when nothing is installed on Linux and Windows; `-DVESPERIS_BUILD_GAME=OFF` for the harness alone). Warnings are errors in `src/core`, `src/galaxy` and `src/peoples` (`VESPERIS_WERROR`, M7-06). `ctest` runs the headless modes. `cpack -B build-cmake` makes a zip; `packaging/make_app.sh` a macOS bundle (`dist/Vesperis.app`, the raylib dylib copied in, launched from `~/Documents/vesperis` so saves have a home); `packaging/make_zip.sh` a portable zip with the docs. The web build (`web/build_web.sh`, needs emsdk) has not been run on the development machine (KI-021). A cmake binary is not installed here: the CMake tree was validated with the `cmake` wheel from PyPI unpacked in the session scratchpad.
+`make` is the quick path on macOS. `cmake -B build-cmake && cmake --build build-cmake` builds the core library, the harness and the game
+(raylib from `find_package`/pkg-config; `-DVESPERIS_FETCH_RAYLIB=ON` downloads and builds raylib 5.5, the default when nothing is
+installed on Linux and Windows; `-DVESPERIS_BUILD_GAME=OFF` for the harness alone). Warnings are errors in `src/core`, `src/galaxy` and
+`src/peoples` (`VESPERIS_WERROR`, M7-06). `ctest` runs the headless modes. `cpack -B build-cmake` makes a zip; `packaging/make_app.sh` a
+macOS bundle (`dist/Vesperis.app`, the raylib dylib copied in, launched from `~/Documents/vesperis` so saves have a home);
+`packaging/make_zip.sh` a portable zip with the docs. The web build (`web/build_web.sh`, needs emsdk) has not been run on the
+development machine (KI-021). A cmake binary is not installed here: the CMake tree was validated with the `cmake` wheel from PyPI
+unpacked in the session scratchpad.
 
-The release's six builds are scripts (F-09, `packaging/`): `toolchains.sh` once (raylib 5.5 and llvm-mingw 20260922 against their checksums into `build/toolchains`, raylib built static for the four Mac and Windows targets), then `VESPERIS_TC=<that dir> sh packaging/build-release.sh <version> <out dir>` from a checkout of the tagged commit: macOS arm64 and x86_64 with the Apple clang and Windows x86_64 and aarch64 with llvm-mingw at `-O2 -flto=thin`, Linux arm64 and amd64 at `-O3` in an Ubuntu 20.04 container (Docker; GCC 9.4, glibc 2.31; amd64 emulated). Each build's log in the out dir ends `exit <status>`, the summary prints each build's warnings, and no zip is made unless all six built. The Windows line compiles with `-Wshorten-64-to-32`: a narrowing only that target reports is Windows' 32-bit `long` (B-424); the tree has none. One target alone: `build-mac.sh <arm64|x86_64> <dir>`, `build-win.sh <x86_64|aarch64> <dir>`, `build-linux.sh <arm64|amd64> <dir>`. The Makefile stays at `-O2`: the bench measures the code, not the flags. A release flag is proved the way F-09 proved its own: the harness built with and without it (for Linux inside the container, `docker run --platform linux/<arch> ... vesperis-build:<arch>`), the old build's `regress bless` the reference, then the new one's `regress` with the workers and with one thread, its scenes and `screens` `pngdiff`-ed against the old one's, and the builds' `bench check` in turn, several rounds, alone on the machine.
+The release's six builds are scripts (F-09, `packaging/`): `toolchains.sh` once (raylib 5.5 and llvm-mingw 20260922 against their
+checksums into `build/toolchains`, raylib built static for the four Mac and Windows targets), then
+`VESPERIS_TC=<that dir> sh packaging/build-release.sh <version> <out dir>` from a checkout of the tagged commit: macOS arm64 and x86_64
+with the Apple clang and Windows x86_64 and aarch64 with llvm-mingw at `-O2 -flto=thin`, Linux arm64 and amd64 at `-O3` in an Ubuntu
+20.04 container (Docker; GCC 9.4, glibc 2.31; amd64 emulated). Each build's log in the out dir ends `exit <status>`, the summary prints
+each build's warnings, and no zip is made unless all six built. The Windows line compiles with `-Wshorten-64-to-32`: a narrowing only
+that target reports is Windows' 32-bit `long` (B-424); the tree has none. One target alone: `build-mac.sh <arm64|x86_64> <dir>`,
+`build-win.sh <x86_64|aarch64> <dir>`, `build-linux.sh <arm64|amd64> <dir>`. The Makefile stays at `-O2`: the bench measures the code,
+not the flags. A release flag is proved the way F-09 proved its own: the harness built with and without it (for Linux inside the
+container, `docker run --platform linux/<arch> ... vesperis-build:<arch>`), the old build's `regress bless` the reference, then the new
+one's `regress` with the workers and with one thread, its scenes and `screens` `pngdiff`-ed against the old one's, and the builds'
+`bench check` in turn, several rounds, alone on the machine.
 
 ## Unit tests, frame hashes and budgets (M7-03, M7-04)
 
-Every harness mode that builds a `Game` points it at `shots/test_save*`, `shots/test_settings.txt`, `shots/<mode>_guide.txt` and a test key map (`bench` and `fuzz` use their own prefixes), so no test run touches `vesperis_save*.txt`, `guide.txt`, `vesperis_settings.txt` or `vesperis_keys.txt` next to the game (B-207, 2026-09-27); the real game autosaves on exit and every five minutes, so a running game will still rewrite its own files while tests run.
+Every harness mode that builds a `Game` points it at `shots/test_save*`, `shots/test_settings.txt`, `shots/<mode>_guide.txt` and a test
+key map (`bench` and `fuzz` use their own prefixes), so no test run touches `vesperis_save*.txt`, `guide.txt`, `vesperis_settings.txt`
+or `vesperis_keys.txt` next to the game (B-207, 2026-09-27); the real game autosaves on exit and every five minutes, so a running game
+will still rewrite its own files while tests run.
 
 `vesperis_test unit` (exit code = failures): round trips of `bodyFromLatLon`/`latLonFromBody` and of the site frame
 (`unitAt`/`localAt`), the sun at the zenith over the sub-solar point and at 60 deg altitude 30 deg along the meridian (with the
@@ -883,11 +928,45 @@ hum; and where the tape is read (a macOS app's `Contents/Resources/music` from i
 its playlist's track then a file it does not list; the explorer's folder instead when it holds tracks; none when neither does)
 (343 in all). The harness points `Game::musicDirDefault` at an empty folder and leaves `musicDirsGame` empty, so neither a
 player's `music` nor the game's own tape plays in another check.
-C-16: three checks (222 in all): what the gain lets in, the receiver (the bed at x1, x11 and x32 toward a pole, the band's plane and the core, a near voice and a far one worn at three gains, two broadcasts with the whistle and the ring, a pulsar under a voice, each age's four programmes and the phonograph's piece: finite, never clipped, the rms within C-07's 0.02-0.13; two minutes of static with at least twice x1's events at x32, two or more of the five stranger kinds there and none at x1); each age on the air (the age worlds' fifty slots by their age: the industrial Morse or a phonograph and never data, the futuristic a synthetic voice, data, a beacon or the piece, the far future the mathematics or a synthetic voice, the modern C-07's; the peoples heard from home at x32 all of radio ages, three or more of them; an industrial Morse keying of a text's words within 10-46 s); and the top step in the game (at home at x32 a signal with another under it both on the air and the synth finite with the two, none under at x1; at the sky farthest from every signal three false rises turned onto, `NOTHING THERE` at least twice, the meter over its floor, never a lock; a recording put in `Guide::heard` coming back as a word while nothing is on the air, that recording, ended, nothing logged). It writes `shots/tests/radar_nothing_there.png`.
-A-02: four checks (226 in all): every kind whole and broken (the sheet's 33 samples at the three levels, whole and broken: none empty, every corner finite and within the form's reach and top, no broken one the same as its whole, C-01's box five faces and its hemisphere forty quads); walking into each one (the explorer eight metres short of each sample, whole and broken, walks at it for twenty seconds: it touches every form and never enters a disc, and goes through a gate, a pointed arch, an arcade, a hall open at its ends, between masts and a lattice's legs and under a saddle); the peoples' banks (the first people's structure in bank 18 is its ground's bank's ramp, the light's ramp set); and the test city's frame at 2x drawn by the workers equal to the serial loop's (`parallelThreadsOverride`).
-A-03: four checks (230 in all): the decay by material (every material's decay grows with the years, the rain takes it sooner, masonry is C-08's `decayOf` to 1e-9 inside its clamp, timber under 0.3 at 30 years and gone at 1,000, earth kept by a desert, dry stone under 0.15 at 1,000 and over 0.5 at 50,000, iron over 0.5 at 1,000, concrete spalling at 100 and over 0.65 at 3,000 while mass concrete is under 0.4, glass gone at 30, composites whole at 1,000 and over 0.85 at 100,000, the far future's 0 at a million years, wet or dry); what each age builds (six cells of each class of every age on the medieval test world at 300 years: no kind of a later age, three or more kinds of its own, the tallest piece within the age's heights: 2-25 m prehistoric, 25-120 medieval, 40-130 industrial, 100-800 modern (A-04: a lofty, ambitious people's towers to 650 m and their masts), 300-2,500 futuristic, 150-4,000 far future); its pieces resting and its rooms open (every piece over the ground has one of its building under it that reaches it, every room's doorway leaves a metre along its wall's line clear of the building's colliders and the explorer's radius, and a spot of every room is clear); and the decay's examples (a wattle village after 1,000 years: every hut in a ring of eight post holes or more, no timber standing over a step; a modern town after 3,000: every tower's standing concrete under a fifth of its height; a far-future spike after 100,000 years: its pieces those of its first year, none broken). The C-01 checks of the houses' rooms and doorways, C-03's of the shards and C-08's of the doorways read every building's room (`buildingRoom`), not C-01's houses alone; the dead desert's and the town's scans of the globe run without the rivers' tiles (a tile a sample with the drainage on took minutes).
+C-16: three checks (222 in all): what the gain lets in, the receiver (the bed at x1, x11 and x32 toward a pole, the band's plane and the
+core, a near voice and a far one worn at three gains, two broadcasts with the whistle and the ring, a pulsar under a voice, each age's
+four programmes and the phonograph's piece: finite, never clipped, the rms within C-07's 0.02-0.13; two minutes of static with at least
+twice x1's events at x32, two or more of the five stranger kinds there and none at x1); each age on the air (the age worlds' fifty slots
+by their age: the industrial Morse or a phonograph and never data, the futuristic a synthetic voice, data, a beacon or the piece, the
+far future the mathematics or a synthetic voice, the modern C-07's; the peoples heard from home at x32 all of radio ages, three or more
+of them; an industrial Morse keying of a text's words within 10-46 s); and the top step in the game (at home at x32 a signal with
+another under it both on the air and the synth finite with the two, none under at x1; at the sky farthest from every signal three false
+rises turned onto, `NOTHING THERE` at least twice, the meter over its floor, never a lock; a recording put in `Guide::heard` coming back
+as a word while nothing is on the air, that recording, ended, nothing logged). It writes `shots/tests/radar_nothing_there.png`.
+A-02: four checks (226 in all): every kind whole and broken (the sheet's 33 samples at the three levels, whole and broken: none empty,
+every corner finite and within the form's reach and top, no broken one the same as its whole, C-01's box five faces and its hemisphere
+forty quads); walking into each one (the explorer eight metres short of each sample, whole and broken, walks at it for twenty seconds:
+it touches every form and never enters a disc, and goes through a gate, a pointed arch, an arcade, a hall open at its ends, between
+masts and a lattice's legs and under a saddle); the peoples' banks (the first people's structure in bank 18 is its ground's bank's ramp,
+the light's ramp set); and the test city's frame at 2x drawn by the workers equal to the serial loop's (`parallelThreadsOverride`).
+A-03: four checks (230 in all): the decay by material (every material's decay grows with the years, the rain takes it sooner, masonry is
+C-08's `decayOf` to 1e-9 inside its clamp, timber under 0.3 at 30 years and gone at 1,000, earth kept by a desert, dry stone under 0.15
+at 1,000 and over 0.5 at 50,000, iron over 0.5 at 1,000, concrete spalling at 100 and over 0.65 at 3,000 while mass concrete is under
+0.4, glass gone at 30, composites whole at 1,000 and over 0.85 at 100,000, the far future's 0 at a million years, wet or dry); what each
+age builds (six cells of each class of every age on the medieval test world at 300 years: no kind of a later age, three or more kinds of
+its own, the tallest piece within the age's heights: 2-25 m prehistoric, 25-120 medieval, 40-130 industrial, 100-800 modern (A-04: a
+lofty, ambitious people's towers to 650 m and their masts), 300-2,500 futuristic, 150-4,000 far future); its pieces resting and its
+rooms open (every piece over the ground has one of its building under it that reaches it, every room's doorway leaves a metre along its
+wall's line clear of the building's colliders and the explorer's radius, and a spot of every room is clear); and the decay's examples (a
+wattle village after 1,000 years: every hut in a ring of eight post holes or more, no timber standing over a step; a modern town after
+3,000: every tower's standing concrete under a fifth of its height; a far-future spike after 100,000 years: its pieces those of its
+first year, none broken). The C-01 checks of the houses' rooms and doorways, C-03's of the shards and C-08's of the doorways read every
+building's room (`buildingRoom`), not C-01's houses alone; the dead desert's and the town's scans of the globe run without the rivers'
+tiles (a tile a sample with the drainage on took minutes).
 
-A-04: three checks (233 in all): the genome is deterministic (the hundred peoples nearest home: their genomes and ways drawn twice the same, twenty-four of them a town each drawn twice and on the workers the same); every variable reaches the drawing (each of its values, seven at most, a step prime to their count apart, set in turn in three peoples' genomes in every age the variable says it acts in, a town and a village at 30 years on the medieval test world: some two of its values change the pieces or the colours they use; `genome reach` prints the ages); no two of a hundred peoples alike (the hundred nearest home, 4,950 pairs: none under `GENOME_ALIKE`, a quarter of the strongest variables' weight; it prints the nearest pair and what they share). A-03's checks read a people's genome: the wattle village of the decay's examples is a people of round huts apart built neither light nor to last, the concrete town's a people of middling lasting; A-02's banks check sets its people untinted; C-08's terraces allow a terracing people's slopes over 0.02.
+A-04: three checks (233 in all): the genome is deterministic (the hundred peoples nearest home: their genomes and ways drawn twice the
+same, twenty-four of them a town each drawn twice and on the workers the same); every variable reaches the drawing (each of its values,
+seven at most, a step prime to their count apart, set in turn in three peoples' genomes in every age the variable says it acts in, a
+town and a village at 30 years on the medieval test world: some two of its values change the pieces or the colours they use;
+`genome reach` prints the ages); no two of a hundred peoples alike (the hundred nearest home, 4,950 pairs: none under `GENOME_ALIKE`, a
+quarter of the strongest variables' weight; it prints the nearest pair and what they share). A-03's checks read a people's genome: the
+wattle village of the decay's examples is a people of round huts apart built neither light nor to last, the concrete town's a people of
+middling lasting; A-02's banks check sets its people untinted; C-08's terraces allow a terracing people's slopes over 0.02.
 
 T-01: five checks (238 in all): the world plan is the same twice and on the workers, within a second and a half on one thread (the six age
 worlds: 0.24-0.67 s); its places are dry where they stand and round their cores (C-01's site test and eight samples at the core's
@@ -918,14 +997,16 @@ of its countryside; a town of every street pattern in the medieval, industrial a
 a street's corridor (a gate stands on its street, a maglev's pylons over everything); the streets walkable (every street's line sampled
 every 1.5 m clear of every standing piece's collider from the ankle to over the head, what fell across it walked round; every web joined);
 B-414: one age a world (every town and every building of it its people's last age's, the places the history left before that age not
-on the ground: over the six age worlds 40; one left early within it weathered longer; T-02 checked an old core older than its city); the districts of each
+on the ground: over the six age worlds 40; one left early within it weathered longer; T-02 checked an old core older than its city); the
+districts of each
 age (a modern capital's towers, suburbs and ring road, an industrial one's works, mills and station, a medieval one's houses, gates and
 fields); a harbour of each age on a coast (a quay, a dock with its cranes, a container port with its gantries and containers) and a town's
 street paved and its field toned in a site's vertices. `towns check` runs these alone in a few seconds.
 
 T-03 adds six (254): over the age worlds and the ages' scene worlds (R-413: and Shioleesein I-a, 196 66 body 7, the nearest living
 world whose dams hold their water, the modern age world a desert since), a world at a time (its plan, histories and works in the caches
-while it is checked): a dam across a valley holding a reservoir (its wall's ends on the valley's sides at its crest, at least 8 m over its floor,
+while it is checked): a dam across a valley holding a reservoir (its wall's ends on the valley's sides at its crest, at least 8 m over
+its floor,
 its water between its floor and its crest, its reservoir's cells held behind the wall and off its grid's edge, and at its lowest the water
 drawn at its level in a site's vertices, or an old bed on a dead desert or behind a breached wall); a quarry in the rock its town was built
 of (its ground the exposed rock its stone-built town's walls are drawn in, within 8 km of the town's edge, its face standing over its floor
@@ -973,13 +1054,18 @@ anachronism, no unknown place or figure); the genres of every age told, one even
 and the history's names recur; the register: the collapse's witnesses only in its years, the ordinary genres over 90% of the texts);
 the decoding by roots (a third of the words with one shard, all at the people's full count, never fewer with more); the voice speaks
 every text's opening (5-75 s); C-13's two peoples name each other (the contact's lines); the radar's sweep waits in real time for the
-texts built on their thread. The grammar check covers the 28 files (each under 16 KB). H-04's second pass (266 checks): the grammar's 94 files each under 16 KB and every `.vg` in the tree compiled in, the engine's cases for their own words (`{~coin}`), a people's own few (`people=K`) and a sentence said once (the frame memory), each people's names in its own tongue (a held-out name told its people over 24 peoples, every name readable), the everyday and the families' kinds at places standing with their persons alive. D-05: six checks (403 in all): the drifters' peoples
+texts built on their thread. The grammar check covers the 28 files (each under 16 KB). H-04's second pass (266 checks): the grammar's 94
+files each under 16 KB and every `.vg` in the tree compiled in, the engine's cases for their own words (`{~coin}`), a people's own few
+(`people=K`) and a sentence said once (the frame memory), each people's names in its own tongue (a held-out name told its people over 24
+peoples, every name readable), the everyday and the families' kinds at places standing with their persons alive. D-05: six checks (403
+in all): the drifters' peoples
 (one frozen felisian or desert drifter in four within 3,000 ly, each its former star found, the loss of the sun its cause in its order,
 two on one drifter ending together, all four ways), a drifter's people's history the same from the decoder and from the ground, the works
 of the end on Vreikheid (the last recording in the last shelters alone, the domes', glasshouses' and graves' counts, the other shelters'
 records of their own years), the beacon (none on Balyaphebist; Vreikheid's last broadcast under its voice within C-07's levels, the cabin's
 radio carrying its machine, the radar camera speaking it and, locked, hearing it), the test drifters' records (every check at zero, every
-name the history's, the eight genres of the lost sun told) and no other people's records moved (the age and scene worlds' peoples' histories,
+name the history's, the eight genres of the lost sun told) and no other people's records moved (the age and scene worlds' peoples'
+histories,
 catalogues, homes, texts and charts' marks pinned as D-04 left them).
 
 `regress` holds 24 hashes: five systems, ten maps, three site profiles (generation) and four frames at 1x (`scene_felisian_shore`,
@@ -1242,9 +1328,11 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   in four media (AS ITS WORLD, the standard broth at 30 C, its best, its hot edge): its curve by five minutes (log10 cells a millilitre,
   `/spores`), the times its stages began, its doubling, any strain and its move; then six pairs, each of one world but the mirrored two
   (a grazer and a small cell, a predator and a large cell, a light-feeder and a heterotroph, a fermenter and a hydrogen-eater, two
-  heterotrophs, two of mirrored hands), in the medium both grow best in: the relation, the winner, the cycle's turn, their curves; then
-  the incubator's screen in a game forty minutes on (the pairs, a dormant world's spores woken, the luminous crowd, a spore former at
-  its hot edge giving a strain). Under a second (output: stdout, `shots/tests/lab_cultures.png`)
+  heterotrophs, two of mirrored hands), in the medium both grow best in: the relation, the winner, the cycle's turn, their curves; Y-04:
+  two lines switched, the luminous one's glow IN THE DARK and the spore former's rest IN THE LIGHT, each an hour dark and lit beside its
+  species (its curve, its stages, when it glows); then the incubator's screen in a game forty minutes on (the pairs, a dormant world's
+  spores woken, the luminous crowd, a spore former at its hot edge giving a strain). Under a second (output: stdout,
+  `shots/tests/lab_cultures.png`)
 * `lab jars`: Z-05: the scan region's first living worlds whose wet silt holds three bands (two of water, then one of each other
   chemistry), each made a jar in a game and drawn on the incubator's jars page at 0, 5, 10 and 20 minutes (its bands printed: the tone,
   the depth in the silt, when it is full; R-439: on the page each band come in numbered by the glass and named under the list), then the
@@ -1276,8 +1364,15 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   letters, ours and mirrored: `geneWorlds`), each genesis's map and its letters' weights, each species' values and genes (its number, its
   kind, its working part, its letters in all, what its letters give); every gene's edit (a letter one heavier, a table's run its next) and
   cut on the four letters' species with the most genes, its values before and after; the gene editor in a game (`lab_genes.png`: empty,
-  its chooser, a rod on it, its warmth's letters changed (its value beside its parent's), its line writing, the line in flask 2); then the
-  laws the unit's `genes` group holds (`geneLaws`). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`)
+  its chooser, a rod on it, its warmth's letters changed (its value beside its parent's), R-445's two prompts (the folder, then the name
+with the parent's typed in), its line writing, the line in flask 2); Y-03:
+  each gene of its world's other species moved into it (its letters, its value after, its price) and a gene's price by how far it came (its
+  best doubling at each); the editor beside a kin (`lab_genes_kin.png`: K's chooser, the map beside its kin, its kin's warmth moved in, a
+  gene into a gap, the line on its world's tree from the kin's leaf); Y-04: the switches (`lab_genes_switch.png`: a luminous species' glow
+  switched by S to IN THE DARK, its line glowing in a dark flask at four minutes beside its species not yet, a spore former's rest IN THE
+  LIGHT at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group holds (`geneLaws`, Y-03's gene moved in
+  and Y-04's own switches among them). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`,
+  `lab_genes_kin.png`, `lab_genes_switch.png`)
 * `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
   its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
   five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of
@@ -1380,7 +1475,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   decoder reads them with `held` shards of the world in hand (default one: about a third of the words, the rest in the people's
   tongue, the names kept; ten: the whole text), in the order of their years with the tone and the kind of each, and how many words
   were read; `full` prints the whole text under each; a world without the trait prints what it would have said.
-  `shards 151 25 1 50 full` is Aieliaalas II's, `shards 153 70 2 50 full` Leileashphail III's (`civilisations/records-and-grammar.md`) (output:
+  `shards 151 25 1 50 full` is Aieliaalas II's, `shards 153 70 2 50 full` Leileashphail III's (`civilisations/records-and-grammar.md`)
+  (output:
   stdout)
 * `music <sx> <sz> <body index> [index] [wav] [age=N] [tone=N]`: C-04 (H-05: every record of the people, its six ensembles; `age=`
   and `tone=` play the records as if of that age or tone; a far future's field printed as each tone's spans): a world's musical
@@ -1785,9 +1881,20 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   3.0% / 3.6% (the rest is KI-341). `unit` runs the same measure over two sites of the first europan, volcanic, desert and
   felisian worlds (4, 16 and 64 m only) (output: stdout)
 
-Environment switches: `VESPERIS_NODRAIN=1` runs without the drainage (the before/after of O6-03 on the same binary; the `terrain` rows without it are the O6-02 ground); `VESPERIS_TRACE=1` prints the timings above (`06-surface.md`); `VESPERIS_SKIP=cut|wq|refl` skips the shore cut, the water quads or the reflections (a rendering artefact is diagnosed by skipping passes and diffing the PNGs); `VESPERIS_THREADS=1` as before.
+Environment switches: `VESPERIS_NODRAIN=1` runs without the drainage (the before/after of O6-03 on the same binary; the `terrain` rows
+without it are the O6-02 ground); `VESPERIS_TRACE=1` prints the timings above (`06-surface.md`); `VESPERIS_SKIP=cut|wq|refl` skips the
+shore cut, the water quads or the reflections (a rendering artefact is diagnosed by skipping passes and diffing the PNGs);
+`VESPERIS_THREADS=1` as before.
 
-Reference numbers (2026-09-28, GEN 10, Apple M4, idle): `bench check` space 2x 3.7 ms, surface 2x 4.4, surface 4x 7.3, forest 4x 9.5, buggy 4x 8.4, descent first frame 50-80 ms (the drainage tiles were prefetched by the landing map; without them a tile costs 100-200 ms on the main thread), sprint worst 3.6; `landmarks`: the share of 24 random land sites with a landmark within 10 km: felisian 96% (peaks 49, lakes 26, ruins 62; 28-45 ms a grid cell with the tiles cold, 1 ms of it the scan), thin atmosphere 92% (craters 79, peaks 28, mesas 5), quartz 92% (ruins 107), cratered 88% (craters 115), hydrocarbon 83% (lakes 85), desert 46% (peaks 57, canyon rims 5; KI-333) (R-408, 2026-10-07, every kind on its own and every ruin: felisian 100% of the sites, peaks within 10 km at 11, lakes holding water at 6, ruins at 24; 44 ms a cell cold with its lake pass; the scanner's 40 km 0.9 s on average and 2 s at most cold, 50 ms with the tiles warm); `terrain`: 27 of 48 class rows on target (section 9 of `PLAN-terrain-3.md`), the felisian 16 m sample 2.5 us (3 x O5: the drainage's neighbourhood, KI-331).
+Reference numbers (2026-09-28, GEN 10, Apple M4, idle): `bench check` space 2x 3.7 ms, surface 2x 4.4, surface 4x 7.3, forest 4x 9.5,
+buggy 4x 8.4, descent first frame 50-80 ms (the drainage tiles were prefetched by the landing map; without them a tile costs 100-200 ms
+on the main thread), sprint worst 3.6; `landmarks`: the share of 24 random land sites with a landmark within 10 km: felisian 96% (peaks
+49, lakes 26, ruins 62; 28-45 ms a grid cell with the tiles cold, 1 ms of it the scan), thin atmosphere 92% (craters 79, peaks 28, mesas
+5), quartz 92% (ruins 107), cratered 88% (craters 115), hydrocarbon 83% (lakes 85), desert 46% (peaks 57, canyon rims 5; KI-333) (R-408,
+2026-10-07, every kind on its own and every ruin: felisian 100% of the sites, peaks within 10 km at 11, lakes holding water at 6, ruins
+at 24; 44 ms a cell cold with its lake pass; the scanner's 40 km 0.9 s on average and 2 s at most cold, 50 ms with the tiles warm);
+`terrain`: 27 of 48 class rows on target (section 9 of `PLAN-terrain-3.md`), the felisian 16 m sample 2.5 us (3 x O5: the drainage's
+neighbourhood, KI-331).
 
 ## F-01: the proof tools and what the bench did not see (2026-10-12)
 
@@ -1936,7 +2043,8 @@ the sprint 10.27 (median 10.2, worst 12.0), city 4x 9.79, probe 4x 10.12, an arr
 29.4 and 4x 101.2, surface 4x 17.0, forest 4x 36.7, descent first 65.5 and beside the capital 100.1, capital 4x 25.9, probe 4x 35.7.
 The terrain bands of surface 4x: every band 2.5-5.2 ms whatever its rows (the sky's bands too); the forest's traced bands: each walks
 all 9,079 cells and sets up the water of all 2,982 wet ones (0.31-0.73 ms of walk, 0.53-1.12 of water set-up, 0.47-2.44 of fill). The
-pool: an empty dispatch 34-50 µs after a rest, 22-32 µs back to back (two runs of `unit`). `bench noise`: `gnoise3` 87.9 ns a call, `gnoise3d` 23.5 (with
+pool: an empty dispatch 34-50 µs after a rest, 22-32 µs back to back (two runs of `unit`). `bench noise`: `gnoise3` 87.9 ns a call,
+`gnoise3d` 23.5 (with
 its gradient), `worley3` 228.2, the features' walk 503.7; their bits `1b2f000a7594cf34`, `effc140ba5cde33b`, `f80ed00a50941a89`,
 `aac27ec62e4220b4`. A comet's re-anchor: the update 0.4-0.5 ms, the next frame 30-33 ms (the refill: 23-25 ms of warm), then 7-9.
 `load landing`: 2.75 cores, eight threads, frames p50 8.8 ms, p99 10.3, the descent's first 45.6. The sweep (a scratch copy with the
@@ -2109,7 +2217,8 @@ and the summary counts the intervals over 17.5 ms.
 
 ## E-03: the harness in pieces (2026-10-24)
 
-The harness is `src/harness/` (57 files with E-02's fingerprints, Z-01's and Z-02's `life`, Z-03's search and Z-04's lab; `src/harness/CLAUDE.md` maps them),
+The harness is `src/harness/` (57 files with E-02's fingerprints, Z-01's and Z-02's `life`, Z-03's search and Z-04's lab;
+`src/harness/CLAUDE.md` maps them),
 not one 2 MB file.
 
 * `help [md]`: every mode by group with its arguments, one line and its file (`MODES` in `main.cpp`); `md` the same as a table a

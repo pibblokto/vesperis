@@ -226,7 +226,7 @@ void Game::handleGlobalKeys(const Input& in) {
 void Game::togglePhotoMode() {
     photoMode = !photoMode;
     if (state == GameState::SURFACE && surf.valid) { if (photoMode) surf.enterFreeCam(); else surf.leaveFreeCam(); }
-    status(photoMode ? (state == GameState::SURFACE ? "PHOTO MODE: FREE CAMERA (W A S D, SPACE/C, SHIFT FAST) - CTRL+P ENDS" : "PHOTO MODE - CTRL+P ENDS") : "PHOTO MODE OFF", 4);
+    status(photoMode ? (state == GameState::SURFACE ? "PHOTO MODE: W A S D, SPACE/C, SHIFT FAST, CTRL+P ENDS" : "PHOTO MODE - CTRL+P ENDS") : "PHOTO MODE OFF", 4);
 }
 
 void Game::toggleRecording() {
@@ -295,7 +295,7 @@ void Game::frame(const Input& inRaw, double realDt) {
         // the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
         if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openScreen(GameState::ALMANAC); } }
         else if (almanacRunning) almanacStop(false);
-        else if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
+        else if (settings.clockMode == 1) status("REAL-TIME CLOCK: NO WARP", 3);
         else { timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }
     }
     if (almanacRunning && settings.clockMode == 1) almanacStop(false);   // the wall clock cannot be run

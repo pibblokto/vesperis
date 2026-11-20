@@ -92,7 +92,7 @@ void Game::launchProbe() {
     if (tele.on) telescopeOff();
     if (radar.on) radarOff();
     logEvent("PROBE", fmt("PROBE %d INTO %s AT %s", probe.id, upper(bodyNameOf(b)).c_str(), latLonString(lat, lon).c_str()));
-    status(aimed ? fmt("PROBE AWAY TO %s", latLonString(lat, lon).c_str()) : "PROBE AWAY, UNDER THE SHIP (THE TELESCOPE AIMS IT)", 5);
+    status(aimed ? fmt("PROBE AWAY TO %s", latLonString(lat, lon).c_str()) : "PROBE AWAY UNDER THE SHIP - TELESCOPE TO AIM", 5);
     statusNext = "SPACE OPENS THE CHUTE ONCE: WHERE TO LINGER"; statusNextSecs = 5;
     audio.beep = BEEP_LOCK;
     openScreen(GameState::PROBE);
@@ -112,7 +112,7 @@ void Game::probeCut(const char* why) {
                                   : fmt("RELAY TO PROBE %d FALLING TO %s CUT: %s", probe.id, upper(bodyNameOf(probe.body)).c_str(), why));   // the log wraps a text on two lines of 44
         probeKeep(3);   // X-04: what it sent until then
     }
-    if (probe.active && probe.endClock < 0) status(fmt("THE PROBE'S RELAY IS CUT: %s", why), 5);
+    if (probe.active && probe.endClock < 0) status(fmt("PROBE RELAY CUT: %s", why), 5);
     probe = ProbeState();
     if (state == GameState::PROBE) closeScreen();
 }
@@ -130,21 +130,21 @@ void Game::probeEnd() {
     probe.endCause = probe.endBar >= probe.flight.crushBar * 0.999 ? 1 : 2;
     int mins = (int)std::lround(probe.clock / 60);
     logEvent("PROBE", fmt("PROBE %d LOST IN %s: %.0f KM DOWN, %.1f ATM, %+.0f C, %d MIN - %s", probe.id, upper(bodyNameOf(probe.body)).c_str(), probe.endKm, atmOf(probe.endBar), probe.endK - 273.15,
-                          mins, probe.endCause == 1 ? "THE HULL GAVE WAY" : "THE HEAT TOOK IT"));   // two lines of 44 with a name of twenty
+                          mins, probe.endCause == 1 ? "HULL GAVE WAY" : "OVERHEATED"));   // two lines of 44 with a name of twenty
     probeKeep(probe.endCause);   // X-04: the record, its final image held on the screen
-    if (state != GameState::PROBE) status("PROBE LOST - ITS LAST FRAME IS ON THE SCREEN (C)", 6);
+    if (state != GameState::PROBE) status("PROBE LOST - C SHOWS THE LAST FRAME", 6);
 }
 
 // every simulating frame: the relay holds while the ship stays parked at the giant; the clock, the chute's tearing, the end
 void Game::updateProbe(double realDt) {
     if (!probe.active) return;
-    if (!probeHere()) { if (probe.endClock < 0) probeCut("THE SHIP LEFT ITS PARKING"); else probeRelease(); return; }
+    if (!probeHere()) { if (probe.endClock < 0) probeCut("SHIP NO LONGER PARKED"); else probeRelease(); return; }
     if (probe.endClock >= 0) return;
     probe.clock += realDt * (probe.fast ? PROBE_FAST : 1.0);   // R-406: `fast` is Shift held on the probe's screen this frame (Game::frame)
     double endC = probeEndClock(probe.atm, probe.flight);
     if (probe.flight.chuteOpen >= 0 && !probe.tornNoted && probe.clock >= probe.flight.chuteClose && probe.flight.chuteClose < endC) {
         probe.tornNoted = true;
-        if (state == GameState::PROBE) status(fmt("THE CHUTE TORE AWAY AT %.2f ATM", atmOf(probeBarAt(probe.flight, probe.flight.chuteClose))), 4);
+        if (state == GameState::PROBE) status(fmt("CHUTE TORE AWAY AT %.2f ATM", atmOf(probeBarAt(probe.flight, probe.flight.chuteClose))), 4);
     }
     probe.clock = std::min(probe.clock, endC);
     probeTrack();   // the tracks and the log's discoveries, to the end
@@ -158,13 +158,13 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl()) || (in.wasPressed(KEY_C) && !in.ctrl()) || (ended && enterKey(in))) {
         closeScreen();
         if (ended) { probeRelease(); status("BACK IN THE CABIN", 3); }
-        else status("THE PROBE FALLS ON - C WATCHES IT", 5);
+        else status("PROBE STILL FALLING - C TO WATCH", 5);
         audio.beep = BEEP_UI;
         return;
     }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // X-04: the storm it falls into, named
-        if (probe.stormKey.empty() || probe.clock < probeDescentStart()) { refuse(probe.stormKey.empty() ? "THE PROBE FALLS INTO NO STORM" : "THE STORM IS NAMED ONCE THE PROBE IS IN ITS CLOUDS", 3); }
+        if (probe.stormKey.empty() || probe.clock < probeDescentStart()) { refuse(probe.stormKey.empty() ? "NO STORM TO NAME" : "PROBE NOT IN THE STORM YET", 3); }
         else { textStormKey = probe.stormKey; const std::string n = probeStormName(); beginTextEntry("NAME THE STORM", TEXT_STORM, n.empty() ? n : upper(n)); }
         return;
     }
@@ -180,23 +180,23 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     probe.camYaw = wrapAngle(probe.camYaw); probe.camPitch = clampd(probe.camPitch, -75 * DEG, 85 * DEG);
     if (in.wasPressed(KEY_SPACE)) {
         double bar = probeBarAt(probe.flight, probe.clock);
-        if (probe.clock < probeDescentStart()) { refuse("THE CHUTE OPENS IN THE AIR, AFTER THE ENTRY", 3); }
+        if (probe.clock < probeDescentStart()) { refuse("CHUTE OPENS AFTER ENTRY", 3); }
         else if (probe.flight.chuteOpen < 0) {
             probe.flight.chuteOpen = probe.clock; probe.flight.chuteClose = probeChuteCloseAt(probe.flight, probe.clock);
-            status(fmt("CHUTE OPEN AT %.2f ATM - SPACE CUTS IT", atmOf(bar)), 4); audio.beep = BEEP_UI;
+            status(fmt("CHUTE OPEN AT %.2f ATM - SPACE TO CUT", atmOf(bar)), 4); audio.beep = BEEP_UI;
         } else if (probe.clock < probe.flight.chuteClose) {
             probe.flight.chuteClose = probe.clock; probe.tornNoted = true;
             status(fmt("CHUTE CUT AT %.2f ATM", atmOf(bar)), 3); audio.beep = BEEP_UI;
-        } else { refuse("THE CHUTE IS GONE", 3); }
+        } else { refuse("CHUTE GONE", 3); }
     }
 }
 
 // U-04: the probe's camera's commands (the controller's first page; its name is its context's)
 void Game::probePad(PadMenu& m) const {
-    if (probe.active && probe.endClock >= 0) m.item("LET IT GO", KEY_ENTER);
-    else m.item("THE CHUTE: OPEN, OR CUT", KEY_SPACE);
-    m.item("CENTRE THE CAMERA", KEY_X); m.item("NAME THE STORM", KEY_N); m.item("PHOTOGRAPH", KEY_P);
-    m.item("BACK TO THE CABIN", KEY_ESCAPE);
+    if (probe.active && probe.endClock >= 0) m.item("RELEASE", KEY_ENTER);
+    else m.item("CHUTE: OPEN OR CUT", KEY_SPACE);
+    m.item("CENTRE CAMERA", KEY_X); m.item("NAME STORM", KEY_N); m.item("PHOTOGRAPH", KEY_P);
+    m.item("BACK", KEY_ESCAPE);
 }
 
 // X-03: the screen's stage name (a deck by its cloud)
@@ -256,7 +256,7 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
     else if (!ended && ((int)(realTime * 2) & 1)) drawTextShadow(canvas, 18 + textWidth(cam.c_str()) + 6, 16, "\x07REC", HUD_RED, HUD_SHADOW);
     int stage = ended ? PS_END : probeStageAt(a, probe.flight, c);
     std::string st = stage == PS_FALL ? fmt("FALLING TO %s", trunc(upper(bodyNameOf(probe.body)), 20).c_str()) : (ended ? PROBE_STAGE_NAMES[PS_END] : probeStageLabel(c));
-    if (rec && ended && rec->endCause == 3) st = "THE RELAY WAS CUT";
+    if (rec && ended && rec->endCause == 3) st = "RELAY CUT";
     if (!ended && stage >= PS_ABOVE && stage <= PS_DEEP && !photoMode) {   // the layer the picture shows (a great storm's dome lifts a deck over its pressure; a hole takes one away)
         const ProbeViewStats& vs = probeViewStats();
         if (vs.inHole) st = "A CLEAR-AIR HOLE";
@@ -303,9 +303,9 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
         if ((int)(realTime * 1.5) & 1) drawTextCentered(canvas, UW / 2, UH / 2 - 16, cause == 3 ? "RELAY CUT" : "SIGNAL LOST", HUD_RED);
         drawTextCentered(canvas, UW / 2, UH / 2 - 4, (eKm >= 0 ? fmt("%.0f KM DOWN  %.1f ATM  %+.0f C", eKm, atmOf(eBar), eK - 273.15) : fmt("%.0f KM UP  %.4f ATM", -eKm, atmOf(eBar))).c_str(), fc);
         drawTextCentered(canvas, UW / 2, UH / 2 + 5,
-                fmt(rec ? "%d MIN %02d S - %s" : "%d MIN %02d S AFTER THE LAUNCH - %s", mins, secs, cause == 1 ? "THE HULL GAVE WAY" : (cause == 2 ? "THE HEAT TOOK IT" : "THE SHIP LEFT")).c_str(),
+                fmt(rec ? "%d MIN %02d S - %s" : "%d MIN %02d S AFTER LAUNCH - %s", mins, secs, cause == 1 ? "HULL GAVE WAY" : (cause == 2 ? "OVERHEATED" : "SHIP LEFT")).c_str(),
                 fd);   // (a recording's clear of its depth bar)
-        drawTextShadow(canvas, 18, UH - 26, rec ? "SPACE PLAYS AGAIN  LEFT DEPTH  ESC GALLERY" : "ENTER / ESC: BACK TO THE CABIN   P PHOTO", fd, HUD_SHADOW);
+        drawTextShadow(canvas, 18, UH - 26, rec ? "SPACE PLAYS AGAIN  LEFT DEPTH  ESC GALLERY" : "ENTER/ESC CABIN  P PHOTO", fd, HUD_SHADOW);
         drawCommonHUD(!rec);
         return;
     }
@@ -313,7 +313,7 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
     if (stage == PS_FALL) {
         Vec3 up; Vec3 pos = probeWorldPos(c, tt, up);
         double h = length(pos - sys.bodyPos(probe.body, tt)) - sys.bodies[probe.body].radiusKm - giantAltitudeKm(a, PROBE_TOP_BAR);
-        l1 = fmt("%s TO THE CLOUD TOPS", distanceString(std::max(0.0, h)).c_str());
+        l1 = fmt("%s TO CLOUD TOPS", distanceString(std::max(0.0, h)).c_str());
         l2 = fmt("ENTRY IN %.0f S", std::max(0.0, PROBE_FALL_S - c));
         l3 = fmt("AIMED AT %s", latLonString(probe.aimLat, probe.aimLon).c_str());
     } else if (stage == PS_ENTRY) {
@@ -322,15 +322,15 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
         double v = vEsc * std::pow(1 - smoothstep(0.0, 1.0, u), 2) + 0.3;
         l1 = fmt("ENTRY %.1f KM/S  %.0f G", v, 230 * std::pow(std::sin(PI * u), 2) + 1);
         l2 = fmt("ALT %.0f KM  %.4f ATM", giantAltitudeKm(a, bar), atmOf(bar));
-        l3 = "THE HEAT SHIELD TAKES IT"; c3 = HUD_AMBER;
+        l3 = "HEAT SHIELD HOLDING"; c3 = HUD_AMBER;
     } else {
         double z = giantAltitudeKm(a, bar);
         double tK = giantTemperatureK(a, bar), w = giantWindEast(a, probe.aimLat, bar) * (1 + 0.12 * std::sin(c * 0.7) * std::sin(c * 0.23));
         l1 = fmt("PRESS %.2f ATM  %s %.1f KM", atmOf(bar), z >= 0 ? "ALT" : "DEPTH", std::fabs(z));
         l2 = fmt("TEMP %+.0f C  WIND %.0f KT %s", tK - 273.15, std::fabs(w) * 1.94384, w >= 0 ? "E" : "W");
         bool chuteOpen = probe.flight.chuteOpen >= 0 && c >= probe.flight.chuteOpen && c < probe.flight.chuteClose;
-        if (chuteOpen) { l3 = rec ? "CHUTE OPEN" : "CHUTE OPEN - SPACE CUTS IT"; c3 = HUD_CYAN; }
-        else if (probe.flight.chuteOpen >= 0 && c >= probe.flight.chuteOpen) l3 = "THE CHUTE IS GONE";
+        if (chuteOpen) { l3 = rec ? "CHUTE OPEN" : "CHUTE OPEN - SPACE TO CUT"; c3 = HUD_CYAN; }
+        else if (probe.flight.chuteOpen >= 0 && c >= probe.flight.chuteOpen) l3 = "CHUTE GONE";
         else l3 = rec ? "FALLING FREE" : "SPACE OPENS THE CHUTE";
     }
     drawTextShadow(canvas, 18, UH - 50, l1.c_str(), fc, HUD_SHADOW);
@@ -338,7 +338,7 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
     drawTextShadow(canvas, 18, UH - 34, l3.c_str(), c3, HUD_SHADOW);
     const bool nameable = !probe.stormKey.empty() && c >= probeDescentStart();
     drawTextShadow(canvas, 18, UH - 26, rec ? (nameable ? "ARROWS DEPTH  SPACE PAUSES  N NAMES  ESC BACK" : "ARROWS DEPTH  SPACE PAUSES  SHIFT FAST  ESC BACK")   // 49 characters at most from x 18
-                                            : (nameable ? "N NAMES THE STORM  SHIFT FAST  P PHOTO  ESC CABIN" : "MOUSE LOOKS  SHIFT FAST  P PHOTO  ESC CABIN"), fd, HUD_SHADOW);
+                                            : (nameable ? "N NAMES  SHIFT FAST  P PHOTO  ESC CABIN" : "MOUSE LOOKS  SHIFT FAST  P PHOTO  ESC CABIN"), fd, HUD_SHADOW);
     drawCommonHUD(!rec);
 }
 

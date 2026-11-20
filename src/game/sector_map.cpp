@@ -51,7 +51,7 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
         std::vector<std::pair<double, const SiteMark*>> in_;
         for (const SiteMark& m : marksHere()) if (std::fabs(m.x - px) <= hw && std::fabs(m.z - pz) <= hh) in_.push_back({std::hypot(m.x - px, m.z - pz), &m});
         std::sort(in_.begin(), in_.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-        if (in_.empty()) status("NO MARK IN THE FRAME - ZOOM OUT (-)", 3);
+        if (in_.empty()) status("NO MARK ON THE MAP - ZOOM OUT (-)", 3);
         else {
             size_t k = 0;
             for (size_t i = 0; i < in_.size(); i++) if (in_[i].second->index == mapTabMark) { k = (i + 1) % in_.size(); break; }
@@ -88,19 +88,19 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
 // d-pad and the sticks)
 void Game::sectorMapPad(PadMenu& m) const {
     m.title = "SECTOR MAP";
-    m.item("MARK HERE, OR RENAME THE MARK", KEY_ENTER);
-    m.item("SHOW THE MARK OVER THE VIEW", KEY_ENTER, MOD_SHIFT);
+    m.item("MARK HERE OR RENAME", KEY_ENTER);
+    m.item("SHOW MARK OVER VIEW", KEY_ENTER, MOD_SHIFT);
     m.item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
-    m.item("WAYPOINT AT THE CURSOR", KEY_M);
-    m.item("THE NEXT MARK", KEY_TAB);
-    m.item("THE CURSOR BACK TO YOU", KEY_SPACE);
+    m.item("WAYPOINT AT CURSOR", KEY_M);
+    m.item("NEXT MARK", KEY_TAB);
+    m.item("CURSOR BACK TO YOU", KEY_SPACE);
     m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
     scannerPad(m);
-    m.item("CLOSE THE MAP", KEY_ESCAPE);
+    m.item("CLOSE", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "MARK"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "BACK TO YOU");
     m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN"); m.button(PR_L3, KEY_LEFT_SHIFT, "FASTER");
     m.button(PR_SELECT, KEY_TAB, "NEXT MARK"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
-    m.sticks = "STICKS MOVE THE CURSOR";
+    m.sticks = "STICKS MOVE CURSOR";
 }
 
 void Game::renderSectorMap() {
@@ -326,7 +326,7 @@ void Game::renderSectorMap() {
             drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
             drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // over the view
         }
-        else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "THE WAYPOINT", HUD_WHITE);
+        else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "WAYPOINT", HUD_WHITE);
     }
     {   // the scanner
         if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);

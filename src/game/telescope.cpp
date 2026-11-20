@@ -37,7 +37,7 @@ double Game::telescopeFieldDeg() const { return 2 * std::atan(std::tan(settings.
 
 void Game::telescopeToggle() {
     if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); audio.beep = BEEP_UI; return; }
-    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING TO SEE IN THE FLIGHT - THE TELESCOPE WAITS"); return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING TO SEE IN FLIGHT"); return; }
     if (radar.on) radarOff();
     tele.on = true; tele.track = TELE_NONE; tele.offYaw = 0; tele.offPitch = 0;
     cabin.yaw = 0; cabin.pitch = 0;   // the eye is at the eyepiece: the view is the ship's attitude
@@ -271,7 +271,7 @@ void Game::renderTelescopeHUD() {
     if (tele.track != TELE_NONE)
         drawTextShadow(canvas, 18, UH - 34, fmt(telescopeStabilised() && tele.track == tele.frameBody ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(tele.track), 22).c_str()).c_str(),
                 HUD_CYAN, HUD_SHADOW);
-    else if (tele.target >= 0 || tele.target == TELE_SUN) drawTextShadow(canvas, 18, UH - 34, "ENTER TRACKS THE TARGET", fd, HUD_SHADOW);
+    else if (tele.target >= 0 || tele.target == TELE_SUN) drawTextShadow(canvas, 18, UH - 34, "ENTER TRACKS", fd, HUD_SHADOW);
     {   // X-01: parked at a giant, the reticle is where a probe goes
         double plat, plon;
         if (!probe.active && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type) &&

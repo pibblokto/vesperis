@@ -223,6 +223,18 @@ void Game::treePage() {
         tree.shownJoin.push_back(last ? commonAncestorGyr(last->line, L.line) : -1.0);
         last = &L;
     }
+    // Y-03: a gene moved in, a line from its donor's row (a species or a line) to the line's, where both are on the page
+    tree.donors.clear();
+    for (size_t k = 0; k < tree.shown.size(); k++) {
+        const auto it = tree.shown[k].lab ? guide.strains.find(tree.shown[k].key) : guide.strains.end();
+        if (it == guide.strains.end() || it->second.what != SM_EDIT) continue;
+        for (const GeneEdit& e : geneEditsOf(it->second.edits)) {
+            if (e.how != GX_MOVED) continue;
+            for (size_t j = 0; j < tree.shown.size(); j++)
+                if (j != k && tree.shown[j].key == e.donor && std::find(tree.donors.begin(), tree.donors.end(), std::make_pair((int)j, (int)k)) == tree.donors.end())
+                    tree.donors.push_back({(int)j, (int)k});
+        }
+    }
     tree.sel = clampi(tree.sel, 0, std::max(0, (int)tree.shown.size() - 1));
 }
 
@@ -268,8 +280,8 @@ int Game::treeNearest(int i, double& gyr) const {
 void Game::treeTakeOff() {
     const TreePage& P = tree.pages[tree.page];
     const TreeLeaf& L = tree.shown[tree.sel];
-    if (P.kind == TP_FOLDER) { refuse("SORT THE FOLDER ON THE MICROSCOPE'S LISTS", 3); return; }
-    if (!L.lab) { refuse(P.kind == TP_SHIP ? "THE SHIP'S OWN STAY ON ITS TREE" : "A WORLD'S OWN SPECIES STAY ON ITS TREE", 3); return; }
+    if (P.kind == TP_FOLDER) { refuse("SORT FOLDERS ON THE MICROSCOPE'S LISTS", 3); return; }
+    if (!L.lab) { refuse(P.kind == TP_SHIP ? "THE SHIP'S SPECIES CANNOT BE TAKEN OFF" : "SPECIES CANNOT BE TAKEN OFF - ONLY STRAINS", 3); return; }
     const std::string words = L.name;
     guide.treeOff.insert(L.key); guide.save(guidePath);
     treePage();
@@ -279,11 +291,11 @@ void Game::treeTakeOff() {
 // Y-01: A opens a chooser of the world's lines taken off; Enter puts the chosen back
 void Game::treePickOpen() {
     const TreePage& P = tree.pages[tree.page];
-    if (P.kind == TP_FOLDER) { refuse("SORT THE FOLDER ON THE MICROSCOPE'S LISTS", 3); return; }
+    if (P.kind == TP_FOLDER) { refuse("SORT FOLDERS ON THE MICROSCOPE'S LISTS", 3); return; }
     tree.pickKeys.clear();
     if (P.kind == TP_WORLD)
         for (const std::string& k : guide.treeOff) if (pageWorldOf(k) == P.key && guide.strains.count(k)) tree.pickKeys.push_back(k);
-    if (tree.pickKeys.empty()) { refuse(P.kind == TP_WORLD ? "NO LINE OF THIS WORLD IS OFF ITS TREE" : "THE SHIP'S OWN ARE ALL ON ITS TREE", 3); return; }
+    if (tree.pickKeys.empty()) { refuse(P.kind == TP_WORLD ? "NO STRAIN OF THIS WORLD IS OFF THE TREE" : "ALL THE SHIP'S SPECIES ARE ON THE TREE", 3); return; }
     tree.picking = true; tree.pickSel = 0;
     audio.beep = BEEP_UI;
 }
@@ -324,23 +336,23 @@ void Game::updateTree(const Input& in, double dt, double realDt) {
     if (enterKey(in)) {   // a kin's world: its star the remote target
         const TreeLeaf& L = tree.shown[tree.sel];
         Star st;
-        if (L.body < 0) { refuse("IT LIVES ABOARD", 2); return; }
-        if (!placeInSector(L.sx, L.sy, L.sz, st, true)) { refuse("ITS STAR IS NO LONGER THERE", 2); return; }
+        if (L.body < 0) { refuse("LIVES ABOARD - NO STAR", 2); return; }
+        if (!placeInSector(L.sx, L.sy, L.sz, st, true)) { refuse("ITS STAR NO LONGER EXISTS", 2); return; }
         setRemoteStar(st);
-        status(fitText("REMOTE TARGET: THE STAR OF " + (L.world == "UNKNOWN" ? std::string("AN UNNAMED WORLD") : L.world), UW - 12), 4);
+        status(fitText("REMOTE TARGET: STAR OF " + (L.world == "UNKNOWN" ? std::string("AN UNNAMED WORLD") : L.world), UW - 12), 4);
         audio.beep = BEEP_LOCK;
     }
 }
 
 void Game::renderTree() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 218);
-    drawText(canvas, 6, 4, "THE TREE OF KIN", treeColour());
+    drawText(canvas, 6, 4, "TREE OF KIN", treeColour());
     const int np = (int)tree.pages.size();
     const bool worldPage = np > 0 && tree.pages[tree.page].kind == TP_WORLD;
     if (np > 0) {   // Y-01: the page, its place among them, what is there and not read
         const TreePage& P = tree.pages[tree.page];
         const std::string of = fmt(" >  %d OF %d", tree.page + 1, np);
-        const int room = UW - 12 - textWidth("THE TREE OF KIN") - 12 - textWidth(("< " + of).c_str());
+        const int room = UW - 12 - textWidth("TREE OF KIN") - 12 - textWidth(("< " + of).c_str());
         const std::string head = "< " + fitText(P.name, room) + of;
         drawText(canvas, UW - 6 - textWidth(head.c_str()), 4, head.c_str(), HUD_WHITE);
         if (tree.unread > 0)
@@ -402,6 +414,14 @@ void Game::renderTree() {
         for (int y = std::max(vy0, yOf[pk] + 4); y <= std::min(vy1, yOf[k]); y += 2) fillRectRGB(canvas, x, y, x, y, treeColour(0.9f));
         if (k != tree.sel && yOf[k] >= vy0 && yOf[k] <= vy1) for (int x2 = x; x2 <= x + 3; x2 += 2) fillRectRGB(canvas, x2, yOf[k], x2, yOf[k], treeColour(0.9f));   // (the chosen's mark its own)
     }
+    // Y-03: a moved gene's line, dotted amber from its donor's row to the line's in the lane before the names (three lanes, by its order)
+    for (size_t i = 0; i < tree.donors.size(); i++) {
+        const int a = tree.donors[i].first, b = tree.donors[i].second, x = tx + 2 + 2 * (int)(i % 3);
+        if (a < 0 || b < 0 || a >= n || b >= n) continue;
+        const int ya = std::min(yOf[a], yOf[b]), yb = std::max(yOf[a], yOf[b]);
+        for (int y = std::max(vy0, ya); y <= std::min(vy1, yb); y += 2) fillRectRGB(canvas, x, y, x, y, HUD_AMBER);
+        for (int k : {a, b}) if (yOf[k] >= vy0 && yOf[k] <= vy1) for (int x2 = x; x2 <= tx + 6; x2 += 2) fillRectRGB(canvas, x2, yOf[k], x2, yOf[k], HUD_AMBER);
+    }
     // the leaves' and the heads' lines
     for (int r = tree.top; r < (int)rows.size() && r < tree.top + TREE_ROWS; r++) {
         const int y = TREE_Y0 + (r - tree.top) * TREE_ROW;
@@ -442,20 +462,24 @@ void Game::renderTree() {
             for (const TreeLeaf& S : tree.leaves) if (S.key == speciesKeyOf(L.key)) of = S.name;
             if (parent > 0) of = treeLineWords(speciesKeyOf(L.key) + "/S" + std::to_string(parent));
             const bool edited = it != guide.strains.end() && it->second.what == SM_EDIT;   // Y-02
-            drawText(canvas, 6, y, fitText((edited ? "A LINE EDITED FROM " : "A STRAIN OF ") + of, UW - 12).c_str(), HUD_WHITE); y += 9;
+            drawText(canvas, 6, y, fitText((edited ? "A STRAIN EDITED FROM " : "A STRAIN OF ") + of, UW - 12).c_str(), HUD_WHITE); y += 9;
             if (it != guide.strains.end()) { drawText(canvas, 6, y, fitText(lineMoveWords(L.key), UW - 12).c_str(), HUD_WHITE); y += 9; }
-            drawText(canvas, 6, y, edited ? "WRITTEN ON THE GENE EDITOR FROM ITS WORLD'S LIFE" : "GROWN IN THE LAB FROM ITS WORLD'S LIFE", HUD_AMBER);
+            std::string from;   // Y-03: a gene moved in, its donor's words
+            if (edited)
+                for (const GeneEdit& e : geneEditsOf(it->second.edits))
+                    if (e.how == GX_MOVED && from.empty()) from = fmt("GENE %d FROM ", e.place + 1) + treeLineWords(e.donor);
+            drawText(canvas, 6, y, fitText(!from.empty() ? from : (edited ? "MADE ON THE GENE EDITOR" : "GROWN IN THE LAB"), UW - 12).c_str(), HUD_AMBER);
         } else {
             int i = -1;
             for (int j = 0; j < (int)tree.leaves.size() && i < 0; j++) if (tree.leaves[j].key == L.key) i = j;
             double gyr = -1;
             const int k = i < 0 ? -1 : treeNearest(i, gyr);
             std::string kin, when;
-            if (k < 0) kin = "NO COMMON ANCESTOR WITH ANY LIFE READ";
+            if (k < 0) kin = "NO COMMON ANCESTOR WITH ANY LIFE SEQUENCED";
             else {
                 const TreeLeaf& K = tree.leaves[k];
-                kin = fitHead("ITS NEAREST KIN: " + K.name, (K.body >= 0 ? " OF " : ", ") + K.world, UW - 12);
-                when = gyr < 1e-3 ? "ONE SPECIES, CARRIED APART " + yearsWords(std::max(gyr * 1e9, 1.0)) + " AGO" : "A COMMON ANCESTOR " + yearsWords(gyr * 1e9) + " AGO";
+                kin = fitHead("NEAREST KIN: " + K.name, (K.body >= 0 ? " OF " : ", ") + K.world, UW - 12);
+                when = gyr < 1e-3 ? "ONE SPECIES, CARRIED APART " + yearsWords(std::max(gyr * 1e9, 1.0)) + " AGO" : "COMMON ANCESTOR " + yearsWords(gyr * 1e9) + " AGO";
             }
             drawText(canvas, 6, y, fitText(kin, UW - 12).c_str(), HUD_WHITE); y += 9;
             if (!when.empty()) { drawText(canvas, 6, y, fitText(when, UW - 12).c_str(), HUD_WHITE); y += 9; }
@@ -464,13 +488,13 @@ void Game::renderTree() {
             else if (L.drifter) {
                 bool beside = false;
                 for (const TreeLeaf& o : tree.leaves) beside = beside || (!o.drifter && o.body >= 0 && o.line.genesis.id == L.line.genesis.id && o.line.lx == L.line.lx && o.line.ly == L.line.ly && o.line.lz == L.line.lz);
-                more = beside ? "A DRIFTER'S, ITS KIN THE LIFE OF THE STAR IT LEFT" : "A DRIFTER'S: ITS LIFE THE STAR'S IT LEFT";
-            } else if (L.body < 0) more = "THE SHIP'S OWN, OF HOME'S LIFE";
+                more = beside ? "FROM A DRIFTER: KIN OF THE STAR IT LEFT" : "FROM A DRIFTER: LIFE OF THE STAR IT LEFT";
+            } else if (L.body < 0) more = "THE SHIP'S OWN, FROM HOME";
             if (!more.empty()) drawText(canvas, 6, y, fitText(more, UW - 12).c_str(), HUD_AMBER);
         }
     } else drawTextCentered(canvas, UW / 2, UH / 2, "NOTHING ON THIS TREE YET", HUD_DIM);
-    drawTextCentered(canvas, UW / 2, UH - 21, np > 1 ? "<- -> A TREE  UP DOWN A LEAF  ENTER ITS STAR" : "UP DOWN A LEAF  ENTER ITS STAR THE TARGET", HUD_DIM);
-    drawTextCentered(canvas, UW / 2, UH - 12, worldPage ? "TAB THE SEQUENCER  BACKSPACE A LINE OFF  A ONE BACK" : "TAB THE SEQUENCER", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 21, np > 1 ? "<- -> TREE  UP DOWN LEAF  ENTER TARGET STAR" : "UP DOWN LEAF  ENTER TARGET ITS STAR", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 12, worldPage ? "TAB SEQUENCER  BKSP STRAIN OFF  A PUT ONE BACK" : "TAB SEQUENCER", HUD_DIM);
     if (tree.picking) {   // A's chooser: the world's lines taken off its tree
         const int all = (int)tree.pickKeys.size(), rowsN = std::min(10, all), x0 = 30, y0 = 44;
         drawPanel(canvas, x0 - 6, y0 - 14, UW - x0 + 6, y0 + rowsN * 9 + 14, rgb(8, 14, 9), 235, treeColour(0.6f));
@@ -482,22 +506,22 @@ void Game::renderTree() {
             if (sel) drawText(canvas, x0, y0 + i * 9, ">", treeColour());
             drawText(canvas, x0 + 8, y0 + i * 9, fitText(treeLineWords(tree.pickKeys[k]), UW - 2 * x0 - 8).c_str(), sel ? HUD_WHITE : lineColour());
         }
-        drawText(canvas, x0, y0 + rowsN * 9 + 3, "ENTER PUTS IT BACK  ESC LEAVES IT", HUD_DIM);
+        drawText(canvas, x0, y0 + rowsN * 9 + 3, "ENTER PUT BACK  ESC LEAVE", HUD_DIM);
     }
 }
 
 void Game::treePad(PadMenu& m) const {
-    m.title = "THE TREE OF KIN";
+    m.title = "TREE OF KIN";
     if (tree.picking) {
-        m.item("PUT IT BACK", KEY_ENTER); m.item("THE NEXT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP); m.item("LEAVE IT", KEY_ESCAPE);
+        m.item("PUT BACK", KEY_ENTER); m.item("NEXT", KEY_DOWN); m.item("PREVIOUS", KEY_UP); m.item("LEAVE", KEY_ESCAPE);
         m.button(PR_A, KEY_ENTER, "PUT BACK"); m.button(PR_B, KEY_ESCAPE, "LEAVE");
         return;
     }
-    m.item("THE NEXT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP);
-    if (tree.pages.size() > 1) { m.item("THE NEXT TREE", KEY_RIGHT); m.item("THE TREE BEFORE", KEY_LEFT); }
-    m.item("ITS STAR THE TARGET", KEY_ENTER);
-    if (!tree.pages.empty() && tree.pages[tree.page].kind == TP_WORLD) { m.item("TAKE THE LINE OFF", KEY_BACKSPACE); m.item("PUT A LINE BACK", KEY_A); }
-    m.item("THE SEQUENCER", KEY_TAB); m.item("BACK", KEY_ESCAPE);
+    m.item("NEXT", KEY_DOWN); m.item("PREVIOUS", KEY_UP);
+    if (tree.pages.size() > 1) { m.item("NEXT TREE", KEY_RIGHT); m.item("PREVIOUS TREE", KEY_LEFT); }
+    m.item("TARGET ITS STAR", KEY_ENTER);
+    if (!tree.pages.empty() && tree.pages[tree.page].kind == TP_WORLD) { m.item("TAKE STRAIN OFF", KEY_BACKSPACE); m.item("PUT A STRAIN BACK", KEY_A); }
+    m.item("SEQUENCER", KEY_TAB); m.item("BACK", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "TARGET"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "SEQUENCER");
-    if (tree.pages.size() > 1) { m.button(PR_LB, KEY_LEFT, "TREE BEFORE"); m.button(PR_RB, KEY_RIGHT, "NEXT TREE"); }
+    if (tree.pages.size() > 1) { m.button(PR_LB, KEY_LEFT, "PREV TREE"); m.button(PR_RB, KEY_RIGHT, "NEXT TREE"); }
 }

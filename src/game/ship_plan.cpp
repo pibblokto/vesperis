@@ -96,8 +96,8 @@ constexpr ShipOpening lifterOf() {
     ShipOpening o{};
     o.kind = OPEN_LIFTER; o.from = ROOM_BRIDGE; o.to = ROOM_OBSERVATORY;
     o.up = {0.0, -3.3, 0, 0}; o.down = SHIP_START.at;
-    o.upSays = "IN THE OBSERVATORY - PAGE DOWN TO THE BRIDGE"; o.downSays = "BACK ON THE BRIDGE";
-    o.upPad = "UP TO THE OBSERVATORY"; o.downPad = "DOWN TO THE BRIDGE";
+    o.upSays = "OBSERVATORY - PAGE DOWN TO BRIDGE"; o.downSays = "BACK ON THE BRIDGE";
+    o.upPad = "UP TO OBSERVATORY"; o.downPad = "DOWN TO BRIDGE";
     return o;
 }
 // every room of the main deck opens onto the hall by an arch, the maintenance room onto the hangar; the well and the oculus seen through

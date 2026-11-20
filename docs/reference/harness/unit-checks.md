@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-50 groups, 484 checks in their order; a group's heading gives its file, its function, the render scale it
+50 groups, 498 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -587,7 +587,7 @@ starts at and its count.
 - search: the activity vision as a vial reads, its frame in bank 15, absent to the bit when off (R-434)
 - search: the kit's count, its refusals, the cold store without limit and its lines (Z-03, R-432)
 
-## lab (`unit_lab.cpp`, `unitLab`, 1x): 16
+## lab (`unit_lab.cpp`, `unitLab`, 1x): 18
 
 - lab: a slide's frame closed-form in its clock, the same at any thread count (Z-04)
 - lab: a sheet's lines only by what was seen (Z-04)
@@ -599,6 +599,8 @@ starts at and its count.
 - lab: the culture collection: kept as grown, in a folder, on the stage, into a flask, chosen, saved (R-433)
 - lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
 - lab: two in a flask, the four ways (Z-05)
+- lab: a switched strain in a predator cycle follows its numbers (B-446)
+- lab: a culture's hold at its crowd ends: past it, it rests, dies or fruits (B-444)
 - lab: a species' genome a pure function of it and its genesis (Z-06)
 - lab: the distances rank as the lineages: a world's, a system's, a cell's (Z-06)
 - lab: no common ancestor across geneses (Z-06)
@@ -623,7 +625,7 @@ starts at and its count.
 - incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
 - incubator: the jars made clear: bands in their places, none over another, an eater that needs air at the air's edge; kept on the sheets; a jar's settling said once (R-439)
 
-## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 10
+## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 22
 
 - genes: the tree by world and by folder: its pages, a world's species and its lines, Backspace and A, a folder's tree (Y-01)
 - genes: a living world of each alphabet and hand (Y-02)
@@ -632,9 +634,21 @@ starts at and its count.
 - genes: each gene's edit and cut as its code says (Y-02)
 - genes: a vital gene's edit kills, a quiet one shows nothing (Y-02)
 - genes: how it lives and its plan's family never move; its values within their limits (Y-02)
+- genes: a gene moved in takes its donor's letters and value, over its own or into a gap; its way and family fixed (Y-03)
+- genes: the own switches (a glow's WHEN CROWDED, a rest's WHEN STARVING, the rest ALWAYS) give every species' curve as before (Y-04)
 - genes: a line written on the editor into a flask, read as a strain is: its culture, its drop, the sequencer, the collection, its twig (Y-02)
+- genes: W asks for the new strain's folder, then its name, the parent's to start (R-445)
 - genes: what a gene does learned: one change seen, candidates from two, a vital death, nothing seen, a strain read (Y-02)
 - genes: the editor, its lines and their flasks over a save and a load (Y-02)
+- genes: a kin beside it on the editor, another life refused with its words; M moves its kin's gene in, over its own and into a gap (Y-03)
+- genes: a moved gene's line on its world's tree, from its donor's leaf to the line's twig (Y-03)
+- genes: a gene not its own slows its line by its donor's distance: its doubling, and beside its parent in a flask (Y-03)
+- genes: D copies a gene to a free place of its kind; changed by hand, the line does something new (Y-03)
+- genes: what a gene needs: a sense in a still cell answers nothing (said); a pigment or a food in one that lives another way (Y-03)
+- genes: the kin beside it, its moved and copied genes over a save and a load (Y-03)
+- genes: a switch's condition in the culture's segments: the light, the warmth against its best, starving, its crowd's share (Y-04)
+- genes: a gene off costs nothing: a gene not its own switched off pays nothing, NEVER nowhere (Y-04)
+- genes: S sets a gene's switch on the editor, kept over a save; a switched line's drop as its flask has it (Y-04)
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

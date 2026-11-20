@@ -246,9 +246,9 @@ double Game::gardenGrowth(int bed) const {
 // R-429: E at a bed: trimmed back to its starting size, to grow again
 void Game::gardenTrim(int bed) {
     if (bed < 0 || bed >= GARDEN_BEDS) return;
-    if (gardenGrowth(bed) < GARDEN_TRIM_MIN) { refuse("NOTHING TO TRIM YET - IT IS GROWING BACK", 3); return; }
+    if (gardenGrowth(bed) < GARDEN_TRIM_MIN) { refuse("NOTHING TO TRIM - STILL GROWING BACK", 3); return; }
     bedTrimmed[bed] = played;
-    status("THE BED TRIMMED BACK - IT GROWS AGAIN AS YOU PLAY", 4);
+    status("BED TRIMMED - IT GROWS BACK AS YOU PLAY", 4);
     audio.beep = BEEP_UI;
 }
 

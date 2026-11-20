@@ -1,9 +1,11 @@
 // Z-05: the incubator's cultures (`lab cultures`): twenty species of the scan region, each of a kind of life (a way to live, a stage of its own
 // cycle, a chemistry, a salt, a warmth), grown an hour in four media (as its world, the lab's standard broth, its best, its hot edge): each curve
 // by five minutes, the times its stages began, its doubling and any strain; then pairs of them in a flask (one wins, they cycle, they feed each
-// other, mirrored they ignore each other), the cycles' periods, the winners
+// other, mirrored they ignore each other), the cycles' periods, the winners; Y-04, lines switched (a glow IN THE DARK, a rest IN THE LIGHT) lit and
+// dark beside their species
 #include "harness/harness.h"
 #include "life/cultures.h"
+#include "life/genes.h"
 #include "life/morphs.h"
 #include "life/jars.h"
 #include <set>
@@ -105,6 +107,28 @@ FlaskCulture alone(const CultureKind& k, const Medium& m) {
     CultureEvent e; e.kind = CD_START; e.t = 0; e.m = m;
     c.events.push_back(e);
     return c;
+}
+// Y-04: a found species' line with its gene of a kind switched (its genes read from it, its switch priced as a flask reads it); false: none
+bool switchedOf(const Found& f, int kind, int sw, CultureKind& out) {
+    const Biota& B = lifeOf(f.sys)->bodies[f.body];
+    Morph form = morphsOf(f.sys, f.body)[f.species];
+    const Morph wildForm = form;
+    MicrobeGenes g = microbeGenesOf(B.species[f.species], form, B.genesis);
+    int place = -1;
+    for (const MicrobeGene& G : g.genes) if (G.kind == kind && place < 0) place = G.place;
+    if (place < 0) return false;
+    out = f.kind;
+    GeneEdit e; e.place = place; e.sw = sw;
+    applyEdits(out, form, g, {e});
+    out.burden = geneBurden(f.kind, wildForm, out, form, g);
+    for (CultureSwitch& w : out.switches) if (const MicrobeGene* G = g.at(w.place)) w.price = genePrice(f.kind, wildForm, out, form, *G);
+    return true;
+}
+// when a culture first glows in its hour (-1 never)
+double glowFrom(const FlaskCulture& c) {
+    const CultureRun R = runCulture(c);
+    for (int t = 0; t <= 3600; t += 5) if (cultureAt(c, R, t).one[0].glowing) return t;
+    return -1;
 }
 enum PairWant { PW_GRAZE, PW_PREY, PW_LIGHT_FEED, PW_HYDROGEN_FEED, PW_COMPETE, PW_MIRRORED, PW_COUNT };
 const char* const PAIR_WANT_NAMES[PW_COUNT] = {"a grazer and a small cell", "a predator and a large cell", "a light-feeder and a heterotroph",
@@ -241,6 +265,30 @@ int labCultures() {
                verdict.c_str(), CULTURE_STAGE_NAMES[end.one[0].stage], CULTURE_STAGE_NAMES[end.one[1].stage], hourOf(c, 0, nullptr).c_str(), hourOf(c, 1, nullptr).c_str());
         pairsRun++;
     }
+    // Y-04: lines switched: the luminous one's glow IN THE DARK (lit from its first cells in the dark, never in the light), the spore former's
+    // rest IN THE LIGHT (spores at its end lit, none in the dark), each an hour lit and dark beside its species
+    printf("\nthe switches (an hour, log10 cells a millilitre by five minutes; /spores):\n");
+    int switched = 0;
+    struct Sw { int want, kind, sw; const char* what; };
+    for (const Sw& x : {Sw{CW_LUMINOUS, GN_GLOW, GW_DARK, "its glow IN THE DARK"}, Sw{CW_SPORES, GN_REST, GW_LIGHT, "its rest IN THE LIGHT"}}) {
+        CultureKind k;
+        if (!found[x.want] || !switchedOf(F[x.want], x.kind, x.sw, k)) { printf("  %s: none\n", x.what); continue; }
+        const Found& f = F[x.want];
+        printf("  %s M%d (%s), %s:\n", f.world.c_str(), f.species, WANT_NAMES[x.want], x.what);
+        for (int light : {CL_DARK, CL_WHITE}) {
+            Medium m;
+            m.cell = chemistryCell(k.chemistry); m.tempC = std::round(k.s.tOpt); m.salt = k.s.saltLo; m.light = light;
+            m.energy = k.s.way == LW_CHEMICAL ? k.s.substrate : (k.s.way == LW_LIGHT ? CE_NONE : CE_BROTH);
+            const FlaskCulture line = alone(k, m), wild = alone(f.kind, m);
+            std::string stages, wildStages;
+            const std::string curve = hourOf(line, 0, &stages), wildCurve = hourOf(wild, 0, &wildStages);
+            const double lg = glowFrom(line), wg = glowFrom(wild);
+            printf("    %-5s the line   %s\n          %s%s\n      its species %s\n          %s%s\n", CULTURE_LIGHT_NAMES[light], curve.c_str(), stages.c_str(),
+                   lg >= 0 ? fmt("; glowing from %s", mmss(lg).c_str()).c_str() : (k.s.glows ? "; never glowing" : ""), wildCurve.c_str(), wildStages.c_str(),
+                   wg >= 0 ? fmt("; glowing from %s", mmss(wg).c_str()).c_str() : "");
+        }
+        switched++;
+    }
     // the incubator's screen in a game: the pairs, the sleeping spores, a culture held at its hot edge, a luminous one, forty minutes on
     {
         TestGame g; Input in;
@@ -352,8 +400,8 @@ int labCultures() {
         }
     }
     const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-    printf("\nlab cultures: %d species (%d not found), %d media (%d grow), %d pairs: %d cycling, %d won, %d feeding, %d mirrored (%.1f s)\n", CW_WANTS - missing, missing,
-           media, grew, pairsRun, cycles, winners, fed, ignored, secs);
+    printf("\nlab cultures: %d species (%d not found), %d media (%d grow), %d pairs: %d cycling, %d won, %d feeding, %d mirrored; %d lines switched (%.1f s)\n",
+           CW_WANTS - missing, missing, media, grew, pairsRun, cycles, winners, fed, ignored, switched, secs);
     return 0;
 }
 

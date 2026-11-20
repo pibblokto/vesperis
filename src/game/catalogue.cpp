@@ -156,7 +156,7 @@ void Game::updateCatalogue(const Input& in, double dt, double realDt) {
         if (in.wasPressed(KEY_V)) {
             const auto it = std::find(ways.begin(), ways.end(), C.seeing);
             C.seeing = it == ways.end() || it + 1 == ways.end() ? ways[0] : *(it + 1);
-            if (ways.size() < 2) refuse("SEEN IN THIS WAY ALONE - THE MICROSCOPE SHOWS MORE", 3);
+            if (ways.size() < 2) refuse("SEEN ONLY THIS WAY - THE MICROSCOPE SHOWS MORE", 3);
             else audio.beep = BEEP_UI;
         }
         if (in.wasPressed(KEY_N)) catalogueName();
@@ -198,7 +198,7 @@ void Game::renderCatalogue() {
     CatalogueState& C = cat;
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 222);
     if (C.page == 1 && C.sel >= 0 && C.sel < (int)C.rows.size()) { renderCatalogueSheet(); return; }
-    drawText(canvas, 6, 4, "THE CATALOGUE", HUD_AMBER);
+    drawText(canvas, 6, 4, "CATALOGUE", HUD_AMBER);
     const char* order = C.order == 0 ? "BY WORLD" : "BY KIN";
     drawText(canvas, UW - 6 - textWidth(order), 4, order, HUD_WHITE);
     if (C.rows.empty()) {
@@ -218,7 +218,7 @@ void Game::renderCatalogue() {
         if (textWidth(line.c_str()) > UW - 24) line = catalogueLine(R, false);   // its world left out before its words are cut
         drawText(canvas, 18, y, fitText(line, UW - 24).c_str(), sel ? HUD_WHITE : (R.lent ? HUD_CYAN : HUD_GREEN));
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, C.order == 0 ? "ENTER ITS SHEET  TAB BY KIN  N NAMES IT  ESC CLOSE" : "ENTER ITS SHEET  TAB BY WORLD  N NAMES IT  ESC CLOSE",
+    drawTextCentered(canvas, UW / 2, UH - 10, C.order == 0 ? "ENTER SHEET  TAB BY KIN  N NAME  ESC CLOSE" : "ENTER SHEET  TAB BY WORLD  N NAME  ESC CLOSE",
                      HUD_DIM);
 }
 
@@ -240,8 +240,8 @@ void Game::renderCatalogueSheet() {
     }
     const std::vector<int> ways = waysSeen(seen);
     drawText(canvas, FORM_X, FORM_Y + FORM_H + 4, SEEING_NAMES[C.seeing], HUD_AMBER);
-    if (ways.size() > 1) drawText(canvas, FORM_X, FORM_Y + FORM_H + 13, fmt("V THE NEXT OF %d WAYS SEEN", (int)ways.size()).c_str(), HUD_DIM);
-    if (R.lent) drawText(canvas, FORM_X, FORM_Y + FORM_H + 22, "LENT BY A FRIEND'S INBOX", HUD_CYAN);
+    if (ways.size() > 1) drawText(canvas, FORM_X, FORM_Y + FORM_H + 13, fmt("V NEXT OF %d WAYS SEEN", (int)ways.size()).c_str(), HUD_DIM);
+    if (R.lent) drawText(canvas, FORM_X, FORM_Y + FORM_H + 22, "LENT BY A FRIEND", HUD_CYAN);
     const std::string world = nameOfKey(worldOfKey(R.key));
     const std::vector<std::string> lines = sheetLinesOf(R.key, W.species[i], W.forms[i], world, seen);
     int y = FORM_Y;
@@ -254,7 +254,7 @@ void Game::renderCatalogueSheet() {
             y += 8;
         }
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN THE NEXT  V SEEING  N NAMES IT  ESC THE LIST", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN NEXT  V SEEING  N NAME  ESC LIST", HUD_DIM);
 }
 
 // its form live: one specimen in the way chosen, the view following it, drawn in the catalogue's framebuffer (every bank its way's) and its
@@ -297,14 +297,14 @@ double Game::renderCatalogueForm(const Morph& m, const MicrobeSheet& seen, uint6
 }
 
 void Game::cataloguePad(PadMenu& m) const {
-    m.title = "THE CATALOGUE";
+    m.title = "CATALOGUE";
     if (cat.page == 1) {
-        m.item("THE NEXT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP); m.item("THE NEXT WAY OF SEEING", KEY_V); m.item("NAME THE SPECIES", KEY_N);
-        m.item("BACK TO THE LIST", KEY_ESCAPE);
-        m.button(PR_B, KEY_ESCAPE, "THE LIST"); m.button(PR_X, KEY_V, "SEEING"); m.button(PR_Y, KEY_N, "NAME");
+        m.item("NEXT", KEY_DOWN); m.item("PREVIOUS", KEY_UP); m.item("NEXT WAY OF SEEING", KEY_V); m.item("NAME SPECIES", KEY_N);
+        m.item("BACK TO LIST", KEY_ESCAPE);
+        m.button(PR_B, KEY_ESCAPE, "LIST"); m.button(PR_X, KEY_V, "SEEING"); m.button(PR_Y, KEY_N, "NAME");
         return;
     }
-    if (!cat.rows.empty()) { m.item("ITS SHEET", KEY_ENTER); m.item("NAME THE SPECIES", KEY_N); }
+    if (!cat.rows.empty()) { m.item("SHEET", KEY_ENTER); m.item("NAME SPECIES", KEY_N); }
     m.item(cat.order == 0 ? "BY KIN" : "BY WORLD", KEY_TAB);
     m.item("CLOSE", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "SHEET"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_SELECT, KEY_TAB, cat.order == 0 ? "BY KIN" : "BY WORLD");

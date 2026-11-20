@@ -32,8 +32,8 @@ const std::string& fitted(const std::string& a, const std::string& b, int width)
 
 void Game::renderIncubator() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 218);
-    drawText(canvas, 6, 4, "THE INCUBATOR", incColour());
-    const char* page = incub.page == 1 ? "THE JARS - TAB THE FLASKS" : "THE FLASKS - TAB THE JARS";
+    drawText(canvas, 6, 4, "INCUBATOR", incColour());
+    const char* page = incub.page == 1 ? "JARS   TAB FLASKS" : "FLASKS   TAB JARS";
     drawText(canvas, UW - 6 - textWidth(page), 4, page, HUD_DIM);
     if (incub.page == 1) renderIncubatorJars(); else renderIncubatorFlasks();
     if (incub.choosing) renderIncubatorChooser();
@@ -52,7 +52,7 @@ void Game::renderIncubatorPick() {
         if (i == incub.pickSel) drawText(canvas, x0 + 6, y, ">", incColour());
         drawText(canvas, x0 + 14, y, fitText(incub.pickLines[i], x1 - x0 - 22).c_str(), i == incub.pickSel ? HUD_WHITE : HUD_GREEN);
     }
-    drawTextCentered(canvas, (x0 + x1) / 2, y0 + h - 11, "ENTER CHOOSES IT  ESC BACK", HUD_DIM);
+    drawTextCentered(canvas, (x0 + x1) / 2, y0 + h - 11, "ENTER CHOOSE  ESC BACK", HUD_DIM);
 }
 
 void Game::renderIncubatorFlasks() {
@@ -81,10 +81,10 @@ void Game::renderIncubatorFlasks() {
     }
     const int ty = cy0 + ch + 12;
     if (F.n == 0 || !F.made) {
-        drawTextCentered(canvas, cx0 + cw / 2, cy0 + ch / 2 - 4, "AN EMPTY FLASK", HUD_DIM);
+        drawTextCentered(canvas, cx0 + cw / 2, cy0 + ch / 2 - 4, "EMPTY FLASK", HUD_DIM);
         drawText(canvas, cx0, ty, "ENTER PUTS IN A SPECIES", HUD_DIM);
         drawText(canvas, cx0, ty + 9, "SEEN IN A VIAL, OR A", HUD_DIM);
-        drawText(canvas, cx0, ty + 18, "FLASK'S CULTURE", HUD_DIM);
+        drawText(canvas, cx0, ty + 18, "CULTURE IN A FLASK", HUD_DIM);
     } else {
         double t0 = 0;
         for (const CultureEvent& e : F.events) if (e.kind == CD_START) { t0 = e.t; break; }
@@ -112,14 +112,15 @@ void Game::renderIncubatorFlasks() {
             const CultureOne& o = now.one[k];
             std::string st = CULTURE_STAGE_NAMES[o.stage];
             const Growth g = growthIn(F.culture.kind[k], F.medium);
-            if ((o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_LAG) && g.mu > 0) st += ", DOUBLING IN " + minutes(std::log(2.0) / g.mu);
+            const double mu = F.culture.kind[k].switches.empty() ? g.mu : o.mu;   // Y-04: a switched line's as its state has it
+            if ((o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_LAG) && mu > 0) st += ", DOUBLING IN " + minutes(std::log(2.0) / mu);
             else if (o.fit != GF_GROWS && o.stage != SG_WAITING && o.stage != SG_DEAD && o.stage != SG_EMPTY) st += std::string(" - ") + GROWTH_FIT_NAMES[o.fit];   // why: the medium
             drawText(canvas, cx0, y, fitted(F.label[k] + ": " + st, st, cw).c_str(), cols[k]);
             y += 9;
         }
         if (F.n == 2 && lab.clock - F.run.tAdd > 300) {   // the pair as its curves show it
             std::string rel = CULTURE_PAIR_NAMES[F.run.pair];
-            if (F.run.pair == PA_CYCLE && F.run.cycleT >= 0 && lab.clock > F.run.cycleT) rel += ", A TURN OF ABOUT " + minutes(F.run.period);
+            if (F.run.pair == PA_CYCLE && F.run.cycleT >= 0 && lab.clock > F.run.cycleT) rel += ", CYCLE OF ABOUT " + minutes(F.run.period);
             if (F.run.pair == PA_CYCLE && !(F.run.cycleT >= 0 && lab.clock > F.run.cycleT)) rel.clear();
             if (F.run.pair == PA_COMPETE && !(F.run.exT >= 0 && lab.clock > F.run.exT)) rel.clear();
             const std::string& r = fitted(rel, CULTURE_PAIR_NAMES[F.run.pair], cw);
@@ -131,11 +132,14 @@ void Game::renderIncubatorFlasks() {
                 const std::string one = F.sleptYears[k] > 0 ? "WOKEN AFTER " + yearsWords(F.sleptYears[k]) : std::string("WOKEN");
                 if (textWidth(one.c_str()) <= cw) said.push_back(one); else { said.push_back("WOKEN AFTER"); said.push_back(yearsWords(F.sleptYears[k])); }
             }
-            if (F.who[k].strain > 0) said.push_back(lineEdited(flaskStrainKey(F.who[k])) ? "EDITED ON THE GENE EDITOR (" + lineTag(F.who[k]) + ")"
-                                                                                        : "A STRAIN OF ITS OWN (" + lineTag(F.who[k]) + ")");
+            if (F.who[k].strain > 0) said.push_back(lineEdited(flaskStrainKey(F.who[k])) ? "MADE ON THE GENE EDITOR (" + lineTag(F.who[k]) + ")"
+                                                                                        : "NEW STRAIN (" + lineTag(F.who[k]) + ")");
             for (const std::string& l : said) if (y < UH - 30) { drawText(canvas, cx0, y, fitted(l, "", cw).c_str(), HUD_DIM); y += 9; }
         }
-        if (now.one[0].glowing || now.one[1].glowing) { drawText(canvas, cx0, y, "GLOWING: ITS CROWD'S OWN LIGHT", HUD_CYAN); y += 9; }
+        if (now.one[0].glowing || now.one[1].glowing) {   // (Y-04: a glow lit by its switch, its cells')
+            const bool cells = (now.one[0].glowing && F.culture.kind[0].glowAny) || (now.one[1].glowing && F.culture.kind[1].glowAny);
+            drawText(canvas, cx0, y, cells ? "GLOWING: SWITCHED ON" : "GLOWING: CROWDED", HUD_CYAN); y += 9;
+        }
     }
     // the medium, its fields (the one chosen lit)
     {
@@ -153,9 +157,9 @@ void Game::renderIncubatorFlasks() {
         }
     }
     const int phase = ((int)(realTime / 4)) % 4;   // R-435: a third line, the digits; R-440, R-442: a fourth, N and K
-    const char* const LINES[4] = {"<- -> THE MEDIUM  + - CHANGE  BACKSPACE EMPTIES", "ENTER PUT IN  W AS ITS WORLD  F FRESH BROTH",
-                                  "0-9 TYPE ITS WARMTH  ENTER SETS IT", "N NAMES IT  K KEEPS A COPY IN A FOLDER"};
-    const std::string keys = incub.typing ? fmt("TYPE THE WARMTH  ENTER SETS IT  ESC KEEPS %.0f C", F.medium.tempC) : std::string(LINES[phase]);
+    const char* const LINES[4] = {"<- -> MEDIUM  + - CHANGE  BKSP EMPTY", "ENTER PUT IN  W LIKE ITS WORLD  F FRESH BROTH",
+                                  "0-9 TYPE WARMTH  ENTER SET", "N NAME  K KEEP A COPY IN A FOLDER"};
+    const std::string keys = incub.typing ? fmt("TYPE WARMTH  ENTER SET  ESC KEEP %.0f C", F.medium.tempC) : std::string(LINES[phase]);
     drawTextCentered(canvas, UW / 2, UH - 12, keys.c_str(), incub.typing ? HUD_AMBER : HUD_DIM);
 }
 
@@ -178,11 +182,11 @@ void Game::renderIncubatorJars() {
     if (incub.jar >= (int)lab.jars.size()) {
         drawTextCentered(canvas, x0 + w / 2, y0 + h / 2 - 4, "EMPTY", HUD_DIM);
         // R-439: what a jar is for
-        const std::vector<std::string> what = wrapText("A JAR STANDS A WORLD'S WET SILT IN WATER UNDER A LIGHT. OVER TWENTY MINUTES ITS LIFE SORTS ITSELF INTO BANDS BY "
-                                                       "WHAT EACH KIND LIVES ON: LIGHT AND AIR AT THE TOP, IRON AND SULPHIDE BELOW, THE EATERS OF THE DEAD AT THE FOOT.",
-                                                       gw / 6);
+        const std::vector<std::string> what = wrapText("ENTER PUTS WET SILT FROM A VIAL IN A JAR. OVER 20 MINUTES THE MICROBES SETTLE INTO COLOURED BANDS, "
+                                                       "ONE SPECIES PER BAND. THE LIST HERE THEN SAYS WHAT EACH SPECIES LIVES ON AND WHETHER IT NEEDS AIR. "
+                                                       "THEIR SHEETS KEEP THIS.", gw / 6);
         for (size_t i = 0; i < what.size() && gy + (int)i * 9 < UH - 40; i++) drawText(canvas, lx, gy + (int)i * 9, what[i].c_str(), HUD_DIM);
-        drawText(canvas, 6, UH - 30, "ENTER: A JAR OF A VIAL'S WET SILT, A MAT OR SOIL", HUD_DIM);
+        drawText(canvas, 6, UH - 30, "ENTER: NEW JAR FROM WET SILT, MAT OR SOIL", HUD_DIM);
     } else {
         Jar& J = lab.jars[incub.jar];
         if (!J.made) jarMake(incub.jar);
@@ -230,20 +234,20 @@ void Game::renderIncubatorJars() {
             drawText(canvas, lx + 12, y, fitText(jarBandWords(J, (int)b), gw - 12).c_str(), HUD_GREEN);
             listed++;
         }
-        const char* head = J.recipe.bands.empty() ? (age >= JAR_SETTLED_S ? "NOTHING IN IT MAKES A BAND OF ITS OWN" : "ITS BANDS COME IN AS IT SETTLES")
-                         : (in == 0 ? "ITS BANDS COME IN AS IT SETTLES" : "ITS BANDS, WHAT EACH LIVES ON:");
+        const char* head = J.recipe.bands.empty() ? (age >= JAR_SETTLED_S ? "NO SPECIES HERE FORMS A BAND" : "BANDS APPEAR AS THE SILT SETTLES")
+                         : (in == 0 ? "BANDS APPEAR AS THE SILT SETTLES" : "BANDS - WHAT EACH SPECIES LIVES ON:");
         drawText(canvas, lx, gy, head, HUD_DIM);
         const std::string st = age >= JAR_SETTLED_S ? "SETTLED" : fmt("SETTLING: %d OF 20 MIN", (int)(age / 60));
         drawText(canvas, 6, UH - 30, fitted(J.name + " - " + st, st, x0 - 14).c_str(), HUD_GREEN);
     }
-    drawTextCentered(canvas, UW / 2, UH - 12, "ENTER A JAR FROM A VIAL  BACKSPACE EMPTIES IT", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 12, "ENTER NEW JAR  BKSP EMPTY JAR", HUD_DIM);
 }
 
 // the chooser (R-432: its folders, a world's, the flasks', the collection's; then the open one's rows)
 void Game::renderIncubatorChooser() {
     const int x0 = 20, y0 = 30, x1 = UW - 20, y1 = UH - 26;
     drawPanel(canvas, x0, y0, x1, y1, rgb(0, 0, 0), 235, incColour());
-    const std::string what = incub.page == 1 ? "A JAR FROM" : fmt("INTO FLASK %d", incub.sel + 1);
+    const std::string what = incub.page == 1 ? "NEW JAR FROM" : fmt("INTO FLASK %d", incub.sel + 1);
     const ChooserPage& P = incub.pages;
     const std::string head = P.open && P.folder < (int)P.folders.size() ? what + ": " + P.folders[P.folder].name : what + ":";
     drawText(canvas, x0 + 8, y0 + 6, fitText(head, x1 - x0 - 16).c_str(), incColour());

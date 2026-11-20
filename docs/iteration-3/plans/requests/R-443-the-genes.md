@@ -1,6 +1,6 @@
 # R-443: the genes
 
-status: in progress (1.5.0, before its release: the Y series): Y-02 done 2026-11-20; Y-03 and Y-04 planned
+status: done 2026-11-20 (1.5.0, before its release: the Y series, Y-02 to Y-04)
 milestone: Y-02, Y-03, Y-04
 
 ## Request
@@ -36,3 +36,18 @@ The design is `docs/ideas/IDEAS-genes.md` section 1; the milestones and their ch
   shows it against its parent (its flask's warmth, salt, food, light, end and glow; its drop's shape, size, colour, motion and answers; a
   vital gene's death; nothing seen) and as a strain is read. Proof and records: `docs/decisions/log/7-1.5.0.md`, Y-02;
   `docs/decisions/rules-life-genes.md`; the unit's `genes` group; `lab genes` (`shots/tests/lab_genes.png`).
+- **Y-03, genes from others** (2026-11-20): K puts a kin beside the culture on the editor (a species read or a culture kept; one of
+  another genesis refused with its words), the map counting where their letters differ; M moves the kin's gene in (its letters and its
+  value the kin's), over its own gene, into a gap or a gene cut out; D copies a gene to a free place of its kind, to be changed by hand. A
+  gene not its own slows its line by how far it came (its world's kin 3%, its system's 6%, another star's 10%; a faster motion and a glow
+  cost too): its doubling shows it, beside its parent it loses. What a gene needs (a sense motion, a food or a pigment's light its way of
+  living, a shape the small cells' plans) is said when seen of a gene known; the tree draws a moved gene's line from its donor. Proof and
+  records: `docs/decisions/log/7-1.5.0.md`, Y-03; `docs/decisions/rules-life-genes.md`; the unit's `genes` group; `lab genes`
+  (`shots/tests/lab_genes_kin.png`).
+- **Y-04, the switches** (2026-11-20): S on the editor sets a gene's switch (ALWAYS, NEVER, IN THE LIGHT, IN THE DARK, WHEN CROWDED, WHEN
+  STARVING, WHEN COLD; a glow's own WHEN CROWDED, a rest's WHEN STARVING). Off, a gene loses its work as one cut and pays nothing; the
+  culture's laws change where the condition does (its light, the cold against its best, starving, its crowd's share), its drop as its
+  flask has it: a glow IN THE DARK lights a dark flask from its first cells, a rest IN THE LIGHT rests lit and dies in the dark, a vital
+  gene IN THE LIGHT is a kill switch. With it B-444 (a culture held at its crowd for good). Proof and records:
+  `docs/decisions/log/7-1.5.0.md`, Y-04; `docs/decisions/rules-life-genes.md`; the unit's `genes` group; `lab cultures`, `lab genes`
+  (`shots/tests/lab_genes_switch.png`).

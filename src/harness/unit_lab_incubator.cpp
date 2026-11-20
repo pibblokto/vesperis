@@ -140,7 +140,7 @@ void unitLabIncubator(const Check& check) {
             title = g.testLab().seq.name;
             g.testLabSkip(SEQUENCE_S + 1);
             const std::vector<std::string>& R = g.testLab().seq.result;
-            kin = R.size() > 2 && R[2].compare(0, 22, "ITS NEAREST KIN READ: ") == 0 ? R[2].substr(22) : std::string();
+            kin = R.size() > 2 && R[2].compare(0, 23, "NEAREST KIN SEQUENCED: ") == 0 ? R[2].substr(23) : std::string();
             for (const TreeLeaf& L : g.testTree().leaves) {
                 if (L.key == ka) leaf = L.name;
                 else if (!kin.empty() && kin.compare(0, L.name.size(), L.name) == 0) kinLeaf = true;
@@ -363,10 +363,10 @@ void unitLabIncubator(const Check& check) {
             for (const JarBand& d : J.recipe.bands) g.guide.microbes[speciesKeyOf(jv, d.species)].seen |= SEEN_FORM;
             g.testClearStatus();
             g.testLabSkip(JAR_SETTLED_S + 1);
-            said = g.testStatus().find("HAS SETTLED") != std::string::npos;
+            said = g.testStatus().find(" SETTLED - ") != std::string::npos;
             g.testClearStatus();
             g.testLabSkip(30);
-            once = g.testStatus().find("HAS SETTLED") == std::string::npos;
+            once = g.testStatus().find(" SETTLED - ") == std::string::npos;
             g.testJarSeen(0);
             sheets = true;
             for (const JarBand& d : J.recipe.bands) sheets &= g.guide.microbes[speciesKeyOf(jv, d.species)].jarLayer == d.layer;
@@ -386,7 +386,7 @@ void unitLabIncubator(const Check& check) {
             h.load("shots/tests/unit_lab_jar.txt");
             h.testClearStatus();
             h.testLabSkip(1);
-            loaded = h.testLab().jars.size() == 1 && h.testStatus().find("HAS SETTLED") == std::string::npos;
+            loaded = h.testLab().jars.size() == 1 && h.testStatus().find(" SETTLED - ") == std::string::npos;
             remove("shots/tests/unit_lab_jar.txt");
         }
         check("incubator: the jars made clear: bands in their places, none over another, an eater that needs air at the air's edge; kept on the sheets; "

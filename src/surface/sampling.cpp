@@ -84,7 +84,7 @@ SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls)
         // mats no species of the world's lives in are its springs' life spreading (a vent world's on its hot ground): the springs' outflow
         if (niche == NI_MAT && !livesIn(NI_MAT) && livesIn(NI_SPRING)) { H.niche = NI_SPRING; if (H.meanC > 60) H.meanC = 45; }
     };
-    if (v.material == MAT_LAVA) { R.refusal = "THE GROUND IS MOLTEN HERE"; return R; }
+    if (v.material == MAT_LAVA) { R.refusal = "GROUND IS MOLTEN HERE"; return R; }
     // a world whose life is seen on its ground lives whatever its mean (rules-life.md, Z-01): the visible life's ground (its mats, soil, crusts,
     // wet edges) no hotter than the biota's limits were drawn round (45 C and a span); its square metre's temperature to a tenth of a degree
     const bool seen = livingGround(b.type) || kindHas(b.type, KT_FLORA | KT_FAUNA | KT_MICROBIAL | KT_VENT_LIFE);

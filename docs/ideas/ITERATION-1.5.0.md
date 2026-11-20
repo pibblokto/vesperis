@@ -45,8 +45,8 @@ specimens (only the small comes aboard), the V and L series.
 | 11 | The close | Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | done 2026-11-17 |
 | 12 | The genes | Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs (R-444) | M | done 2026-11-19 |
 | 13 | The genes | Y-02 | The gene editor: a species' own genes cut, changed by hand, put into a flask, learned (R-443) | XL | done 2026-11-20 |
-| 14 | The genes | Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, needs (R-443) | L | planned |
-| 15 | The genes | Y-04 | The switches: when a gene is on, in the culture's segments and the drop (R-443) | L | planned |
+| 14 | The genes | Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, needs (R-443) | L | done 2026-11-20 |
+| 15 | The genes | Y-04 | The switches: when a gene is on, in the culture's segments and the drop (R-443) | L | done 2026-11-20 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.

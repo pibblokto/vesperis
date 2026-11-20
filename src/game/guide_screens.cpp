@@ -28,7 +28,7 @@
 const RowList<MenuRow>& Game::guideMenu() {
     static constexpr const char* SHIP_TARGETS = "TARGETING IS DONE FROM THE SHIP";
     static constexpr MenuRow ROWS[] = {
-        {"STAR MAP", [](Game& g) { g.openScreen(GameState::STAR_MAP); }, "THE STAR MAP IS READ FROM THE SHIP"},
+        {"STAR MAP", [](Game& g) { g.openScreen(GameState::STAR_MAP); }, "STAR MAP IS READ FROM THE SHIP"},
         {"NAME THIS STAR", [](Game& g) {   // D-02: a drifter's place is the explorer's to name as a system is
              if (!g.sys.valid) { g.status("NO STAR HERE", 3); return; }
              g.closeScreen(); g.beginTextEntry(g.sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, g.starNamed(g.sys.star) ? upper(g.starNameOf(g.sys.star)) : std::string());
@@ -46,16 +46,16 @@ const RowList<MenuRow>& Game::guideMenu() {
              int bi = g.returnState == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
              return bi >= 0 && bi < (int)g.sys.bodies.size() && g.bodyNamed(bi) ? "RENAME " + trunc(upper(g.bodyNameOf(bi)), 22) : "";
          }},
-        {"WRITE A NOTE", [](Game& g) { g.closeScreen(); g.beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); }},
+        {"WRITE A NOTE", [](Game& g) { g.closeScreen(); g.beginTextEntry("NOTE FOR LOG", TEXT_NOTE, ""); }},
         {"EXPEDITION LOG", [](Game& g) { g.openScreen(GameState::LOG); }},
         {"GALLERY", [](Game& g) { g.openScreen(GameState::GALLERY); }},
         {"STATISTICS", [](Game& g) { g.openScreen(GameState::STATS); }},
         {"THE CATALOGUE", [](Game& g) { g.openScreen(GameState::CATALOGUE); }},   // Z-07: the species seen
-        {"THE SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }, "THE SHARDS ARE READ ON THE SHIP"},
+        {"SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }, "SHARDS ARE READ ON THE SHIP"},
         {"TARGET A STAR BY NAME", [](Game& g) { g.closeScreen(); g.beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); }, SHIP_TARGETS},
         {"TARGET BY COORDINATES", [](Game& g) { g.closeScreen(); g.beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); }, SHIP_TARGETS},
-        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { if (g.targetPreviousStar()) g.closeScreen(); }, SHIP_TARGETS},
-        {"TARGET THE HOME STAR", [](Game& g) { if (g.targetHome()) g.closeScreen(); }, SHIP_TARGETS},
+        {"TARGET PREVIOUS STAR", [](Game& g) { if (g.targetPreviousStar()) g.closeScreen(); }, SHIP_TARGETS},
+        {"TARGET HOME STAR", [](Game& g) { if (g.targetHome()) g.closeScreen(); }, SHIP_TARGETS},
         {"SET HOME HERE", [](Game& g) {
              if (g.sys.valid) {
                  g.guide.home = g.starKeyOf(g.sys.star); g.guide.save(g.guidePath);
@@ -101,7 +101,7 @@ void Game::renderGuideMenu() {
     const RowList<MenuRow>& m = guideMenu();
     const int top = 10, bottom = UH - 6, y0 = top + 18;   // C-06: a row every 9 px, the box grown with them (the rows had run into the footer)
     drawPanel(canvas, 40, top, UW - 40, bottom, rgb(0, 0, 0), 215);
-    drawTextCentered(canvas, UW / 2, top + 6, "THE GUIDE", HUD_AMBER);
+    drawTextCentered(canvas, UW / 2, top + 6, "GUIDE", HUD_AMBER);
     for (int i = 0; i < m.count; i++) {
         int y = y0 + i * 9;
         bool sel = i == guideSel;
@@ -200,10 +200,14 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             if (text.empty()) return;
             if (textFolderId >= 0) { folderRename(textFolderId, text); break; }
             const int id = folderNew(text);
-            if (id >= 0 && keeping) { keptAdd(keep.what, id); break; }
+            if (id >= 0 && keeping) { if (keep.write) editorWriteName(id); else keptAdd(keep.what, id); break; }   // R-445: a new line's folder
             for (size_t f = 0; f < lab.folders.size(); f++) if (id >= 0 && lab.folders[f].id == id) { scope.tab = 1; scope.open = false; scope.folder = 2 + (int)f; }
             break;
         }
+        case TEXT_LINE:   // R-445: the name of the strain the gene editor writes; then the writing begins
+            if (text.empty()) { refuse("TYPE A NAME FOR THE NEW STRAIN", 3); beginTextEntry("NAME THE NEW STRAIN", TEXT_LINE, ""); return; }
+            editorWriteBegin(text);
+            break;
         case TEXT_PIECE: {   // the piece's name (the shard on the decoder screen)
             if (text.empty() || textShardKey.empty()) return;
             guide.names[textShardKey] = text; guide.save(guidePath);
@@ -225,10 +229,10 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
 
 // U-04: a text entry's commands (the controller's first page)
 void Game::textEntryPad(PadMenu& m) const {
-    m.title = "THE ENTRY";
-    if (!padKeyboardShown()) m.item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
+    m.title = "ENTRY";
+    if (!padKeyboardShown()) m.item("KEYBOARD", -1, 0, PSP_KEYBOARD);
     m.item("DONE", KEY_ENTER); m.item("CANCEL", KEY_ESCAPE);
-    if (textKind == TEXT_MARK) m.item("WHAT IT MARKS: THE NEXT", KEY_TAB);
+    if (textKind == TEXT_MARK) m.item("MARKS: NEXT", KEY_TAB);
 }
 
 // a text entry covers the frame over the galaxy chart, the probe's screen, a recording or the microscope (its opener), drawn under it
@@ -249,6 +253,7 @@ void Game::renderTextEntry() {
     else if (from == GameState::MICROSCOPE) renderMicroscope();
     else if (from == GameState::INCUBATOR) renderIncubator();   // Z-05: a strain's name over its flask
     else if (from == GameState::CATALOGUE) renderCatalogue();   // Z-07: a species' name over its row or its sheet
+    else if (from == GameState::EDITOR) renderEditor();         // R-445: a new line's name, a gene's
     const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
     drawPanel(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // as wide as its last line (it ran past the box)
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
@@ -353,7 +358,7 @@ void Game::renderStatsLife() {
     if (forms) sub("SEEN AS: " + formsSeenWords(forms));
     if (stages && !stagesSeenWords(stages, false).empty()) sub("STAGES SEEN: " + stagesSeenWords(stages, false));
     line(fmt("WOKEN FROM SPORES     %d", woken), HUD_GREEN);
-    if (slept > 0) sub("THE LONGEST AFTER " + yearsWords(slept));
+    if (slept > 0) sub("LONGEST AFTER " + yearsWords(slept));
     int strains = 0, strainsNamed = 0, edited = 0, genesKnown = 0;   // Y-02: the edited lines apart from the strains, the genes known
     for (const auto& kv : guide.strains) {
         if (kv.second.what == SM_EDIT) { edited++; continue; }
@@ -362,7 +367,7 @@ void Game::renderStatsLife() {
     }
     for (const auto& kv : guide.genes) genesKnown += kv.second.kind >= 0;
     line(fmt("STRAINS               %d, %d NAMED", strains, strainsNamed), HUD_GREEN);
-    if (edited || genesKnown) line(fmt("LINES EDITED          %d, ", edited) + plural(genesKnown, "GENE KNOWN", "GENES KNOWN"), HUD_GREEN);
+    if (edited || genesKnown) line(fmt("EDITED STRAINS        %d, ", edited) + plural(genesKnown, "GENE KNOWN", "GENES KNOWN"), HUD_GREEN);
     line(fmt("SEQUENCED             %d", read) + (guide.watermarks.empty() ? std::string() : fmt(", %d MADE BY A PEOPLE", (int)guide.watermarks.size())), HUD_GREEN);
     if (read > 0) sub(tree.geneses == 1 ? std::string("LIFE BEGAN AT LEAST ONCE") : fmt("LIFE BEGAN AT LEAST %d TIMES", tree.geneses));
     {   // kin across stars: the species read whose kin were read at another star (the tree's leaves on worlds), the farthest two stars apart
@@ -388,11 +393,11 @@ void Game::renderStatsLife() {
             across += kin;
         }
         line(fmt("KIN ACROSS STARS      ") + plural(across, "SPECIES", "SPECIES"), HUD_GREEN);
-        if (across > 0) sub(fmt("THE FARTHEST %.1f LY APART", farLy));
+        if (across > 0) sub(fmt("FARTHEST %.1f LY APART", farLy));
     }
     int lentN = 0;
     for (const auto& kv : guide.lentMicrobes) if (!guide.microbes.count(kv.first)) lentN++;
-    if (lentN > 0) line(fmt("LENT BY THE INBOX     %d SPECIES, IN THE CATALOGUE", lentN), HUD_CYAN);
+    if (lentN > 0) line(fmt("LENT BY INBOX         %d SPECIES, IN CATALOGUE", lentN), HUD_CYAN);
     drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
 }
 
@@ -419,7 +424,7 @@ void Game::renderStats() {
     line(fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()), HUD_GREEN);
     sub("  " + statsKindsLine());
     line(fmt("FURTHEST FROM HOME    %.2f LY", guide.furthestFromHomeLY), HUD_GREEN);
-    line(fmt("LONGEST WALK          %.2f KM FROM THE CAPSULE", guide.longestWalkM / 1000.0), HUD_GREEN);
+    line(fmt("LONGEST WALK          %.2f KM FROM CAPSULE", guide.longestWalkM / 1000.0), HUD_GREEN);
     line(fmt("HIGHEST POINT REACHED %.0f M", guide.highestPointM), HUD_GREEN);
     // one line, the shards took the other; R-403: the drone's kilometres
     line(fmt("FOOT, DRIVEN, FLOWN   %.1f / %.1f / %.1f KM", guide.totalWalkedM / 1000.0, guide.totalDrivenM / 1000.0, guide.totalFlownM / 1000.0), HUD_GREEN);
@@ -485,7 +490,7 @@ void Game::updateGallery(const Input& in, double dt, double realDt) {
         menuStep(in, gallerySel, n, true);
     }
     if (n > 0 && enterKey(in) && galleryItems[gallerySel].rec >= 0) {   // X-04: a recording plays on the ship's screen
-        if (returnState == GameState::SURFACE) { refuse("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); }
+        if (returnState == GameState::SURFACE) { refuse("RECORDINGS PLAY ON THE SHIP", 3); }
         else openRecording(galleryItems[gallerySel].rec);
         return;
     }

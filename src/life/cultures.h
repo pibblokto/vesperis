@@ -8,7 +8,9 @@
 // medium suits them. Two in a flask: one wins (Gause 1934), predator and prey cycle (Lotka 1925, Volterra 1926), a light-feeder and a
 // heterotroph or a fermenter and a hydrogen-eater feed each other, mirrored handedness ignore each other. A culture grown at its range's
 // edge gives a strain, one value moved (Lenski and Travisano 1994). What a flask holds at a time is closed-form in its clock from its events:
-// nothing is integrated a frame at a time (`runCulture` lays its laws out once, `cultureAt` reads them)
+// nothing is integrated a frame at a time (`runCulture` lays its laws out once, `cultureAt` reads them). Y-04: a line's genes switched to a
+// condition: each stretch's laws by its state (the light, the cold against its best, starving, its crowd's quorum share), a law ending where
+// its crowd crosses that share
 #include "life/biota.h"
 #include "life/samples.h"
 #include <cstdint>
@@ -40,9 +42,26 @@ struct Medium {
     bool operator!=(const Medium& o) const { return !(*this == o); }
 };
 
+// Y-04: a gene's switch (its promoter, life/genes.h; Jacob and Monod 1961), when it does its work: always, never, in the light, in the dark, its
+// crowd past its quorum's share (a glow's own), starving (its crowd's food spent, nothing it eats, no light or its medium killing it, judged of
+// the line as written: a rest's own), colder than its best. The guide keeps a switch by its key
+enum GeneSwitch { GW_ALWAYS = 0, GW_NEVER, GW_LIGHT, GW_DARK, GW_CROWDED, GW_STARVING, GW_COLD, GW_COUNT };
+extern const char* const GENE_SWITCH_NAMES[GW_COUNT];   // "ALWAYS", "NEVER", "IN THE LIGHT", "IN THE DARK", "WHEN CROWDED", "WHEN STARVING", "WHEN COLD"
+extern const char* const GENE_SWITCH_KEYS[GW_COUNT];    // "ALWAYS", "NEVER", "LIGHT", "DARK", "CROWDED", "STARVING", "COLD"
+// a culture's state as a switch reads it (bits): its flask lit, colder than its best, its crowd past its quorum's share, starving
+enum CultureState : uint32_t { CST_LIGHT = 1, CST_COLD = 2, CST_CROWDED = 4, CST_STARVING = 8 };
+bool switchOn(int sw, uint32_t state);
+// what a gene off loses in its culture, as one cut (`applyEdits`): its life (a vital gene), its warmth's range (round its best), its salt (fresh
+// water), its pigment, its food, its rest at its end (`bits`: its cycle's), its glow; a motion, a sense, a size or a shape its drop's alone
+enum CultureWork { CX_NONE = 0, CX_LIFE, CX_WARMTH, CX_SALT, CX_PIGMENT, CX_FOOD, CX_REST, CX_GLOW };
+// a line's gene switched to a condition: its place, its switch, what it loses off, its price (its part of the line's burden: not paid off)
+struct CultureSwitch { int place = 0, when = GW_ALWAYS, work = CX_NONE; double price = 0; uint32_t bits = 0; };
+
 // what a culture reads of a species: its values (a strain's moves applied), its world's chemistry, its handedness against home's, its body
 // across (who eats whom), whether it went in as spores or cysts; Y-02: an edited line's (life/genes.h): whether it lives (a vital gene changed:
-// it does not), the share of its crowd its glow begins at
+// it does not), the share of its crowd its glow begins at; Y-03: the share of its growth its genes cost it (`geneBurden`: genes not its own, a
+// motion or a glow past its species' own), its best rate's; Y-04: its genes switched to a condition (none: its kind in every state), its glow
+// lit by its switch (any cells, while on) rather than at its crowd's share
 struct CultureKind {
     Microbe s;
     int chemistry = CH_WATER;
@@ -51,7 +70,13 @@ struct CultureKind {
     bool spores = false;
     bool dead = false;
     double quorum = 0.03;
+    double burden = 0;
+    std::vector<CultureSwitch> switches;
+    bool glowAny = false;
 };
+// Y-04: a work lost (a gene cut, or off by its switch); a kind in a state: its switched genes off there lose their work and their price
+void cultureWorkOff(CultureKind& k, int work, uint32_t bits = 0);
+CultureKind switchedKind(const CultureKind& k, uint32_t state);
 // a world's species as a flask takes it (its body across its form's: `Morph::bodyUm` twice); a dormant one goes in as its spores or cysts
 CultureKind cultureKindOf(const Biota& B, int species, double bodyUm);
 // AS ITS WORLD (IDEAS 1.8: the first guess): the medium of a sample's place: its chemistry's cell, the warmth read at the take, its sun's light
@@ -117,8 +142,9 @@ struct CultureSeg {
     int role = 0;                                                 // CYCLE: 0 the prey, 1 the predator
     int fit = GF_GROWS, edge = EG_NONE;                           // how its medium suits it
     bool glows = false, colony = false;
-    double quorum = 0.03;                                         // Y-02: the share of its crowd its glow begins at
+    double quorum = 0.03;                                         // Y-02: the share of its crowd its glow begins at (Y-04: 0, lit by its switch)
     bool capped = false;                                          // FEED: the fed one, held to a share of its feeder
+    int state = -1;                                               // Y-04: a switched species' state (`CultureState`'s bits; -1 none)
 };
 struct CultureRun {
     int n = 0;                         // species in it (at the run's end)
@@ -132,8 +158,12 @@ struct CultureRun {
     int strainWhat[2] = {0, 0}; double strainValue[2] = {0, 0};
 };
 CultureRun runCulture(const FlaskCulture& c);
-// what a flask holds at a time: each species' cells, spores or cysts, its lysed, its stage, its glow, how its medium suits it
-struct CultureOne { double cells = 0, spores = 0, ghosts = 0; int stage = SG_EMPTY; bool glowing = false; int fit = GF_GROWS; int edge = EG_NONE; };
+// what a flask holds at a time: each species' cells, spores or cysts, its lysed, its stage, its glow, how its medium suits it; Y-04: a switched
+// species' state (-1 none) and its rate while it grows (its switches' price paid or not)
+struct CultureOne {
+    double cells = 0, spores = 0, ghosts = 0; int stage = SG_EMPTY; bool glowing = false; int fit = GF_GROWS; int edge = EG_NONE;
+    int state = -1; double mu = 0;
+};
 struct CultureNow { int n = 0; CultureOne one[2]; };
 CultureNow cultureAt(const FlaskCulture& c, const CultureRun& r, double t);
 // the stages a species has passed by a time (LifeCycle bits), seen on its curve

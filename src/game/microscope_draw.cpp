@@ -59,16 +59,16 @@ void Game::renderMicroscopeHUD() {
     {   // the preparation; R-437, the four things done, a line each: the stage's warmth (amber while it eases, is set off the vial's or typed), the
         // light, the food, the magnet (its field's way)
         const int p = scope.mount.prep;
-        const std::string prep = scope.mount.section ? "A THIN SECTION OF THE ROCK" :
-                                 (p > 0 ? fmt("CONCENTRATED X%s", thousands(std::pow(10.0, p)).c_str()) : (p < 0 ? fmt("DILUTED 1:%s", thousands(std::pow(10.0, -p)).c_str()) : "A DROP AS TAKEN"));
+        const std::string prep = scope.mount.section ? "THIN SECTION OF ROCK" :
+                                 (p > 0 ? fmt("CONCENTRATED X%s", thousands(std::pow(10.0, p)).c_str()) : (p < 0 ? fmt("DILUTED 1:%s", thousands(std::pow(10.0, -p)).c_str()) : "DROP AS TAKEN"));
         drawTextShadow(canvas, 12, 34, prep.c_str(), fd, HUD_SHADOW);
         const bool easing = std::fabs(st.stageC - st.setC) > 0.5, setOff = std::fabs(st.setC - scope.mount.stageC) >= 0.05;
         std::string s = fmt("STAGE %.0f C", st.stageC);
         if (scope.typing) s += " > " + scope.typed + "_ C";
         else if (easing) s += fmt(" > %.0f C %s", st.setC, st.setC > st.stageC ? "WARMING" : "COOLING");
         drawTextShadow(canvas, 12, 42, s.c_str(), scope.typing || easing || setOff ? HUD_AMBER : fd, HUD_SHADOW);
-        drawTextShadow(canvas, 12, 50, st.spot ? "LIGHT  A SPOT ON THE SLIDE" : "LIGHT  -", st.spot ? lightCol : fd, HUD_SHADOW);
-        drawTextShadow(canvas, 12, 58, st.food ? "FOOD   A DROP OF BROTH" : "FOOD   -", st.food ? HUD_GREEN : fd, HUD_SHADOW);
+        drawTextShadow(canvas, 12, 50, st.spot ? "LIGHT  SPOT ON THE SLIDE" : "LIGHT  -", st.spot ? lightCol : fd, HUD_SHADOW);
+        drawTextShadow(canvas, 12, 58, st.food ? "FOOD   DROP OF BROTH" : "FOOD   -", st.food ? HUD_GREEN : fd, HUD_SHADOW);
         drawTextShadow(canvas, 12, 66, st.magnet ? (fieldRight ? "MAGNET FIELD TO THE RIGHT" : "MAGNET FIELD TO THE LEFT") : "MAGNET -", st.magnet ? HUD_AMBER : fd, HUD_SHADOW);
     }
     if (st.magnet && scope.seeing != WS_ELECTRON) {   // R-436: the magnet beside the view, the pole facing the slide (N: its field away from it,
@@ -141,12 +141,12 @@ void Game::renderMicroscopeHUD() {
             drawTextShadow(canvas, UW / 2 - textWidth(form.c_str()) / 2, UH - 34, form.c_str(), col, HUD_SHADOW);
         }
     }
-    if (scope.typing) drawTextCentered(canvas, UW / 2, UH - 10, fmt("TYPE THE WARMTH  ENTER SETS IT  ESC KEEPS %.0f C", st.setC).c_str(), HUD_AMBER);   // R-438
+    if (scope.typing) drawTextCentered(canvas, UW / 2, UH - 10, fmt("TYPE WARMTH  ENTER SET  ESC KEEP %.0f C", st.setC).c_str(), HUD_AMBER);   // R-438
     else if (realTime >= statusUntil) {   // the keys, two lines in turn (the controller's are its Y page)
         const int phase = (int)(std::fmod(realTime, sp >= 0 ? 12.0 : 8.0) / 4);   // R-440: a third with a cell under the crosshair, K
-        const char* keys = scope.tracking ? "ENTER LETS IT GO  TAB SHEET  N NAMES  K KEEPS IT"
-                                          : (phase == 0 ? "1-6 WAYS  +/- ZOOM  [ ] FOCUS  ENTER TRACKS"
-                                                        : (phase == 1 ? "L LIGHT  M MAGNET  H WARMTH  F FOOD  TAB SHEET" : "TAB ITS SHEET  N NAMES IT  K KEEPS IT"));
+        const char* keys = scope.tracking ? "ENTER RELEASE  TAB SHEET  N NAME  K KEEP"
+                                          : (phase == 0 ? "1-6 WAYS  +/- ZOOM  [ ] FOCUS  ENTER TRACK"
+                                                        : (phase == 1 ? "L LIGHT  M MAGNET  H WARMTH  F FOOD  TAB SHEET" : "TAB SHEET  N NAME  K KEEP"));
         drawTextCentered(canvas, UW / 2, UH - 10, keys, fd);
     }
 }
@@ -158,8 +158,8 @@ void Game::renderMicroscopeList() {
     drawPanel(canvas, 8, top, UW - 8, bottom, rgb(0, 0, 0), 215);
     drawTextShadow(canvas, 16, top + 6, "CAM 06 MICROSCOPE", scopeColour(), HUD_SHADOW);
     {   // the tabs, the one shown in amber
-        const char* a = scope.tab == 0 ? "THE VIALS" : "VIALS";
-        const char* b = scope.tab == 1 ? "THE CULTURES" : "CULTURES";
+        const char* a = "VIALS";
+        const char* b = "CULTURES";
         const int x = UW - 16 - textWidth(b);
         drawText(canvas, x, top + 6, b, scope.tab == 1 ? HUD_AMBER : HUD_DIM);
         drawText(canvas, x - 12 - textWidth(a), top + 6, a, scope.tab == 0 ? HUD_AMBER : HUD_DIM);
@@ -201,8 +201,8 @@ void Game::renderMicroscopeList() {
         drawText(canvas, 20, y, line.c_str(), sel ? HUD_WHITE : (staged ? HUD_CYAN : HUD_GREEN));
         if (20 + textWidth(line.c_str()) + 12 <= UW - 14 - textWidth(right.c_str())) drawText(canvas, UW - 14 - textWidth(right.c_str()), y, right.c_str(), rc);   // never cut
     }
-    const char* keys = f.id == FOLDER_WORLD ? "ENTER ON THE STAGE  BACKSPACE EMPTIES IT  ESC BACK"
-                     : (f.id == FOLDER_FLASKS ? "ENTER A DROP OF IT ON THE STAGE  ESC BACK" : "ENTER STAGE  M MOVES  C COPIES  BACKSPACE DISCARDS");
+    const char* keys = f.id == FOLDER_WORLD ? "ENTER STAGE  BKSP EMPTY  ESC BACK"
+                     : (f.id == FOLDER_FLASKS ? "ENTER DROP ON STAGE  ESC BACK" : "ENTER STAGE  M MOVE  C COPY  BKSP DISCARD");
     drawTextCentered(canvas, UW / 2, bottom - 10, keys, HUD_DIM);
     if (!scope.moving) return;
     // R-433: M's chooser over the list: UNSORTED and the explorer's folders, the culture's own marked
@@ -227,16 +227,16 @@ void Game::renderMicroscopeFolders(const std::vector<LabFolder>& F) {
     const int top = 14, bottom = UH - 16, nf = (int)F.size();
     if (scope.tab == 0) {
         if (nf == 0) {
-            drawText(canvas, 16, top + 18, "THE COLD STORE IS EMPTY", HUD_AMBER);
+            drawText(canvas, 16, top + 18, "COLD STORE EMPTY", HUD_AMBER);
             drawTextCentered(canvas, UW / 2, top + 60, "NO VIALS IN THE COLD STORE", HUD_DIM);
             drawTextCentered(canvas, UW / 2, top + 72, "ON THE GROUND O TAKES A SAMPLE", HUD_DIM);
-            drawTextCentered(canvas, UW / 2, bottom - 10, "TAB THE CULTURES  ESC BACK TO THE LABORATORY", HUD_DIM);
+            drawTextCentered(canvas, UW / 2, bottom - 10, "TAB CULTURES  ESC BACK", HUD_DIM);
             return;
         }
-        drawText(canvas, 16, top + 18, fmt("THE COLD STORE: %d VIAL%s FROM %d WORLD%s", (int)coldStore.size(), coldStore.size() == 1 ? "" : "S", nf, nf == 1 ? "" : "S").c_str(), HUD_AMBER);
+        drawText(canvas, 16, top + 18, fmt("COLD STORE: %d VIAL%s FROM %d WORLD%s", (int)coldStore.size(), coldStore.size() == 1 ? "" : "S", nf, nf == 1 ? "" : "S").c_str(), HUD_AMBER);
     } else {
         const int kept = (int)lab.kept.size();
-        drawText(canvas, 16, top + 18, (kept == 0 ? std::string("THE COLLECTION: NOTHING KEPT YET") : fmt("THE COLLECTION: %d CULTURE%s KEPT", kept, kept == 1 ? "" : "S")).c_str(), HUD_AMBER);
+        drawText(canvas, 16, top + 18, (kept == 0 ? std::string("COLLECTION: NOTHING KEPT YET") : fmt("COLLECTION: %d CULTURE%s KEPT", kept, kept == 1 ? "" : "S")).c_str(), HUD_AMBER);
     }
     const int rowH = scope.tab == 0 ? 19 : 9, rows = (bottom - 14 - (top + 32)) / rowH;
     scope.folder = clampi(scope.folder, 0, nf - 1);
@@ -259,9 +259,9 @@ void Game::renderMicroscopeFolders(const std::vector<LabFolder>& F) {
         }
     }
     const LabFolder& f = F[scope.folder];
-    const char* keys = scope.tab == 0 ? "ENTER OPENS A WORLD  TAB CULTURES  ESC BACK"
-                     : (f.id <= 0 ? "ENTER OPENS  N NEW FOLDER  TAB VIALS  ESC BACK"
-                                  : (f.rows.empty() ? "ENTER OPENS  N NEW  R RENAMES  BACKSPACE REMOVES" : "ENTER OPENS  N NEW  R RENAMES  ESC BACK"));
+    const char* keys = scope.tab == 0 ? "ENTER OPEN WORLD  TAB CULTURES  ESC BACK"
+                     : (f.id <= 0 ? "ENTER OPEN  N NEW FOLDER  TAB VIALS  ESC BACK"
+                                  : (f.rows.empty() ? "ENTER OPEN  N NEW  R RENAME  BKSP REMOVE" : "ENTER OPEN  N NEW  R RENAME  ESC BACK"));
     drawTextCentered(canvas, UW / 2, bottom - 10, keys, HUD_DIM);
 }
 

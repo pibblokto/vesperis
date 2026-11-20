@@ -488,7 +488,7 @@ int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: 
 struct GeneWorld { int letters = 4; bool mirrored = false; StarSystem sys; int body = -1; std::vector<Morph> forms; };
 bool geneWorlds(GeneWorld (&out)[6]);
 struct GeneLaw { bool ok = false; std::string detail; };
-struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed; };
+struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed, moved, wild; };   // Y-04: wild, the own switches
 GeneLaws geneLaws();
 int labGenes();
 // ---- modes_tree.cpp (Z-06; Z-07's `lab catalogue`)

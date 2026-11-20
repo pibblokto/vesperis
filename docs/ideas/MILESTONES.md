@@ -341,8 +341,8 @@ the tree of kin by world and by folder. A species' genes are read from what it i
 | --- | --- | --- | --- |
 | Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs, A and Backspace (R-444) | M | 1.5.0, done 2026-11-19 |
 | Y-02 | The gene editor: a species' own genes, cut and changed by hand, written into a flask, learned as seen (R-443) | XL | 1.5.0, done 2026-11-20 |
-| Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, what a gene needs (R-443) | L | 1.5.0 |
-| Y-04 | The switches: when a gene is on, in the culture's segments and the drop; the close (R-443) | L | 1.5.0 |
+| Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, what a gene needs (R-443) | L | 1.5.0, done 2026-11-20 |
+| Y-04 | The switches: when a gene is on, in the culture's segments and the drop; the close (R-443) | L | 1.5.0, done 2026-11-20 |
 
 ## Suggested order for 1.2.0
 

@@ -84,7 +84,7 @@ std::string Game::screenshotCaption() const {
     if (state == GameState::RECORDING && replay.rec >= 0 && replay.rec < (int)guide.probes.size()) {   // a recording's frame
         const ProbeRecord& r = guide.probes[replay.rec];
         const double c = std::min(replay.clock, r.endClock);
-        where = fmt("THE RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0),
+        where = fmt("RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0),
                         probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) +
                 " - " + where;
     }
@@ -134,7 +134,7 @@ void Game::takeInstrument() {
     int here = 0; const std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/I";
     for (const std::string& k : guide.instruments) if (k.compare(0, prefix.size(), prefix) == 0) here++;
     logEvent("INSTRUMENT", fmt("%s OF THE OLD PEOPLE TAKEN ON %s, TO THE CABIN'S CASE (%d FROM THIS WORLD)", what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here));
-    status(fmt("%s OF THE OLD PEOPLE - TO THE CABIN'S CASE", what.c_str()), 5);
+    status(fmt("%s OF THE OLD PEOPLE - TO THE CASE", what.c_str()), 5);
     audio.beep = BEEP_LOCK;
 }
 // C-03: E at a shard: the guide, the log, the status
@@ -158,7 +158,7 @@ void Game::takeShard() {
             fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM",
                     ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place), where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here,
                     total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
-    status(caught ? fmt("%s OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", what.c_str(), here, total)
+    status(caught ? fmt("%s OF THE OLD PEOPLE - CAUGHT BY RADAR (%d OF %d)", what.c_str(), here, total)
                   : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total),
             5);
     audio.beep = BEEP_LOCK;

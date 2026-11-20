@@ -135,6 +135,15 @@ N NAMES THE GENE  W WRITES IT INTO A FLASK
   feeds only a chemical-eater. Found by trying, said when seen.
 - On the trees a moved gene is a thin line from its donor's leaf to the line's twig.
 
+As built (Y-03): K puts a kin beside it (the species read, its own world's first, and the cultures; one of another genesis refused with its
+words), the map counting each gene's working letters that differ (+ where only the kin has one), the head their genomes' share alike, the
+gene chosen its kin's letters and value; M moves the gene at the place chosen in from the kin beside it (the chooser first with none). A
+gene moved in fills a gap or a gene its parent cut out; a vital gene moved in kills as one changed by hand does. A moved gene keeps whose it
+was, so a gene carried by a kin costs by where it began. The price's other parts: a motion past its species' own pace 4% a doubling (5%
+where it was still), a glow not its own 4%, lit at a smaller crowd 2% a halving, at most half. Two needs more: a shape works only in the
+four small cells' plans, a motion only in a form that moves. A need is said only of a gene known (else it would tell what the gene does),
+and a gene that cannot work in its line is never NOTHING SEEN. The tree's line is dotted amber, from the donor's row to the line's.
+
 ### 1.7 The switches (Y-04)
 
 S sets a gene's switch (its promoter: Jacob and Monod 1961): ALWAYS, NEVER, IN THE LIGHT, IN THE DARK, WHEN CROWDED, WHEN STARVING, WHEN
@@ -142,6 +151,14 @@ COLD. The wild ones: a glow's WHEN CROWDED (its quorum), a rest's WHEN STARVING,
 is the clever edit: swimming only when starving grows faster while fed; a glow in the dark lights a dark flask; spores when cold sleep
 through the cryostat. The culture's segments change where the switch's condition does (the medium's light, its warmth against the line's
 best, nothing to eat or its crowd's hold, its crowd's share), closed-form as every segment; a drop shows the line as its flask has it.
+
+As built (Y-04): S on the editor, each press the next switch, the map's mark ^ (the font has no tilde; the guide writes `16~DARK`). A gene
+off loses its work as one cut, so a switch is a cut in a condition, and pays no price; the wild's own work is in its rate, so a switch
+off saves only what a line pays beyond its species (a moved gene, a faster motion, a glow not its own): a costly motion WHEN STARVING grows
+as its species while fed. Starving is judged of the line as written (where it could not grow but for the cold), so no switch turns itself
+on, and its crowd's share is its quorum's (its glow's, else 3%). A rest rests only as it ends, so its ALWAYS works as its own; spores WHEN
+COLD rest under its best and die over it (the cold never killed a culture: one too cold waits). A size, shape, motion or sense switched
+show in a drop alone. Writing the checks found B-444: a culture held at its crowd for good (its hold's end an ulp short), now exact.
 
 ### 1.8 What stays fixed
 

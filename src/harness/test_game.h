@@ -321,6 +321,8 @@ public:
     // B-442, R-439 to R-442: K's folder chooser (what it keeps), a kept culture copied to a folder, the jars page's bands to their sheets, any
     // species' sheet lines
     KeepPick& testKeep() { return keep; }
+    const std::string& testTextBuffer() const { return textBuffer; }   // R-445: what a text entry holds, and what it names
+    int testTextKind() const { return textKind; }
     void testKeptCopy(int k, int id) { keptCopy(k, id); }
     void testJarSeen(int j) { jarSeen(j); }
     std::vector<std::string> testSheetLinesOf(const std::string& key, const Microbe& s, const Morph& m, const MicrobeSheet& seen) const { return sheetLinesOf(key, s, m, "A WORLD", seen); }
@@ -340,7 +342,18 @@ public:
         EditorChoice c; c.who = w; c.medium = m; c.asWorld = m; c.from = "THE TEST"; c.read = read; return editorPut(c);
     }
     void testEditorSet(int place, bool cut, const std::string& part) { editorSet(place, cut, part); }
-    bool testEditorWrite() { return editorWrite(); }
+    // Y-03: a kin put beside it (its chooser's row where it has one, else as read), the kin's chooser
+    bool testEditorKin(const FlaskSpecies& w) {
+        for (const EditorChoice& c : lab.edit.choices) if (c.who.sameSpecies(w) && c.who.strain == w.strain) return editorKinPut(c);
+        EditorChoice c; c.who = w; c.from = "THE TEST"; c.read = true; return editorKinPut(c);
+    }
+    std::vector<EditorChoice>& testEditorKinChoices() { editorChoices(true); return lab.edit.choices; }
+    std::string testFlaskKey(const FlaskSpecies& w) const { return flaskSpeciesKey(w); }
+    bool testEditorWrite(int folder = 0, const std::string& name = "") {   // W, then its folder and its name given (R-445; "" unnamed)
+        if (!editorWrite()) return false;
+        keep.open = false; lab.edit.writeFolder = folder;
+        return editorWriteBegin(name);
+    }
     std::vector<EditorChoice>& testEditorChoices() { editorChoices(); return lab.edit.choices; }
     void testEditorSave(std::string& lines) const { editorSave(lines); }
     bool testEditorLoad(const std::string& line) { return editorLoad(line); }
@@ -497,10 +510,13 @@ public:
     int testLogEntries() const { return (int)guide.log.size(); }
     // ---- life aboard (cabin_life.cpp, I-04): the prints made and waited for (only the harness waits), their count; the drive's level; the
     // descent's clock (the hatch's drop under 0); the shelves' worlds; the garden's home and its growth
-    void testWaitPrints() {
-        if (prints.stale || prints.dir != shotsDir) printsAsk();
-        while (prints.busy.load()) std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        printsCollect();
+    void testWaitPrints() {   // (Y-03: again while stale: an ask while an older job runs is refused, its prints the old ones)
+        for (int guard = 0; guard < 4; guard++) {
+            if (prints.stale || prints.dir != shotsDir) printsAsk();
+            while (prints.busy.load()) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            printsCollect();
+            if (!prints.stale && prints.dir == shotsDir) break;
+        }
     }
     int testPrints() const { return (int)prints.shown.size(); }
     int testPrintAt(int k) const { for (const ShipPrint& p : prints.shown) if (p.frame == k) return p.number; return -1; }   // R-428: frame k's print

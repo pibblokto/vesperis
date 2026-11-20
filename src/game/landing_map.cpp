@@ -62,7 +62,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
         drainagePrefetch(spaceR.genFor(sys.bodies[landBody]), StarSystem::bodyFromLatLon(landLat, landLon), 65000.0, true);
     }
     if (in.wasPressed(KEY_Z) && !in.ctrl()) {
-        if (!landingZoomAllowed()) status("THE WHOLE WORLD ALREADY FITS THE MAP", 3);
+        if (!landingZoomAllowed()) status("WHOLE WORLD ALREADY FITS THE MAP", 3);
         else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = BEEP_UI; }
     }
     const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // R once the world's map is made
@@ -94,7 +94,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
             Vec3 dir = sys.bodyFrame(landBody, t) * normalize(sys.bodyPos(best, t) - bp);
             StarSystem::latLonFromBody(dir, landLat, landLon);
             landLat = clampd(landLat, -85 * DEG, 85 * DEG);
-            status(fmt("%s AT THE ZENITH HERE (%.1f%c WIDE)", upper(bodyNameOf(best)).c_str(), 2 * bestAng / DEG, CH_DEGREE), 3);
+            status(fmt("%s OVERHEAD (%.1f%c WIDE)", upper(bodyNameOf(best)).c_str(), 2 * bestAng / DEG, CH_DEGREE), 3);
         } else status("NOTHING BIG IN THIS SKY", 2);
     }
     if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon))
@@ -115,7 +115,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
         fade = 0;
         {   // the capsule sets down outside a settlement's walls
             double la = landLat, lo = landLon;
-            if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("THE CAPSULE KEEPS OUTSIDE THE RUINS", 4); }
+            if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("LANDING OUTSIDE THE RUINS", 4); }
         }
         surf.init(&sys, landBody, landLat, landLon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
@@ -133,17 +133,17 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
 void Game::landingMapPad(PadMenu& m) const {
     m.title = "LANDING MAP";
     m.item("LAND HERE", KEY_ENTER);
-    if (landingZoomAllowed()) m.item(landZoom ? "THE WHOLE WORLD" : "ZOOM INTO THE SECTOR", KEY_Z);
+    if (landingZoomAllowed()) m.item(landZoom ? "WHOLE WORLD" : "ZOOM IN", KEY_Z);
     m.item("A RANDOM LIT SITE", KEY_R);
-    m.item(mapClouds ? "HIDE THE CLOUDS" : "SHOW THE CLOUDS", KEY_C);
-    m.item("UNDER THE SKY'S BIGGEST BODY", KEY_J);
-    m.item(landPeoples ? "HIDE THE PEOPLES" : "THE PEOPLES", KEY_V);
-    m.item("THE ALMANAC OF THE SITE", KEY_T, MOD_CTRL);
-    m.item("BACK TO THE SHIP", KEY_ESCAPE);
+    m.item(mapClouds ? "HIDE CLOUDS" : "SHOW CLOUDS", KEY_C);
+    m.item("BIGGEST BODY OVERHEAD", KEY_J);
+    m.item(landPeoples ? "HIDE PEOPLES" : "PEOPLES", KEY_V);
+    m.item("SITE ALMANAC", KEY_T, MOD_CTRL);
+    m.item("BACK", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "LAND"); m.button(PR_B, KEY_ESCAPE, "BACK");
     if (landZoom) m.button(PR_LT, KEY_Z, "THE WORLD"); else m.button(PR_RT, KEY_Z, "ZOOM IN");   // its zoom is Z, in and out
     m.button(PR_L3, KEY_LEFT_SHIFT, "BIG STEPS"); m.button(PR_START, KEY_ESCAPE, "BACK");
-    m.sticks = "STICKS MOVE THE CURSOR";
+    m.sticks = "STICKS MOVE CURSOR";
 }
 
 // N1-06: the relief class at a site from the terrain itself: the steepest rise over 150 m and over 600 m
@@ -389,7 +389,7 @@ void Game::renderLandingMap() {
         drawRectRGB(canvas, bx - 1, ry + 6, bx + 24, ry + 15, HUD_DIM);
     }
     std::string sn = tvp.biome && !sys.sunless() ? seasonName(probe.season, landLat, b.axialTilt) : "";   // no sun, no season
-    std::string l3 = noSun ? fmt("%s%sNO SUN - THE DARK", tvp.biome ? BIOME_NAMES[tvp.biome] : "", tvp.biome ? "  " : "")
+    std::string l3 = noSun ? fmt("%s%sNO SUN", tvp.biome ? BIOME_NAMES[tvp.biome] : "", tvp.biome ? "  " : "")
                            : fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
                                  si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
     if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // the species most likely met here
@@ -445,8 +445,8 @@ void Game::renderLandingMap() {
     if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
     // the survey has no clouds
     else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
-    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
-                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);
+    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK A SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
+                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: ALTIMETER SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);
 }
 
 // ---- R-415 (2026-10-11): the peoples on the landing map --------------------------------------------------------------------------------
@@ -627,7 +627,7 @@ void Game::drawLandPeoples(int ox, int oy, int cx, int cy) {
     else if (K.peoples == 0) rows.push_back({"NO PEOPLE LIVED ON THIS WORLD", HUD_DIM});
     for (int k = 0; k < K.peoples; k++) {
         const std::string who = K.name[k].empty() ? (k == 0 ? "A PEOPLE" : "ANOTHER PEOPLE") : trunc(K.name[k], 16);
-        rows.push_back({K.all(k) ? fmt("%s: ALL %d SHARDS, THE WHOLE MAP", who.c_str(), K.total[k]) : fmt("%s: %d OF %d SHARDS", who.c_str(), K.held[k], K.total[k]), PEOPLE_TINT[k]});
+        rows.push_back({K.all(k) ? fmt("%s: ALL %d SHARDS, WHOLE MAP", who.c_str(), K.total[k]) : fmt("%s: %d OF %d SHARDS", who.c_str(), K.held[k], K.total[k]), PEOPLE_TINT[k]});
     }
     for (size_t i = 0; i < rows.size(); i++) {
         const int lx = ox + 2, ly = oy + 2 + 9 * (int)i;

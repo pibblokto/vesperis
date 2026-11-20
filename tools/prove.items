@@ -16,7 +16,7 @@ fp_life | $V fingerprint life | shots/tests/fingerprint_life.txt=1 |
 salt | $V salt scan |  | 
 life | $V life list 24; $V life survey 1500; $V life kin 200; $V life search all; $V life kit; $V life made 100; $V life auto; $V life sight | shots/tests/life_kit_*.png=4 shots/tests/life_auto_*.png=2 shots/tests/life_sight_*.png=4 | mask=\(\d+(?:\.\d+)?\ss\)
 life_look | $V life plates 4; $V life strips; $V life distinct; $V life forms | shots/tests/life_*.png=60 | mask=\(\d+(?:\.\d+)?\ss\)
-lab | $V lab microscope; $V lab cultures; $V lab jars; $V lab tree; $V lab catalogue; $V lab genes | shots/tests/lab_microscope_*.png=20 shots/tests/lab_cultures*.png=2 shots/tests/lab_jars*.png=2 shots/tests/lab_sequencer.png=1 shots/tests/lab_tree.png=1 shots/tests/lab_watermark.png=1 shots/tests/lab_catalogue.png=1 shots/tests/lab_life.png=1 shots/tests/lab_catalogue_gallery/*.png=1 shots/tests/lab_genes.png=1 | mask=\(\d+(?:\.\d+)?\ss\)
+lab | $V lab microscope; $V lab cultures; $V lab jars; $V lab tree; $V lab catalogue; $V lab genes | shots/tests/lab_microscope_*.png=20 shots/tests/lab_cultures*.png=2 shots/tests/lab_jars*.png=2 shots/tests/lab_sequencer.png=1 shots/tests/lab_tree.png=1 shots/tests/lab_watermark.png=1 shots/tests/lab_catalogue.png=1 shots/tests/lab_life.png=1 shots/tests/lab_catalogue_gallery/*.png=1 shots/tests/lab_genes*.png=3 | mask=\(\d+(?:\.\d+)?\ss\)
 regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 screens | $V screens | shots/tests/screens/*.png=96 | 
@@ -40,6 +40,6 @@ climate | $V climate |  |
 settings | $V settings | shots/tests/*.txt=2 | 
 input | $V input | shots/tests/*.png=15 shots/tests/*.txt=8 | twice
 unit | $V unit | shots/tests/*.png=47 shots/tests/*.txt=19 shots/*.png=0 shots/tests/game_shots/*.png=2 | twice noise=tests/unit_r408_*.png noise=tests/unit_b412_*.png noise=tests/unit_t03_scan.png noise=tests/test_save_auto.txt mask=\(the\sworst\s\d+\) mask=\(\d+(?:\.\d+)?\sat\smost\) mask=\d+(?:\.\d+)?\sfresh mask=steps\s\d+\s\(window\s\d+\),\sthe\sfastest\sturn\s\d+\sdeg/s mask=\(\d+(?:\.\d+)?\ss\sto\sfind\) mask=,\s\d+(?:\.\d+)?\ss$ mask=\d+(?:\.\d+)?\ss\sin\sall mask=checks\s\d+(?:\.\d+)?\ss\) mask=slowest\slaid\sout\s[^;]* mask=\(the\sslowest\s[^)]*\)
-flow | $V flow | shots/tests/*.png=189 shots/tests/test_gallery/*.png=3 | twice
+flow | $V flow | shots/tests/*.png=191 shots/tests/test_gallery/*.png=3 | twice
 tour | $V tour | shots/tests/tour/*.png=496 shots/tests/tour/*.txt=92 shots/tests/tour/*/*.png=4 shots/tests/tour/*/*.txt=4 | twice
 ship | $V ship rooms; $V ship walk; $V ship light; $V ship life | shots/tests/ship/*.png=98 shots/tests/ship_life_gallery/*.png=12 | mask=\d+\.\d+\sms

@@ -198,6 +198,8 @@ Contents:
   function calls `check` on each by name, not a callback that names them.
 - A scripted game's stages run before the stages that make games of their own: the flow's game, run on after the reload's two were
   made and destroyed, broke its heap within frames (KI-450: Y-02's step, put last, crashed the flow at its end five runs in five).
+- A field that means "by its rule" until set (`Microbe::flees` -1, the niche's flight) turns 0 or 1 at the first edit near it: a check
+  compares what it does (`fleesLight`), not the field (Y-03's copy of a sense read as a change till then).
 
 ## Pixels and the look
 
@@ -206,6 +208,8 @@ Contents:
   `canvas.px`. `drawText`'s scale multiplies the canvas's. 2-D helpers take `RGBCanvas&`, not `Framebuffer`. `rgb()` packs red
   low (0xFFBBGGRR).
 - The tone tile eats albedo steps under ~40% (steps of 20-28% vanished): judge ground marks by pixel columns, not by eye.
+- The font draws 32 to 95 (lower case as capitals), `|`, `` ` ``, `~` and the codes 1 to 7; anything else is a box. The tilde was a box
+  until B-445 (the lake landmark's mark, KI-451). Look at a frame of a new mark.
 - The sky bank runs from zenith to horizon: measure the sky column by pixel before tuning; a dark element on a coloured sky needs
   its own bank.
 - The mush averages shades across bank edges: two banks meet cleanly only where their ramps agree in light and colour over the
@@ -401,6 +405,12 @@ Contents:
   re-imposes the attitude takes up turns made elsewhere: compare with the values it last set.
 - Long real-time sequences keep closed-form state and a clock-skip hook (`testProbeSkip`), so a replayed frame equals the live one
   bit for bit. Derived probe state is rebuilt by an every-frame ensure step (`probeEnsureClouds`), so loads and swaps keep it.
+- A closed-form law that ends at `t + (len - done)` and adds `end - t` back can fall an ulp short of `len`: the next law has no length
+  and repeats to the guard (B-444: a third of the cultures held at their crowd for good). A law that reaches its end sets its state
+  exactly; a check that every curve moves on past its longest stage finds it.
+- A condition that turns part of a thing off is evaluated against the thing as written, kept as a list beside it, never baked into
+  it: an off made twice is not always the same (a cut size halves again) and a lost value cannot come back (Y-04's switches). Judge the
+  condition of the thing as written too, or a switch can turn itself on and off at the same moment.
 - A new parking kind is left by every other approach: test the way out, not only the way in. A cross-cutting input change covers
   every screen, the maps included.
 - A member named like a free function hides it in every member: name helpers distinctly (`nameOfKey`, not `keyName`).

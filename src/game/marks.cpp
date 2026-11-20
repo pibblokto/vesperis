@@ -121,26 +121,26 @@ bool Game::scanModeHere(int mode) const { return surf.valid && mode >= 0 && mode
 void Game::scanCycle() {
     if (!surf.valid) return;
     const unsigned kinds = sightKindsOf(surf.site.gen);
-    if (!kinds) { scanMode = -1; surf.scanWanted = false; refuse("THE SCANNER HAS NOTHING TO READ ON THIS WORLD"); return; }
+    if (!kinds) { scanMode = -1; surf.scanWanted = false; refuse("SCANNER HAS NOTHING TO READ ON THIS WORLD"); return; }
     int pos = -1;
     for (int i = 0; i < LM_COUNT; i++) if (SCAN_ORDER[i] == scanMode) pos = i;
     int next = -1;
     for (int i = pos + 1; i < LM_COUNT && next < 0; i++) if ((kinds >> SCAN_ORDER[i]) & 1) next = SCAN_ORDER[i];
     scanMode = next; surf.scanWanted = next >= 0;
-    status(next < 0 ? "SCANNER OFF" : fmt("SCANNER: %s - R NEXT, SHIFT+R THE MARKED %s", SCAN_MODE_NAMES[next], scanSkipMarked ? "IN" : "OUT"), 4);
+    status(next < 0 ? "SCANNER OFF" : fmt("SCANNER: %s - R NEXT, SHIFT+R MARKED %s", SCAN_MODE_NAMES[next], scanSkipMarked ? "IN" : "OUT"), 4);
     audio.beep = BEEP_UI;
 }
 
 void Game::scanToggleSkip() {
     scanSkipMarked = !scanSkipMarked;
-    status(scanSkipMarked ? "SCANNER: THE SIGHTS YOU MARKED ARE LEFT OUT" : "SCANNER*: THE SIGHTS YOU MARKED ARE HEARD TOO", 4);
+    status(scanSkipMarked ? "SCANNER: MARKED SIGHTS LEFT OUT" : "SCANNER*: MARKED SIGHTS HEARD TOO", 4);
     audio.beep = BEEP_UI;
 }
 
 // U-04: the scanner's two lines in the controller's commands (the ground's and the sector map's)
 void Game::scannerPad(PadMenu& m) const {
-    m.item(scanMode < 0 ? "THE SCANNER ON" : "THE SCANNER'S NEXT KIND", KEY_R);
-    m.item(scanSkipMarked ? "THE SCANNER: MARKED SIGHTS IN" : "THE SCANNER: MARKED SIGHTS OUT", KEY_R, MOD_SHIFT);
+    m.item(scanMode < 0 ? "SCANNER ON" : "SCANNER: NEXT KIND", KEY_R);
+    m.item(scanSkipMarked ? "SCANNER: MARKED SIGHTS IN" : "SCANNER: MARKED SIGHTS OUT", KEY_R, MOD_SHIFT);
 }
 
 // "A TOWN", "1240 M HIGH", "2.3 KM ACROSS"
@@ -261,14 +261,14 @@ void Game::beginMark(double x, double z) {
         if (d < reach && score < best) { best = score; textMarkKind = e.lm.kind; }
     }
     returnState = GameState::SURFACE;   // the entry is drawn over the ground (and the map)
-    beginTextEntry("NAME THE MARK", TEXT_MARK, "");
+    beginTextEntry("NAME MARK", TEXT_MARK, "");
 }
 
 void Game::beginRenameMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     textMark = mi; textMarkKind = guide.marks[mi].kind;
     returnState = GameState::SURFACE;
-    beginTextEntry("RENAME THE MARK", TEXT_MARK, upper(guide.marks[mi].name));
+    beginTextEntry("RENAME MARK", TEXT_MARK, upper(guide.marks[mi].name));
 }
 
 // the entry's Enter
@@ -290,7 +290,7 @@ void Game::finishMark(const std::string& name) {
     const std::string what = m.kind < LM_COUNT ? fmt(" (%s)", LANDMARK_KIND_NAMES[m.kind]) : std::string();
     logEvent("MARK", fmt("%s%s ON %s AT %.2f%s %.2f%s", name.empty() ? "A MARK" : name.c_str(), what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(),
                          std::fabs(m.lat / DEG), m.lat >= 0 ? "N" : "S", std::fabs(wrapAngle(m.lon) / DEG), wrapAngle(m.lon) >= 0 ? "E" : "W"));   // saves the guide
-    status(name.empty() ? "A MARK PLACED - ENTER ON IT IN THE MAP NAMES IT" : fmt("MARKED: %s", name.c_str()), 4);
+    status(name.empty() ? "MARK PLACED - NAME IT WITH ENTER ON THE MAP" : fmt("MARKED: %s", name.c_str()), 4);
     audio.beep = BEEP_LOCK;
 }
 

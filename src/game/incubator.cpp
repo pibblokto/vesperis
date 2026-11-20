@@ -16,12 +16,12 @@
 // a strain's move in words (its line said, the tree's twig)
 std::string Game::strainMoveWords(int what, double value) {
     switch (what) {
-        case SM_HOT: return fmt("IT GROWS TO %.0f C", value);
-        case SM_COLD: return fmt("IT GROWS DOWN TO %.0f C", value);
-        case SM_SIZE: return "ITS CELLS A QUARTER BIGGER";
-        case SM_SALT_LO: return std::string("IT GROWS IN ") + (value <= 0 ? "FRESH WATER" : "SEA SALT");
-        case SM_SALT_HI: return std::string("IT GROWS IN ") + (value >= 2 ? "BRINE" : "SEA SALT");
-        case SM_PIGMENT: return std::string("ITS PIGMENT ") + (value == PG_BLUE_GREEN ? "BLUE-GREEN" : (value == PG_ORANGE ? "ORANGE" : "BLACK"));
+        case SM_HOT: return fmt("GROWS UP TO %.0f C", value);
+        case SM_COLD: return fmt("GROWS DOWN TO %.0f C", value);
+        case SM_SIZE: return "CELLS A QUARTER BIGGER";
+        case SM_SALT_LO: return std::string("GROWS IN ") + (value <= 0 ? "FRESH WATER" : "SEA SALT");
+        case SM_SALT_HI: return std::string("GROWS IN ") + (value >= 2 ? "BRINE" : "SEA SALT");
+        case SM_PIGMENT: return std::string("PIGMENT NOW ") + (value == PG_BLUE_GREEN ? "BLUE-GREEN" : (value == PG_ORANGE ? "ORANGE" : "BLACK"));
         default: return "A STRAIN";
     }
 }
@@ -46,7 +46,7 @@ std::string Game::flaskSpeciesWords(const FlaskSpecies& w, const Morph& form, bo
 // what a flask's species is: its world's (its values, its form), the strain it went in as (its moves from the wild one), and a vial's spores'
 // sleep (its world's end, its drifter's leaving, the impact that carried them); Y-02: its lines' genes (the wild ones its species', a strain's
 // its move's gene stepped, an edited line's its edits: `applyEdits`)
-bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes) const {
+bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes, int depth) const {
     LabSystems systems;
     const StarSystem* S = systems.get(sys, w.sx, w.sy, w.sz);
     if (!S || w.body < 0 || w.body >= (int)S->bodies.size()) return false;
@@ -70,16 +70,67 @@ bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, doub
     MicrobeGenes G;
     GeneCode code;
     if (genes || edits) { G = microbeGenesOf(s, form, B.genesis); code = geneCodeOf(B.genesis); }
+    const CultureKind wild = kind;
+    const Morph wildForm = form;
     for (auto r = chain.rbegin(); r != chain.rend(); ++r) {
         const StrainRecord& R = r->second;
-        if (R.what == SM_EDIT) { applyEdits(kind, form, G, geneEditsOf(R.edits)); continue; }
+        if (R.what == SM_EDIT) {
+            std::vector<GeneEdit> ed = geneEditsOf(R.edits);
+            for (GeneEdit& e : ed) if (e.how == GX_MOVED) geneDonor(w, e, depth + 1);   // Y-03: its genes' donors read
+            applyEdits(kind, form, G, ed);
+            continue;
+        }
         if (G.valid) strainGenes(G, code, kind, R.what, R.value, fnv1a(flaskSpeciesKey(w) + "/S" + std::to_string(r->first)));
         applyStrain(kind, R.what, R.value);
         if (R.what == SM_SIZE) { form.lengthUm *= R.value; form.widthUm *= R.value; }
         if (R.what == SM_PIGMENT) form.pigment = (int)R.value;
     }
+    if (edits && G.valid) {
+        kind.burden = geneBurden(wild, wildForm, kind, form, G);   // Y-03: what its genes cost it
+        for (CultureSwitch& s : kind.switches)                     // Y-04: a switched gene's part of it, not paid while it is off
+            if (const MicrobeGene* g = G.at(s.place)) s.price = genePrice(wild, wildForm, kind, form, *g);
+    }
     if (genes) *genes = G;
     return true;
+}
+
+// Y-04: a flask's line (or its parent) as a state of its culture has it (`CultureOne::state`): its genes switched off there lose their work, its
+// form's too (the parent's warmth against its own best)
+void Game::flaskLineIn(int i, int k, int state, CultureKind& kind, Morph& form, bool parent) const {
+    const Flask& F = lab.flasks[clampi(i, 0, INCUBATOR_FLASKS - 1)];
+    k = clampi(k, 0, 1);
+    kind = parent ? F.parentKind[k] : F.culture.kind[k];
+    form = parent ? F.parentForm[k] : F.forms[k];
+    if (state < 0 || kind.switches.empty()) return;
+    uint32_t st = (uint32_t)state;
+    if (parent) st = (st & ~(uint32_t)CST_COLD) | (F.medium.tempC < kind.s.tOpt ? (uint32_t)CST_COLD : 0u);
+    switchedLine(kind, form, parent ? F.parentGenes[k] : F.genes[k], st);
+}
+
+// Y-03: a moved gene's donor read: its key (its species' or its line's) back into a culture, made as a flask makes it (its own lines and their
+// donors, a few deep at most), its gene at the edit's place; whose that gene was (its donor's, or the species it came from before) and how far
+// it came to the line's species. False where the donor has no gene there to read (how far it came then by its key alone)
+bool Game::geneDonor(const FlaskSpecies& line, GeneEdit& e, int depth) const {
+    e.read = false;
+    FlaskSpecies d;
+    if (!speciesOfKey(e.donor, d)) { e.far = GFROM_STAR; return false; }
+    const size_t sp = e.donor.rfind("/S");
+    if (sp != std::string::npos && sp > e.donor.rfind("/M")) d.strain = d.strainIn = atoi(e.donor.c_str() + sp + 2);
+    e.origin = flaskSpeciesKey(d);
+    MicrobeGenes dg;
+    double slept = 0;
+    if (depth <= 6 && flaskKind(d, e.donorKind, e.donorForm, slept, &dg, depth)) {
+        const MicrobeGene* G = dg.at(e.place);
+        if (G && !G->cut) { e.donorGene = *G; e.read = true; if (!G->origin.empty()) e.origin = G->origin; }
+    }
+    e.far = geneFar(flaskSpeciesKey(line), e.origin);
+    return e.read;
+}
+int Game::geneFar(const std::string& speciesKey, const std::string& origin) const {
+    if (origin.empty() || origin == speciesKey) return GFROM_OWN;
+    FlaskSpecies a, b;
+    if (!speciesOfKey(speciesKey, a) || !speciesOfKey(origin, b) || a.sx != b.sx || a.sy != b.sy || a.sz != b.sz) return GFROM_STAR;
+    return a.body == b.body ? GFROM_WORLD : GFROM_SYSTEM;
 }
 
 // a flask's culture made again from its species and events: the kinds read from their worlds, its laws laid out, its forms, its names
@@ -89,7 +140,8 @@ void Game::flaskMake(int i) {
     F.culture = FlaskCulture(); F.run = CultureRun(); F.forms.clear();
     for (int k = 0; k < F.n && k < 2; k++) {
         CultureKind kind; Morph form; double slept = 0;
-        if (!flaskKind(F.who[k], kind, form, slept)) { F.n = k; break; }   // its world no longer there
+        F.genes[k] = MicrobeGenes(); F.parentGenes[k] = MicrobeGenes(); F.switchOnly[k].clear();
+        if (!flaskKind(F.who[k], kind, form, slept, &F.genes[k])) { F.n = k; break; }   // its world no longer there
         // a later strain's moves on the form (its size, its pigment): the strains its events made
         for (const CultureEvent& e : F.events) if (e.kind == CD_STRAIN && e.who == k) {
             if (e.what == SM_SIZE) { form.lengthUm *= e.value; form.widthUm *= e.value; }
@@ -98,7 +150,7 @@ void Game::flaskMake(int i) {
         F.culture.kind[k] = kind; F.forms.push_back(form); F.sleptYears[k] = slept;
         F.label[k] = flaskSpeciesWords(F.who[k], form, false);
         // Y-02: an edited line, compared with its parent as it grows and is looked at (a strain arisen in the flask since ends it)
-        F.edited[k] = false; F.changed[k].clear(); F.genesis[k] = 0;
+        F.edited[k] = false; F.changed[k].clear(); F.changedKind[k].clear(); F.genesis[k] = 0;
         const auto rec = guide.strains.find(flaskSpeciesKey(F.who[k]) + "/S" + std::to_string(F.who[k].strainIn));
         if (F.who[k].strainIn > 0 && F.who[k].strain == F.who[k].strainIn && rec != guide.strains.end() && rec->second.what == SM_EDIT) {
             FlaskSpecies p = F.who[k]; p.strain = p.strainIn = rec->second.parent;
@@ -106,7 +158,13 @@ void Game::flaskMake(int i) {
             double ps = 0;
             if (flaskKind(p, F.parentKind[k], F.parentForm[k], ps, &pg)) {
                 F.edited[k] = true; F.genesis[k] = pg.genesis.id;
-                for (const GeneEdit& e : geneEditsOf(rec->second.edits)) if (pg.at(e.place)) F.changed[k].push_back(e.place);
+                const GeneCode code = geneCodeOf(pg.genesis);
+                for (const GeneEdit& e : geneEditsOf(rec->second.edits))
+                    if (pg.at(e.place) || e.how != GX_HAND) {   // (Y-03: a gap's too; Y-04: a switch alone kept apart)
+                        F.changed[k].push_back(e.place); F.changedKind[k].push_back(code.kind[e.place]);
+                        if (e.switchOnly()) F.switchOnly[k].push_back(e.place);
+                    }
+                F.parentGenes[k] = pg;
             }
         }
     }
@@ -134,7 +192,7 @@ void Game::updateLab(double realDt) {
         J.told = true;
         if (!J.made) jarMake(j);
         const int n = (int)J.recipe.bands.size();
-        status(n == 0 ? "THE JAR OF " + J.name + " HAS SETTLED - NOTHING IN IT MAKES A BAND" : fmt("THE JAR OF %s HAS SETTLED - %d BAND%s", J.name.c_str(), n, n == 1 ? "" : "S"), 5);
+        status(n == 0 ? "JAR OF " + J.name + " SETTLED - NO BANDS" : fmt("JAR OF %s SETTLED - %d BAND%s TO READ", J.name.c_str(), n, n == 1 ? "" : "S"), 5);
     }
     for (int i = 0; i < INCUBATOR_FLASKS; i++) {
         Flask& F = lab.flasks[i];
@@ -155,7 +213,7 @@ void Game::updateLab(double realDt) {
             F.told &= ~(FT_KEPT << k);   // R-433: the strain kept in its turn, as it grows
             flaskMake(i);
             const std::string line = fmt("A STRAIN OF %s IN FLASK %d: %s", was.c_str(), i + 1, strainMoveWords(r.what, r.value).c_str());
-            status(line + " - N NAMES IT", 6);
+            status(line + " - N TO NAME IT", 6);
             logEvent("STRAIN", line);
             guide.save(guidePath);
         }
@@ -177,7 +235,11 @@ void Game::updateLab(double realDt) {
         }
         if (!(F.told & FT_GLOW)) {
             const CultureNow now = flaskNow(i);
-            for (int k = 0; k < now.n; k++) if (now.one[k].glowing) { F.told |= FT_GLOW; status(fmt("FLASK %d GLOWS: %s, ITS CROWD'S OWN LIGHT", i + 1, F.label[k].c_str()), 5); break; }
+            for (int k = 0; k < now.n; k++) if (now.one[k].glowing) {   // (Y-04: a glow lit by its switch, its cells')
+                F.told |= FT_GLOW;
+                status(fmt("FLASK %d GLOWS: %s, %s", i + 1, F.label[k].c_str(), F.culture.kind[k].glowAny ? "SWITCHED ON" : "CROWDED"), 5);
+                break;
+            }
         }
     }
     geneSay();   // Y-02: what the genes showed, said in its turn
@@ -221,14 +283,14 @@ bool Game::incubatorTypeKeys(const Input& in) {
         incub.typing = true; incub.typed = std::string(1, (char)('0' + d)); incub.field = 1; audio.beep = BEEP_UI;
         return true;
     }
-    if (in.wasPressed(KEY_ESCAPE) || F.n == 0) { incub.typing = false; status(fmt("FLASK %d KEEPS %.0f C", incub.sel + 1, F.medium.tempC), 2); audio.beep = BEEP_UI; return true; }
+    if (in.wasPressed(KEY_ESCAPE) || F.n == 0) { incub.typing = false; status(fmt("FLASK %d STAYS AT %.0f C", incub.sel + 1, F.medium.tempC), 2); audio.beep = BEEP_UI; return true; }
     warmthTyping(in, incub.typed, F.medium.tempC);
     if (!enterKey(in)) return true;
     if (incub.typed.empty() || incub.typed == "-") { incub.typing = false; return true; }
     double lo, hi;
     cellRange(F.medium.cell, lo, hi);
     const int v = atoi(incub.typed.c_str());
-    if (v < lo || v > hi) { refuse(fmt("THE %s CELL HOLDS %.0f TO %.0f C", CULTURE_CELL_NAMES[F.medium.cell], lo, hi), 3); return true; }
+    if (v < lo || v > hi) { refuse(fmt("%s CELL: %.0f TO %.0f C ONLY", CULTURE_CELL_NAMES[F.medium.cell], lo, hi), 3); return true; }
     incub.typing = false;
     Medium m = F.medium; m.tempC = v;
     flaskSet(incub.sel, m);
@@ -323,7 +385,7 @@ bool Game::vialMedium(const Vial& V, Medium& out) {
 bool Game::flaskPut(int i, const IncubatorChoice& c) {
     if (i < 0 || i >= INCUBATOR_FLASKS) return false;
     Flask& F = lab.flasks[i];
-    if (F.n >= 2) { refuse("TWO IN A FLASK ARE ENOUGH", 3); return false; }
+    if (F.n >= 2) { refuse("TWO PER FLASK AT MOST", 3); return false; }
     std::vector<FlaskSpecies> in;
     Medium asWorld = F.asWorld;
     if (c.flask >= 0 && c.flask < INCUBATOR_FLASKS && lab.flasks[c.flask].n > 0) {
@@ -341,12 +403,12 @@ bool Game::flaskPut(int i, const IncubatorChoice& c) {
         FlaskSpecies w; w.sx = V.sx; w.sy = V.sy; w.sz = V.sz; w.body = V.body; w.species = c.species;
         in.push_back(w);
         if (F.n == 0) {   // AS ITS WORLD: the vial's place's medium
-            if (!vialMedium(V, asWorld)) { refuse("THE VIAL'S WORLD IS NO LONGER THERE"); return false; }
+            if (!vialMedium(V, asWorld)) { refuse("VIAL'S WORLD NO LONGER EXISTS"); return false; }
             F.medium = asWorld;
         }
     } else return false;
-    for (const FlaskSpecies& w : in) for (int k = 0; k < F.n; k++) if (F.who[k].sameSpecies(w) && F.who[k].strain == w.strainIn) { refuse("IT IS IN THE FLASK ALREADY", 3); return false; }
-    if (F.n + (int)in.size() > 2) { refuse("TWO IN A FLASK ARE ENOUGH", 3); return false; }
+    for (const FlaskSpecies& w : in) for (int k = 0; k < F.n; k++) if (F.who[k].sameSpecies(w) && F.who[k].strain == w.strainIn) { refuse("ALREADY IN THIS FLASK", 3); return false; }
+    if (F.n + (int)in.size() > 2) { refuse("TWO PER FLASK AT MOST", 3); return false; }
     const bool fresh = F.n == 0;
     for (const FlaskSpecies& w : in) {
         CultureEvent e; e.kind = F.n == 0 ? CD_START : CD_ADD; e.t = lab.clock; e.m = F.medium;
@@ -356,7 +418,7 @@ bool Game::flaskPut(int i, const IncubatorChoice& c) {
         F.events.push_back(e);
     }
     flaskMake(i);
-    if (fresh) status(fmt(c.vial >= 0 ? "FLASK %d: %s PUT IN, AS ITS WORLD" : "FLASK %d: %s PUT IN", i + 1, F.label[0].c_str()), 4);
+    if (fresh) status(fmt(c.vial >= 0 ? "FLASK %d: %s PUT IN, MEDIUM LIKE ITS WORLD" : "FLASK %d: %s PUT IN", i + 1, F.label[0].c_str()), 4);
     else status(fmt("FLASK %d: %s ADDED", i + 1, F.label[F.n - 1].c_str()), 4);
     audio.beep = BEEP_UI;
     return true;
@@ -388,7 +450,7 @@ void Game::flaskFresh(int i) {
     CultureEvent e; e.kind = CD_FRESH; e.t = lab.clock; e.m = F.medium;
     F.events.push_back(e);
     flaskMake(i);
-    status(fmt("FLASK %d: A HUNDREDTH INTO FRESH BROTH", i + 1), 3);
+    status(fmt("FLASK %d: 1%% MOVED TO FRESH BROTH", i + 1), 3);
     audio.beep = BEEP_UI;
 }
 
@@ -425,7 +487,7 @@ std::string Game::jarWays(int layer, int substrate, bool full) {
         case JL_DARK_LIGHT: w = "LIGHT, NO AIR"; break;
         case JL_SULPHIDE: w = "SULPHIDE"; break;
         case JL_DEEP: w = on + ", NO AIR"; break;
-        default: w = "THE DEAD, NO AIR"; break;
+        default: w = "DEAD MATTER, NO AIR"; break;
     }
     return full ? "LIVES ON " + w : w;
 }
@@ -435,7 +497,7 @@ std::string Game::jarBandWords(const Jar& J, int b) const {
     const std::string key = Guide::bodyKey(J.sx, J.sy, J.sz, J.body) + "/M" + std::to_string(B.species), named = nameOfKey(key);
     const auto it = guide.microbes.find(key);
     const std::string who = named != "UNKNOWN" ? upper(named)
-                          : (it != guide.microbes.end() && (it->second.seen & SEEN_FORM) && b < (int)J.plans.size() && J.plans[b] >= 0 ? planWords(J.plans[b]) : "AN UNSEEN KIND");
+                          : (it != guide.microbes.end() && (it->second.seen & SEEN_FORM) && b < (int)J.plans.size() && J.plans[b] >= 0 ? planWords(J.plans[b]) : "UNSEEN SPECIES");
     return who + ": " + jarWays(B.layer, B.substrate, false);
 }
 // R-439: what the jars page shows of a jar goes to its bands' species' sheets (those seen): each band's place once it has come in
@@ -459,20 +521,20 @@ bool Game::jarPut(int vial) {
     if (vial < 0 || vial >= (int)coldStore.size()) return false;
     const Vial& V = coldStore[vial];
     if (!jarNiche(V.hab.niche)) { refuse("A JAR NEEDS WET SILT, A MAT OR SOIL", 3); return false; }
-    for (const Jar& J : lab.jars) if (J.sx == V.sx && J.sy == V.sy && J.sz == V.sz && J.body == V.body) { refuse("THE SHELF HOLDS THIS WORLD'S JAR ALREADY", 3); return false; }
-    if ((int)lab.jars.size() >= JAR_PLACES) { refuse(fmt("THE SHELF'S %d PLACES ARE FULL", JAR_PLACES), 3); return false; }
+    for (const Jar& J : lab.jars) if (J.sx == V.sx && J.sy == V.sy && J.sz == V.sz && J.body == V.body) { refuse("THIS WORLD ALREADY HAS A JAR ON THE SHELF", 3); return false; }
+    if ((int)lab.jars.size() >= JAR_PLACES) { refuse(fmt("SHELF FULL (%d JARS)", JAR_PLACES), 3); return false; }
     Jar J;
     J.sx = V.sx; J.sy = V.sy; J.sz = V.sz; J.body = V.body; J.hab = V.hab; J.name = V.name; J.t0 = lab.clock;
     lab.jars.push_back(J);
     jarMake((int)lab.jars.size() - 1);
-    status("A JAR OF " + V.name + " ON THE SHELF - IT SETTLES OVER TWENTY MINUTES", 4);
+    status("JAR OF " + V.name + " ON THE SHELF - READY IN 20 MINUTES", 4);
     audio.beep = BEEP_UI;
     return true;
 }
 void Game::jarEmpty(int j) {
     if (j < 0 || j >= (int)lab.jars.size()) return;
     lab.jars.erase(lab.jars.begin() + j);
-    status("THE JAR IS EMPTIED", 3);
+    status("JAR EMPTIED", 3);
     audio.beep = BEEP_UI;
 }
 
@@ -508,10 +570,10 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
         menuStep(in, incub.jar, JAR_PLACES);
         const bool has = incub.jar < (int)lab.jars.size();
         if (enterKey(in)) {
-            if (has) refuse("THE JAR IS SETTLING - BACKSPACE EMPTIES IT", 3);
+            if (has) refuse("JAR IN USE - BKSP EMPTIES IT", 3);
             else {
                 incubatorChoices();
-                if (incub.choices.empty()) refuse("NO VIAL OF WET SILT, A MAT OR SOIL IN THE COLD STORE", 3);
+                if (incub.choices.empty()) refuse("NO VIAL OF WET SILT, MAT OR SOIL IN THE COLD STORE", 3);
                 else { incub.choosing = true; audio.beep = BEEP_UI; }
             }
         }
@@ -542,14 +604,14 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
     }
     if (in.wasPressed(KEY_W)) {
         if (F.n == 0) refuse("PUT A CULTURE IN FIRST - ENTER", 2);
-        else { flaskSet(incub.sel, F.asWorld); status(fmt("FLASK %d: THE MEDIUM AS ITS WORLD", incub.sel + 1), 3); audio.beep = BEEP_UI; }
+        else { flaskSet(incub.sel, F.asWorld); status(fmt("FLASK %d: MEDIUM SET LIKE ITS WORLD", incub.sel + 1), 3); audio.beep = BEEP_UI; }
     }
-    if (in.wasPressed(KEY_F) && !in.ctrl()) { if (F.n == 0) refuse("THE FLASK IS EMPTY", 2); else flaskFresh(incub.sel); }
+    if (in.wasPressed(KEY_F) && !in.ctrl()) { if (F.n == 0) refuse("FLASK EMPTY", 2); else flaskFresh(incub.sel); }
     if (enterKey(in)) {
-        if (F.n >= 2) refuse("TWO IN A FLASK ARE ENOUGH", 3);
+        if (F.n >= 2) refuse("TWO PER FLASK AT MOST", 3);
         else {
             incubatorChoices();
-            if (incub.choices.empty()) refuse("NOTHING SEEN TO PUT IN - THE MICROSCOPE SHOWS WHAT A VIAL HOLDS", 4);
+            if (incub.choices.empty()) refuse("NOTHING TO PUT IN - LOOK AT A VIAL UNDER THE MICROSCOPE", 4);
             else { incub.choosing = true; audio.beep = BEEP_UI; }
         }
     }
@@ -562,7 +624,7 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
 // R-442: N names the flask's organism: each species (its look, or its name) and its strain, one named at once, more chosen from rows first
 void Game::incubatorName() {
     const Flask& F = lab.flasks[incub.sel];
-    if (F.n == 0 || !F.made) { refuse("THE FLASK IS EMPTY - ENTER PUTS IN A CULTURE", 3); return; }
+    if (F.n == 0 || !F.made) { refuse("FLASK EMPTY - ENTER PUTS IN A CULTURE", 3); return; }
     incub.pickLines.clear(); incub.pickKeys.clear(); incub.pickStrain.clear();
     for (int k = 0; k < F.n && k < (int)F.forms.size(); k++) {
         FlaskSpecies w = F.who[k]; w.strain = 0;
@@ -570,7 +632,7 @@ void Game::incubatorName() {
         incub.pickKeys.push_back(flaskSpeciesKey(w)); incub.pickStrain.push_back(0);
         if (F.who[k].strain <= 0) continue;
         const std::string st = nameOfKey(flaskStrainKey(F.who[k]));
-        incub.pickLines.push_back((lineEdited(flaskStrainKey(F.who[k])) ? "ITS LINE " : "ITS STRAIN ") + lineTag(F.who[k]) + (st == "UNKNOWN" ? std::string() : ": " + upper(st)));
+        incub.pickLines.push_back(std::string("STRAIN ") + lineTag(F.who[k]) + (st == "UNKNOWN" ? std::string() : ": " + upper(st)));
         incub.pickKeys.push_back(flaskStrainKey(F.who[k])); incub.pickStrain.push_back(1);
     }
     if (incub.pickKeys.size() == 1) { incubatorNameKey(incub.pickKeys[0], incub.pickStrain[0]); return; }
@@ -584,7 +646,7 @@ void Game::incubatorNameKey(const std::string& key, bool strain) {
 // R-440: K keeps a copy of the flask's culture in a folder (the flask grows on): its one species, or of two either alone or both
 void Game::incubatorKeep() {
     const Flask& F = lab.flasks[incub.sel];
-    if (F.n == 0 || !F.made) { refuse("THE FLASK IS EMPTY - ENTER PUTS IN A CULTURE", 3); return; }
+    if (F.n == 0 || !F.made) { refuse("FLASK EMPTY - ENTER PUTS IN A CULTURE", 3); return; }
     if (F.n == 1) { keepFromFlask(incub.sel, 0); return; }
     incub.pickLines = {F.label[0] + " ALONE", F.label[1] + " ALONE", "BOTH TOGETHER"};
     incub.pick = PICK_KEEP; incub.pickSel = 0; audio.beep = BEEP_UI;
@@ -595,7 +657,7 @@ void Game::keepFromFlask(int i, int which) {
     const CultureNow now = flaskNow(i);
     for (int k = 0; k < F.n; k++) {
         const CultureOne& o = now.one[k];
-        if ((which == 2 || which == k) && (o.stage == SG_DEAD || (o.cells < 1 && o.spores < 1))) { refuse(F.label[k] + " IS DEAD - NOTHING OF IT TO KEEP", 3); return; }
+        if ((which == 2 || which == k) && (o.stage == SG_DEAD || (o.cells < 1 && o.spores < 1))) { refuse(F.label[k] + " IS DEAD - NOTHING TO KEEP", 3); return; }
     }
     KeptCulture c;
     const int k = which == 2 ? 0 : clampi(which, 0, F.n - 1);
@@ -620,26 +682,26 @@ void Game::incubatorPickKeys(const Input& in) {
 }
 
 void Game::incubatorPad(PadMenu& m) const {
-    m.title = "THE INCUBATOR";
-    if (keep.open) { m.item("KEEP A COPY THERE", KEY_ENTER); m.item("A NEW FOLDER", KEY_N); m.item("BACK", KEY_ESCAPE); return; }   // R-440
+    m.title = "INCUBATOR";
+    if (keep.open) { m.item("KEEP A COPY THERE", KEY_ENTER); m.item("NEW FOLDER", KEY_N); m.item("BACK", KEY_ESCAPE); return; }   // R-440
     if (incub.pick) { m.item(incub.pick == PICK_NAME ? "NAME IT" : "KEEP IT", KEY_ENTER); m.item("BACK", KEY_ESCAPE); return; }
     if (incub.choosing) {
-        m.item(incub.pages.open ? "PUT IT IN" : "OPEN THE FOLDER", KEY_ENTER);
-        if (incub.pages.tabbed) m.item(incub.pages.tab == 0 ? "THE CULTURES" : "THE VIALS", KEY_TAB);   // R-441
+        m.item(incub.pages.open ? "PUT IN" : "OPEN FOLDER", KEY_ENTER);
+        if (incub.pages.tabbed) m.item(incub.pages.tab == 0 ? "CULTURES" : "VIALS", KEY_TAB);   // R-441
         m.item("BACK", KEY_ESCAPE);
         return;
     }
     if (incub.page == 1) {
-        m.item("A JAR FROM A VIAL", KEY_ENTER); m.item("EMPTY THE JAR", KEY_BACKSPACE); m.item("THE FLASKS", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
+        m.item("NEW JAR", KEY_ENTER); m.item("EMPTY JAR", KEY_BACKSPACE); m.item("FLASKS", KEY_TAB); m.item("BACK", KEY_ESCAPE);
         m.button(PR_A, KEY_ENTER, "JAR"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "FLASKS");
         return;
     }
     const Flask& F = lab.flasks[incub.sel];
     m.item(F.n == 0 ? "PUT IN A CULTURE" : "ADD A SECOND", KEY_ENTER);
-    m.item("THE NEXT FIELD", KEY_RIGHT); m.item("RAISE IT", KEY_EQUAL); m.item("LOWER IT", KEY_MINUS);
-    m.item("AS ITS WORLD", KEY_W); m.item("FRESH BROTH", KEY_F); m.item("EMPTY THE FLASK", KEY_BACKSPACE); m.item("NAME IT", KEY_N);
+    m.item("NEXT FIELD", KEY_RIGHT); m.item("RAISE", KEY_EQUAL); m.item("LOWER", KEY_MINUS);
+    m.item("LIKE ITS WORLD", KEY_W); m.item("FRESH BROTH", KEY_F); m.item("EMPTY FLASK", KEY_BACKSPACE); m.item("NAME IT", KEY_N);
     m.item("KEEP A COPY", KEY_K);
-    m.item("THE JARS", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
+    m.item("JARS", KEY_TAB); m.item("BACK", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "PUT IN"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_X, KEY_W, "AS WORLD"); m.button(PR_Y, KEY_F, "FRESH");
     m.button(PR_LB, KEY_MINUS, "LOWER"); m.button(PR_RB, KEY_EQUAL, "RAISE"); m.button(PR_SELECT, KEY_TAB, "JARS");
 }

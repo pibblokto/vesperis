@@ -890,7 +890,8 @@ void Flow::reload() {
 // Y-02: the gene editor, the flow's game's last stage (after the drones: nothing of its own after it moves in time; before the games of
 // its own the stages after it make, whose ends leave its frames unsafe: KI-450): E at it, Enter (the chooser: the cultures), Enter (THE
 // FLASKS), Enter (flask 1's culture, read on the sequencer); its map's first gene, Enter (its letters), Up (a letter changed), Enter (the
-// map), W (its line written), its clock skipped past the writing (the skip hook): the line in an empty flask; Esc
+// map), W (R-445: UNSORTED chosen, then its parent's name kept), its clock skipped past the writing (the skip hook): the line in an empty
+// flask; Esc
 void Flow::genes() {
     game.setState(GameState::SPACE);
     game.testCabinAtDevice(FACE_EDITOR); run(0.167); press(KEY_E); run(0.1);
@@ -900,7 +901,9 @@ void Flow::genes() {
     const EditorState& E = game.testEditor();
     const int first = E.genes.genes.empty() ? -1 : E.genes.genes[0].place;
     press(KEY_ENTER); press(KEY_UP); run(0.1); shot("editor_letters");
-    press(KEY_ENTER); press(KEY_W); run(0.1);
+    press(KEY_ENTER); press(KEY_W); run(0.1); shot("editor_folder");   // R-445: its folder, then its name
+    press(KEY_ENTER); run(0.1); shot("editor_name");
+    press(KEY_ENTER); run(0.1);
     game.testLabSkip(EDIT_S / 2); run(0.2); shot("editor_writing");
     game.testLabSkip(EDIT_S / 2 + 1); run(0.2); shot("editor_written");
     int line = -1;

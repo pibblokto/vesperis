@@ -838,7 +838,8 @@ protected:
     std::string flaskSpeciesName(const FlaskSpecies& w) const;
     std::string flaskSpeciesWords(const FlaskSpecies& w, const Morph& form, bool sized) const;   // B-442: its name, else its look
     static std::string strainMoveWords(int what, double value);   // a strain's move ("IT GROWS TO 31 C"; Y-01: the tree's too)
-    bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes = nullptr) const;   // Y-02: its genes
+    bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes = nullptr, int depth = 0) const;   // Y-02: its genes
+    void flaskLineIn(int i, int k, int state, CultureKind& kind, Morph& form, bool parent = false) const;   // Y-04: as a state has it
     void incubatorChoices();
     bool jarPut(int vial);
     void jarEmpty(int j);
@@ -865,18 +866,28 @@ protected:
     // guide's `gene` lines)
     void editorEnter(); void updateEditor(const Input& in, double dt, double realDt); void renderEditor(); void editorPad(PadMenu& m) const;
     void editorSave(std::string& lines) const; bool editorLoad(const std::string& line); void editorReset();
-    void editorChoices();
+    void editorChoices(bool kin = false);   // Y-03: a kin's, the species read before the cultures
     bool editorPut(const EditorChoice& c);
     void editorMake();
     void editorEdited();              // its kind, form and genes with its edits
     void editorTick();                // the writing's end as the lab's clock reaches it (`updateLab`)
-    bool editorWrite();               // W: the writing begun
+    bool editorWrite();               // W: the folder asked, then the name (R-445), then the writing
+    void editorWriteName(int folder); bool editorWriteBegin(const std::string& name);
     void editorLetterKeys(const Input& in);
     void editorSet(int place, bool cut, const std::string& part);   // a gene's edit made (dropped where it is its parent's again)
+    // Y-03: genes from others: K the kin beside it (a species read or a culture kept; another genesis refused with its words), M its gene at the
+    // place chosen moved in, D the gene chosen copied to a free place of its kind; a moved gene's donor read; what a gene needs, said once
+    bool editorKinPut(const EditorChoice& c);
+    void editorMove();
+    void editorCopy();
+    void editorSwitch();              // Y-04: S, the gene chosen's switch the next
+    bool geneDonor(const FlaskSpecies& line, GeneEdit& e, int depth = 0) const;   // its kind and form, its gene, whose it was, how far it came
+    int geneFar(const std::string& speciesKey, const std::string& origin) const;   // a gene's GeneFrom by its species' place and its origin's
+    void geneNeedSay(int flask, int who, int place, const std::string& seen, const std::string& says);
     std::string geneKey(uint64_t genesis, int place) const;
     const GeneKnown* geneKnown(uint64_t genesis, int place) const;
     std::string geneWords(uint64_t genesis, int place) const;   // the map's words: its name, what it was seen to do, NOTHING SEEN, NOT KNOWN
-    void geneSeen(int flask, int who, int kind, const std::string& what, int how = GENE_SEEN_EDIT);
+    void geneSeen(int flask, int who, int kind, const std::string& what, int how = GENE_SEEN_EDIT, int state = -1);   // Y-04: its state
     void geneSay();                   // the findings said in their turn (`updateLab`)
     void flaskLearn(int i);           // an edited line against its parent as the lab's clock runs (its fit, its rest, its glow; a vital death)
     void scopeLearn();                // a flask's edited line in view on the microscope (its shape, size, colour, motion; nothing seen)

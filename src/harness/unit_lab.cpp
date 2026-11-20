@@ -168,7 +168,7 @@ void unitLab(const Check& check) {
             pressKey(g, in, KEY_ESCAPE); folders = M.page == 0 && !M.open;
             pressKey(g, in, KEY_TAB);
             const std::vector<LabFolder> C = g.testCultureFolders();
-            cultures = M.tab == 1 && !M.open && C.size() == 2 && C[0].name == "THE FLASKS" && C[1].name == "UNSORTED";
+            cultures = M.tab == 1 && !M.open && C.size() == 2 && C[0].name == "FLASKS" && C[1].name == "UNSORTED";
             pressKey(g, in, KEY_ESCAPE); closed = g.state != GameState::MICROSCOPE;
             std::set<std::string> byState, bySpecies;
             for (const Vial* v : {&va, &vb}) {
@@ -316,7 +316,7 @@ void unitLab(const Check& check) {
             for (const IncubatorChoice& c : IC) chooseOk = chooseOk && c.kept >= 0;
             const std::vector<SequencerChoice> SC = a.testSequencerChoices();
             rowsS = (int)SC.size();
-            for (const LabFolder& f : a.testLab().seq.pages.folders) chooseOk = chooseOk && f.name.rfind("THE COLLECTION: ", 0) == 0;
+            for (const LabFolder& f : a.testLab().seq.pages.folders) chooseOk = chooseOk && f.name.rfind("COLLECTION: ", 0) == 0;
             const KeptCulture c0 = a.testLab().kept[0];
             intoFlask = a.testFlaskPutKept(5, 0) && a.testLab().flasks[5].n == 1 && a.testLab().flasks[5].who[0].sameSpecies(c0.who) &&
                         a.testLab().flasks[5].who[0].strain == c0.who.strain && a.testLab().flasks[5].medium == c0.medium;
@@ -387,16 +387,88 @@ void unitLab(const Check& check) {
             const CultureRun R = runCulture(c);
             double lo = 1e30, hi = 0;   // the second's range of numbers over its last half hour (a cycle's swing)
             for (int t = 1800; t <= 3600; t += 30) { const double v = cultureAt(c, R, t).one[1].cells; lo = std::min(lo, v); hi = std::max(hi, v); }
+            double most[2] = {0, 0};   // each one's most over the hour (B-444: its crowd held a while, then its decline)
+            for (int t = 0; t <= 3600; t += 30) for (int k = 0; k < 2; k++) most[k] = std::max(most[k], cultureAt(c, R, t).one[k].cells);
             const CultureNow end = cultureAt(c, R, 3600), mid = cultureAt(c, R, 1800);
             bool ok = R.pair == w.want;
             if (w.want == PA_COMPETE) ok = ok && (end.one[0].stage == SG_OUTGROWN || end.one[1].stage == SG_OUTGROWN || end.one[0].cells == 0 || end.one[1].cells == 0);
             if (w.want == PA_CYCLE) ok = ok && R.period > 0 && R.cycleT > 0 && end.one[0].cells > 0 && end.one[1].cells > 0 && hi > 10 * lo;
             if (w.want == PA_FEED) ok = ok && mid.one[1].cells >= 1e5;   // the heterotroph fed with no broth of its own
-            if (w.want == PA_IGNORE) ok = ok && mid.one[0].cells >= 1e8 && mid.one[1].cells >= 1e8;
+            if (w.want == PA_IGNORE) ok = ok && most[0] >= 1e8 && most[1] >= 1e8;   // each to its crowd, as alone
             right += ok;
             lines += fmt("%s%s: %s%s", lines.empty() ? "" : "; ", w.what, CULTURE_PAIR_NAMES[R.pair], w.want == PA_CYCLE ? fmt(" (a turn of %.0f s, a %.1f-decade swing)", R.period, std::log10(hi / std::max(lo, 1e-9))).c_str() : "");
         }
         check("lab: two in a flask, the four ways (Z-05)", right == 4, fmt("%d of 4 as they should be: %s", right, lines.c_str()));
+        {   // B-446: a switched prey in a grazer's cycle. The rod carries a gene moved in from its world's kin (3%) set WHEN CROWDED, so it pays
+            // only past 3% of its crowd. Every 5 s from the cycle's start to the hour, its state must say CROWDED exactly when its numbers are
+            // past that share, and each part of the cycle must grow at the rate of its state
+            CultureKind line = rod;
+            CultureSwitch sw; sw.place = 4; sw.when = GW_CROWDED; sw.price = 0.03;
+            line.switches.push_back(sw); line.burden = 0.03;
+            FlaskCulture c;
+            c.kind[0] = grazer; c.kind[1] = line;
+            CultureEvent e; e.kind = CD_START; e.t = 0; e.m.cell = CC_WATER; e.m.tempC = 30; e.m.energy = CE_BROTH; e.m.light = CL_DARK;
+            c.events.push_back(e);
+            e.kind = CD_ADD; e.t = 120; c.events.push_back(e);
+            const CultureRun R = runCulture(c);
+            const double Nq = line.quorum * std::pow(10.0, growthIn(line, e.m).crowdLog);
+            int times = 0, match = 0, parts = 0, crowdedParts = 0, rightRate = 0;
+            for (double t = std::max(0.0, R.cycleT) + 5; t <= 3600; t += 5) {
+                const CultureOne o = cultureAt(c, R, t).one[1];
+                if (o.cells <= 0 || std::fabs(std::log(o.cells / Nq)) < 1e-6) continue;   // on the line itself: either is right
+                times++;
+                match += (o.state >= 0 && ((o.state & CST_CROWDED) != 0) == (o.cells >= Nq));
+            }
+            double rFree = 0;
+            for (const CultureSeg& s : R.seg[1]) if (s.stage == SG_CYCLING && s.state >= 0 && !(s.state & CST_CROWDED)) rFree = s.r;
+            for (const CultureSeg& s : R.seg[1]) {
+                if (s.stage != SG_CYCLING) continue;
+                parts++;
+                const bool crowded = s.state >= 0 && (s.state & CST_CROWDED);
+                crowdedParts += crowded;
+                rightRate += rFree > 0 && std::fabs(s.r / rFree - (crowded ? 0.97 : 1.0)) < 1e-9;
+            }
+            const bool ok = R.pair == PA_CYCLE && R.cycleT > 0 && times > 100 && match == times && crowdedParts > 0 && crowdedParts < parts && rightRate == parts;
+            check("lab: a switched strain in a predator cycle follows its numbers (B-446)", ok,
+                  fmt("the rod's gene WHEN CROWDED (3%%, past %.2e cells): its state right at %d of %d times; %d cycle parts, %d crowded, %d at their state's rate",
+                      Nq, match, times, parts, crowdedParts, rightRate));
+        }
+    }
+    {   // B-444: a culture's hold at its crowd ends. Every living species of forty worlds alone at its best (its warmth, its salt, its light and its
+        // energy), once at its crowd, has moved on fifteen minutes and a second later (its hold's longest): resting, dying or fruiting, never held
+        // at its crowd for good by its hold's end lost to a rounding
+        int worlds = 0, species = 0, crowded = 0, onward = 0;
+        std::string stuck;
+        for (auto& [x, z, sv, sys] : scanSystems(150, 340, 20, 160, [&] { return worlds < 40; })) {
+            auto L = lifeOf(sys);
+            for (int b = 0; b < (int)sys.bodies.size() && worlds < 40; b++) {
+                const Biota& B = L->bodies[b];
+                if (!livingStage(B.stage)) continue;
+                worlds++;
+                const std::vector<Morph> forms = morphsOf(sys, b);
+                for (const Microbe& m : B.species) {
+                    if (m.state != SS_LIVING) continue;
+                    species++;
+                    FlaskCulture c;
+                    c.kind[0] = cultureKindOf(B, m.index, 2 * forms[m.index].bodyUm());
+                    CultureEvent e; e.kind = CD_START; e.t = 0;
+                    e.m.cell = chemistryCell(c.kind[0].chemistry); e.m.tempC = std::round(m.tOpt); e.m.salt = m.saltLo;
+                    e.m.energy = m.way == LW_CHEMICAL ? m.substrate : (m.way == LW_LIGHT ? CE_NONE : CE_BROTH); e.m.light = m.way == LW_LIGHT ? CL_WHITE : CL_DARK;
+                    c.events.push_back(e);
+                    const CultureRun R = runCulture(c);
+                    double tc = -1;
+                    for (const CultureSeg& s : R.seg[0]) if (tc < 0 && s.stage == SG_CROWD) tc = s.t0;
+                    if (tc < 0) continue;
+                    crowded++;
+                    const int st = cultureAt(c, R, tc + 901).one[0].stage;
+                    if (st != SG_CROWD) onward++;
+                    else if (stuck.size() < 200) stuck += fmt("%s%s M%d", stuck.empty() ? "" : ", ", sys.bodies[b].name.c_str(), m.index);
+                }
+            }
+        }
+        check("lab: a culture's hold at its crowd ends: past it, it rests, dies or fruits (B-444)", crowded > 100 && onward == crowded,
+              fmt("%d species of %d worlds at their best, %d at their crowd, %d moved on past their hold%s%s", species, worlds, crowded, onward, stuck.empty() ? "" : "; held: ",
+                  stuck.c_str()));
     }
     // Z-06: the genomes and the tree, over the species of the systems within six sectors of home (each of its own, alive or asleep)
     struct Sp { StarSystem* sys; int body, species; Lineage line; };

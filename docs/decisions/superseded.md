@@ -164,6 +164,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   [D-03]
 - The ship's player is a page of the decoder's screen, Tab at its worlds turning to it; it plays the recordings held and caught too
   [C-11]; replaced by [R-431]
+- Rooms aboard sound by their plan rows (`Game::aboardSounds`), from their own noise; `aboardOff` mutes them off the ship [I-04];
+  replaced by [R-430] (moved here 2026-11-20: the line had stayed in `rules-audio.md`)
 
 ## The search and the laboratory
 
@@ -177,6 +179,7 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   [Z-04]; replaced by [R-438]
 - The tree (`TREE`): every species read and the ship's own at its root, a genesis a clade; Enter a kin's world's star the remote target
   [Z-06]; replaced by [Y-01]
+- A parent's cut gene stays cut in its lines (edit the parent); a gap takes no gene till Y-03 moves one in [Y-02]; replaced by [Y-03]
 
 ## The harness and the proof
 
@@ -375,3 +378,5 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [Z-04]: log/7-1.5.0.md
 [Z-06]: log/7-1.5.0.md
 [Y-01]: log/7-1.5.0.md
+[Y-02]: log/7-1.5.0.md
+[Y-03]: log/7-1.5.0.md

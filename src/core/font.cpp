@@ -83,6 +83,7 @@ const char* SPECIAL[8][7] = {
     {".....", ".....", ".###.", ".###.", ".###.", ".....", "....."},  // dot
 };
 const char* const PIPE[7] = {"..#..", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."};
+const char* const TILDE[7] = {".....", ".....", ".#...", "#.#.#", "...#.", ".....", "....."};   // B-445: the lake's landmark, a gene's switch
 const char* const BOX[7] = {"#####", "#...#", "#...#", "#...#", "#...#", "#...#", "#####"};
 
 const char* const* glyphFor(unsigned char ch) {
@@ -90,6 +91,7 @@ const char* const* glyphFor(unsigned char ch) {
     if (ch >= 32 && ch < 96) return GLYPHS[ch - 32];
     if (ch >= 1 && ch < 8) return SPECIAL[ch];
     if (ch == '|') return PIPE;
+    if (ch == '~') return TILDE;
     if (ch == '`') return GLYPHS['\'' - 32];
     return BOX;
 }

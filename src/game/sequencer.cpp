@@ -95,7 +95,7 @@ void Game::sequencerChoices() {
             if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM) || !listed.insert(key).second) continue;   // only what was seen of it, each once
             if (forms.empty()) forms = morphsOf(*S, V.body);
             SequencerChoice c; c.who.sx = V.sx; c.who.sy = V.sy; c.who.sz = V.sz; c.who.body = V.body; c.who.species = H.species;
-            add(c, Guide::bodyKey(V.sx, V.sy, V.sz, V.body), flaskSpeciesWords(c.who, forms[H.species], true), " - FROM " + V.name + ((it->second.seen & SEEN_KIN) ? " (READ)" : ""),
+            add(c, Guide::bodyKey(V.sx, V.sy, V.sz, V.body), flaskSpeciesWords(c.who, forms[H.species], true), " - FROM " + V.name + ((it->second.seen & SEEN_KIN) ? " (SEQUENCED)" : ""),
                 formTraits(forms[H.species]));   // B-442
         }
     }
@@ -108,7 +108,7 @@ void Game::sequencerChoices() {
             const auto it = guide.microbes.find(key);
             SequencerChoice c; c.who = w;
             add(c, "FLASKS", fmt("FLASK %d: ", f + 1) + flaskSpeciesWords(w, lab.flasks[f].forms[k], false),
-                it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "", "");
+                it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (SEQUENCED)" : "", "");
         }
     for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order (R-440: a pair's two each)
         for (int k : F.id >= 0 ? F.rows : std::vector<int>())
@@ -120,7 +120,7 @@ void Game::sequencerChoices() {
                 SequencerChoice c; c.who = w;
                 std::string trait;
                 const std::string look = keptRow(k, &trait, one);
-                add(c, keptFolderKey(k), look, it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (READ)" : "", trait);
+                add(c, keptFolderKey(k), look, it != guide.microbes.end() && (it->second.seen & SEEN_KIN) ? " (SEQUENCED)" : "", trait);
             }
     apartRows(looks, rests, keys, traits);
     for (size_t i = 0; i < Q.choices.size(); i++) Q.choices[i].line = looks[i] + rests[i];
@@ -171,9 +171,9 @@ bool Game::sequencerPut(const FlaskSpecies& w) {
     SequencerState& Q = lab.seq;
     Q.on = true; Q.who = w; Q.who.strainIn = Q.who.strain; Q.t0 = lab.clock; Q.told = false; Q.result.clear();   // Y-02: a line read as it is
     sequencerMake();
-    if (!Q.on) { refuse("ITS WORLD IS NO LONGER THERE"); return false; }
-    if (!Q.line.valid) { Q.on = false; refuse("NO GENOME TO READ IN IT", 3); return false; }
-    status(fitText(fmt("READING %s: ABOUT %.0f SECONDS", Q.name.c_str(), SEQUENCE_S), UW - 12), 4);
+    if (!Q.on) { refuse("ITS WORLD NO LONGER EXISTS"); return false; }
+    if (!Q.line.valid) { Q.on = false; refuse("NO GENOME TO SEQUENCE", 3); return false; }
+    status(fitText(fmt("SEQUENCING %s: ABOUT %.0f SECONDS", Q.name.c_str(), SEQUENCE_S), UW - 12), 4);
     audio.beep = BEEP_UI;
     return true;
 }
@@ -203,20 +203,20 @@ std::string Game::sequencerResult() {
     }
     geneses.insert(Q.line.genesis.id);
     Q.result.clear();
-    Q.result.push_back(fmt("ITS GENOME: %s LETTERS OF %s (%s)", lettersWords(Q.letters).c_str(), LETTER_WORDS[std::min(8, Q.line.genesis.letters)], alphabetOf(Q.line.genesis.letters)));
-    Q.result.push_back(Q.line.genesis.mirrored ? "ITS HELIX TURNS LEFT: A MIRRORED LIFE" : "ITS HELIX TURNS RIGHT, AS OURS DOES");
+    Q.result.push_back(fmt("GENOME: %s LETTERS OF %s (%s)", lettersWords(Q.letters).c_str(), LETTER_WORDS[std::min(8, Q.line.genesis.letters)], alphabetOf(Q.line.genesis.letters)));
+    Q.result.push_back(Q.line.genesis.mirrored ? "HELIX TURNS LEFT: MIRRORED LIFE" : "HELIX TURNS RIGHT, LIKE OURS");
     std::string line;
     if (nearest < 0) {
-        Q.result.push_back("NO COMMON ANCESTOR WITH ANY LIFE READ");
+        Q.result.push_back("NO COMMON ANCESTOR WITH ANY LIFE SEQUENCED");
         Q.result.push_back(fmt("LIFE BEGAN AT LEAST %d TIMES", (int)geneses.size()));
-        line = fmt("KIN: %s OF %s, NO COMMON ANCESTOR WITH ANY LIFE READ: LIFE BEGAN AT LEAST %d TIMES", Q.name.c_str(), Q.world.c_str(), (int)geneses.size());
+        line = fmt("KIN: %s OF %s HAS NO COMMON ANCESTOR WITH ANY LIFE SEQUENCED. LIFE BEGAN AT LEAST %d TIMES", Q.name.c_str(), Q.world.c_str(), (int)geneses.size());
     } else {
         const std::string who = kinWorld.empty() ? kin : kin + " OF " + kinWorld;
-        Q.result.push_back(fitHead("ITS NEAREST KIN READ: " + kin, kinWorld.empty() ? "" : " OF " + kinWorld, UW - 12));   // B-443: its world left out first
-        Q.result.push_back("A COMMON ANCESTOR " + yearsWords(std::max(nearest * 1e9, 1.0)) + " AGO");
-        line = fmt("KIN: %s OF %s AND %s, A COMMON ANCESTOR %s AGO", Q.name.c_str(), Q.world.c_str(), who.c_str(), yearsWords(std::max(nearest * 1e9, 1.0)).c_str());
+        Q.result.push_back(fitHead("NEAREST KIN SEQUENCED: " + kin, kinWorld.empty() ? "" : " OF " + kinWorld, UW - 12));   // B-443: its world left out first
+        Q.result.push_back("COMMON ANCESTOR " + yearsWords(std::max(nearest * 1e9, 1.0)) + " AGO");
+        line = fmt("KIN: %s OF %s AND %s, COMMON ANCESTOR %s AGO", Q.name.c_str(), Q.world.c_str(), who.c_str(), yearsWords(std::max(nearest * 1e9, 1.0)).c_str());
     }
-    if (Q.artificial) Q.result.push_back("TOO REGULAR TO HAVE EVOLVED: A WATERMARK IN IT FOR THE DECODER");
+    if (Q.artificial) Q.result.push_back("TOO REGULAR TO HAVE EVOLVED: A WATERMARK FOR THE DECODER");
     if (Q.who.strain > 0 && lineEdited(flaskStrainKey(Q.who))) {   // Y-02: an edited line: what its genes differ in from its parent's
         Q.result.push_back(fitText("EDITED: " + lineMoveWords(flaskStrainKey(Q.who)), UW - 12));
         line += " (" + lineTag(Q.who) + ", EDITED: " + lineMoveWords(flaskStrainKey(Q.who)) + ")";
@@ -225,7 +225,7 @@ std::string Game::sequencerResult() {
         const int p = strainGene(Q.who, genesis);
         if (p >= 0) {
             const std::string words = geneWords(genesis, p);
-            Q.result.push_back(fitText(fmt("GENE %d DIFFERS FROM ITS PARENT'S", p + 1) + (words == "NOT KNOWN" || words == "NOTHING SEEN" ? "" : ": " + words), UW - 12));
+            Q.result.push_back(fitText(fmt("GENE %d DIFFERS FROM THE PARENT'S", p + 1) + (words == "NOT KNOWN" || words == "NOTHING SEEN" ? "" : ": " + words), UW - 12));
         }
     }
     return line;
@@ -268,23 +268,23 @@ void Game::updateSequencer(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (in.wasPressed(KEY_TAB)) { openScreen(GameState::TREE); return; }
     if (enterKey(in)) {
-        if (Q.on && !Q.told) { refuse("IT IS STILL READING", 2); return; }
+        if (Q.on && !Q.told) { refuse("STILL SEQUENCING", 2); return; }
         sequencerChoices();
-        if (Q.choices.empty()) { refuse("NOTHING SEEN TO READ: THE MICROSCOPE FIRST", 3); return; }
+        if (Q.choices.empty()) { refuse("NOTHING TO SEQUENCE - LOOK AT A VIAL UNDER THE MICROSCOPE", 3); return; }
         Q.choosing = true; audio.beep = BEEP_UI;
         return;
     }
-    if ((in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) && Q.on) { const int tab = Q.lastTab; Q = SequencerState(); Q.lastTab = tab; status("THE SEQUENCER IS EMPTY", 2); audio.beep = BEEP_UI; }
+    if ((in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) && Q.on) { const int tab = Q.lastTab; Q = SequencerState(); Q.lastTab = tab; status("SEQUENCER EMPTY", 2); audio.beep = BEEP_UI; }
 }
 
 void Game::renderSequencer() {
     const SequencerState& Q = lab.seq;
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 218);
-    drawText(canvas, 6, 4, "THE SEQUENCER", seqColour());
-    drawText(canvas, UW - 6 - textWidth("TAB THE TREE"), 4, "TAB THE TREE", HUD_DIM);
+    drawText(canvas, 6, 4, "SEQUENCER", seqColour());
+    drawText(canvas, UW - 6 - textWidth("TAB TREE"), 4, "TAB TREE", HUD_DIM);
     if (!Q.on) {
         drawTextCentered(canvas, UW / 2, UH / 2 - 12, "EMPTY", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH / 2, "ENTER CHOOSES A SPECIES SEEN IN A VIAL OR A FLASK", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH / 2, "ENTER: CHOOSE A SPECIES FROM A VIAL OR A FLASK", HUD_DIM);
     } else {
         const double read = sequencerRead();
         const char* abc = alphabetOf(Q.line.genesis.letters);
@@ -293,10 +293,10 @@ void Game::renderSequencer() {
         const int bx0 = 6, by0 = 28, bw = UW - 70;
         drawRectRGB(canvas, bx0, by0, bx0 + bw, by0 + 5, seqColour(0.4f));
         fillRectRGB(canvas, bx0 + 1, by0 + 1, bx0 + 1 + (int)std::lround((bw - 2) * read), by0 + 4, seqColour());
-        drawText(canvas, bx0, by0 + 9, fmt("READ %s OF %s LETTERS", lettersWords(Q.letters * read).c_str(), lettersWords(Q.letters).c_str()).c_str(), HUD_DIM);
+        drawText(canvas, bx0, by0 + 9, fmt("SEQUENCED %s OF %s LETTERS", lettersWords(Q.letters * read).c_str(), lettersWords(Q.letters).c_str()).c_str(), HUD_DIM);
         // the alphabet's legend
         int lx = bx0;
-        drawText(canvas, lx, by0 + 19, "ITS LETTERS:", HUD_DIM); lx += textWidth("ITS LETTERS: ");
+        drawText(canvas, lx, by0 + 19, "LETTERS:", HUD_DIM); lx += textWidth("LETTERS: ");
         for (const char* p = abc; *p; p++) { const char s[2] = {*p, 0}; drawText(canvas, lx, by0 + 19, s, letterColour(*p)); lx += 9; }
         // the letters as they are read: the marker's, a made one's watermark between its rows (too regular), the newest row's chromatogram
         const int shown = (int)std::floor(read * MARKER_LETTERS * 2), rows = std::min(SEQ_ROWS, shown / SEQ_ROW + 1);
@@ -341,13 +341,13 @@ void Game::renderSequencer() {
         // the result, once read
         int y = gy0 + SEQ_ROWS * 9 + 6;
         if (Q.told) for (const std::string& l : Q.result) { if (y < UH - 22) drawText(canvas, 6, y, fitText(l, UW - 12).c_str(), l.compare(0, 3, "TOO") == 0 ? HUD_AMBER : HUD_GREEN); y += 9; }
-        else drawText(canvas, 6, y, fmt("READING: %.0f SECONDS TO GO", std::ceil(std::max(0.0, Q.t0 + SEQUENCE_S - lab.clock))).c_str(), HUD_DIM);
+        else drawText(canvas, 6, y, fmt("SEQUENCING: %.0f SECONDS LEFT", std::ceil(std::max(0.0, Q.t0 + SEQUENCE_S - lab.clock))).c_str(), HUD_DIM);
     }
-    drawTextCentered(canvas, UW / 2, UH - 12, "ENTER A SPECIES  BACKSPACE TAKES IT OFF  TAB THE TREE", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 12, "ENTER SPECIES  BKSP REMOVE  TAB TREE", HUD_DIM);
     if (Q.choosing) {   // the chooser over it (R-432: its folders, then the open one's rows)
         const int rowsN = 14, x0 = 20, y0 = 30;
         drawPanel(canvas, x0 - 6, y0 - 14, UW - x0 + 6, y0 + rowsN * 9 + 18, rgb(10, 8, 12), 235, seqColour(0.6f));
-        const std::string head = Q.pages.open && Q.pages.folder < (int)Q.pages.folders.size() ? "WHAT TO READ: " + Q.pages.folders[Q.pages.folder].name : std::string("WHAT TO READ");
+        const std::string head = Q.pages.open && Q.pages.folder < (int)Q.pages.folders.size() ? "WHAT TO SEQUENCE: " + Q.pages.folders[Q.pages.folder].name : std::string("WHAT TO SEQUENCE");
         drawText(canvas, x0, y0 - 10, fitText(head, UW - 2 * x0).c_str(), seqColour());
         std::vector<std::string> lines;
         for (const SequencerChoice& c : Q.choices) lines.push_back(c.line);
@@ -356,15 +356,15 @@ void Game::renderSequencer() {
 }
 
 void Game::sequencerPad(PadMenu& m) const {
-    m.title = "THE SEQUENCER";
+    m.title = "SEQUENCER";
     if (lab.seq.choosing) {
-        m.item(lab.seq.pages.open ? "READ IT" : "OPEN THE FOLDER", KEY_ENTER);
-        if (lab.seq.pages.tabbed) m.item(lab.seq.pages.tab == 0 ? "THE CULTURES" : "THE VIALS", KEY_TAB);   // R-441
+        m.item(lab.seq.pages.open ? "SEQUENCE IT" : "OPEN FOLDER", KEY_ENTER);
+        if (lab.seq.pages.tabbed) m.item(lab.seq.pages.tab == 0 ? "CULTURES" : "VIALS", KEY_TAB);   // R-441
         m.item("BACK", KEY_ESCAPE);
         return;
     }
-    m.item("A SPECIES TO READ", KEY_ENTER); m.item("TAKE IT OFF", KEY_BACKSPACE); m.item("THE TREE OF KIN", KEY_TAB); m.item("BACK TO THE LABORATORY", KEY_ESCAPE);
-    m.button(PR_A, KEY_ENTER, "READ"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "TREE");
+    m.item("CHOOSE A SPECIES", KEY_ENTER); m.item("REMOVE", KEY_BACKSPACE); m.item("TREE OF KIN", KEY_TAB); m.item("BACK", KEY_ESCAPE);
+    m.button(PR_A, KEY_ENTER, "SEQUENCE"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "TREE");
 }
 
 // ---- the save's line: what is on it, when its reading began, whether its result was told -------------------------------------------------

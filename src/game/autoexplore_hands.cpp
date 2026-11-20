@@ -485,6 +485,6 @@ void Game::autoRender() {
     blendRectRGB(canvas, 0, UH - (music ? 21 : 12), UW - 1, UH - 1, rgb(0, 0, 0), (int)(120 * a));
     const uint32_t c = HUD_AMBER;
     const uint32_t faded = rgb((int)((c & 255) * a), (int)(((c >> 8) & 255) * a), (int)(((c >> 16) & 255) * a));
-    if (music) drawTextCentered(canvas, UW / 2, UH - 19, padInUse() ? "SELECT STARTS AND STOPS THE MUSIC" : "M STARTS AND STOPS THE MUSIC", faded);
+    if (music) drawTextCentered(canvas, UW / 2, UH - 19, padInUse() ? "SELECT STARTS AND STOPS MUSIC" : "M STARTS AND STOPS MUSIC", faded);
     drawTextCentered(canvas, UW / 2, UH - 10, s.c_str(), faded);
 }

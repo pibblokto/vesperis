@@ -20,7 +20,7 @@ void Game::updateSystemList(const Input& in, double dt, double realDt) {
 }
 
 // U-04: the analyzer's commands (the controller's first page)
-void Game::systemListPad(PadMenu& m) const { m.title = "THE ANALYZER"; m.item("APPROACH IT", KEY_ENTER); m.item("MAKE IT THE TARGET", KEY_L); m.item("CLOSE", KEY_ESCAPE); }
+void Game::systemListPad(PadMenu& m) const { m.title = "ANALYZER"; m.item("APPROACH", KEY_ENTER); m.item("TARGET", KEY_L); m.item("CLOSE", KEY_ESCAPE); }
 
 void Game::renderSystemList() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
@@ -96,7 +96,7 @@ void Game::updateDataSheet(const Input& in, double dt, double realDt) {
 // U-04: the data sheet's commands (the controller's first page)
 void Game::dataSheetPad(PadMenu& m) const {
     m.title = "DATA SHEET";
-    m.item("THE ALMANAC", KEY_T); if (!dataProbes().empty()) m.item("THE PROBES' PROFILES", KEY_RIGHT); m.item("CLOSE", KEY_ESCAPE);
+    m.item("ALMANAC", KEY_T); if (!dataProbes().empty()) m.item("PROBE PROFILES", KEY_RIGHT); m.item("CLOSE", KEY_ESCAPE);
 }
 
 void Game::renderDataSheet() {
@@ -115,28 +115,28 @@ void Game::renderDataSheet() {
         const Belt& bl = sys.belts[ship.targetBelt];
         line(upper(beltNameOf(ship.targetBelt)), HUD_AMBER);
         line("ASTEROID BELT", HUD_GREEN);
-        for (const std::string& w : wrapText("A BAND OF ROCKS AND DUST LEFT IN THE GAP BETWEEN TWO ORBITS. MOST OF ITS STONES ARE UNDER A KILOMETRE; A FEW ARE MOUNTAINS TWENTY KILOMETRES ACROSS. THE "
+        for (const std::string& w : wrapText("A BAND OF ROCKS AND DUST LEFT IN THE GAP BETWEEN TWO ORBITS. MOST STONES ARE UNDER A KILOMETRE, BUT A FEW ARE MOUNTAINS TWENTY KILOMETRES ACROSS. THE "
                                              "INNER ONES OUTRUN THE OUTER, SO THE FIELD SHEARS SLOWLY.",
                      50))
             line(w, HUD_DIM);
         y += 3;
         double w = bl.outerKm - bl.innerKm, mid = 0.5 * (bl.innerKm + bl.outerKm);
-        line(fmt("INNER EDGE  %s FROM THE STAR", distanceString(bl.innerKm).c_str()), HUD_GREEN);
+        line(fmt("INNER EDGE  %s FROM STAR", distanceString(bl.innerKm).c_str()), HUD_GREEN);
         line(fmt("OUTER EDGE  %s   WIDTH %s", distanceString(bl.outerKm).c_str(), distanceString(w).c_str()), HUD_GREEN);
-        line(fmt("PERIOD      %.1f H AT THE INNER EDGE, %.1f H AT THE OUTER", bl.period / 3600, TAU / bl.rateAt(bl.outerKm) / 3600), HUD_GREEN);
+        line(fmt("PERIOD      %.1f H AT INNER EDGE, %.1f H AT OUTER", bl.period / 3600, TAU / bl.rateAt(bl.outerKm) / 3600), HUD_GREEN);
         double cells = (w / BELT_CELL_KM) * (TAU * mid / BELT_CELL_KM) * std::max(1.0, 2 * 0.015 * mid / BELT_CELL_KM);
         double rocks = cells * 1.1;
-        line(fmt("ROCKS       ABOUT %s, THE SPARKLE BAND IS THE SUNLIT DUST", rocks > 1e6 ? fmt("%.1f MILLION", rocks / 1e6).c_str() : fmt("%.0f THOUSAND", rocks / 1e3).c_str()), HUD_GREEN);
-        line("LANDABLE    NO - THE CAPSULE NEEDS A WORLD UNDER IT", HUD_RED);
+        line(fmt("ROCKS       ABOUT %s IN SUNLIT DUST", rocks > 1e6 ? fmt("%.1f MILLION", rocks / 1e6).c_str() : fmt("%.0f THOUSAND", rocks / 1e3).c_str()), HUD_GREEN);
+        line("LANDABLE    NO", HUD_RED);
         BeltRock rk;
         if (beltRockNow(rk))
-            line(fmt("%s     A ROCK %.1f KM ACROSS, %s OFF, TUMBLING SLOWLY", ship.parkedBelt >= 0 ? "PARKED " : "TARGET ", 2 * rk.radiusKm, distanceString(length(rk.pos - ship.pos)).c_str()),
+            line(fmt("%s     A ROCK %.1f KM ACROSS, %s OFF", ship.parkedBelt >= 0 ? "PARKED " : "TARGET ", 2 * rk.radiusKm, distanceString(length(rk.pos - ship.pos)).c_str()),
                     HUD_CYAN);
         y += 3;
         line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
         line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
         for (const std::string& ww : wrapText(upper(describeStar(sys.star)), 50)) line(ww, HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 10, "T THE ALMANAC  ANY OTHER KEY CLOSES", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, "T ALMANAC  ANY OTHER KEY CLOSES", HUD_DIM);
         return;
     }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { drawTextCentered(canvas, UW / 2, 90, "NO LOCAL TARGET", HUD_DIM); return; }
@@ -168,19 +168,19 @@ void Game::renderDataSheet() {
     put(fmt("RADIUS      %.0f KM   MASS %.3f EARTHS   TILT %.1f%c", b.radiusKm, b.massEarths, b.axialTilt / DEG, CH_DEGREE), HUD_GREEN);
     if (sys.sunless()) {   // a drifter's worlds have no equilibrium (their warmth is their own) and the drifter no orbit
         put(fmt("GRAVITY     %.2f G (%.1f M/S2)   OWN HEAT %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
-        if (b.parent < 0) put("ORBIT       NONE - ADRIFT BETWEEN THE STARS", HUD_GREEN);
-        else put(fmt("ORBIT       %s FROM ITS PLANET%s", distanceString(b.orbitRadiusKm).c_str(), b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
+        if (b.parent < 0) put("ORBIT       NONE - ADRIFT BETWEEN STARS", HUD_GREEN);
+        else put(fmt("ORBIT       %s FROM PLANET%s", distanceString(b.orbitRadiusKm).c_str(), b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
         if (b.parent < 0) put(fmt("PERIOD      NONE   ROTATION %.2f H%s", std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
         else put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
     } else {
     put(fmt("GRAVITY     %.2f G (%.1f M/S2)   EQUILIBRIUM %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
-    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "ITS SUN" : "ITS PLANET") : "THE STAR",
+    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "2ND SUN" : "PLANET") : "STAR",
                 b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""),
             HUD_GREEN);
     put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked ? " (LOCKED)" : "")), HUD_GREEN);
     }
     if (b.type == PT_COMET) {   // where it is now on its plunge
-        put(fmt("NOW         %s FROM THE STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
+        put(fmt("NOW         %s FROM STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
         put(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
     put(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", b.moonCount, b.rings ? "   RINGS" : "",
@@ -297,8 +297,8 @@ void Game::renderDataSheet() {
             drawText(canvas, UW - 10 - textWidth(epocFullString().c_str()) - 12 - textWidth(pn.c_str()), top, pn.c_str(), HUD_DIM);
         }
     }
-    const char* foot = dataPage == 0 ? (dataSheetPages > 1 ? "T THE ALMANAC  RIGHT MORE  ANY OTHER KEY CLOSES"
-                                                           : (dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES"))
+    const char* foot = dataPage == 0 ? (dataSheetPages > 1 ? "T ALMANAC  RIGHT MORE  ANY OTHER KEY CLOSES"
+                                                           : (dataProbes().empty() ? "T ALMANAC  ANY OTHER KEY CLOSES" : "T ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES"))
                                      : "RIGHT MORE  LEFT BACK  ANY OTHER KEY CLOSES";   // a giant's probes; Q-01: the sheet's pages
     drawTextCentered(canvas, UW / 2, UH - 10, foot, HUD_DIM);
 }

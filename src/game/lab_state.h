@@ -89,6 +89,7 @@ struct MicroscopeState {
     std::vector<Microbe> species;
     std::vector<std::string> keys, worlds;
     std::string title, line;
+    int lineState[2] = {-1, -1};  // Y-04: a flask's switched lines' state as their drop was taken (-1 none)
     Sample sample;
     SlideMount mount;
     std::vector<SlideEvent> events;
@@ -157,12 +158,18 @@ struct Flask {
     std::string label[2];
     double sleptYears[2] = {0, 0};      // a vial's spores' sleep: its world's end, its drifter's leaving, the impact that carried them
     // Y-02: a line the gene editor wrote (its line's record SM_EDIT), compared with its parent as it grows and as its drop is looked at: its
-    // parent's kind and form, its genesis, the genes its edits changed; what of it was told (a GeneKind's bit: said once a flask)
+    // parent's kind and form, its genesis, the genes its edits changed (and their kinds, its genesis's map's); what of it was told (a GeneKind's
+    // bit: said once a flask); Y-03: what its genes need told (a place's bit)
     bool edited[2] = {false, false};
     CultureKind parentKind[2]; Morph parentForm[2];
     uint64_t genesis[2] = {0, 0};
-    std::vector<int> changed[2];
+    std::vector<int> changed[2], changedKind[2];
     uint32_t geneTold[2] = {0, 0};
+    uint32_t needTold[2] = {0, 0};
+    // Y-04: its lines' genes and their parents' (a switched line as its state has it: its drop, what it shows against its parent); the places
+    // whose edit is a switch alone (a gene as its parent's while its switch is on)
+    MicrobeGenes genes[2], parentGenes[2];
+    std::vector<int> switchOnly[2];
 };
 // a world in a jar (Winogradsky's column): the vial's world and place it was made from, its line, when it was made
 struct Jar {
@@ -248,6 +255,7 @@ struct TreeState {
     std::map<std::string, Lineage> known;   // the lineages read so far (a sequenced species' world drawn once), by key
     std::map<std::string, Morph> forms;     // B-443: their forms (a leaf's look), drawn with their lineages
     std::map<std::string, int> kinds;       // Y-01: their worlds' kinds by body key (a world's page's name where it has none)
+    std::vector<std::pair<int, int>> donors; // Y-03: a moved gene's line on the page: its donor's row in `shown`, the line's
 };
 // R-433: the culture collection (game/lab_lists.cpp): every species and strain grown in a flask, kept frozen as labs keep their stocks, without
 // limit and after its flask is emptied: its world's species and its strain (the one it goes in as), the medium it grew in and its world's (AS
@@ -264,9 +272,10 @@ struct KeptCulture {
     int partnerPlan = -1;   // its plan, looked up once (the list's words)
 };
 // R-440: a culture kept by hand (K on the microscope's slide or a flask), a copy: what is kept (one species, or a pair), the folder chooser's row
-// (UNSORTED, the explorer's folders, A NEW FOLDER) over the screen it was asked on; `pending` while a new folder's name is typed for it
+// (UNSORTED, the explorer's folders, A NEW FOLDER) over the screen it was asked on; `pending` while a new folder's name is typed for it.
+// R-445: `write` when the folder is for the line the gene editor is about to write (`what` is then its parent)
 struct KeepPick {
-    bool open = false, pending = false;
+    bool open = false, pending = false, write = false;
     KeptCulture what;
     int sel = 0;
 };
@@ -288,6 +297,7 @@ struct EditorState {
     bool letters = false; int cursor = 0;
     bool writing = false; double t0 = 0;
     std::vector<GeneEdit> writ;
+    int writeFolder = 0; std::string writeName;   // R-445: the folder the line being written goes in, and its name ("" none)
     bool choosing = false; int choiceSel = 0;
     std::vector<EditorChoice> choices;
     ChooserPage pages;
@@ -296,7 +306,13 @@ struct EditorState {
     CultureKind kind, editedKind; Morph form, editedForm;
     std::string name;
     std::vector<std::pair<std::string, std::string>> said;   // what the genes showed and what it says of them, each waiting its turn on the status
+    // Y-03: its kin beside it (K: a species read or a culture kept, of its genesis), what M moves a gene in from: its genes, kind, form and words,
+    // its genome's share alike; what the chooser chooses (EC_CULTURE what to edit, EC_KIN a kin, EC_MOVE a kin to move the gene chosen from)
+    bool kinOn = false; FlaskSpecies kin; std::string kinFrom, kinName; double kinAlike = 0;
+    MicrobeGenes kinGenes; CultureKind kinKind; Morph kinForm;
+    int choosingFor = 0;
 };
+enum EditorChoosing { EC_CULTURE = 0, EC_KIN, EC_MOVE };
 struct LabState {
     double clock = 0;             // the lab's clock (s): real seconds while the game simulates, saved
     Flask flasks[INCUBATOR_FLASKS];

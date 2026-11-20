@@ -44,7 +44,7 @@ void Game::updateWall(const Input& in, double dt, double realDt) {
         if (in.wasPressed(KEY_DOWN)) row = (row + 1) % WALL_ROWS;
         wall.sel = row * WALL_COLS + col;
         if (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) {
-            if (wallNumber(wall.sel) < 0) { refuse("THE FRAME IS EMPTY", 2); return; }
+            if (wallNumber(wall.sel) < 0) { refuse("FRAME IS EMPTY", 2); return; }
             wallOwn(); wall.frame[wall.sel] = -1; prints.stale = true;
             status("TAKEN DOWN", 2); audio.beep = BEEP_UI;
             return;
@@ -73,7 +73,7 @@ void Game::renderWall() {
     if (wall.level == 1) {   // the photographs for a frame: the one chosen large, as the gallery shows it
         const int n = (int)wall.photos.size();
         wall.pick = clampi(wall.pick, 0, std::max(0, n - 1));
-        drawText(canvas, 6, 4, fmt("A PHOTOGRAPH FOR THE FRAME %d", wall.sel + 1).c_str(), HUD_AMBER);
+        drawText(canvas, 6, 4, fmt("PHOTOGRAPH FOR FRAME %d", wall.sel + 1).c_str(), HUD_AMBER);
         if (n == 0) return;
         if (wall.shownPick != wall.pick) {
             wall.shownPick = wall.pick; wall.caption.clear();
@@ -91,11 +91,11 @@ void Game::renderWall() {
         drawRectRGB(canvas, fx - 1, fy - 1, fx + fw, fy + fh, HUD_DIM);
         drawText(canvas, fx, fy + fh + 4, fmt("PHOTOGRAPH %d   %d OF %d", wall.photos[wall.pick], wall.pick + 1, n).c_str(), HUD_AMBER);
         drawText(canvas, fx, fy + fh + 13, trunc(wall.caption, 37).c_str(), HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, "LEFT/RIGHT BROWSE  ENTER HANG IT  ESC BACK", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, "LEFT/RIGHT BROWSE  ENTER HANG  ESC BACK", HUD_DIM);
         return;
     }
-    drawText(canvas, 6, 4, "THE PHOTOGRAPHS ON THE WALL", HUD_AMBER);
-    const char* head = wall.chosen ? "AS YOU HUNG THEM" : "THE NEWEST TWELVE";
+    drawText(canvas, 6, 4, "PHOTOGRAPHS", HUD_AMBER);
+    const char* head = wall.chosen ? "AS YOU HUNG THEM" : "NEWEST TWELVE";
     drawText(canvas, UW - 6 - textWidth(head), 4, head, HUD_DIM);
     const int x0 = (UW - WALL_COLS * CELL_W - (WALL_COLS - 1) * CELL_GAP) / 2;
     for (int k = 0; k < SHIP_PRINTS; k++) {
@@ -110,7 +110,7 @@ void Game::renderWall() {
         drawRectRGB(canvas, x - 1, y - 1, x + CELL_W, y + CELL_H, k == wall.sel ? HUD_AMBER : HUD_DIM);
     }
     const int num = wallNumber(wall.sel);
-    std::string line = "AN EMPTY FRAME";
+    std::string line = "EMPTY FRAME";
     if (num >= 0) {
         line = fmt("PHOTOGRAPH %d", num);
         for (const ShipPrint& sp : prints.shown) if (sp.frame == wall.sel && sp.number == num && !sp.caption.empty()) line += "  " + sp.caption;
@@ -121,7 +121,7 @@ void Game::renderWall() {
 
 // U-04: the wall's commands (the controller's first page), its level's
 void Game::wallPad(PadMenu& m) const {
-    m.title = "THE PHOTOGRAPHS";
-    if (wall.level == 0) { m.item("HANG A PHOTOGRAPH HERE", KEY_ENTER); m.item("TAKE IT DOWN", KEY_BACKSPACE); m.item("CLOSE", KEY_ESCAPE); return; }
-    m.item("HANG IT", KEY_ENTER); m.item("THE NEXT", KEY_RIGHT); m.item("THE ONE BEFORE", KEY_LEFT); m.item("BACK TO THE WALL", KEY_ESCAPE);
+    m.title = "PHOTOGRAPHS";
+    if (wall.level == 0) { m.item("HANG A PHOTOGRAPH HERE", KEY_ENTER); m.item("TAKE DOWN", KEY_BACKSPACE); m.item("CLOSE", KEY_ESCAPE); return; }
+    m.item("HANG", KEY_ENTER); m.item("NEXT", KEY_RIGHT); m.item("PREVIOUS", KEY_LEFT); m.item("BACK", KEY_ESCAPE);
 }

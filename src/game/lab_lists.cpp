@@ -38,7 +38,7 @@ std::vector<LabFolder> Game::vialFolders() const {
         f.name = upper(worldNameOfKey(f.key)); f.foreign = nameIsForeign(f.key);
         int strong = 0;
         for (int i : f.rows) strong += coldStore[i].activity == VA_STRONG;
-        f.line = fmt("%d VIAL%s - %d READ STRONG", (int)f.rows.size(), f.rows.size() == 1 ? "" : "S", strong);
+        f.line = fmt("%d VIAL%s - %d HIGH ACTIVITY", (int)f.rows.size(), f.rows.size() == 1 ? "" : "S", strong);
     }
     return out;
 }
@@ -46,7 +46,7 @@ std::vector<LabFolder> Game::vialFolders() const {
 // the cultures' folders: the flasks with a culture, UNSORTED (where the collection's new ones go), then the explorer's in the order made
 std::vector<LabFolder> Game::cultureFolders() const {
     std::vector<LabFolder> out(2 + lab.folders.size());
-    out[0].name = "THE FLASKS"; out[0].id = FOLDER_FLASKS;
+    out[0].name = "FLASKS"; out[0].id = FOLDER_FLASKS;
     for (int i = 0; i < INCUBATOR_FLASKS; i++) if (lab.flasks[i].n > 0) out[0].rows.push_back(i);
     out[1].name = "UNSORTED"; out[1].id = 0;
     for (size_t f = 0; f < lab.folders.size(); f++) { out[2 + f].name = lab.folders[f].name; out[2 + f].id = lab.folders[f].id; }
@@ -85,14 +85,14 @@ void Game::keepCulture(int i, int k) {
     }
     for (const KeptCulture& o : lab.kept) if (sameCulture(o, c)) return;
     lab.kept.push_back(c);
-    status(fmt(c.paired ? "FLASK %d: %s GROWS - KEPT WITH WHAT FEEDS IT" : "FLASK %d: %s GROWS - KEPT IN THE COLLECTION", i + 1, F.label[k].c_str()), 5);
+    status(fmt(c.paired ? "FLASK %d: %s GROWS - KEPT WITH ITS PARTNER" : "FLASK %d: %s GROWS - KEPT IN THE COLLECTION", i + 1, F.label[k].c_str()), 5);
 }
 
 // R-440: a copy kept by hand in a folder (0 UNSORTED), refused where that folder holds it already; said
 bool Game::keptAdd(KeptCulture c, int folder) {
     c.folder = folder; c.t = lab.clock;
     for (const KeptCulture& o : lab.kept)
-        if (o.folder == folder && sameCulture(o, c)) { refuse("THE FOLDER " + folderName(folder) + " HOLDS IT ALREADY", 3); return false; }
+        if (o.folder == folder && sameCulture(o, c)) { refuse("FOLDER " + folderName(folder) + " ALREADY HAS IT", 3); return false; }
     lab.kept.push_back(c);
     status(keptName((int)lab.kept.size() - 1) + " KEPT IN " + folderName(folder), 4);
     audio.beep = BEEP_UI;
@@ -106,7 +106,7 @@ std::string Game::folderName(int id) const {
 
 // R-440: K's chooser of the folder a copy goes in (UNSORTED, the explorer's, A NEW FOLDER: its name typed, the copy kept in it once made)
 void Game::keepOpen(const KeptCulture& c) {
-    keep.open = true; keep.pending = false; keep.what = c; keep.sel = 0;
+    keep.open = true; keep.pending = false; keep.write = false; keep.what = c; keep.sel = 0;
     audio.beep = BEEP_UI;
 }
 bool Game::keepKeys(const Input& in) {
@@ -121,7 +121,9 @@ bool Game::keepKeys(const Input& in) {
         beginTextEntry("NAME THE NEW FOLDER", TEXT_FOLDER, "");
         return true;
     }
-    if (keptAdd(keep.what, keep.sel == 0 ? 0 : lab.folders[clampi(keep.sel - 1, 0, n - 3)].id)) keep.open = false;
+    const int id = keep.sel == 0 ? 0 : lab.folders[clampi(keep.sel - 1, 0, n - 3)].id;
+    if (keep.write) { keep.open = false; editorWriteName(id); return true; }   // R-445: then the line's name
+    if (keptAdd(keep.what, id)) keep.open = false;
     return true;
 }
 // its panel over the screen: what is kept, the folders (one holding it marked), A NEW FOLDER
@@ -132,18 +134,19 @@ void Game::renderKeepPick(uint32_t colour) {
     drawPanel(canvas, x0, y0, x1, y0 + h, rgb(0, 0, 0), 235, colour);
     KeptCulture& w = keep.what;
     std::string what = keptWordsOf(w);
-    drawText(canvas, x0 + 8, y0 + 6, fitText("KEEP " + what + " IN:", x1 - x0 - 16).c_str(), colour);
+    drawText(canvas, x0 + 8, y0 + 6, fitText(keep.write ? std::string("WHICH FOLDER FOR THE NEW STRAIN?") : "KEEP " + what + " IN:", x1 - x0 - 16).c_str(), colour);
     keep.sel = clampi(keep.sel, 0, n - 1);
     const int first = std::max(0, std::min(keep.sel - shown / 2, n - shown));
     for (int i = first; i < n && i < first + shown; i++) {
         const int y = y0 + 20 + (i - first) * rowH, id = i == 0 ? 0 : (i < n - 1 ? lab.folders[i - 1].id : -1);
         bool there = false;
         for (const KeptCulture& o : lab.kept) there |= id >= 0 && o.folder == id && sameCulture(o, w);
-        const std::string name = i == n - 1 ? std::string("A NEW FOLDER") : folderName(id);
+        const std::string name = i == n - 1 ? std::string("NEW FOLDER") : folderName(id);
         if (i == keep.sel) drawText(canvas, x0 + 6, y, ">", colour);
-        drawText(canvas, x0 + 14, y, fitText(name + (there ? "  (KEPT THERE)" : ""), x1 - x0 - 22).c_str(), i == keep.sel ? HUD_WHITE : (i == n - 1 ? HUD_AMBER : HUD_GREEN));
+        const char* mark = !there ? "" : (keep.write ? "  (PARENT HERE)" : "  (KEPT THERE)");
+        drawText(canvas, x0 + 14, y, fitText(name + mark, x1 - x0 - 22).c_str(), i == keep.sel ? HUD_WHITE : (i == n - 1 ? HUD_AMBER : HUD_GREEN));
     }
-    drawTextCentered(canvas, (x0 + x1) / 2, y0 + h - 12, "ENTER KEEPS IT THERE  N A NEW FOLDER", HUD_DIM);
+    drawTextCentered(canvas, (x0 + x1) / 2, y0 + h - 12, keep.write ? "ENTER CHOOSE  N NEW FOLDER  ESC CANCEL" : "ENTER KEEP  N NEW FOLDER  ESC CANCEL", HUD_DIM);
 }
 
 // a kept culture's words: its species' (or its strain's) name, else what it looks like and an unnamed strain's number (B-442); a pair's two
@@ -174,13 +177,20 @@ bool Game::microscopeStageKept(int k) {
     scope.species.clear(); scope.keys.clear(); scope.worlds.clear();
     for (size_t i = 0; i < who.size(); i++) {
         CultureKind kind; Morph form; double slept = 0;
-        if (!flaskKind(who[i], kind, form, slept)) { refuse("ITS WORLD IS NO LONGER THERE"); return false; }
+        MicrobeGenes genes;
+        if (!flaskKind(who[i], kind, form, slept, &genes)) { refuse("ITS WORLD NO LONGER EXISTS"); return false; }
         if (i == 0) B.chemistry = kind.chemistry;
+        const Growth g = growthIn(kind, c.medium, c.paired);
+        if (!kind.switches.empty()) {   // Y-04: a switched line as a young culture of it is (lit or not, the cold, a tenth of its crowd)
+            uint32_t st = (c.medium.light != CL_DARK ? CST_LIGHT : 0u) | (c.medium.tempC < kind.s.tOpt ? CST_COLD : 0u);
+            if (kind.quorum <= 0.1) st |= CST_CROWDED;
+            if (g.fit != GF_GROWS && g.fit != GF_COLD) st |= CST_STARVING;
+            switchedLine(kind, form, genes, st);
+        }
         Microbe m = kind.s; m.index = (int)i; m.state = SS_LIVING;
         B.species.push_back(m); scope.species.push_back(m); forms.push_back(form);
         scope.keys.push_back(flaskSpeciesKey(who[i]));
         scope.worlds.push_back(nameOfKey(Guide::bodyKey(who[i].sx, who[i].sy, who[i].sz, who[i].body)));
-        const Growth g = growthIn(kind, c.medium, c.paired);
         Held h; h.species = (int)i; h.state = SS_LIVING; h.cells = std::pow(10.0, std::max(5.0, g.crowdLog - 1)); h.active = g.fit == GF_GROWS; h.dividing = 0.25;
         h.alive = g.fit == GF_HOT || g.fit == GF_SALT || g.fit == GF_SOLVENT ? 0 : 1;   // B-441, R-438: a hungry cell lives on the slide
         S.held.push_back(h);
@@ -192,9 +202,9 @@ bool Game::microscopeStageKept(int k) {
     scope.sample = S;
     scope.mount = mountOf(B, scope.forms, S, hab);
     cellRange(c.medium.cell, scope.stageLo, scope.stageHi);
-    scope.vial = -1; scope.flask = -1; scope.kept = k; scope.life.reset(); scope.body = -1;
+    scope.vial = -1; scope.flask = -1; scope.kept = k; scope.life.reset(); scope.body = -1; scope.lineState[0] = scope.lineState[1] = -1;
     scope.title = flaskSpeciesName(c.who);
-    scope.line = fmt("THE COLLECTION, %.0f C", c.medium.tempC);
+    scope.line = fmt("COLLECTION, %.0f C", c.medium.tempC);
     microscopeView();
     return true;
 }
@@ -202,26 +212,26 @@ bool Game::microscopeStageKept(int k) {
 // N: a folder made (its name typed, none of the same name), its id the next after the highest; R: renamed; Backspace: removed once empty
 int Game::folderNew(const std::string& name) {
     if (name.empty()) return -1;
-    if (name == "UNSORTED" || name == "THE FLASKS") { refuse("THAT FOLDER IS THERE ALREADY", 3); return -1; }
-    for (const CultureFolder& f : lab.folders) if (f.name == name) { refuse("A FOLDER OF THAT NAME IS THERE ALREADY", 3); return -1; }
+    if (name == "UNSORTED" || name == "FLASKS") { refuse("THAT FOLDER ALREADY EXISTS", 3); return -1; }
+    for (const CultureFolder& f : lab.folders) if (f.name == name) { refuse("A FOLDER WITH THAT NAME EXISTS", 3); return -1; }
     int id = 1;
     for (const CultureFolder& f : lab.folders) id = std::max(id, f.id + 1);
     lab.folders.push_back({id, name});
-    status("THE FOLDER " + name + " MADE - M MOVES A CULTURE INTO IT", 4);
+    status("FOLDER " + name + " MADE - M MOVES A CULTURE INTO IT", 4);
     return id;
 }
 bool Game::folderRename(int id, const std::string& name) {
-    if (name.empty() || name == "UNSORTED" || name == "THE FLASKS") return false;
-    for (const CultureFolder& f : lab.folders) if (f.name == name && f.id != id) { refuse("A FOLDER OF THAT NAME IS THERE ALREADY", 3); return false; }
+    if (name.empty() || name == "UNSORTED" || name == "FLASKS") return false;
+    for (const CultureFolder& f : lab.folders) if (f.name == name && f.id != id) { refuse("A FOLDER WITH THAT NAME EXISTS", 3); return false; }
     for (CultureFolder& f : lab.folders)
-        if (f.id == id) { f.name = name; status("THE FOLDER IS NOW CALLED " + name, 3); return true; }
+        if (f.id == id) { f.name = name; status("FOLDER RENAMED " + name, 3); return true; }
     return false;
 }
 bool Game::folderRemove(int id) {
-    for (const KeptCulture& c : lab.kept) if (c.folder == id) { refuse("ONLY AN EMPTY FOLDER IS REMOVED - M MOVES ITS CULTURES OUT", 3); return false; }
+    for (const KeptCulture& c : lab.kept) if (c.folder == id) { refuse("ONLY EMPTY FOLDERS CAN BE REMOVED - M MOVES CULTURES OUT", 3); return false; }
     for (size_t f = 0; f < lab.folders.size(); f++)
         if (lab.folders[f].id == id) {
-            status("THE FOLDER " + lab.folders[f].name + " REMOVED", 3);
+            status("FOLDER " + lab.folders[f].name + " REMOVED", 3);
             lab.folders.erase(lab.folders.begin() + f);
             return true;
         }
@@ -310,8 +320,8 @@ int chooserKeys(const Input& in, ChooserPage& P, int& sel) {
 void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, int sel, int& top, const std::vector<std::string>& lines, uint32_t colour) {
     constexpr int rowH = 9;
     if (P.tabbed) {   // R-441: the tabs over the rows, the one shown in amber
-        const char* a = P.tab == 0 ? "THE VIALS" : "VIALS";
-        const char* b = P.tab == 1 ? "THE CULTURES" : "CULTURES";
+        const char* a = "VIALS";
+        const char* b = "CULTURES";
         drawText(c, x1 - textWidth(b), y0, b, P.tab == 1 ? HUD_AMBER : HUD_DIM);
         drawText(c, x1 - textWidth(b) - 12 - textWidth(a), y0, a, P.tab == 0 ? HUD_AMBER : HUD_DIM);
         y0 += 12;
@@ -321,7 +331,7 @@ void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, i
     const char* other = P.tab == 0 ? "TAB CULTURES" : "TAB VIALS";
     if (P.tabbed && nf == 0) {
         drawTextCentered(c, (x0 + x1) / 2, y0 + 30, P.tab == 0 ? "NO SPECIES SEEN IN A VIAL YET" : "NO CULTURES YET", HUD_DIM);
-        drawTextCentered(c, (x0 + x1) / 2, y0 + 42, P.tab == 0 ? "THE MICROSCOPE SHOWS WHAT A VIAL HOLDS" : "A FLASK GROWS ONE - K KEEPS A COPY", HUD_DIM);
+        drawTextCentered(c, (x0 + x1) / 2, y0 + 42, P.tab == 0 ? "LOOK AT A VIAL UNDER THE MICROSCOPE" : "GROW ONE IN A FLASK - K KEEPS A COPY", HUD_DIM);
         drawTextCentered(c, (x0 + x1) / 2, y1 - 10, fmt("%s  ESC BACK", other).c_str(), HUD_DIM);
         return;
     }
@@ -338,7 +348,7 @@ void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, i
             drawText(c, x0 + 8, y, name.c_str(), on ? HUD_WHITE : (F.foreign ? HUD_CYAN : HUD_GREEN));
             drawText(c, x1 - textWidth(F.line.c_str()), y, F.line.c_str(), HUD_DIM);
         }
-        drawTextCentered(c, (x0 + x1) / 2, y1 - 10, P.tabbed ? fmt("ENTER OPENS  %s  ESC BACK", other).c_str() : "ENTER OPENS A FOLDER  ESC BACK", HUD_DIM);
+        drawTextCentered(c, (x0 + x1) / 2, y1 - 10, P.tabbed ? fmt("ENTER OPEN  %s  ESC BACK", other).c_str() : "ENTER OPEN FOLDER  ESC BACK", HUD_DIM);
         return;
     }
     const std::vector<int>& R = P.folders[clampi(P.folder, 0, std::max(0, nf - 1))].rows;
@@ -353,7 +363,7 @@ void drawChooser(RGBCanvas& c, int x0, int y0, int x1, int y1, ChooserPage& P, i
         const std::string& l = R[i] >= 0 && R[i] < (int)lines.size() ? lines[R[i]] : std::string();
         drawText(c, x0 + 8, y, fitText(l, x1 - x0 - 8).c_str(), on ? HUD_WHITE : HUD_GREEN);
     }
-    drawTextCentered(c, (x0 + x1) / 2, y1 - 10, "ENTER CHOOSES IT  ESC THE FOLDERS", HUD_DIM);
+    drawTextCentered(c, (x0 + x1) / 2, y1 - 10, "ENTER CHOOSE  ESC FOLDERS", HUD_DIM);
 }
 
 // R-441: a chooser's folders in two tabs, the vials' worlds and the cultures (the flasks', the collection's); the one asked for shown, or the other
@@ -380,10 +390,10 @@ std::vector<LabFolder> Game::chooserFolders(const std::vector<std::string>& keys
         if (it == at.end()) {
             it = at.emplace(keys[i], (int)out.size()).first;
             LabFolder f; f.key = keys[i];
-            if (keys[i] == "FLASKS") { f.id = FOLDER_FLASKS; f.name = "THE FLASKS"; }
+            if (keys[i] == "FLASKS") { f.id = FOLDER_FLASKS; f.name = "FLASKS"; }
             else if (keys[i].compare(0, 5, "KEPT/") == 0) {
-                f.id = atoi(keys[i].c_str() + 5); f.name = "THE COLLECTION: UNSORTED";
-                for (const CultureFolder& d : lab.folders) if (d.id == f.id) f.name = "THE COLLECTION: " + d.name;
+                f.id = atoi(keys[i].c_str() + 5); f.name = "COLLECTION: UNSORTED";
+                for (const CultureFolder& d : lab.folders) if (d.id == f.id) f.name = "COLLECTION: " + d.name;
             } else { f.name = upper(worldNameOfKey(keys[i])) + labFolderWhere(keys[i]); f.foreign = nameIsForeign(keys[i]); }
             out.push_back(f);
         }

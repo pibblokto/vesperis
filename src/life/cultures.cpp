@@ -11,12 +11,14 @@ const char* const CULTURE_CELL_NAMES[CC_COUNT] = {"WATER", "ACID", "AMMONIA", "C
 const char* const CULTURE_LIGHT_NAMES[CL_COUNT] = {"DARK", "WHITE", "RED", "BLUE"};
 const char* const CULTURE_ENERGY_NAMES[CE_COUNT] = {"NONE", "HYDROGEN", "SULPHIDE", "IRON", "METHANE", "AMMONIA", "ACETYLENE", "BROTH"};
 const char* const CULTURE_SALT_NAMES[3] = {"FRESH", "SEA SALT", "BRINE"};
-const char* const GROWTH_FIT_NAMES[GF_COUNT] = {"GROWS", "TOO COLD", "TOO HOT", "THE WRONG SALT", "THE WRONG SOLVENT", "NOTHING IT EATS", "NO LIGHT",
-                                               "IT DOES NOT LIVE"};
-const char* const CULTURE_STAGE_NAMES[SG_COUNT] = {"EMPTY", "ASLEEP", "WAKING", "IN ITS LAG", "GROWING", "IN COLONIES", "AT ITS CROWD", "STARVING",
+const char* const GROWTH_FIT_NAMES[GF_COUNT] = {"GROWS", "TOO COLD", "TOO HOT", "WRONG SALT", "WRONG SOLVENT", "NOTHING TO EAT", "NO LIGHT",
+                                               "CANNOT LIVE"};
+const char* const CULTURE_STAGE_NAMES[SG_COUNT] = {"EMPTY", "ASLEEP", "WAKING", "ADAPTING", "GROWING", "IN COLONIES", "FULL", "STARVING",
                                                    "TOO COLD TO GROW", "GATHERING", "FRUITING", "SPORULATING", "ENCYSTING", "DYING", "DEAD",
                                                    "CYCLING", "OUTGROWN"};
-const char* const CULTURE_PAIR_NAMES[PA_COUNT] = {"ALONE", "ONE WINS", "THEY CYCLE", "THEY FEED EACH OTHER", "MIRRORED: THEY IGNORE EACH OTHER"};
+const char* const CULTURE_PAIR_NAMES[PA_COUNT] = {"ALONE", "ONE WINS", "PREDATOR AND PREY", "FEED EACH OTHER", "MIRRORED: IGNORE EACH OTHER"};
+const char* const GENE_SWITCH_NAMES[GW_COUNT] = {"ALWAYS", "NEVER", "IN THE LIGHT", "IN THE DARK", "WHEN CROWDED", "WHEN STARVING", "WHEN COLD"};
+const char* const GENE_SWITCH_KEYS[GW_COUNT] = {"ALWAYS", "NEVER", "LIGHT", "DARK", "CROWDED", "STARVING", "COLD"};
 
 namespace {
 constexpr uint64_t SALT_CULTURE = 0x11FE57A6E0000020ULL;   // a species' pace in a flask (its time to its crowd, its lag, its waking, its hold)
@@ -73,7 +75,8 @@ Traits traitsOf(const CultureKind& k) {
     T.sigmaStress = T.decline == SG_GATHERING ? 0 : 0.5 * T.sigma;
     const double best = T.baseLog + bestYieldLog(s);
     T.muMax = std::log(10.0) * std::max(1.0, best - T.inocLog) / std::max(60.0, T.bestS - T.lagS);
-    T.q0 = 1.0 / std::expm1(std::max(0.05, T.muMax * T.lagS));   // Baranyi's h0: the lag's work, its time at the best rate
+    T.q0 = 1.0 / std::expm1(std::max(0.05, T.muMax * T.lagS));   // Baranyi's h0: the lag's work, its time at its species' best rate (Y-04: before its genes' price)
+    if (k.burden > 0) T.muMax *= 1 - std::min(0.5, k.burden);   // Y-03: what its genes cost it (Y-04: its lag longer by as much)
     return T;
 }
 
@@ -131,19 +134,54 @@ void strainMove(const CultureKind& k, const Medium& m, int edge, int count, int&
     }
 }
 
+// Y-04: a switched species over a stretch: its kind as written (its genes on), the flask's medium and what feeds it, the pair's measure on its
+// crowd, its growth as written there (the pair's measure on it), the state's bits the stretch fixes (its light, the cold), its crowd's quorum share
+struct SwitchCtx {
+    const CultureKind* base = nullptr;
+    const Medium* med = nullptr;
+    bool fed = false;
+    double adj = 0;
+    Growth gBase;
+    uint32_t fixed = 0;
+    double Nq = INF;
+};
+// its state from its numbers: crowded past its quorum's share, starving where the line as written would not grow (its crowd's food spent, nothing
+// it eats or no light, its medium killing it) but for the cold, which it waits out: judged of the line as written, so no switch turns it on itself
+uint32_t stateNow(const SwitchCtx& x, const SpState& S) {
+    uint32_t st = x.fixed;
+    if (S.N > 0 && S.N >= x.Nq) st |= CST_CROWDED;
+    const Growth& g = x.gBase;
+    const bool grows = g.fit == GF_GROWS && !S.spent && (S.N <= 0 || S.N < 0.9 * std::pow(10.0, g.crowdLog));
+    if (!grows && g.fit != GF_COLD) st |= CST_STARVING;
+    return st;
+}
+
 // one species' laws over [ta, tb) from its state at ta, alone (its pair's relation in its growth); its state at tb after; the first strain's and
-// the spores' waking marked
+// the spores' waking marked. Y-04: a switched species (`sw`) as its state has it, segment by segment (its kind, its traits, its growth), a segment
+// ending where its crowd crosses its quorum's share; its strain's move drawn from the line as written
 struct Marks { double* strainT; int* strainWhat; double* strainValue; double* wokeT; int strains; const Medium* m; };
-void advance(const Traits& T, const CultureKind& k, const Growth& g, SpState& S, double ta, double tb, std::vector<CultureSeg>& out, const Marks& mk) {
+void advance(const Traits& T0, const CultureKind& k0, const Growth& g0, SpState& S, double ta, double tb, std::vector<CultureSeg>& out, const Marks& mk,
+             const SwitchCtx* sw = nullptr) {
     double t = ta;
     if (S.N > 0 && S.N < CULTURE_EXTINCT) S.N = 0;
-    for (int guard = 0; guard < 16 && t < tb; guard++) {
+    CultureKind kv; Traits tv; Growth gv;
+    uint32_t was = ~0u;
+    for (int guard = 0; guard < (sw ? 32 : 16) && t < tb; guard++) {
+        uint32_t st = 0;
+        if (sw) {
+            st = stateNow(*sw, S);
+            if (st != was) { kv = switchedKind(*sw->base, st); tv = traitsOf(kv); gv = growthIn(kv, *sw->med, sw->fed); gv.crowdLog += sw->adj; was = st; }
+        }
+        const Traits& T = sw ? tv : T0;
+        const CultureKind& k = sw ? kv : k0;
+        const Growth& g = sw ? gv : g0;
         CultureSeg s;
         s.t0 = t; s.N = S.N; s.q = S.q; s.Sp = S.Sp; s.G = S.G;
         s.K = std::pow(10.0, g.crowdLog); s.fit = g.fit; s.edge = g.edge;
-        s.glows = k.s.glows; s.colony = (k.s.cycle & LC_COLONY) != 0; s.quorum = k.quorum;
+        s.glows = k.s.glows; s.colony = (k.s.cycle & LC_COLONY) != 0; s.quorum = k.glowAny ? 0 : k.quorum;
+        s.state = sw ? (int)st : -1;
         double end = tb;
-        bool crowd = false;
+        bool crowd = false, gone = false, crossed = false, held = false;
         if (S.N <= 0) {
             if (S.Sp > 0 && g.fit == GF_GROWS && !S.spent) { s.mode = MD_WAKING; end = std::min(tb, t + std::max(0.0, T.wakeS - S.wake)); }
             else { s.mode = S.Sp > 0 ? MD_ASLEEP : MD_DEAD; S.wake = 0; }
@@ -152,7 +190,8 @@ void advance(const Traits& T, const CultureKind& k, const Growth& g, SpState& S,
             s.mode = MD_DECLINE; s.kd = g.fit == GF_UNVIABLE ? 1.0 : T.kdStress; s.sigma = lyses ? 0 : T.sigmaStress;
             s.stage = lyses ? SG_DYING : T.stressDecline;
             if (S.declineT0 < 0) S.declineT0 = t;
-            end = std::min(tb, t + std::log(S.N / CULTURE_EXTINCT) / s.kd);
+            const double tx = t + std::log(S.N / CULTURE_EXTINCT) / s.kd;
+            end = std::min(tb, tx); gone = tx < tb;
         } else if (g.fit == GF_COLD) s.mode = MD_WAIT;
         else if (g.fit == GF_GROWS && !S.spent && S.N < 0.9 * s.K) {
             s.mode = MD_GROW; s.mu = g.mu;
@@ -160,18 +199,28 @@ void advance(const Traits& T, const CultureKind& k, const Growth& g, SpState& S,
             const double tf = growTau(S.N, S.q, g.mu, s.K, 0.9 * s.K);
             crowd = t + tf <= tb;
             end = std::min(tb, t + tf);
+            if (sw && S.N < sw->Nq && sw->Nq < 0.9 * s.K) {   // Y-04: its crowd past its quorum's share first
+                const double tq = t + growTau(S.N, S.q, g.mu, s.K, sw->Nq);
+                if (tq < end) { end = tq; crowd = false; crossed = true; }
+            }
             if (g.edge != EG_NONE && *mk.strainT < 0) {
                 const double Ns = S.N * std::pow(2.0, std::max(0.0, STRAIN_GENERATIONS - S.gens));
                 const double ts = t + growTau(S.N, S.q, g.mu, s.K, Ns);
-                if (ts < end) { *mk.strainT = ts; strainMove(k, *mk.m, g.edge, mk.strains, *mk.strainWhat, *mk.strainValue); }
+                if (ts < end) { *mk.strainT = ts; strainMove(k0, *mk.m, g.edge, mk.strains, *mk.strainWhat, *mk.strainValue); }
             }
         } else if (S.hold < T.holdS) {   // at its crowd, or with nothing to eat: its reserves held a while
             s.mode = MD_HOLD; s.stage = g.fit == GF_GROWS ? SG_CROWD : SG_HUNGRY;
-            end = std::min(tb, t + (T.holdS - S.hold));
+            const double th = t + (T.holdS - S.hold);
+            end = std::min(tb, th); held = th <= tb;
         } else {   // starved
             s.mode = MD_DECLINE; s.kd = T.kd; s.sigma = T.sigma; s.stage = T.decline;
             if (S.declineT0 < 0) S.declineT0 = t;
-            end = std::min(tb, t + std::log(S.N / CULTURE_EXTINCT) / s.kd);
+            const double tx = t + std::log(S.N / CULTURE_EXTINCT) / s.kd;
+            end = std::min(tb, tx); gone = tx < tb;
+        }
+        if (sw && s.mode == MD_DECLINE && S.N >= sw->Nq && sw->Nq > CULTURE_EXTINCT) {   // Y-04: its crowd falling under its quorum's share
+            const double tq = t + std::log(S.N / sw->Nq) / s.kd;
+            if (tq < end) { end = tq; gone = false; crossed = true; }
         }
         s.declineT0 = S.declineT0;
         out.push_back(s);
@@ -189,15 +238,16 @@ void advance(const Traits& T, const CultureKind& k, const Growth& g, SpState& S,
                 const double Nn = crowd ? 0.9 * s.K : growN(S.N, S.q, g.mu, s.K, tau, &qn);
                 if (crowd) growN(S.N, S.q, g.mu, s.K, tau, &qn);
                 if (g.edge != EG_NONE) S.gens += std::log2(Nn / S.N);
-                S.N = Nn; S.q = qn;
+                S.N = crossed ? std::max(Nn, sw->Nq) : Nn; S.q = qn;   // (Y-04: on its quorum's share, not a rounding short of it)
                 if (crowd) S.spent = true;
                 break;
             }
-            case MD_HOLD: S.hold += tau; break;
+            case MD_HOLD: S.hold = held ? T.holdS : S.hold + tau; break;   // B-444: its hold over where it ends, never a rounding short of it
             case MD_DECLINE: {
-                if (end < tb) { S.Sp += s.sigma * S.N; S.G += (1 - s.sigma) * S.N; S.N = 0; break; }   // the last of them
+                if (gone) { S.Sp += s.sigma * S.N; S.G += (1 - s.sigma) * S.N; S.N = 0; break; }   // the last of them
                 const double e = std::exp(-s.kd * tau), lost = S.N * (1 - e);
                 S.Sp += s.sigma * lost; S.G += (1 - s.sigma) * lost; S.N *= e;
+                if (crossed) S.N = std::min(S.N, sw->Nq * (1 - 1e-9));
                 break;
             }
             default: break;
@@ -232,6 +282,38 @@ void cycleAt(const CultureSeg& s, double tau, double& x, double& y) {
     const double w = std::sqrt(s.r * s.m), d = w / (TAU * 4), e = std::exp(-d * tau), c = std::cos(w * tau), sn = std::sin(w * tau);
     x = e * (s.x0 * c - std::sqrt(s.r / s.m) * s.y0 * sn);
     y = e * (s.y0 * c + std::sqrt(s.m / s.r) * s.x0 * sn);
+}
+// B-446: the first time within h after a cycle segment starts where x (the prey) or y (the predator) crosses its level, for the sides that
+// watch one (a switched line's quorum share, as a log deviation); h when none does. Sampled at 1/64 of a period, then halved down. The decay
+// ends the search once neither swing can reach its level again
+double cycleCross(const CultureSeg& s, const double level[2], const bool watch[2], double h) {
+    if (!watch[0] && !watch[1]) return h;
+    const double w = std::sqrt(s.r * s.m), d = w / (TAU * 4), P = TAU / w;
+    const double ax = std::sqrt(s.x0 * s.x0 + (s.r / s.m) * s.y0 * s.y0), ay = std::sqrt(s.y0 * s.y0 + (s.m / s.r) * s.x0 * s.x0);
+    double reach = 0;
+    for (int k = 0; k < 2; k++) {
+        if (!watch[k]) continue;
+        const double a = k == 0 ? ax : ay, L = std::fabs(level[k]);
+        reach = std::max(reach, L <= 0 ? 64 * P : (a > L ? std::min(64 * P, std::log(a / L) / d) : 0.0));
+    }
+    const double end = std::min(h, reach), step = P / 64;
+    auto side = [&](double tau, bool out[2]) { double x, y; cycleAt(s, tau, x, y); out[0] = x >= level[0]; out[1] = y >= level[1]; };
+    bool at0[2];
+    side(0, at0);
+    for (double lo = 0; lo < end; lo += step) {
+        const double hi = std::min(end, lo + step);
+        bool at[2];
+        side(hi, at);
+        if (!((watch[0] && at[0] != at0[0]) || (watch[1] && at[1] != at0[1]))) continue;
+        double a = lo, b = hi;
+        while (b - a > 1e-6 * P) {
+            const double m = 0.5 * (a + b);
+            side(m, at);
+            if ((watch[0] && at[0] != at0[0]) || (watch[1] && at[1] != at0[1])) b = m; else a = m;
+        }
+        return b;
+    }
+    return h;
 }
 const CultureSeg* segAt(const std::vector<CultureSeg>& v, double t) {
     if (v.empty() || t < v[0].t0) return nullptr;
@@ -333,6 +415,38 @@ Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
     else if (saltEdge) g.edge = EG_SALT;
     else if (s.way == LW_LIGHT && fE <= 0.4) g.edge = EG_LIGHT;
     return g;
+}
+
+bool switchOn(int sw, uint32_t state) {
+    switch (sw) {
+        case GW_NEVER: return false;
+        case GW_LIGHT: return (state & CST_LIGHT) != 0;
+        case GW_DARK: return !(state & CST_LIGHT);
+        case GW_CROWDED: return (state & CST_CROWDED) != 0;
+        case GW_STARVING: return (state & CST_STARVING) != 0;
+        case GW_COLD: return (state & CST_COLD) != 0;
+        default: return true;
+    }
+}
+void cultureWorkOff(CultureKind& k, int work, uint32_t bits) {
+    switch (work) {
+        case CX_LIFE: k.dead = true; break;
+        case CX_WARMTH: { const double best = k.s.tOpt; k.s.tMin = std::max(k.s.tMin, best - 4); k.s.tMax = std::min(k.s.tMax, best + 2); break; }
+        case CX_SALT: k.s.saltLo = k.s.saltHi = 0; break;
+        case CX_PIGMENT: k.s.pigment = PG_NONE; break;
+        case CX_FOOD: k.s.substrate = SU_NONE; break;
+        case CX_REST: k.s.cycle &= ~bits; k.s.sporeYears = 0; break;
+        case CX_GLOW: k.s.glows = false; break;
+        default: break;
+    }
+}
+CultureKind switchedKind(const CultureKind& k, uint32_t state) {
+    CultureKind v = k;
+    v.switches.clear();
+    for (const CultureSwitch& w : k.switches)
+        if (!switchOn(w.when, state)) { cultureWorkOff(v, w.work, w.bits); v.burden -= w.price; }
+    v.burden = std::max(0.0, v.burden);
+    return v;
 }
 
 double bestDoublingS(const CultureKind& k) { return std::log(2.0) / traitsOf(k).muMax; }
@@ -446,7 +560,7 @@ CultureRun runCulture(const FlaskCulture& c) {
         const bool two = present[1];
         const int lead = R.lead, other = 1 - std::max(0, lead);
         Growth g[2];
-        bool capped[2] = {false, false};
+        bool capped[2] = {false, false}, fedK[2] = {false, false};
         const size_t had[2] = {R.seg[0].size(), R.seg[1].size()};
         for (int k = 0; k < 2; k++) {
             if (!present[k]) continue;
@@ -456,6 +570,7 @@ CultureRun runCulture(const FlaskCulture& c) {
             g[k] = growthIn(K[k], med, fed);
             if (fed && R.pair == PA_FEED && growthIn(K[k], med).fit == GF_GROWS) { g[k] = growthIn(K[k], med); fed = false; }   // its own food there too
             capped[k] = fed && R.pair == PA_FEED;
+            fedK[k] = fed;
         }
         if (two && R.pair == PA_COMPETE) g[1 - lead].crowdLog -= std::log10(2.0);   // the loser's share of the energy
         if (two && R.pair == PA_FEED) g[lead].crowdLog += std::log10(2.0);          // the feeder helped in turn
@@ -463,17 +578,33 @@ CultureRun runCulture(const FlaskCulture& c) {
             if (!cycling) Zstar = (smallCellPlan(K[other].s.plan) ? 1e-3 : 0.03) * std::pow(10.0, g[other].crowdLog);   // a grazer of bacteria a thousandth of them, a protist's predator more
             g[lead].crowdLog = std::log10(Zstar / 0.9);   // the predator's numbers rise to the prey's measure, then they cycle
         }
+        // Y-04: a switched species: what its switches read over the stretch (its light, the cold; its crowd's quorum share of its crowd as written,
+        // or its best's where it cannot grow), and the stretch begun as its state is (its kind then the cycle's law's)
+        SwitchCtx sx[2];
+        CultureKind vk[2];
+        for (int k = 0; k < 2; k++) {
+            if (!present[k] || K[k].switches.empty()) continue;
+            SwitchCtx& x = sx[k];
+            x.base = &K[k]; x.med = &med; x.fed = fedK[k]; x.gBase = g[k];
+            x.adj = g[k].crowdLog - growthIn(K[k], med, fedK[k]).crowdLog;
+            x.fixed = (med.light != CL_DARK ? CST_LIGHT : 0u) | (med.tempC < K[k].s.tOpt ? CST_COLD : 0u);
+            x.Nq = K[k].quorum * std::pow(10.0, g[k].fit == GF_GROWS ? g[k].crowdLog : T[k].baseLog + bestYieldLog(K[k].s));
+            vk[k] = switchedKind(K[k], stateNow(x, S[k]));
+            g[k] = growthIn(vk[k], med, fedK[k]);
+            g[k].crowdLog += x.adj;
+        }
+        auto swOf = [&](int k) { return K[k].switches.empty() ? nullptr : &sx[k]; };
         double t = ta;
         if (two && R.pair == PA_CYCLE && !cycling && !broken && g[lead].fit == GF_GROWS && g[other].fit == GF_GROWS && S[other].N > 0) {
             // the predator's rise: where it reaches its measure the cycle begins
             SpState probe = S[lead];
             std::vector<CultureSeg> tmp;
             double st = -1, wt = -1; int sw = 0; double sv = 0;
-            advance(T[lead], K[lead], g[lead], probe, ta, tb, tmp, Marks{&st, &sw, &sv, &wt, strains[lead], &med});
+            advance(T[lead], K[lead], g[lead], probe, ta, tb, tmp, Marks{&st, &sw, &sv, &wt, strains[lead], &med}, swOf(lead));
             double tc = S[lead].N >= Zstar ? ta : -1;   // at its measure already
             for (const CultureSeg& s : tmp) if (tc < 0 && s.mode == MD_GROW) { const double tf = s.t0 + growTau(s.N, s.q, s.mu, s.K, 0.9 * s.K); if (tf < tb) tc = tf; }
             if (tc >= ta && tc < tb) {
-                for (int k = 0; k < 2; k++) advance(T[k], K[k], g[k], S[k], ta, tc, R.seg[k], marks(k));
+                for (int k = 0; k < 2; k++) advance(T[k], K[k], g[k], S[k], ta, tc, R.seg[k], marks(k), swOf(k));
                 if (S[other].N > 0 && g[other].fit == GF_GROWS) {   // at its measure the predator brings its prey a decade down, and they turn about that
                     Pstar = 0.1 * S[other].N; cx = std::log(10.0);
                     cy = std::log(std::max(S[lead].N, 1e-6) / Zstar);
@@ -483,30 +614,60 @@ CultureRun runCulture(const FlaskCulture& c) {
             }
         }
         if (cycling && two) {
-            if (g[lead].fit == GF_GROWS && g[other].fit == GF_GROWS && g[other].mu > 0) {
+            // B-446: a switched line's state is read from its numbers along the cycle: crowded past its quorum share, its light and the cold
+            // fixed by the stretch, never starving (both grow by the cycle's law). The cycle splits where a state changes, and a line that
+            // cannot grow in its new state breaks it there
+            bool held = false;
+            for (int part = 0; part < 48; part++) {
+                Growth gc[2] = {g[0], g[1]};
+                uint32_t stc[2] = {0, 0};
+                double level[2] = {0, 0};
+                bool watch[2] = {false, false};
+                for (int k = 0; k < 2; k++) {
+                    if (K[k].switches.empty()) continue;
+                    const double N = k == lead ? Zstar * std::exp(cy) : Pstar * std::exp(cx);
+                    stc[k] = sx[k].fixed | (N >= sx[k].Nq ? CST_CROWDED : 0u);
+                    vk[k] = switchedKind(K[k], stc[k]);
+                    gc[k] = growthIn(vk[k], med, fedK[k]);
+                    gc[k].crowdLog += sx[k].adj;
+                    const int side = k == lead ? 1 : 0;
+                    level[side] = std::log(sx[k].Nq / (k == lead ? Zstar : Pstar));
+                    watch[side] = sx[k].Nq < INF;
+                }
+                if (!(gc[lead].fit == GF_GROWS && gc[other].fit == GF_GROWS && gc[other].mu > 0)) break;
                 CultureSeg s;
                 s.t0 = t; s.mode = MD_CYCLE; s.x0 = cx; s.y0 = cy;
-                s.r = g[other].mu; s.m = 0.3 * std::max(1e-5, g[lead].mu);
+                s.r = gc[other].mu; s.m = 0.3 * std::max(1e-5, gc[lead].mu);
                 s.Pstar = Pstar; s.Zstar = Zstar; s.stage = SG_CYCLING; s.fit = GF_GROWS;
                 if (R.period <= 0) R.period = TAU / std::sqrt(s.r * s.m);
                 for (int k = 0; k < 2; k++) {
                     CultureSeg sk = s;
+                    const CultureKind& Kn = K[k].switches.empty() ? K[k] : vk[k];
                     sk.role = k == lead ? 1 : 0;
                     sk.N = k == lead ? Zstar * std::exp(cy) : Pstar * std::exp(cx);
                     sk.Sp = S[k].Sp; sk.G = S[k].G;
-                    sk.K = k == lead ? 10 * Zstar : 10 * Pstar; sk.glows = K[k].s.glows; sk.quorum = K[k].quorum; sk.edge = g[k].edge;
+                    sk.K = k == lead ? 10 * Zstar : 10 * Pstar; sk.glows = Kn.s.glows; sk.quorum = Kn.glowAny ? 0 : Kn.quorum; sk.edge = gc[k].edge;
+                    if (!K[k].switches.empty()) sk.state = (int)stc[k];
                     R.seg[k].push_back(sk);
                 }
-                if (tb < INF) cycleAt(s, tb - t, cx, cy);
-                continue;
+                const double h = tb - t, tau = part < 47 ? cycleCross(s, level, watch, h) : h;   // the last part keeps its state to the end
+                if (tau < h && t + tau < tb) { cycleAt(s, tau, cx, cy); t += tau; continue; }
+                if (tb < INF) cycleAt(s, h, cx, cy);
+                held = true;
+                break;
             }
+            if (held) continue;
             // the cycle broken (the prey or its predator cannot grow here): each from its numbers then, the predator hungry
             S[other].N = Pstar * std::exp(cx); S[lead].N = Zstar * std::exp(cy);
             for (int k = 0; k < 2; k++) { S[k].q = 1e9; S[k].spent = false; S[k].hold = 0; }
             cycling = false; broken = true;
             g[lead] = growthIn(K[lead], med, false);
+            if (!K[lead].switches.empty()) {   // (Y-04: hungry as written too; B-446: its quorum share of its own crowd again)
+                sx[lead].fed = false; sx[lead].gBase = g[lead]; sx[lead].adj = 0;
+                sx[lead].Nq = K[lead].quorum * std::pow(10.0, g[lead].fit == GF_GROWS ? g[lead].crowdLog : T[lead].baseLog + bestYieldLog(K[lead].s));
+            }
         }
-        for (int k = 0; k < 2; k++) if (present[k]) advance(T[k], K[k], g[k], S[k], t, tb, R.seg[k], marks(k));
+        for (int k = 0; k < 2; k++) if (present[k]) advance(T[k], K[k], g[k], S[k], t, tb, R.seg[k], marks(k), swOf(k));
         for (int k = 0; k < 2; k++) for (size_t j = had[k]; j < R.seg[k].size(); j++) R.seg[k][j].capped = capped[k];
     }
     // one wins: from when the winner holds half its crowd the loser falls (Gause 1934)
@@ -541,6 +702,7 @@ CultureNow cultureAt(const FlaskCulture& c, const CultureRun& R, double t) {
         evalSeg(*s, t, o.cells, o.spores, o.ghosts, q);
         raw[k] = o.cells;
         o.fit = s->fit; o.edge = s->edge;
+        o.state = s->state; o.mu = s->mode == MD_GROW ? s->mu : 0;
         switch (s->mode) {
             case MD_ASLEEP: o.stage = SG_ASLEEP; break;
             case MD_WAKING: o.stage = SG_WAKING; break;
