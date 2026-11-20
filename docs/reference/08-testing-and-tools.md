@@ -302,21 +302,21 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   (output: `shots/tests/ship/light_*_<scale>x.png`, stdout)
 * `ship life [scale]` (I-04, `modes_ship.cpp`): life aboard at 2x by default, parked at the start's world. Twelve photographs first
   (twelve of the plan's views, the HUD out, written as the game writes its photographs into `shots/tests/ship_life_gallery`), then the
-  quarters' wall lit and by night (`TestGame::testWaitPrints`: only the harness waits for the prints; twelve on the wall or it
-  fails); R-429: the garden as planted and an hour of play on (`garden_planted`, `garden_grown`: they must differ; the home world's
-  flora found; the clock and the time played put back after, so the frames after are taken when I-04's were), the shards'
-  shelves empty and with sixty-four worlds' shards (a world k holding k mod 16 + 1; they must differ), the library's wall of them,
-  the case's twelve instruments, the player's deck, Z-04: the microscope from its stand and the cold store's door empty and with
-  forty vials (five of its eight lamps lit; they must differ), Z-05: the incubator empty and stocked (`labStock`: a living world's
-  species in the twelve flasks, each in its best medium under the lights in turn, a luminous crowd in the dark, fifteen minutes on;
-  they must differ, and twelve filled) and by night, the jars' shelf with four worlds' jars settled, the laboratory's stern bench
-  whole, the drive's core at rest and in a flight (they must differ), R-427: the maintenance room from its arch and the buggy on its
-  platform from the walk (`maintenance`, `maintenance_platforms`); R-428: `E` at the wall, its screen (`wall_screen`), the photographs
-  for its third frame (`wall_pick`), the oldest hung there and the sixth frame taken down, the wall so (`wall_hung`: eleven prints, it
-  must differ from the lit wall); R-429: the bed in view grown, trimmed back by `E` (`garden_trimmed`); the capsule in its cradle and
-  the hatch's drop at five instants (`E` at the capsule, the landing map's `Enter`; the last must
-  differ from the cradle). Each frame's banks checked by `shipBanksWhole` and its time printed; the exit code counts the failures
-  (output: `shots/tests/ship/life_*_<scale>x.png`, stdout)
+  quarters' wall lit and by night (`TestGame::testWaitPrints`: only the harness waits for the prints; twelve on the wall or it fails);
+  R-429: the garden as planted and an hour of play on (`garden_planted`, `garden_grown`: they must differ; the home world's flora found;
+  the clock and the time played put back after, so the frames after are taken when I-04's were), the shards' shelves empty and with
+  sixty-four worlds' shards (a world k holding k mod 16 + 1; they must differ), the library's wall of them, the case's twelve instruments,
+  the player's deck, Z-04: the microscope from its stand and the cold store's door empty and with forty vials (five of its eight lamps
+  lit; they must differ), Z-05: the incubator empty and stocked (`labStock`: a living world's species in the twelve flasks, each in its
+  best medium under the lights in turn, a luminous crowd in the dark, fifteen minutes on; they must differ, and twelve filled) and by
+  night, the jars' shelf with four worlds' jars settled, the laboratory's stern bench whole, Y-02: the gene editor idle and writing a line
+  of flask 1's species (the twelfth flask emptied for it; they must differ), the drive's core at rest and in a flight (they must differ),
+  R-427: the maintenance room from its arch and the buggy on its platform from the walk (`maintenance`, `maintenance_platforms`); R-428:
+  `E` at the wall, its screen (`wall_screen`), the photographs for its third frame (`wall_pick`), the oldest hung there and the sixth
+  frame taken down, the wall so (`wall_hung`: eleven prints, it must differ from the lit wall); R-429: the bed in view grown, trimmed back
+  by `E` (`garden_trimmed`); the capsule in its cradle and the hatch's drop at five instants (`E` at the capsule, the landing map's
+  `Enter`; the last must differ from the cradle). Each frame's banks checked by `shipBanksWhole` and its time printed; the exit code
+  counts the failures (output: `shots/tests/ship/life_*_<scale>x.png`, stdout)
 * `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
   map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) (output:
   `shots/landmap_<TYPE>.png`)
@@ -347,118 +347,114 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   site's light factor against the globe's; the felisian site moved onto snow under a dim star (light 0.62 on the ground, 0.35 on
   the globe: KI-309) and reads 105, so the count is 1 of 13 (output: `shots/consistency_<TYPE>.png`, stdout)
 * `flow`: scripted expedition: title, list, data, help, guide menu, rename the star by typing; I-04, after the telescope's photograph,
-  life aboard (`aboard_wall` its print on the quarters' wall, `E` at the bunk and the almanac's hour's rest from it, the desk's log,
-  the deck's player (R-431: its own screen, on its worlds), the garden, the core); star map (G-05: `Tab` to the
-  galaxy, `starmap_galaxy`, four levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the
-  flight, `starmap_flight`: the galaxy page with the line flown; G-06, after the belt and before the probe, which parks the ship
-  where it needs it: the chart's cursor 3,000 ly coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab`
-  looks, `starmap_look`, `Tab` back, `Enter` flies, `starmap_jumped` a second in, and at the arrival `starmap_arrived` with the
-  crosshair printed; the minute of flight puts the five-minute autosave in it, so slot 0 is `DEEP SPACE ... IN SPACE` at the end),
-  arrival, approach, orbit, landing map, descent (I-04: boarded at the capsule, `drop` the hatch's drop two seconds in; save to
-  slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
-  `surface2`, `Tab` again; Z-03: three vials of the ground a few steps apart, `kit_line` the first's line, the cold store's three
-  printed at `back_in_space`; Z-04: then `E` at the microscope, `microscope_list` the cold store's vials (R-432: its worlds),
-  `Enter` (`microscope_world`, the first world's vials), `Enter` and two seconds of the first's slide, `microscope` with its line (its
-  species, its preparation, the cells in view, the sheets, the log's FORM), `microscope_sheet` with Tab, Esc three times; Z-05: `E` at
-  the incubator, `incubator_choose` its chooser (R-432: its folders), `Enter` twice puts the first in flask 1 at AS ITS WORLD (R-432's
-  three keys' frames taken from the waits at the incubator and the sequencer, so the frames after them keep their times), its warmth turned to the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook),
-  `incubator` with its line (the species, its medium, its stage, its cells and spores), `incubator_jars` with Tab, Esc), sprint,
-  jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase
-  view), drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`,
-  `drone_readings` a second after it with `Tab` (R-414) and `Tab` again, `drone_chase`, S brakes, Shift lands, `E` out, the line
-  `drone: ... top 320 km/h, 160 m up, landed ok after 13 s`), waypoint, C-07: the signal radar at the start (`radar_set` the set
-  beside the decoder faced from the cabin, `E` on it, `radar_on` with the scope and the hint, `radar_sweep` after two seconds of
-  the arrows, `radar_hold` the view turned onto the first people's signal by `testAimAtSignal` with the cone filling and the
-  recording heard through the static, `radar_lock` the readout naming the system only and the lock's diamond, `radar_flight` a
-  second after Enter: the Vimana flight to the signal's star with the camera left and the synth released, then `V` aborts it for
-  the rest of the flow; the radar's state printed at each step; C-15: `B` again and the gain up five steps, `radar_gain` at x32
-  when the far scan is done (the view still on the Ghutreig: overloaded, the meter pinned red), `radar_far_hold` the view turned
-  onto the farthest people's signal x32 hears (5,524 ly) with the longer hold filling, `radar_far_lock` its readout with the
-  thousands, `radar_far_flight` Enter's flight, aborted at once by `V` so the flow goes on from where C-07's flight left it),
-  note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall, ascent (Z-07: before the reloads
-  `flow_auto_sample`, a game of its own landed 200 m inland of the flow's world's coast (`coastSite`), auto-explore begun on the ground
-  with its water outing planned, its sample at the water's edge and its look over the water: its steps, the vial's line, the log's
-  SAMPLE and the guide's count printed), then reloads:
-  newest save (with the guide), and slot 2 which resumes the descent and reaches the surface; M6: `attract` (the title tour),
-  `credits`, `photo` and `photo_flight` (free camera), `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01:
-  parks at the first comet near the start (`comet` with the HUD motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from
-  the first herd (`herd_approach`), walks in for four seconds and prints the herd's states before and after (`herd_flee`: alert,
-  calls, fleeing); N4: after `buggy_seat` the buggy is moved to open ground when there is any (`TestGame::testDriveOpen`) and driven
-  45 s (`buggy_drive`, `buggy_air` if it jumps), then the chase frame; N4-06 (B-205): after getting out, `K` must recall the
-  capsule and `B` must unfold a new buggy ("SCRAPPED"), and after the ascent a second landing (`second_landing`) must start with
-  no buggy; O1/O2: `landing_zoom` (the sector zoom) and the rangefinder printed after landing; O4: since comets are landable,
-  parking at the comet opens its landing map (`comet_map`), then the comet's HUD, sheet and list as before, then a landing on it
-  (`comet_surface`, the escape velocity, `B` refused, the walking speed against its cap, a jump after 4 s and after 3 s of `Ctrl`,
-  `comet_jump`, `comet_sky`, `comet_sectormap`); O3: the first belt near the start through the analyzer (`belt_list`,
-  `belt_approach`, `belt` with the debug line and parked belt, `belt_data`, `C` refused, `belt_rock` after `X`, and the rocks and
-  bank-3 pixels drawn); O1-04/B-303: `sectormap_wide` at the widest level the world allows (the level printed), and after the
-  second landing the waypoint must be fresh (`waypoint=0`, `second_sectormap`; R-414: M4-02's trail is gone); R-408: the scanner
-  on (`R`, the world's first mode) until its search is in (`scan_hud`, its numbers printed), a mark at the crosshair (B-412: the
-  look put on the ground 35 m ahead first and back after; `L`, typed `FLOW MARK`, `scan_marked`: nothing over the view; R-414: the
-  rangefinder naming the mark is the readings'), the sector map with the mark shown by `Shift+Enter` at the cursor (boxed,
-  `SHIFT+ENTER HIDES`) and the echoes (`scan_map`), the view with the shown mark over the ground and its hollow diamond on the
-  compass (`mark_shown`), the mark removed from the map's cursor (Delete twice) and the scanner off again; G-04: `N` then `Enter`
-  lock the nearest star again (the cabin view faces it), the landing map's cursor goes to a lit grassland site from the body's
-  seed (`TestGame::testLandSite`; `J` had left it under the moon, in the sea at Heilya II), and when the arrival holds no living world
-  the landing parks at the scan's first felisian world after the approach and orbit frames (Siophios, 0.97 ly from Heilya: thin
-  atmosphere, cratered, acidic); C-06: the shard decoder in the library (`decoder`, facing it; `shards_none` with an
-  empty guide; then three shards of Aieliaalas II put into the guide: `shards_worlds`, `shards_list`, `shards_decoding` a second
-  into the recording (C-05: the words resolving as they are spoken), `shards_text` read at 46% with the speech skipped by Enter,
-  the next shard likewise; then ten: `shards_list10` with every shard marked unread, `shards_full` the whole text,
-  `shards_speaking` the read shard spoken again with the word being spoken underlined, then paused, and the print that the synth's
-  speech pointer is cleared after `ESC`; the decoder's state printed at each step; C-04: the first piece of music among the ten
-  opened by index, `shards_music` two seconds in, `shards_music_name` the entry box over it, `shards_music_named` after typing a
-  name, and the print that the synth's piece pointer is cleared after `ESC`; C-10: the first star chart of the world added to the
-  guide and opened by index, `shards_chart_reading` two seconds into its reading (the stars up, the figures' lines drawing, the
-  names not yet), `shards_chart` after Enter skipped the wait (the disc with the figures named, the caption read at the share,
-  `THEY MARKED` with the star's class, distance and sector), then `O` holds it up and `Esc` leaves: `chart_overlay` the space view
-  turned onto the marked star (its diamond and `THEY MARKED THIS STAR`, `A CHART OF THE <PEOPLE> HELD UP` at the top right) and
-  `chart_overlay_figure`, C-12: the world's last recording added and read with the wait skipped (`shards_last`, THE LAST
-  RECORDING, the `SHARD` log line) and the list with its timeline closed (`shards_timeline`); H-06: `TAB` to the world's timeline
-  of its eras (`shards_eras`), `TAB` to its history as the shards read tell it (`shards_history`, the page's state and first rows
-  printed), `TAB` back to the records; C-11: after the lending, the decoder's worlds turned with `TAB` to the ship's player
-  (`player`), its first piece played and left playing as the decoder closes, the player's state printed at the flight (`vimana`,
-  its HUD line), on arrival and at the descent (stopped), the instruments' case in the library (`cabin_case`, `facing`
-  10); B-411: the hull made glass, seen across the bridge with the light on (`cabin_glass_lit`: the flight desk and the console
-  arc solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the bridge dark round the stars); H-04: the
-  longest of the world's first sixty records put into the guide and opened, its opening spoken (`shards_long`, `PAGE 1/3`), `DOWN`
-  to its next page (`shards_long_page2`), `ENTER` speaking that page; C-13: three shards of each people of Eleinewai I (152 0 92)
-  added and the decoder opened again, the worlds' list with that world listed once a people, named (`shards_peoples`), and the
-  second people's list with its own count and header (`shards_second_people`); C-14: the guide so far saved as the inbox file and
-  imported into a fresh guide in the same game, the decoder's list with the lent rows in cyan (`shards_lent`) and the friend's
-  piece under the friend's name (`shards_lent_piece`), the guide put back after turned onto the chart's first figure (its lines
-  between the stars in the window band, its name), then the chart put down from the decoder; the chart's state printed at each
-  step); C-09 ends the expedition with `roads_zoom`, the landing zoom over Aieliaalas II's land region with the old roads drawn as
-  faint lines (R-415: with the peoples, `V`; the count and the layer's info printed), and C-18 after it with the drone bay over
-  the same world (`drones_rack` from its stand in the hangar, `facing` 11; `drones_bay` its screen; `drones_launch` a second after
-  Enter, drone 1 through its port; `drones_search` four seconds after the first stop; `drones_back` every drone docked, the finds
-  printed), and every frame's line carries the seconds since the start, so a slow step shows (a first C-09 run took 930 s with the
-  same output, the next 32); W-01 (2026-10-06) adds `almanac_ship` (the list from the parking at the start, 13 events),
-  `almanac_site` (the cursor's site on the landing map), `almanac` (under the feet: at the flow's locked world the comets alone
-  under `THE SUN STANDS STILL HERE`), `almanac_run` (the run's first frames, the status row's `TO ... - T STOPS`) and
-  `almanac_arrived` (the clock landed, `UNKNOWN AT PERIAPSIS - X1`), with the line
-  `the run: 10279 s of game time in 284 frames at a peak of x10000, 0.000 s off the event`; the `timelapse` frame went with
-  M5-06's lapse; W-06 (after `almanac_ship`): `telescope` (the parked world at x2, tracked from the start, the reticle's line
-  under it), `telescope_moon` (the widest other body tracked at the power that fits it), `telescope_name` (the text entry
-  `NAME THIS MOON`), `telescope_named` (the line reads the name), the photo written as the test gallery's `screenshot_1.png` with
-  its caption (`photo: THROUGH THE TELESCOPE X2: THE NEAR MOON  ROCKY MOON  64402 KM  6.4 DEG - IN ORBIT OF UNKNOWN ...`), then
-  stowed; the review's rework added `cabin_back` (I-02: `cabin_arc`, the bridge's console arc's three screens in their colours,
-  R-404) and `cabin_telescope`
-  (facing the telescope's set) with `telescope_set` (the eyepiece opened from it by `E`) before the telescope block, and in it
-  `telescope_plate` (the moon stepped deeper until the eyepiece's step is finer than the map's texel and a plate begins, then read
-  out whole, `testTelescopeSettle`) and `telescope_plate_deep` (two steps deeper, read out whole), the plate's line printed with
-  each; R-405 added `orbit_turn` after the telescope is stowed (a second of Shift+Right from the front window, the status
-  `OVER ...`); W-03 prints `fronts: ...` after `surface` and `surface_data` (the data sheet's `FORECAST` line, the front's line
-  and the numbers at the feet); X-01 adds the probe after the belt: parked at the scan's first gas giant, the telescope's reticle
-  moved up its disc (`probe_aim`, `C SENDS A PROBE TO ...`), `C` (`probe_fall`, the aim and the clock printed), `probe_entry`,
-  `probe_clouds`, `Space` in the haze (`probe_chute`), `Ctrl+S` to slot 3 in the descent, `Esc` to the cabin (`probe_cabin`: the
-  space HUD's `PROBE:` line), `C` back, `Shift` held a second (R-406: `probe_fast`, the clock eight seconds on), a flash between
-  the decks (X-02: `probe_between`, the picture's layers printed), on to the end (`probe_lost`, the log's `LOST IN` line), `Enter`
-  (state 1, the probe let go); X-04: the guide's gallery (`probe_gallery`: the newest item the probe's recording, its final
-  image), `Enter` plays it (`probe_recording`, state 25), `Right` held 1.4 s goes down it (`probe_recording_deep`, the clock
-  printed), the statistics (`probe_stats`: `PROBES SENT 1   DEEPEST DESCENT ...`), the giant's data sheet and `Right`
-  (`probe_profile`); slot 3 is then the newest save, so the load at the end resumes the probe on its screen
-  (`the newest save is the probe's: state 24, ...`) (output: `shots/tests/flow_<step>.png`, stdout with state and status per step)
+  life aboard (`aboard_wall` its print on the quarters' wall, `E` at the bunk and the almanac's hour's rest from it, the desk's log, the
+  deck's player (R-431: its own screen, on its worlds), the garden, the core); star map (G-05: `Tab` to the galaxy, `starmap_galaxy`, four
+  levels in, `starmap_galaxy_x16`, and back), targeting (`R`, `N`), Vimana (G-05: `M` in the flight, `starmap_flight`: the galaxy page
+  with the line flown; G-06, after the belt and before the probe, which parks the ship where it needs it: the chart's cursor 3,000 ly
+  coreward at level 3, `starmap_cursor`, `Enter` plots, `starmap_plotted`, `Tab` looks, `starmap_look`, `Tab` back, `Enter` flies,
+  `starmap_jumped` a second in, and at the arrival `starmap_arrived` with the crosshair printed; the minute of flight puts the five-minute
+  autosave in it, so slot 0 is `DEEP SPACE ... IN SPACE` at the end), arrival, approach, orbit, landing map, descent (I-04: boarded at the
+  capsule, `drop` the hatch's drop two seconds in; save to slot 2 mid-descent), walk (R-414: `surface_readings` with `Tab` after
+  `surface2`, `Tab` again; Z-03: three vials of the ground a few steps apart, `kit_line` the first's line, the cold store's three printed
+  at `back_in_space`; Z-04: then `E` at the microscope, `microscope_list` the cold store's vials (R-432: its worlds), `Enter`
+  (`microscope_world`, the first world's vials), `Enter` and two seconds of the first's slide, `microscope` with its line (its species,
+  its preparation, the cells in view, the sheets, the log's FORM), `microscope_sheet` with Tab, Esc three times; Z-05: `E` at the
+  incubator, `incubator_choose` its chooser (R-432: its folders), `Enter` twice puts the first in flask 1 at AS ITS WORLD (R-432's three
+  keys' frames taken from the waits at the incubator and the sequencer, so the frames after them keep their times), its warmth turned to
+  the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook), `incubator` with its line (the species, its
+  medium, its stage, its cells and spores), `incubator_jars` with Tab, Esc; Z-06: the sequencer reads the first species, its tree with
+  Tab; Y-02, the flow's game's last stage (after the drones, before the stages with games of their own: KI-450): `E` at the gene editor,
+  `editor_choose` its chooser, `Enter` twice puts flask 1's culture on it (`editor`), its map's first gene's letter changed by `Enter` and
+  `Up` (`editor_letters`), `W` writes its line (`editor_writing` halfway on the lab's clock, `editor_written` past it: the line in flask
+  2, its line printed)), sprint, jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase view),
+  drone (R-403: `F` unfolds it, `E` in, Space lifts off, 16 s at full thrust with a turn, `drone_seat`, `drone_flight`, `drone_readings` a
+  second after it with `Tab` (R-414) and `Tab` again, `drone_chase`, S brakes, Shift lands, `E` out, the line `drone: ... top 320 km/h,
+  160 m up, landed ok after 13 s`), waypoint, C-07: the signal radar at the start (`radar_set` the set beside the decoder faced from the
+  cabin, `E` on it, `radar_on` with the scope and the hint, `radar_sweep` after two seconds of the arrows, `radar_hold` the view turned
+  onto the first people's signal by `testAimAtSignal` with the cone filling and the recording heard through the static, `radar_lock` the
+  readout naming the system only and the lock's diamond, `radar_flight` a second after Enter: the Vimana flight to the signal's star with
+  the camera left and the synth released, then `V` aborts it for the rest of the flow; the radar's state printed at each step; C-15: `B`
+  again and the gain up five steps, `radar_gain` at x32 when the far scan is done (the view still on the Ghutreig: overloaded, the meter
+  pinned red), `radar_far_hold` the view turned onto the farthest people's signal x32 hears (5,524 ly) with the longer hold filling,
+  `radar_far_lock` its readout with the thousands, `radar_far_flight` Enter's flight, aborted at once by `V` so the flow goes on from
+  where C-07's flight left it), note, log, statistics, gallery, time warp, data, menu, settings, slot picker (save to slot 1), recall,
+  ascent (Z-07: before the reloads `flow_auto_sample`, a game of its own landed 200 m inland of the flow's world's coast (`coastSite`),
+  auto-explore begun on the ground with its water outing planned, its sample at the water's edge and its look over the water: its steps,
+  the vial's line, the log's SAMPLE and the guide's count printed), then reloads: newest save (with the guide), and slot 2 which resumes
+  the descent and reaches the surface; M6: `attract` (the title tour), `credits`, `photo` and `photo_flight` (free camera),
+  `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01: parks at the first comet near the start (`comet` with the HUD
+  motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from the first herd (`herd_approach`), walks in for four seconds and prints
+  the herd's states before and after (`herd_flee`: alert, calls, fleeing); N4: after `buggy_seat` the buggy is moved to open ground when
+  there is any (`TestGame::testDriveOpen`) and driven 45 s (`buggy_drive`, `buggy_air` if it jumps), then the chase frame; N4-06 (B-205):
+  after getting out, `K` must recall the capsule and `B` must unfold a new buggy ("SCRAPPED"), and after the ascent a second landing
+  (`second_landing`) must start with no buggy; O1/O2: `landing_zoom` (the sector zoom) and the rangefinder printed after landing; O4:
+  since comets are landable, parking at the comet opens its landing map (`comet_map`), then the comet's HUD, sheet and list as before,
+  then a landing on it (`comet_surface`, the escape velocity, `B` refused, the walking speed against its cap, a jump after 4 s and after 3
+  s of `Ctrl`, `comet_jump`, `comet_sky`, `comet_sectormap`); O3: the first belt near the start through the analyzer (`belt_list`,
+  `belt_approach`, `belt` with the debug line and parked belt, `belt_data`, `C` refused, `belt_rock` after `X`, and the rocks and bank-3
+  pixels drawn); O1-04/B-303: `sectormap_wide` at the widest level the world allows (the level printed), and after the second landing the
+  waypoint must be fresh (`waypoint=0`, `second_sectormap`; R-414: M4-02's trail is gone); R-408: the scanner on (`R`, the world's first
+  mode) until its search is in (`scan_hud`, its numbers printed), a mark at the crosshair (B-412: the look put on the ground 35 m ahead
+  first and back after; `L`, typed `FLOW MARK`, `scan_marked`: nothing over the view; R-414: the rangefinder naming the mark is the
+  readings'), the sector map with the mark shown by `Shift+Enter` at the cursor (boxed, `SHIFT+ENTER HIDES`) and the echoes (`scan_map`),
+  the view with the shown mark over the ground and its hollow diamond on the compass (`mark_shown`), the mark removed from the map's
+  cursor (Delete twice) and the scanner off again; G-04: `N` then `Enter` lock the nearest star again (the cabin view faces it), the
+  landing map's cursor goes to a lit grassland site from the body's seed (`TestGame::testLandSite`; `J` had left it under the moon, in the
+  sea at Heilya II), and when the arrival holds no living world the landing parks at the scan's first felisian world after the approach
+  and orbit frames (Siophios, 0.97 ly from Heilya: thin atmosphere, cratered, acidic); C-06: the shard decoder in the library (`decoder`,
+  facing it; `shards_none` with an empty guide; then three shards of Aieliaalas II put into the guide: `shards_worlds`, `shards_list`,
+  `shards_decoding` a second into the recording (C-05: the words resolving as they are spoken), `shards_text` read at 46% with the speech
+  skipped by Enter, the next shard likewise; then ten: `shards_list10` with every shard marked unread, `shards_full` the whole text,
+  `shards_speaking` the read shard spoken again with the word being spoken underlined, then paused, and the print that the synth's speech
+  pointer is cleared after `ESC`; the decoder's state printed at each step; C-04: the first piece of music among the ten opened by index,
+  `shards_music` two seconds in, `shards_music_name` the entry box over it, `shards_music_named` after typing a name, and the print that
+  the synth's piece pointer is cleared after `ESC`; C-10: the first star chart of the world added to the guide and opened by index,
+  `shards_chart_reading` two seconds into its reading (the stars up, the figures' lines drawing, the names not yet), `shards_chart` after
+  Enter skipped the wait (the disc with the figures named, the caption read at the share, `THEY MARKED` with the star's class, distance
+  and sector), then `O` holds it up and `Esc` leaves: `chart_overlay` the space view turned onto the marked star (its diamond and `THEY
+  MARKED THIS STAR`, `A CHART OF THE <PEOPLE> HELD UP` at the top right) and `chart_overlay_figure`, C-12: the world's last recording
+  added and read with the wait skipped (`shards_last`, THE LAST RECORDING, the `SHARD` log line) and the list with its timeline closed
+  (`shards_timeline`); H-06: `TAB` to the world's timeline of its eras (`shards_eras`), `TAB` to its history as the shards read tell it
+  (`shards_history`, the page's state and first rows printed), `TAB` back to the records; C-11: after the lending, the decoder's worlds
+  turned with `TAB` to the ship's player (`player`), its first piece played and left playing as the decoder closes, the player's state
+  printed at the flight (`vimana`, its HUD line), on arrival and at the descent (stopped), the instruments' case in the library
+  (`cabin_case`, `facing` 10); B-411: the hull made glass, seen across the bridge with the light on (`cabin_glass_lit`: the flight desk
+  and the console arc solid and lit, a sheen on the glass) and off (`cabin_glass`: the glass clear, the bridge dark round the stars);
+  H-04: the longest of the world's first sixty records put into the guide and opened, its opening spoken (`shards_long`, `PAGE 1/3`),
+  `DOWN` to its next page (`shards_long_page2`), `ENTER` speaking that page; C-13: three shards of each people of Eleinewai I (152 0 92)
+  added and the decoder opened again, the worlds' list with that world listed once a people, named (`shards_peoples`), and the second
+  people's list with its own count and header (`shards_second_people`); C-14: the guide so far saved as the inbox file and imported into a
+  fresh guide in the same game, the decoder's list with the lent rows in cyan (`shards_lent`) and the friend's piece under the friend's
+  name (`shards_lent_piece`), the guide put back after turned onto the chart's first figure (its lines between the stars in the window
+  band, its name), then the chart put down from the decoder; the chart's state printed at each step); C-09 ends the expedition with
+  `roads_zoom`, the landing zoom over Aieliaalas II's land region with the old roads drawn as faint lines (R-415: with the peoples, `V`;
+  the count and the layer's info printed), and C-18 after it with the drone bay over the same world (`drones_rack` from its stand in the
+  hangar, `facing` 11; `drones_bay` its screen; `drones_launch` a second after Enter, drone 1 through its port; `drones_search` four
+  seconds after the first stop; `drones_back` every drone docked, the finds printed), and every frame's line carries the seconds since the
+  start, so a slow step shows (a first C-09 run took 930 s with the same output, the next 32); W-01 (2026-10-06) adds `almanac_ship` (the
+  list from the parking at the start, 13 events), `almanac_site` (the cursor's site on the landing map), `almanac` (under the feet: at the
+  flow's locked world the comets alone under `THE SUN STANDS STILL HERE`), `almanac_run` (the run's first frames, the status row's `TO ...
+  - T STOPS`) and `almanac_arrived` (the clock landed, `UNKNOWN AT PERIAPSIS - X1`), with the line `the run: 10279 s of game time in 284
+  frames at a peak of x10000, 0.000 s off the event`; the `timelapse` frame went with M5-06's lapse; W-06 (after `almanac_ship`):
+  `telescope` (the parked world at x2, tracked from the start, the reticle's line under it), `telescope_moon` (the widest other body
+  tracked at the power that fits it), `telescope_name` (the text entry `NAME THIS MOON`), `telescope_named` (the line reads the name), the
+  photo written as the test gallery's `screenshot_1.png` with its caption (`photo: THROUGH THE TELESCOPE X2: THE NEAR MOON  ROCKY MOON
+  64402 KM  6.4 DEG - IN ORBIT OF UNKNOWN ...`), then stowed; the review's rework added `cabin_back` (I-02: `cabin_arc`, the bridge's
+  console arc's three screens in their colours, R-404) and `cabin_telescope` (facing the telescope's set) with `telescope_set` (the
+  eyepiece opened from it by `E`) before the telescope block, and in it `telescope_plate` (the moon stepped deeper until the eyepiece's
+  step is finer than the map's texel and a plate begins, then read out whole, `testTelescopeSettle`) and `telescope_plate_deep` (two steps
+  deeper, read out whole), the plate's line printed with each; R-405 added `orbit_turn` after the telescope is stowed (a second of
+  Shift+Right from the front window, the status `OVER ...`); W-03 prints `fronts: ...` after `surface` and `surface_data` (the data
+  sheet's `FORECAST` line, the front's line and the numbers at the feet); X-01 adds the probe after the belt: parked at the scan's first
+  gas giant, the telescope's reticle moved up its disc (`probe_aim`, `C SENDS A PROBE TO ...`), `C` (`probe_fall`, the aim and the clock
+  printed), `probe_entry`, `probe_clouds`, `Space` in the haze (`probe_chute`), `Ctrl+S` to slot 3 in the descent, `Esc` to the cabin
+  (`probe_cabin`: the space HUD's `PROBE:` line), `C` back, `Shift` held a second (R-406: `probe_fast`, the clock eight seconds on), a
+  flash between the decks (X-02: `probe_between`, the picture's layers printed), on to the end (`probe_lost`, the log's `LOST IN` line),
+  `Enter` (state 1, the probe let go); X-04: the guide's gallery (`probe_gallery`: the newest item the probe's recording, its final
+  image), `Enter` plays it (`probe_recording`, state 25), `Right` held 1.4 s goes down it (`probe_recording_deep`, the clock printed), the
+  statistics (`probe_stats`: `PROBES SENT 1   DEEPEST DESCENT ...`), the giant's data sheet and `Right` (`probe_profile`); slot 3 is then
+  the newest save, so the load at the end resumes the probe on its screen (`the newest save is the probe's: state 24, ...`) (output:
+  `shots/tests/flow_<step>.png`, stdout with state and status per step)
 * `bench`: frame times for space and surface at every scale 1x-4x (B-310: the surface rows print the render's sections: sky, the
   vertex warm pass, the terrain bands, objects, flora, the rest), walking and turning at 1x, the first/worst of the first 60
   descent frames, and (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree
@@ -1258,9 +1254,11 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   flow lands and samples), home's world's, a kin star's (home's genesis across stars), a world of a genesis of its own, a mirrored life's,
   a drifter's and the star it left's (one deep branch), and the nearest made species, read on the sequencer (its screen halfway through
   and read: its result printed, the guide's kin and watermark); the tree printed leaf by leaf (each genesis's head, each leaf's join with
-  the one above and its nearest kin) and drawn at its root, a drifter's leaf and the made one; the decoder opened on the made species'
-  people (its world listed by the watermark, the watermark opened in their tongue); then `lab kin 12`. Under four seconds (output: stdout,
-  `shots/tests/lab_sequencer.png`, `lab_tree.png`, `lab_watermark.png`)
+  the one above and its nearest kin); Y-01, the flow's world's first species given a strain and its strain, a folder THE PICKS holding a
+  kin star's species, a mirrored life's and that second strain alone: every page printed (its rows, a line indented by its depth, what is
+  not read, its years) and five drawn (the ship's, the flow's world's with its strains, a drifter's, the made one's, the folder's); the
+  decoder opened on the made species' people (its world listed by the watermark, the watermark opened in their tongue); then `lab kin 12`.
+  Under four seconds (output: stdout, `shots/tests/lab_sequencer.png`, `lab_tree.png`, `lab_watermark.png`)
 * `lab kin [r]`: Z-06: home's genesis, its partings and the ship's three species' markers; the systems within r sectors of home whose
   water life is home's kin, their star's line and the common ancestor with the ship's own; the ranking over the region's species within
   a deep branch (one world's, one system's, two stars' pairs: their common ancestors' ranges and their markers' agreement, any out of
@@ -1274,6 +1272,12 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   species named from it; the statistics' first page, its LIFE page, the data sheet of the flow's world (its microbe line), a micrograph
   taken on the microscope as P writes one and seen in the gallery. Under a second; exit 1 on a step failing (output: stdout,
   `shots/tests/lab_catalogue.png`, `lab_life.png`, `lab_catalogue_gallery/`)
+* `lab genes` (`modes_genes.cpp`): Y-02: the first living world of each alphabet and hand in the scan region (four, six and eight
+  letters, ours and mirrored: `geneWorlds`), each genesis's map and its letters' weights, each species' values and genes (its number, its
+  kind, its working part, its letters in all, what its letters give); every gene's edit (a letter one heavier, a table's run its next) and
+  cut on the four letters' species with the most genes, its values before and after; the gene editor in a game (`lab_genes.png`: empty,
+  its chooser, a rod on it, its warmth's letters changed (its value beside its parent's), its line writing, the line in flask 2); then the
+  laws the unit's `genes` group holds (`geneLaws`). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`)
 * `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
   its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
   five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of

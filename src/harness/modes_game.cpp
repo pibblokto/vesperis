@@ -32,6 +32,7 @@ struct Flow {
     void roads();   // the old roads on the landing zoom
     void autoSamples();   // Z-07: auto-explore on the coast of the flow's world, its walk to the water, the sample it takes
     void reload();   // the saves loaded again: the newest, then slot 2 mid-descent
+    void genes();    // Y-02: the gene editor, last: a line written from flask 1's culture into an empty flask
 };
 
 void Flow::title() {
@@ -886,6 +887,32 @@ void Flow::reload() {
     printf("flow done in %.1f s\n", nowSec() - t0);
 }
 
+// Y-02: the gene editor, the flow's game's last stage (after the drones: nothing of its own after it moves in time; before the games of
+// its own the stages after it make, whose ends leave its frames unsafe: KI-450): E at it, Enter (the chooser: the cultures), Enter (THE
+// FLASKS), Enter (flask 1's culture, read on the sequencer); its map's first gene, Enter (its letters), Up (a letter changed), Enter (the
+// map), W (its line written), its clock skipped past the writing (the skip hook): the line in an empty flask; Esc
+void Flow::genes() {
+    game.setState(GameState::SPACE);
+    game.testCabinAtDevice(FACE_EDITOR); run(0.167); press(KEY_E); run(0.1);
+    press(KEY_ENTER); run(0.1); shot("editor_choose");
+    const int choices = (int)game.testEditor().choices.size();
+    press(KEY_ENTER); press(KEY_ENTER); run(0.1); shot("editor");
+    const EditorState& E = game.testEditor();
+    const int first = E.genes.genes.empty() ? -1 : E.genes.genes[0].place;
+    press(KEY_ENTER); press(KEY_UP); run(0.1); shot("editor_letters");
+    press(KEY_ENTER); press(KEY_W); run(0.1);
+    game.testLabSkip(EDIT_S / 2); run(0.2); shot("editor_writing");
+    game.testLabSkip(EDIT_S / 2 + 1); run(0.2); shot("editor_written");
+    int line = -1;
+    for (int i = 0; i < INCUBATOR_FLASKS; i++) if (game.testLab().flasks[i].n > 0 && game.testLab().flasks[i].who[0].strain > 0 && game.testLab().flasks[i].edited[0]) line = i;
+    int edits = 0;
+    for (const LogEntry& e : game.guide.log) edits += e.kind == "EDIT";
+    printf("  the gene editor: %s, %d to choose from, %s on it (%zu genes, %d letters), gene %d changed, its line %s, %d EDIT in the log: '%s'\n", stateName(game.state),
+           choices, E.on ? E.name.c_str() : "NOTHING", E.genes.genes.size(), E.genes.letters, first + 1,
+           line >= 0 ? fmt("in flask %d (%s)", line + 1, game.testLab().flasks[line].label[0].c_str()).c_str() : "NOT WRITTEN", edits, game.testStatus().c_str());
+    press(KEY_ESCAPE); run(0.1);
+}
+
 void runGameFlow() {
     Flow f;
     f.title();
@@ -901,6 +928,7 @@ void runGameFlow() {
     f.chart();
     f.probe();
     f.roads();
+    f.genes();   // Y-02: the flow's game's last (nothing of its after it moves in time; before the other games: KI-450)
     f.autoSamples();
     f.reload();
 }

@@ -1,11 +1,9 @@
 # Rules: the living small
 
 The rules in force for the microorganisms of 1.5.0 (`src/life/`, R-425): where life is (Z-01), what it looks like (Z-02), its genomes
-(Z-06); a line each with the
-entries behind them (`log/`, by release). A milestone that sets or changes one edits its line here; a replaced one moves to
-`superseded.md` (`docs/CLAUDE.md`). GEN_VERSION, the draws and the salts in general: `rules-galaxy.md`; the search and the lab:
-`rules-life-lab.md`; the incubator and the collection: `rules-life-cultures.md`; the sequencer, the tree and the record:
-`rules-life-record.md`.
+(Z-06); a line each with its entries (`log/`); a replaced one moves to `superseded.md`. GEN_VERSION, the draws and the salts:
+`rules-galaxy.md`; the search and the lab: `rules-life-lab.md`; the incubator and the collection: `rules-life-cultures.md`; the sequencer,
+the tree and the record: `rules-life-record.md`; the genes and the gene editor: `rules-life-genes.md`.
 
 ## Where life is
 - Every landable kind has a row of `BIOTA` (built at compile time, held against `KINDS` by the unit); a giant, a brown dwarf and the companion none [Z-01]

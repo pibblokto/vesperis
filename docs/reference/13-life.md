@@ -6,7 +6,8 @@ search (the samples, the kit, the ultraviolet, red snow and the springs' bands),
 what is seen of each species), Z-05 the incubator (cultures in twelve flasks, their stages, spores woken, two in a flask, strains) and the
 jars, Z-06 the genomes, the sequencer, the tree of kin and the organisms the late peoples made, Z-07 the record (the catalogue, the LIFE
 page, lending, auto-explore's samples). Then, on the user's word: R-432 the microscope's lists by world and the cold store without limit,
-R-433 the culture collection, R-434 the activity vision.
+R-433 the culture collection, R-434 the activity vision; the Y series (R-443, R-444): Y-01 the trees by world and by folder, Y-02 the genes
+and the gene editor.
 
 <!-- contents -->
 Contents:
@@ -30,6 +31,7 @@ Contents:
 - The microscope (`life/slides.h`, `game/microscope.cpp`)
 - The incubator (`life/cultures.h`, `life/jars.h`, `game/incubator.cpp`)
 - The genomes and the tree (`life/sequences.h`, `game/sequencer.cpp`, `game/tree_screen.cpp`, `peoples/made.h`)
+- The genes (`life/genes.h`, `game/editor.cpp`)
 - The record (`game/catalogue.cpp`, the guide)
 - Determinism, cost and the cache
 - The harness
@@ -449,12 +451,23 @@ letters, its hand, its nearest kin read and their common ancestor or no common a
 and logged (`KIN`). Its `seq` line keeps what is on it, when it began and whether it was told. The sheet reads `SEQUENCED: ITS KIN ON THE
 TREE` and lists THE SEQUENCER among the ways to more.
 
-**The tree of kin** (the state `TREE`, E at its screen on the port wall, or Tab from the sequencer; leaf green, home 46): every species read
-and the ship's own three at its root, in the tree's order (`treeBefore`: home's genesis first, then by genesis, deep branch, a kin cell's
-boxes, the line's star, the world, its comb), each two neighbours' common ancestor drawn as the tree is (billions of years back, each
-genesis its own clade headed by its alphabet, its hand and when it began); the geneses counted (`LIFE BEGAN AT LEAST 3 TIMES`). A drifter's
-species sits beside the star it left's once both are read. Up and Down choose a leaf (its nearest kin and their common ancestor below);
-Enter sets the remote target to its world's star. In the room the screen shows a tree of its leaves (`drawTreeWall`).
+**The tree of kin** (the state `TREE`, E at its screen on the port wall, or Tab from the sequencer on the page of what it read; leaf
+green, home 46): Y-01 (R-444), a tree a page and no tree of everything, Left and Right between them (`TreeState::pages`): THE SHIP (its
+own three, home's life), each world with a species read (its name, else UNKNOWN and its kind), each of the collection's folders holding a
+culture (UNSORTED, then the explorer's). Every species read stays in `tree.leaves` in the tree's order (`treeBefore`: home's genesis
+first, then by genesis, deep branch, a kin cell's boxes, the line's star, the world, its comb), the geneses counted there (the LIFE page's
+`LIFE BEGAN AT LEAST 3 TIMES`); a page shows its own (`treePage`: `tree.shown`), each two neighbours' common ancestor drawn as the tree
+is, each genesis its own clade headed by its alphabet, its hand and when it began, on the page's own years (`treeYears`: its oldest common
+ancestor and a quarter, in millions under a billion and a half; a stem older than that runs to the edge). A world's page holds its species
+read, those seen and not read counted under the head, and the lab's lines of its species (the strains, `guide.strains`) as dotted twigs at
+today's edge under their parents, a strain's strain under it; a line goes on as it arises, Backspace takes one off and A puts it back from
+a chooser (the guide's `treeoff` lines), a world's own species staying. A folder's page is what it holds (a pair two leaves, a strain kept
+without its species a leaf in the species' place, those not read counted), sorted on the microscope's lists. A species with no name is its
+look and size (B-443, `treeLeaves`: its form kept with its lineage, `formOfKey`), two of a world alike told apart as B-442's rows are, and
+a line too long for its row leaves out its world ("AN ARMOURED CELL, 65 UM ACROSS"; on a world's own page none is said); the sequencer
+says a species in its words on the tree (`treeWords`: its title, its kin, the log's KIN). Up and Down choose a leaf: its nearest kin read
+anywhere and their common ancestor below (a drifter's the star it left's), a line's species and its move; Enter sets the remote target to
+its world's star. In the room the screen shows a tree of every leaf read (`drawTreeWall`).
 
 **The made** (`peoples/made.h`, the peoples' one reader of the living small): on a world of a futuristic or far-future people one of its own
 species (alive or asleep) is theirs (`madeSpeciesOf`, by the world's hash; the people and the year of their count, in their last age, the
@@ -467,13 +480,71 @@ to whoever reads it; the far future's a signature left to itself. Sequenced, it 
 by its people, the watermark after their records by its year, read with the language their records taught (it teaches none). Over the
 hundred nearest home, 3.1% of its long sentences on a repeated frame (the records' aim at a hundred: 5%), every check at zero.
 
+## The genes (`life/genes.h`, `game/editor.cpp`)
+
+Y-02 (R-443; the design `docs/ideas/IDEAS-genes.md` section 1): a species' genes, read from what it already is, and a machine that changes
+them. No generation change: nothing of generation 17 moves, and a line with no edit is its species bit for bit (its values, its culture's
+segments, its slide's kinds: the unit over forty worlds' 349 species).
+
+**A genesis's map and code** (`geneCodeOf`, salts of their own): eighteen places, a gene's number each, the same in all its kin (three
+vital: its copying, its membrane, its making; three quiet; a warmth, a salt, a size, a pigment, a food, a motion, three senses, a rest, a
+glow, a shape), in an order of the genesis's hash; each letter's weight (home's pinned A 0, T 1, C 2, G 3: a G and C rich stem holds at a
+higher heat, Galtier and Lobry 1997; another genesis's a shuffle of its alphabet's), and its tables (a short run of letters read as a
+number in the alphabet's base: a pigment's two letters, a food's three, a motion's kind's two, a sense's two, a shape's two), every choice
+in each at least once, most runs synonyms.
+
+**A species' genes** (`microbeGenesOf`): the three vital, one to three quiet, the warmth, salt and size, then those it uses: a pigment (one
+that has one or lives by light), a food (a chemical-eater), a motion (one that moves), a sense for each thing it turns to (the light, or
+away from it: a dark-dweller's swimmers' flight, R-438; the food, the field, the warmth; three at most), a rest (one that ends in spores,
+cysts or the gatherers' fruit), a glow (a luminous one), a shape (a sphere, a rod, a curved rod or a spiral): 7 to 16 a species, a gap
+where it lacks one. Each has a working part, the run its effect lies in (warmth 12 letters, salt and motion 6, vital and quiet 8, size,
+rest, glow and shape 4, food 3, pigment and sense 2), its wild letters chosen so that the code gives its own values: a warmth's weight its
+best over its cell's range (a heat-lover's heavy, a cold-lover's light), a salt's in its band's third, a size's by its cells' width (three
+a doubling about 1 um, 40 a large cell's, 50 a colony's), a table's run one that reads its own pigment, food, kind, target or plan.
+
+**An edit** (`applyEdits`) moves a value from its parent's by the change in the code: a warmth's range a step a weight (its cell's range
+over the gene's heaviest, to half a degree: water's 4 C with four letters, 2.5 with six, 1.5 with eight; the cryostat's 0.5), held within
+its cell's range or its own; a salt's band; a size by two to the third of the change, within its family's widths; a pace by two to the
+quarter; a pigment, a food, a sense's target, a small cell's plan (its outline drawn again for it, its width kept) and a motion's kind (its
+plan's: a rod's run and tumble, glide or twitch; still) by the run's choice; a rest or a glow on past a quarter of its weight (a glow's
+share of its crowd halved a weight up, 0.5 to 30%). A gene cut loses its work: the warmth only round its best (4 C under, 2 over), fresh
+water, half its size, no pigment, no food, still (its flagella kept, paralysed), no sense, dying at its end, no glow, a sphere (Jones et
+al. 2001's MreB). A vital gene changed or cut: the line does not live (`CultureKind::dead`: `GF_UNVIABLE`, its cells lyse in about ten
+seconds, its drop their ghosts); a quiet one changes nothing. How it lives and its plan's family never move. A strain's genes are its
+parent's with its move's gene stepped its way (`strainGenes`: a hotter top, heavier warmth letters), so the sequencer reads which.
+
+**The gene editor** (the state `EDITOR`, E at it on the bow bench past the sequencer, under the jars' shelf; deep blue, home 48): Enter
+(Tab once one is on) chooses a culture whose species the sequencer read, a flask's or the collection's, its line as it is (another is
+refused: READ IT ON THE SEQUENCER FIRST). Its map is two columns of nine places, each NOT KNOWN, NOTHING SEEN, what it was seen to do or
+the explorer's name (N, every kin's), a dash where it has no gene, = where it is changed; the arrows choose a gene, Enter opens its
+working part (Left and Right a letter, Up and Down it through the alphabet, Backspace its parent's letter; the letters' keys are not read:
+P and T are the game's own), C cuts it out and back, Backspace makes it its parent's again. A gene known shows its value as its letters
+give it beside its parent's. W writes the line in 120 seconds on the lab's clock (`EDIT_S`), the screen open or not, refused with nothing
+changed or no flask empty; its end (`editorTick` in `updateLab`): a strain of its species (the guide's `strain` line, SM_EDIT and its
+edits, its number its species' next: E for an edited line, S a strain's), into the first empty flask in its culture's medium (none then:
+the collection), said and logged (EDIT). Its edits stay on the editor for the next. A line is read everywhere a strain is: its flask's
+culture and its form (`flaskKind` walks its lines from the wild one, a strain's move or an edit's genes each), its drop, the sequencer
+(EDITED: what it changed; a strain's gene that differs), the collection as it grows, its twig on its world's tree (`E1 - GENE 11 CHANGED`).
+The save's `editor`, `editoredits`, `editorwrit` and `editorfrom` lines keep what is on it.
+
+**Learning** (the guide's `gene` lines, by genesis and number): an edited line is compared with its parent (`Flask::parentKind`, made with
+the flask): in its flask alone where it grows and its parent would not or the other way (its warmth, its salt, its food, its pigment's
+light), its end (resting or dying), its glow (`flaskLearn`); in its drop its cells' shape, size, colour (in a bright field), motion (where
+it moves) and its answers to the light, the food and the field (`scopeLearn`, `scopeAnswerLearn`; its answers its line's, never its
+species' sheet's); a vital gene's death at once. Of its changed genes, those that could show it (none known to do another thing; one
+NOTHING SEEN is no candidate for what a drop shows): one is learned (`GENE 8 IS ITS WARMTH`), several said (`ITS WARMTH: GENE 2 OR 8`).
+Grown and looked at with nothing different, its changed genes not known are NOTHING SEEN; a strain read on the sequencer, its one changed
+gene is its move's. Each finding is logged at once (GENE, the lab's notebook) and said in its turn when the status line is free
+(`geneSay`): what was seen (`FLASK 2: IT GROWS AT 29 C - ITS PARENT DIES`), then what it says of the genes.
+
 ## The record (`game/catalogue.cpp`, the guide)
 
 Z-07: what was found of the living small, kept and shown. **The guide** (`guide.txt`) keeps what is known: a species seen is a `microbe`
 line (its sheet: the parts seen, the forms of its life seen, the stages its cultures showed, its quickest growth and the medium, and the
-years its spores slept before a flask woke them), the explorer's names (`name`: a species `<body>/M<index>`, a strain `.../S<n>`), the
-strains, the made ones read (`watermark`), the samples taken (`stat samples`) and their worlds (`sampled`). The save keeps what runs aboard
-(the kit, the cold store, the flasks, the jars, the sequencer).
+years its spores slept before a flask woke them), the explorer's names (`name`: a species `<body>/M<index>`, a strain `.../S<n>`, a gene
+`G<genesis>/<number>`), the strains and the edited lines (`strain`), what the genes were seen to do (`gene`), the made ones read
+(`watermark`), the samples taken (`stat samples`) and their worlds (`sampled`). The save keeps what runs aboard (the kit, the cold store,
+the flasks, the jars, the sequencer, the gene editor).
 
 **The catalogue** (the state `CATALOGUE`, the guide's THE CATALOGUE; anywhere, as the log): every species with a sheet, the explorer's and a
 friend's lent, by world (a world's head, its name or UNKNOWN and its kind; its species by index, each its name or UNNAMED and its form in
@@ -490,7 +561,8 @@ sequenced and the made; the tree's count of geneses in its words; kin across sta
 the farthest two stars apart). Every count is the explorer's own and agrees with the other screens (the catalogue's rows, the tree's
 leaves); a friend's lent sit on a cyan line of their own. **The data sheet** of a world: `MICROBES  4 SPECIES SEEN, 2 NAMED, 1 SEQUENCED`
 (the catalogue's rows of it), or `SAMPLED, NONE SEEN YET`. **The log**: SAMPLE (each take: its microhabitat, its world, its reading and
-activity; the scoop's), FORM, WOKEN, STRAIN, KIN. **The gallery**: a micrograph is P on the microscope's slide, its caption the slide's.
+activity; the scoop's), FORM, WOKEN, STRAIN, KIN, EDIT, GENE. **The gallery**: a micrograph is P on the microscope's slide, its
+caption the slide's.
 
 **Lending** (the guide's IMPORT AN INBOX FILE): the friend's sheets of the species they saw (their `microbe` lines; never those lent to
 them, nor one the explorer saw, whose own sheet wins; an earlier loan's added to) become `lentmicrobe` lines, their names coming with the

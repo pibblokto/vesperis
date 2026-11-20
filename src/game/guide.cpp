@@ -96,11 +96,16 @@ bool Guide::load(const std::string& path) {
             if (!is.fail() && l >= 0) (key == "jarband" ? microbes : lentMicrobes)[k].jarLayer = l;
         }
         else if (key == "sampled") { std::string k; is >> k; if (!is.fail()) sampled.insert(k); }   // Z-07: a world a sample was taken on
-        else if (key == "strain") {   // Z-05: <key> <parent> <what> <value>
+        else if (key == "strain") {   // Z-05: <key> <parent> <what> <value>; Y-02: an edited line's edits after them
             std::string k; StrainRecord r; is >> k >> r.parent >> r.what >> r.value;
-            if (!is.fail()) strains[k] = r;
+            if (!is.fail()) { std::string e; if (is >> e) r.edits = e; strains[k] = r; }
+        }
+        else if (key == "gene") {   // Y-02: <genesis>/<number> <kind> <how>
+            std::string k; GeneKnown g; is >> k >> g.kind >> g.how;
+            if (!is.fail()) genes[k] = g;
         }
         else if (key == "watermark") { std::string k; is >> k; if (!is.fail()) watermarks.insert(k); }   // Z-06: a made species sequenced
+        else if (key == "treeoff") { std::string k; is >> k; if (!is.fail()) treeOff.insert(k); }   // Y-01: a lab's line off its world's tree
         else if (key == "probe") {
             ProbeRecord r; int lentFlag = 0; std::string storm;
             is >> r.id >> lentFlag >> r.body >> r.gen >> r.saved >> r.launchT >> r.aimLat >> r.aimLon >> r.seed >> r.startX >> r.startY >> r.startZ >> r.headYaw >> r.descYaw >> r.chuteOpen >>
@@ -210,7 +215,10 @@ bool Guide::save(const std::string& path) const {
     for (auto& kv : microbes) if (kv.second.jarLayer >= 0) f << "jarband " << kv.first << " " << kv.second.jarLayer << "\n";   // R-439
     for (auto& kv : lentMicrobes) if (kv.second.jarLayer >= 0) f << "lentjarband " << kv.first << " " << kv.second.jarLayer << "\n";
     for (auto& k : sampled) f << "sampled " << k << "\n";
-    for (auto& kv : strains) f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << "\n";
+    for (auto& kv : strains)
+        f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << (kv.second.edits.empty() ? "" : " " + kv.second.edits) << "\n";
+    for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << " " << kv.second.how << "\n";   // Y-02
+    for (auto& k : treeOff) f << "treeoff " << k << "\n";   // Y-01
     for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
     for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "

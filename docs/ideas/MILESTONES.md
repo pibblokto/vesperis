@@ -45,6 +45,7 @@ bb0e58b), on the user's request of 2026-11-16 (R-425 microorganisms on every wor
 Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-spacious.md`: eleven milestones, Z-01 and Z-02,
 I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03 done 2026-11-16, I-04,
 Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
+Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -329,6 +330,19 @@ cockpit. I-01 changes nothing drawn (the old room proven as the first plan of ro
 | I-02 | The new Stardrifter: three decks, eight spaces, the stair and the arches, the devices in their rooms | XL | 1.5.0, done 2026-11-16 |
 | I-03 | Light, materials and views: lamps, the star's light through the windows, the hull seen outside | L | 1.5.0, done 2026-11-16 |
 | I-04 | Life aboard: the quarters, the garden, the library's shelves, the hangar's capsule, sound by room | L | 1.5.0, done 2026-11-17 |
+
+## Y: the genes (`IDEAS-genes.md`) — no generation change
+
+Planned 2026-11-19 for 1.5.0 (R-443, R-444), after Z-07, on the user's requests talked through first: a gene editor of its own in the
+laboratory (a species' genes cut and changed by hand, then genes from its kin and switches), the edited lines grown in the flasks, and
+the tree of kin by world and by folder. A species' genes are read from what it is: no world moves.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs, A and Backspace (R-444) | M | 1.5.0, done 2026-11-19 |
+| Y-02 | The gene editor: a species' own genes, cut and changed by hand, written into a flask, learned as seen (R-443) | XL | 1.5.0, done 2026-11-20 |
+| Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, what a gene needs (R-443) | L | 1.5.0 |
+| Y-04 | The switches: when a gene is on, in the culture's segments and the drop; the close (R-443) | L | 1.5.0 |
 
 ## Suggested order for 1.2.0
 

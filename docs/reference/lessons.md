@@ -192,6 +192,12 @@ Contents:
   check kept a cell once and refused it after (no cell under it). Track the cell first (Enter), as the explorer would.
 - `newGame` writes a fresh guide at `guidePath`: a probe on a copy of the player's guide that set the path before it read an empty guide
   (B-442's first look at the user's chooser had no worlds in it). Load the player's guide after `newGame`.
+- A flask filled in place starts from `Flask()`: the reset leaves every flask `made`, so one filled over it is never made again (Y-02's
+  first editor frames: no culture in it, the chooser empty). The harness's `putIn` does so.
+- A check's name is a literal (`tools/unitchecks.py` reads the source): a group of laws returns its verdicts (`GeneLaws`) and the unit's
+  function calls `check` on each by name, not a callback that names them.
+- A scripted game's stages run before the stages that make games of their own: the flow's game, run on after the reload's two were
+  made and destroyed, broke its heap within frames (KI-450: Y-02's step, put last, crashed the flow at its end five runs in five).
 
 ## Pixels and the look
 
@@ -412,6 +418,9 @@ Contents:
   `copyAt` gave a field-turner the field's branch alone (it never ran to food); and a crowd's disc sized to hold every cell of a reach
   sent the cells near the spot outward to their places in it (capped at twice the spot's radius). Measure a law on the copies first.
 - A `thread_local` named inside a pool's lambda is each worker's own (empty): bind it to a reference outside (Z-04's crash).
+- A screen that simulates hears the game's own keys: P is a photograph and T the warp anywhere (KI-428), so a screen reads no letter it
+  does not own (the gene editor's letters by the arrows). A said line holds 51 characters (`UW - 12`): Y-02's findings were cut before
+  their verdict; say what was seen, then what it says (`statusNext`).
 - A tree drawn from its leaves' neighbours: sort the leaves so every clade is a run (`treeBefore`), keep each pair of neighbours' join;
   the node of a run is its highest join, its two sides the runs either side of it (a Cartesian tree), drawn by recursion (Z-06's tree).
 - `%.2g` of a number of three figures prints it as an exponent (Z-06: "2.3E+02 MILLION YEARS"): two figures through the rounding to
@@ -420,6 +429,14 @@ Contents:
   pushed the surface page's footer off the frame, found in Z-04); key labels 15;
   a 320 px line 53 (52 with the margins); the warp line owns y 24 on the right. Never truncate a label or a HUD line: drop a part,
   or place it.
+- Rows seen together are told apart by what each draws at its width, not by their strings: told apart over the whole tree, B-443's
+  leaves took colours and motions that ran past the row, and 3 still read alike once cut. Measure the fitted lines; drop the part that
+  tells nothing (an unnamed world) before the one that tells them apart.
+- A row under another says only what the one above does not: Y-01's twigs, indented, cut their species' look before the strain's number
+  (two strains read alike), so a twig says its strain and its move, its species' look on the row above. A hint line is 53 characters:
+  the tree's 60 had been cut at both edges since Z-06.
+- A helper in a file's anonymous namespace loses to a `Game` member of its name inside `Game`'s methods (Y-01's `worldKeyOf(string)`
+  against `Game::worldKeyOf(int)`): name a file's helper apart from every member.
 - Map labels need overlap avoidance (dy 0, ±9, ±18) and priorities (YOU and the cursor first); knots stay dimmer than markers;
   markers on lit maps get a dark rim. The cabin computers' screen colours stay at least 0.3 apart in RGB. The landing map's zoom
   never computes tiles.

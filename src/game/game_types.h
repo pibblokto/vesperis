@@ -28,6 +28,7 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        CATALOGUE,      // Z-07: the guide's catalogue of the species seen (by world, by kin)
                        PLAYER,         // R-431: the ship's player at its deck (its worlds, a world's music)
                        WALL,           // R-428: the quarters' wall of photographs, hung by the explorer
+                       EDITOR,         // Y-02: the laboratory's gene editor (a culture's genes changed by hand, a line written into a flask)
                        COUNT };        // U-06: no state, their count: a new state goes before it (a state's number is saved)
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
@@ -113,11 +114,12 @@ const char* stateName(GameState s);
 // what the explorer faces in the cabin, E using it (`Cabin::facing`; its row in `Game::cabinDevices`): nothing, the GOES console, the flight computer, the
 // star map's, the landing map's and the target's screens, the capsule's cage, the shard decoder, the signal radar, the telescope, the
 // instruments' case, the drone bay; I-04: the bunk (the almanac's rest), the desk (the log), the player's deck; Z-04: the laboratory's microscope;
-// Z-05: its incubator; Z-06: its sequencer and the tree of kin's screen
+// Z-05: its incubator; Z-06: its sequencer and the tree of kin's screen; Y-02: its gene editor (after the rest: its row the last)
 enum CabinFacing { FACE_NOTHING = 0, FACE_GOES, FACE_FLIGHT, FACE_STAR_MAP, FACE_LANDING, FACE_TARGET, FACE_CAGE, FACE_DECODER, FACE_RADAR, FACE_TELESCOPE, FACE_CASE, FACE_BAY,
                    FACE_BUNK, FACE_DESK, FACE_DECK, FACE_MICROSCOPE, FACE_INCUBATOR, FACE_SEQUENCER, FACE_TREE,
                    FACE_BED_1, FACE_BED_2, FACE_BED_3, FACE_BED_4,   // R-429: the garden's beds, the plan's in their order
                    FACE_PRINTS,                                      // R-428: the quarters' wall of photographs
+                   FACE_EDITOR,                                      // Y-02: the laboratory's gene editor
                    FACE_COUNT };
 
 // F-05: what the cabin's bands share, taken once a frame (`drawCabin`): the eye, the light, the screens' flickers, the decoder's wait, and
@@ -165,7 +167,8 @@ constexpr double EXPEDITION_T0 = 3.6e6;   // the game's clock at an expedition's
 constexpr int VISION_MODES = 6, VISION_ACTIVITY = 5;
 
 enum TextKind { TEXT_NONE = 0, TEXT_STAR, TEXT_WORLD, TEXT_NOTE, TEXT_FIND_STAR, TEXT_SECTOR, TEXT_MARK, TEXT_PIECE, TEXT_SKY_STAR, TEXT_STORM, TEXT_PLACE,
-                TEXT_SPECIES, TEXT_STRAIN, TEXT_FOLDER };   // R-433: a folder of the culture collection
+                TEXT_SPECIES, TEXT_STRAIN, TEXT_FOLDER,   // R-433: a folder of the culture collection
+                TEXT_GENE };                              // Y-02: a gene of a genesis (the editor's N)
 
 // M2: the explorer inside the Stardrifter: in a room of the plan (I-01, `ship_plan.h`), where they stand in it and look; I-02: on the
 // stair, the angle walked round it (its height goes by it)

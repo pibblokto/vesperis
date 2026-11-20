@@ -17,18 +17,20 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   `coastSite`; R-434: `life sight`), `modes_life_look` (Z-02: the forms' plates, strips, distinctness; `everyForm`), `modes_lab` (Z-04:
   `lab microscope`, `lab time`; `labVial`, `labDenseVial`; R-438's samples, `findAnswerSamples`), `modes_cultures` (Z-05: `lab cultures`,
   `lab jars`; `labStock`, the lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07:
-  `lab catalogue`),
+  `lab catalogue`; Y-01: `lab tree`'s pages), `modes_genes` (Y-02: `lab genes`, `geneWorlds`, `geneLaws`: the genes' laws the unit holds),
   `modes_drones`, `modes_ship` (I-02: `ship rooms`, `ship walk`; I-03: `ship light`; I-04: `ship life`),
   `modes_game` (the flow, `Flow`), `modes_input`, `modes_tour` (every state toured, `Tour`: its `STOPS`, then the rows),
   `modes_bench` (`Bench`'s stages), `modes_proof`.
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`,
   `civ_peoples`, `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
-- `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`,
-  `unit_life`, `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`,
-  `unit_search` (Z-03; R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's
-  vials by world, R-433's collection), `unit_lab_answers` (the group `experiments`: R-435 to R-438 and B-441, the typed warmths, the slide's
-  answers, the partner), `unit_lab_incubator` (the group `incubator`: B-442 and R-439 to R-442, the rows told apart, N's names, the
-  choosers' tabs, K's copies, the jars' bands); the last, `files` (B-440: the player's files left as the unit found them), in `unit.cpp`.
+- `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`, `unit_life`,
+  `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`, `unit_search` (Z-03;
+  R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's vials by world, R-433's
+  collection), `unit_lab_answers` (the group `experiments`: R-435 to R-438 and B-441, the typed warmths, the slide's answers, the
+  partner), `unit_lab_incubator` (the group `incubator`: B-442, B-443 and R-439 to R-442, the rows and the tree's leaves told apart, N's
+  names, the choosers' tabs, K's copies, the jars' bands), `unit_lab_genes` (the group `genes`, the Y series: Y-01's tree by world and by
+  folder; Y-02's laws, a line written and read everywhere, learning, the editor over a save); the last, `files` (B-440: the player's files
+  left as the unit found them), in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:

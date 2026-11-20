@@ -285,8 +285,8 @@ double shipGlassToward(int room, const Vec3& dir);
 // looking out the outside's one (`cabinDeal`: what shows through the glass is in it, read through the space view's own palette)
 struct ShipBankAsk { int home; RGB col; double near; };
 // Z-05: the homes are keys: a bank's number (its own when the pool has it) or past them (SHIP_LIFE_HOMES on: the lab's cultures' tones,
-// always a free bank)
-constexpr int SHIP_HOMES = 48;
+// always a free bank); Y-02: the gene editor's screen 48
+constexpr int SHIP_HOMES = 49;
 struct ShipBanks {
     int of[SHIP_HOMES];      // a home's dealt bank, -1 dimmed or not asked
     RGB col[SHIP_HOMES];     // a home's colour as asked

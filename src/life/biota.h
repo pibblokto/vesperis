@@ -101,6 +101,7 @@ struct Microbe {
     uint64_t seed = 0;          // what its form, its genome and its strains grow from (Z-02, Z-06)
     double ageYears = 0;        // a fossil's age; a carried spore's time since the impact that carried it
     int fromBody = -1, fromIndex = -1;   // a carried spore: the world of its system it came from, and its species there
+    int flees = -1;             // Y-02: an edited line's light turned away (1) or not (0); -1 its niche's way (R-438: `fleesLight`)
 };
 
 struct Biota {

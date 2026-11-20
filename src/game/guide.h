@@ -101,8 +101,13 @@ struct MicrobeSheet {
     bool answered() const { return answers || movingHi >= movingLo || stillCold > -1e8 || stillHot < 1e8 || stressAct >= 0; }
 };
 // Z-05: a strain arisen in a flask, keyed `<body key>/M<index>/S<n>` (its species' key and its number): the strain it came of (0 the wild),
-// its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines
-struct StrainRecord { int parent = 0, what = 0; double value = 0; };
+// its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines. Y-02: a line the gene
+// editor wrote is one of them (its move SM_EDIT, its number its species' next), its edits after its value (life/genes.h's text: "3=ACCG;8=-")
+struct StrainRecord { int parent = 0, what = 0; double value = 0; std::string edits; };
+// Y-02: what a gene does, as the explorer learned it, keyed `<genesis id, hex>/<its number>` (its genesis's map: every kin's): its kind
+// (life/genes.h's `GeneKind`; -1 none yet: NOTHING SEEN) and how (GENE_SEEN_*). `gene` lines
+enum GeneHow { GENE_SEEN_EDIT = 1, GENE_SEEN_DEATH, GENE_SEEN_STRAIN, GENE_SEEN_NOTHING };
+struct GeneKnown { int kind = -1, how = 0; };
 
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
@@ -123,6 +128,8 @@ struct Guide {
     std::set<std::string> instruments;            // "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; peoples/instruments.h's ids): kept in the cabin's case
     std::map<std::string, MicrobeSheet> microbes; // Z-04: "<body key>/M<index>" of every species seen under the microscope, what of it was seen (`microbe` lines)
     std::map<std::string, StrainRecord> strains;  // Z-05: "<body key>/M<index>/S<n>" of every strain a flask gave (`strain` lines)
+    std::set<std::string> treeOff;                // Y-01: the lab's lines ("<body key>/M<index>/S<n>") taken off their world's tree (`treeoff` lines)
+    std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a genesis was seen to do ("<genesis>/<number>": `gene` lines)
     std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
     // Z-07: the samples taken (`stat samples`) and the worlds they came from (`sampled` lines); a friend's sheets of the species they saw, lent by
     // their inbox file (`lentmicrobe` lines, as `microbe` lines): in the catalogue in cyan, in no statistic; the explorer's own sheet wins

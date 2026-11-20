@@ -131,7 +131,8 @@ void Game::renderIncubatorFlasks() {
                 const std::string one = F.sleptYears[k] > 0 ? "WOKEN AFTER " + yearsWords(F.sleptYears[k]) : std::string("WOKEN");
                 if (textWidth(one.c_str()) <= cw) said.push_back(one); else { said.push_back("WOKEN AFTER"); said.push_back(yearsWords(F.sleptYears[k])); }
             }
-            if (F.who[k].strain > 0) said.push_back(fmt("A STRAIN OF ITS OWN (S%d)", F.who[k].strain));
+            if (F.who[k].strain > 0) said.push_back(lineEdited(flaskStrainKey(F.who[k])) ? "EDITED ON THE GENE EDITOR (" + lineTag(F.who[k]) + ")"
+                                                                                        : "A STRAIN OF ITS OWN (" + lineTag(F.who[k]) + ")");
             for (const std::string& l : said) if (y < UH - 30) { drawText(canvas, cx0, y, fitted(l, "", cw).c_str(), HUD_DIM); y += 9; }
         }
         if (now.one[0].glowing || now.one[1].glowing) { drawText(canvas, cx0, y, "GLOWING: ITS CROWD'S OWN LIGHT", HUD_CYAN); y += 9; }

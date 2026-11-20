@@ -41,13 +41,16 @@ struct Medium {
 };
 
 // what a culture reads of a species: its values (a strain's moves applied), its world's chemistry, its handedness against home's, its body
-// across (who eats whom), whether it went in as spores or cysts
+// across (who eats whom), whether it went in as spores or cysts; Y-02: an edited line's (life/genes.h): whether it lives (a vital gene changed:
+// it does not), the share of its crowd its glow begins at
 struct CultureKind {
     Microbe s;
     int chemistry = CH_WATER;
     bool mirrored = false;
     double bodyUm = 1;
     bool spores = false;
+    bool dead = false;
+    double quorum = 0.03;
 };
 // a world's species as a flask takes it (its body across its form's: `Morph::bodyUm` twice); a dormant one goes in as its spores or cysts
 CultureKind cultureKindOf(const Biota& B, int species, double bodyUm);
@@ -57,8 +60,8 @@ CultureKind cultureKindOf(const Biota& B, int species, double bodyUm);
 Medium mediumOfPlace(const Biota& B, int bodyType, int starClass, const Microhabitat& h, double readingC);
 
 // how a species does in a medium: grows; too cold (it waits); too hot, the wrong salt or the wrong solvent (it dies, or sporulates); no energy it
-// burns, no light for a light-feeder (it starves)
-enum GrowthFit { GF_GROWS = 0, GF_COLD, GF_HOT, GF_SALT, GF_SOLVENT, GF_HUNGRY, GF_DARK, GF_COUNT };
+// burns, no light for a light-feeder (it starves); Y-02: a line whose vital gene was changed (it lyses at once, anywhere)
+enum GrowthFit { GF_GROWS = 0, GF_COLD, GF_HOT, GF_SALT, GF_SOLVENT, GF_HUNGRY, GF_DARK, GF_UNVIABLE, GF_COUNT };
 extern const char* const GROWTH_FIT_NAMES[GF_COUNT];
 // the edge of its range a growing culture is held at (a strain comes of it): its warmth's either side, its salt, a light its pigment takes poorly
 enum CultureEdge { EG_NONE = 0, EG_HOT, EG_COLD, EG_SALT, EG_LIGHT, EG_COUNT };
@@ -72,14 +75,17 @@ struct Growth {
 Growth growthIn(const CultureKind& k, const Medium& m, bool fed = false);
 // its doubling at its best (s), and where it is best: the warmth, the energy, the light
 double bestDoublingS(const CultureKind& k);
+// Y-02: the stage its starved crowd declines into (spores, cysts, the gatherers' fruiting, or dying)
+int cultureDecline(const CultureKind& k);
 
 // what is done to a flask: the culture started (its first species), the medium changed (the incubator's controls: a change of energy, salt or
 // cell is a fresh broth of it), a fresh broth (the culture diluted a hundredfold into new medium: a serial transfer), a second species added,
 // a strain arisen (a species' value moved: `what` and `value`, from `cultureStrain`)
 enum CultureDo { CD_START = 0, CD_MEDIUM, CD_FRESH, CD_ADD, CD_STRAIN, CD_COUNT };
 struct CultureEvent { int kind = CD_START; double t = 0; Medium m; int who = 0, what = 0; double value = 0; };
-// a strain's move: its highest warmth up, its lowest down, its size up (Atkinson 1994's cold rule), its salt's range, its pigment
-enum StrainMove { SM_NONE = 0, SM_HOT, SM_COLD, SM_SIZE, SM_SALT_LO, SM_SALT_HI, SM_PIGMENT, SM_COUNT };
+// a strain's move: its highest warmth up, its lowest down, its size up (Atkinson 1994's cold rule), its salt's range, its pigment; Y-02: a line
+// written by the gene editor (its edits the guide's, life/genes.h: `applyStrain` moves nothing)
+enum StrainMove { SM_NONE = 0, SM_HOT, SM_COLD, SM_SIZE, SM_SALT_LO, SM_SALT_HI, SM_PIGMENT, SM_EDIT, SM_COUNT };
 void applyStrain(CultureKind& k, int what, double value);
 struct FlaskCulture {
     CultureKind kind[2];               // the first put in, the second added (CD_ADD)
@@ -111,6 +117,7 @@ struct CultureSeg {
     int role = 0;                                                 // CYCLE: 0 the prey, 1 the predator
     int fit = GF_GROWS, edge = EG_NONE;                           // how its medium suits it
     bool glows = false, colony = false;
+    double quorum = 0.03;                                         // Y-02: the share of its crowd its glow begins at
     bool capped = false;                                          // FEED: the fed one, held to a share of its feeder
 };
 struct CultureRun {

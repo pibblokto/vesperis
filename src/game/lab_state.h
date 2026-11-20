@@ -9,6 +9,7 @@
 #include "life/cultures.h"
 #include "life/jars.h"
 #include "life/sequences.h"
+#include "life/genes.h"
 #include "ship_plan.h"
 #include "galaxy/system.h"
 #include <map>
@@ -155,6 +156,13 @@ struct Flask {
     std::vector<Morph> forms;
     std::string label[2];
     double sleptYears[2] = {0, 0};      // a vial's spores' sleep: its world's end, its drifter's leaving, the impact that carried them
+    // Y-02: a line the gene editor wrote (its line's record SM_EDIT), compared with its parent as it grows and as its drop is looked at: its
+    // parent's kind and form, its genesis, the genes its edits changed; what of it was told (a GeneKind's bit: said once a flask)
+    bool edited[2] = {false, false};
+    CultureKind parentKind[2]; Morph parentForm[2];
+    uint64_t genesis[2] = {0, 0};
+    std::vector<int> changed[2];
+    uint32_t geneTold[2] = {0, 0};
 };
 // a world in a jar (Winogradsky's column): the vial's world and place it was made from, its line, when it was made
 struct Jar {
@@ -215,18 +223,31 @@ struct SequencerState {
 // first, then by genesis, deep branch, a kin cell's boxes, the system's line, the world, its comb), the common ancestor of each with the one
 // before it (-1 another genesis: a gap), the geneses counted; its rows (a genesis's head, then its leaves) and the one chosen
 struct TreeLeaf {
-    std::string key;              // the guide's (`<body key>/M<index>`; the ship's own "SHIP/<k>")
+    std::string key;              // the guide's (`<body key>/M<index>`; the ship's own "SHIP/<k>"; Y-01, a strain's `.../S<n>`)
     Lineage line;
     std::string name, world;
     int64_t sx = 0, sy = 0, sz = 0; int body = -1;
     bool drifter = false;
+    // Y-01: a lab's line (a strain: its species' lineage and world): its depth under its species (0 standing in its species' place, a
+    // folder's strain kept without it) and the key it hangs under
+    bool lab = false; int depth = 0; std::string parent;
 };
+// Y-01 (R-444): a page of the tree: the ship's own, a world's (its body key), a folder's (its id); its name in the head
+enum TreePageKind { TP_SHIP = 0, TP_WORLD, TP_FOLDER };
+struct TreePage { int kind = TP_SHIP; std::string key; int folder = 0; std::string name; };
 struct TreeState {
-    std::vector<TreeLeaf> leaves;
+    std::vector<TreeLeaf> leaves; // every species read and the ship's own, in the tree's order (the LIFE page's, the sequencer's words)
     std::vector<double> join;     // join[k]: the common ancestor of leaves k-1 and k (Gyr; -1 a new genesis; join[0] -1)
     int geneses = 0;
-    int sel = 0, top = 0;
+    // Y-01: its pages and the one shown: its species and their lines in its rows' order, each species' common ancestor with the one before it
+    // (-1 a genesis's first; a line's -1, its depth saying it is one), what is there and not read; A's chooser of a world's lines taken off
+    std::vector<TreePage> pages; int page = 0;
+    std::vector<TreeLeaf> shown; std::vector<double> shownJoin; int unread = 0;
+    bool picking = false; int pickSel = 0; std::vector<std::string> pickKeys;
+    int sel = 0, top = 0;         // the row chosen on the page shown
     std::map<std::string, Lineage> known;   // the lineages read so far (a sequenced species' world drawn once), by key
+    std::map<std::string, Morph> forms;     // B-443: their forms (a leaf's look), drawn with their lineages
+    std::map<std::string, int> kinds;       // Y-01: their worlds' kinds by body key (a world's page's name where it has none)
 };
 // R-433: the culture collection (game/lab_lists.cpp): every species and strain grown in a flask, kept frozen as labs keep their stocks, without
 // limit and after its flask is emptied: its world's species and its strain (the one it goes in as), the medium it grew in and its world's (AS
@@ -251,11 +272,37 @@ struct KeepPick {
 };
 struct CultureFolder { int id = 0; std::string name; };
 bool sameCulture(const KeptCulture& a, const KeptCulture& b);   // R-440: one species alone, or the same two either way round (lab_lists.cpp)
+// Y-02: the gene editor (game/editor.cpp): a culture on it (a flask's or a kept one, read on the sequencer: its species and line, the medium it
+// grew in and its world's, where it came from), the edits made (each gene once), the gene chosen (its place on the map) and its working part's
+// letter, the writing (on the lab's clock, EDIT_S; the edits written), its chooser (the cultures' rows by folder); made again (not saved): its
+// genes, its genesis's code, its kind and form, the same with its edits, its words
+constexpr double EDIT_S = 120;   // the writing of a line (about two minutes on the lab's clock)
+struct EditorChoice { FlaskSpecies who; Medium medium, asWorld; std::string line, from; bool read = false; };
+struct EditorState {
+    bool on = false;
+    FlaskSpecies who;
+    Medium medium, asWorld;
+    std::string from;
+    std::vector<GeneEdit> edits;
+    int sel = 0;                  // the place chosen on the map (0 .. GENE_PLACES - 1)
+    bool letters = false; int cursor = 0;
+    bool writing = false; double t0 = 0;
+    std::vector<GeneEdit> writ;
+    bool choosing = false; int choiceSel = 0;
+    std::vector<EditorChoice> choices;
+    ChooserPage pages;
+    bool made = false;
+    Genesis genesis; GeneCode code; MicrobeGenes genes, editedGenes;
+    CultureKind kind, editedKind; Morph form, editedForm;
+    std::string name;
+    std::vector<std::pair<std::string, std::string>> said;   // what the genes showed and what it says of them, each waiting its turn on the status
+};
 struct LabState {
     double clock = 0;             // the lab's clock (s): real seconds while the game simulates, saved
     Flask flasks[INCUBATOR_FLASKS];
     std::vector<Jar> jars;
     SequencerState seq;           // Z-06
+    EditorState edit;             // Y-02
     std::vector<KeptCulture> kept;          // R-433
     std::vector<CultureFolder> folders;
 };

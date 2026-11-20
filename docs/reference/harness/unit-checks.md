@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-49 groups, 473 checks in their order; a group's heading gives its file, its function, the render scale it
+50 groups, 484 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -614,13 +614,27 @@ starts at and its count.
 - experiments: the incubator's warmth typed: set as one change, refused past its cell's range, kept by Esc, below zero (R-435)
 - experiments: a culture grown on its partner kept with it: staged and put in together, saved, the pair kept once; alone on the stage its cells live (B-441)
 
-## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 5
+## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 6
 
 - incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)
+- incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)
 - incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)
 - incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too, the jars' one list (R-441)
 - incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
 - incubator: the jars made clear: bands in their places, none over another, an eater that needs air at the air's edge; kept on the sheets; a jar's settling said once (R-439)
+
+## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 10
+
+- genes: the tree by world and by folder: its pages, a world's species and its lines, Backspace and A, a folder's tree (Y-01)
+- genes: a living world of each alphabet and hand (Y-02)
+- genes: deterministic (Y-02)
+- genes: every species unedited is itself: its values, its culture's segments, its slide's kinds (Y-02)
+- genes: each gene's edit and cut as its code says (Y-02)
+- genes: a vital gene's edit kills, a quiet one shows nothing (Y-02)
+- genes: how it lives and its plan's family never move; its values within their limits (Y-02)
+- genes: a line written on the editor into a flask, read as a strain is: its culture, its drop, the sequencer, the collection, its twig (Y-02)
+- genes: what a gene does learned: one change seen, candidates from two, a vital death, nothing seen, a strain read (Y-02)
+- genes: the editor, its lines and their flasks over a save and a load (Y-02)
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

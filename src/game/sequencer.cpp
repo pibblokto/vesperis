@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -19,21 +20,7 @@ uint32_t seqColour(float k = 1) {
     const RGB& c = Game::cabinDevices().row[FACE_SEQUENCER].col;
     return rgb((int)clampd(c.r * k * 255, 0, 255), (int)clampd(c.g * k * 255, 0, 255), (int)clampd(c.b * k * 255, 0, 255));
 }
-// a letter's dye: ours as a sequencer's four (A green, C blue, G amber, T red), Benner's Z and P violet and cyan, hachimoji's S and B rose and white
-uint32_t letterColour(char c, float k = 1) {
-    RGB col;
-    switch (c) {
-        case 'A': col = RGB(0.3f, 0.9f, 0.35f); break;
-        case 'C': col = RGB(0.35f, 0.55f, 1.0f); break;
-        case 'G': col = RGB(1.0f, 0.75f, 0.2f); break;
-        case 'T': col = RGB(1.0f, 0.3f, 0.3f); break;
-        case 'Z': col = RGB(0.75f, 0.45f, 1.0f); break;
-        case 'P': col = RGB(0.3f, 0.9f, 0.95f); break;
-        case 'S': col = RGB(1.0f, 0.5f, 0.75f); break;
-        default: col = RGB(0.9f, 0.9f, 0.9f); break;
-    }
-    return rgb((int)clampd(col.r * k * 255, 0, 255), (int)clampd(col.g * k * 255, 0, 255), (int)clampd(col.b * k * 255, 0, 255));
-}
+uint32_t letterColour(char c, float k = 1) { return letterDye(c, k); }   // (ui.h's, the gene editor's too)
 const char* const LETTER_WORDS[9] = {"", "", "", "", "FOUR", "", "SIX", "", "EIGHT"};
 std::string lettersWords(double n) {
     if (n >= 1e9) return fmt("%.1f BILLION", n / 1e9);
@@ -54,20 +41,33 @@ bool Game::speciesOfKey(const std::string& key, FlaskSpecies& w) const {
     return w.body >= 0 && w.species >= 0;
 }
 
-// a sequenced species' lineage (its world's system drawn once, the made ones marked): kept while the game runs
+// a sequenced species' lineage (its world's system drawn once, the made ones marked): kept while the game runs; B-443: its form with it
 const Lineage& Game::lineageOfKey(const std::string& key) {
     auto it = tree.known.find(key);
     if (it != tree.known.end()) return it->second;
+    kinDraw(key);
+    return tree.known[key];
+}
+const Morph* Game::formOfKey(const std::string& key) {
+    auto it = tree.forms.find(key);
+    if (it == tree.forms.end()) { kinDraw(key); it = tree.forms.find(key); }
+    return it == tree.forms.end() ? nullptr : &it->second;
+}
+void Game::kinDraw(const std::string& key) {
     Lineage L;
     FlaskSpecies w;
     if (speciesOfKey(key, w)) {
         LabSystems systems;
-        if (const StarSystem* S = systems.get(sys, w.sx, w.sy, w.sz)) {
+        const StarSystem* S = systems.get(sys, w.sx, w.sy, w.sz);
+        if (S && w.body < (int)S->bodies.size()) {
             L = lineageOf(*S, w.body, w.species);
             L.made = madeSpeciesOf(*S, w.body).species == w.species;
+            const std::vector<Morph> forms = morphsOf(*S, w.body);
+            if (w.species < (int)forms.size()) tree.forms[key] = forms[w.species];
+            tree.kinds[key.substr(0, key.rfind("/M"))] = S->bodies[w.body].type;   // Y-01: its world's page's name
         }
     }
-    return tree.known[key] = L;
+    tree.known.emplace(key, L);   // (a lineage the sequencer set kept)
 }
 
 // the chooser's rows: each species seen in a cold store's vial (never a fossil or a protocell: no genome to read), then each flask's, then (R-433)
@@ -102,9 +102,9 @@ void Game::sequencerChoices() {
     flaskMadeAll();   // (their forms)
     for (int f = 0; f < INCUBATOR_FLASKS; f++)
         for (int k = 0; k < lab.flasks[f].n && k < (int)lab.flasks[f].forms.size(); k++) {
-            FlaskSpecies w = lab.flasks[f].who[k]; w.strain = w.strainIn = 0;
+            FlaskSpecies w = lab.flasks[f].who[k]; w.strainIn = w.strain;   // Y-02: its line as it is (a strain's, an edited line's genes)
             const std::string key = flaskSpeciesKey(w);
-            if (!cultured.insert("FLASKS|" + key).second) continue;
+            if (!cultured.insert("FLASKS|" + flaskStrainKey(w)).second) continue;
             const auto it = guide.microbes.find(key);
             SequencerChoice c; c.who = w;
             add(c, "FLASKS", fmt("FLASK %d: ", f + 1) + flaskSpeciesWords(w, lab.flasks[f].forms[k], false),
@@ -113,9 +113,9 @@ void Game::sequencerChoices() {
     for (const LabFolder& F : cultureFolders())   // R-433: the collection, its folders in their order (R-440: a pair's two each)
         for (int k : F.id >= 0 ? F.rows : std::vector<int>())
             for (int one = 0; one < (lab.kept[k].paired ? 2 : 1); one++) {
-                FlaskSpecies w = one == 1 ? lab.kept[k].partner : lab.kept[k].who; w.strain = w.strainIn = 0;
+                FlaskSpecies w = one == 1 ? lab.kept[k].partner : lab.kept[k].who; w.strainIn = w.strain;
                 const std::string key = flaskSpeciesKey(w);
-                if (!cultured.insert(keptFolderKey(k) + "|" + key).second) continue;
+                if (!cultured.insert(keptFolderKey(k) + "|" + flaskStrainKey(w)).second) continue;
                 const auto it = guide.microbes.find(key);
                 SequencerChoice c; c.who = w;
                 std::string trait;
@@ -141,7 +141,6 @@ void Game::sequencerMake() {
     Q.species = B.species[Q.who.species];
     Q.line = lineageOf(*S, Q.who.body, Q.who.species);
     Q.letters = genomeLetters(Q.species);
-    Q.name = flaskSpeciesName(Q.who);
     Q.world = upper(nameOfKey(Guide::bodyKey(Q.who.sx, Q.who.sy, Q.who.sz, Q.who.body)));
     const MadeSpecies m = madeSpeciesOf(*S, Q.who.body);
     if (m.species == Q.who.species) {
@@ -150,7 +149,16 @@ void Game::sequencerMake() {
         Shard w;
         if (madeWatermarkOf(*S, Q.who.body, loreQuick(*S, b, BodyGen::make(b), m.people), m, w)) Q.mark = w.text;
     }
-    tree.known[flaskSpeciesKey(Q.who)] = Q.line;
+    const std::string key = flaskSpeciesKey(Q.who);
+    tree.known[key] = Q.line;
+    const std::vector<Morph> forms = morphsOf(*S, Q.who.body);
+    if (Q.who.species < (int)forms.size()) tree.forms[key] = forms[Q.who.species];
+    tree.kinds[key.substr(0, key.rfind("/M"))] = S->bodies[Q.who.body].type;
+    Q.name = treeWords(key);   // B-443: its words on the tree, a look where it has no name
+    if (Q.who.strain > 0) {    // Y-02: a line's name, else its species' words and its number
+        const std::string named = nameOfKey(flaskStrainKey(Q.who));
+        Q.name = named == "UNKNOWN" ? Q.name + " " + lineTag(Q.who) : upper(named);
+    }
     if (Q.told) sequencerResult();   // a reading done before a load: its lines again
 }
 
@@ -161,7 +169,7 @@ double Game::sequencerRead() const {
 
 bool Game::sequencerPut(const FlaskSpecies& w) {
     SequencerState& Q = lab.seq;
-    Q.on = true; Q.who = w; Q.who.strain = Q.who.strainIn = 0; Q.t0 = lab.clock; Q.told = false; Q.result.clear();
+    Q.on = true; Q.who = w; Q.who.strainIn = Q.who.strain; Q.t0 = lab.clock; Q.told = false; Q.result.clear();   // Y-02: a line read as it is
     sequencerMake();
     if (!Q.on) { refuse("ITS WORLD IS NO LONGER THERE"); return false; }
     if (!Q.line.valid) { Q.on = false; refuse("NO GENOME TO READ IN IT", 3); return false; }
@@ -183,12 +191,15 @@ std::string Game::sequencerResult() {
         const double ca = commonAncestorGyr(Q.line, L);
         if (ca >= 0 && (nearest < 0 || ca < nearest)) { nearest = ca; kin = name; kinWorld = world; }
     };
+    std::map<std::string, std::string> words;   // B-443: each species in its words on the tree (its look where it has no name)
+    for (const TreeLeaf& L : treeLeaves(key)) words[L.key] = L.name;
+    if (words.count(key)) Q.name = words[key];
     for (int k = 0; k < SHIP_SPECIES; k++) consider(shipLineage(k), "THE SHIP'S OWN", "");
     for (const auto& kv : guide.microbes) {
         if (!(kv.second.seen & SEEN_KIN) || kv.first == key) continue;
         FlaskSpecies w;
         if (!speciesOfKey(kv.first, w)) continue;
-        consider(lineageOfKey(kv.first), flaskSpeciesName(w), upper(nameOfKey(kv.first.substr(0, kv.first.rfind("/M")))));
+        consider(lineageOfKey(kv.first), words.count(kv.first) ? words[kv.first] : flaskSpeciesName(w), upper(nameOfKey(kv.first.substr(0, kv.first.rfind("/M")))));
     }
     geneses.insert(Q.line.genesis.id);
     Q.result.clear();
@@ -201,11 +212,22 @@ std::string Game::sequencerResult() {
         line = fmt("KIN: %s OF %s, NO COMMON ANCESTOR WITH ANY LIFE READ: LIFE BEGAN AT LEAST %d TIMES", Q.name.c_str(), Q.world.c_str(), (int)geneses.size());
     } else {
         const std::string who = kinWorld.empty() ? kin : kin + " OF " + kinWorld;
-        Q.result.push_back("ITS NEAREST KIN READ: " + who);
+        Q.result.push_back(fitHead("ITS NEAREST KIN READ: " + kin, kinWorld.empty() ? "" : " OF " + kinWorld, UW - 12));   // B-443: its world left out first
         Q.result.push_back("A COMMON ANCESTOR " + yearsWords(std::max(nearest * 1e9, 1.0)) + " AGO");
         line = fmt("KIN: %s OF %s AND %s, A COMMON ANCESTOR %s AGO", Q.name.c_str(), Q.world.c_str(), who.c_str(), yearsWords(std::max(nearest * 1e9, 1.0)).c_str());
     }
     if (Q.artificial) Q.result.push_back("TOO REGULAR TO HAVE EVOLVED: A WATERMARK IN IT FOR THE DECODER");
+    if (Q.who.strain > 0 && lineEdited(flaskStrainKey(Q.who))) {   // Y-02: an edited line: what its genes differ in from its parent's
+        Q.result.push_back(fitText("EDITED: " + lineMoveWords(flaskStrainKey(Q.who)), UW - 12));
+        line += " (" + lineTag(Q.who) + ", EDITED: " + lineMoveWords(flaskStrainKey(Q.who)) + ")";
+    } else if (Q.who.strain > 0) {   // a strain: the one gene its move was in
+        uint64_t genesis = 0;
+        const int p = strainGene(Q.who, genesis);
+        if (p >= 0) {
+            const std::string words = geneWords(genesis, p);
+            Q.result.push_back(fitText(fmt("GENE %d DIFFERS FROM ITS PARENT'S", p + 1) + (words == "NOT KNOWN" || words == "NOTHING SEEN" ? "" : ": " + words), UW - 12));
+        }
+    }
     return line;
 }
 
@@ -220,9 +242,11 @@ void Game::sequencerTick() {
     const std::string key = flaskSpeciesKey(Q.who);
     guide.microbes[key].seen |= SEEN_KIN;
     if (Q.artificial) guide.watermarks.insert(key);
+    const std::string learned = strainReadLearn();   // Y-02: a strain's gene, the one its move was in
     const std::string line = sequencerResult();
     status(fitText(Q.artificial ? std::string("SEQUENCED: MADE, A WATERMARK FOR THE DECODER") : "SEQUENCED: " + Q.result[2], UW - 12), 6);
     logEvent("KIN", line);
+    if (!learned.empty()) { statusNext = fitText(learned, UW - 12); statusNextSecs = 6; guide.save(guidePath); }
     audio.beep = BEEP_LOCK;
 }
 
@@ -264,7 +288,7 @@ void Game::renderSequencer() {
     } else {
         const double read = sequencerRead();
         const char* abc = alphabetOf(Q.line.genesis.letters);
-        drawText(canvas, 6, 16, fitText(Q.name + " OF " + (Q.world == "UNKNOWN" ? std::string("AN UNNAMED WORLD") : Q.world), UW - 70).c_str(), HUD_WHITE);
+        drawText(canvas, 6, 16, fitHead(Q.name, " OF " + (Q.world == "UNKNOWN" ? std::string("AN UNNAMED WORLD") : Q.world), UW - 70).c_str(), HUD_WHITE);
         // the progress and the letters read
         const int bx0 = 6, by0 = 28, bw = UW - 70;
         drawRectRGB(canvas, bx0, by0, bx0 + bw, by0 + 5, seqColour(0.4f));
@@ -350,7 +374,9 @@ void Game::sequencerSave(std::string& lines) const {
     if (!Q.on) return;
     std::ostringstream f;
     f.precision(17);
-    f << "seq " << Q.who.sx << " " << Q.who.sy << " " << Q.who.sz << " " << Q.who.body << " " << Q.who.species << " " << Q.t0 << " " << (Q.told ? 1 : 0) << "\n";
+    f << "seq " << Q.who.sx << " " << Q.who.sy << " " << Q.who.sz << " " << Q.who.body << " " << Q.who.species << " " << Q.t0 << " " << (Q.told ? 1 : 0);
+    if (Q.who.strain > 0) f << " " << Q.who.strain;   // Y-02: a line read
+    f << "\n";
     lines += f.str();
 }
 
@@ -362,6 +388,8 @@ bool Game::sequencerLoad(const std::string& text) {
     SequencerState Q; int told = 0;
     is >> Q.who.sx >> Q.who.sy >> Q.who.sz >> Q.who.body >> Q.who.species >> Q.t0 >> told;
     if (is.fail()) return true;
+    int strain = 0;
+    if (is >> strain && strain > 0) Q.who.strain = Q.who.strainIn = strain;
     Q.on = true; Q.told = told != 0; Q.made = false;
     lab.seq = Q;
     return true;

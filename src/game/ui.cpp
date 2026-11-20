@@ -55,6 +55,11 @@ std::string fitText(const std::string& s, int width) {
     while (!t.empty() && textWidth((t + ".").c_str()) > width) { const size_t sp = t.find_last_of(' '); t = sp == std::string::npos ? t.substr(0, t.size() - 1) : t.substr(0, sp); }
     return t + ".";
 }
+// B-443: a look and its world: the world left out before the look is cut
+std::string fitHead(const std::string& head, const std::string& tail, int width) {
+    const std::string s = head + tail;
+    return textWidth(s.c_str()) <= width ? s : fitText(head, width);
+}
 
 std::string trunc(const std::string& s, size_t n) { return s.size() <= n ? s : s.substr(0, n - 1) + "."; }
 std::vector<std::string> wrapText(const std::string& s, size_t width) {
@@ -93,4 +98,19 @@ const char* compassName(double azRad) {
     static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     int i = (int)std::floor(wrap2pi(azRad) / TAU * 8 + 0.5) & 7;
     return names[i];
+}
+
+uint32_t letterDye(char c, float k) {
+    RGB col;
+    switch (c) {
+        case 'A': col = RGB(0.3f, 0.9f, 0.35f); break;
+        case 'C': col = RGB(0.35f, 0.55f, 1.0f); break;
+        case 'G': col = RGB(1.0f, 0.75f, 0.2f); break;
+        case 'T': col = RGB(1.0f, 0.3f, 0.3f); break;
+        case 'Z': col = RGB(0.75f, 0.45f, 1.0f); break;
+        case 'P': col = RGB(0.3f, 0.9f, 0.95f); break;
+        case 'S': col = RGB(1.0f, 0.5f, 0.75f); break;
+        default: col = RGB(0.9f, 0.9f, 0.9f); break;
+    }
+    return rgb((int)clampd(col.r * k * 255, 0, 255), (int)clampd(col.g * k * 255, 0, 255), (int)clampd(col.b * k * 255, 0, 255));
 }

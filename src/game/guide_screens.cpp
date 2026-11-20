@@ -173,6 +173,7 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             guide.names[textSpeciesKey] = text; guide.save(guidePath);
             for (int i = 0; i < INCUBATOR_FLASKS; i++) lab.flasks[i].made = false;   // the flasks' lines say its name
             flaskMadeAll();
+            lab.seq.made = false;   // B-443: the sequencer's title and lines too
             status(fmt("THE SPECIES IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A SPECIES %s", text.c_str()));
             break;
@@ -184,6 +185,13 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             flaskMadeAll();
             status(fmt("THE STRAIN IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A STRAIN %s", text.c_str()));
+            break;
+        }
+        case TEXT_GENE: {   // Y-02: a gene of a genesis, on the gene editor (every kin's)
+            if (text.empty() || textGeneKey.empty()) return;
+            guide.names[textGeneKey] = text; guide.save(guidePath);
+            status(fmt("THE GENE IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A GENE %s", text.c_str()));
             break;
         }
         case TEXT_FOLDER: {   // R-433: a folder of the culture collection made (and chosen on the microscope's cultures) or renamed
@@ -346,9 +354,15 @@ void Game::renderStatsLife() {
     if (stages && !stagesSeenWords(stages, false).empty()) sub("STAGES SEEN: " + stagesSeenWords(stages, false));
     line(fmt("WOKEN FROM SPORES     %d", woken), HUD_GREEN);
     if (slept > 0) sub("THE LONGEST AFTER " + yearsWords(slept));
-    int strainsNamed = 0;
-    for (const auto& kv : guide.strains) if (guide.names.count(kv.first)) strainsNamed++;
-    line(fmt("STRAINS               %d, %d NAMED", (int)guide.strains.size(), strainsNamed), HUD_GREEN);
+    int strains = 0, strainsNamed = 0, edited = 0, genesKnown = 0;   // Y-02: the edited lines apart from the strains, the genes known
+    for (const auto& kv : guide.strains) {
+        if (kv.second.what == SM_EDIT) { edited++; continue; }
+        strains++;
+        if (guide.names.count(kv.first)) strainsNamed++;
+    }
+    for (const auto& kv : guide.genes) genesKnown += kv.second.kind >= 0;
+    line(fmt("STRAINS               %d, %d NAMED", strains, strainsNamed), HUD_GREEN);
+    if (edited || genesKnown) line(fmt("LINES EDITED          %d, ", edited) + plural(genesKnown, "GENE KNOWN", "GENES KNOWN"), HUD_GREEN);
     line(fmt("SEQUENCED             %d", read) + (guide.watermarks.empty() ? std::string() : fmt(", %d MADE BY A PEOPLE", (int)guide.watermarks.size())), HUD_GREEN);
     if (read > 0) sub(tree.geneses == 1 ? std::string("LIFE BEGAN AT LEAST ONCE") : fmt("LIFE BEGAN AT LEAST %d TIMES", tree.geneses));
     {   // kin across stars: the species read whose kin were read at another star (the tree's leaves on worlds), the farthest two stars apart

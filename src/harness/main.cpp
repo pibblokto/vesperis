@@ -160,14 +160,17 @@ static const Mode MODES[] = {
                 "Z-07: `auto`, auto-explore's water outing on a felisian world and at a terraced spring, run till it takes a sample (its steps, the vial's line). "
                 "R-434: `sight`, the activity vision played on a superhabitable world's shelf (on, from the buggy, a vial where it shows strong, off)",
                 "modes_life.cpp", runLife},
-        {"lab", "life", "microscope | time | cultures | jars | tree | kin [r] | catalogue", "Z-04: the microscope opened on samples of each stage and chemistry: every way of seeing at every zoom, a cell tracked, "
+        {"lab", "life", "microscope | time | cultures | jars | tree | kin [r] | catalogue | genes", "Z-04: the microscope opened on samples of each stage and chemistry: every way of seeing at every zoom, a cell tracked, "
                 "the light's crowd, the magnet's turn, the warm stage, the food, a fossil's section; the mounts and the sheets. `time`: a dense slide's frame "
                 "timed by its parts. Z-05 (modes_cultures.cpp): `cultures`, twenty species an hour in four media (their curves, their stages' times), the pairs "
                 "(the cycles' periods, the winners, the mirrored), the incubator's screen; `jars`, worlds' jars at 0, 5, 10 and 20 minutes and their shelf. "
                 "Z-06 (modes_tree.cpp): `tree`, a sequenced set (the flow's world's, home's, a kin star's, its own genesis's, a mirrored one, a drifter's and "
                 "the star it left, a made one on the sequencer), the tree printed and drawn, the decoder's watermark, the kin near home; `kin`, those alone. "
                 "Z-07: `catalogue`, a guide as the lab fills it and a friend's file lent: the catalogue by world (the lent in cyan) and by kin, a sheet's form "
-                "live, a name given from it; the statistics' LIFE page, the data sheet's microbes, a micrograph in the gallery",
+                "live, a name given from it; the statistics' LIFE page, the data sheet's microbes, a micrograph in the gallery. Y-02 (modes_genes.cpp): `genes`, "
+                "a world's species' genes for each alphabet and hand (each genesis's map and code), every gene's edit and cut on a species (its values before "
+                "and after), the gene editor's screen (`lab_genes.png`: its chooser, its map, a known gene's letters changed, its line writing and in its flask), "
+                "the genes' laws",
                 "modes_lab.cpp", runLab},
         {"signals", "radio", "[<sx> <sy> <sz>] [reach] [xG] | wav", "C-07: the far signals heard from a sector; their WAVs", "modes_signals.cpp", runSignals},
         {"voice", "radio", "<sx> <sz> <body> [index] [wav]", "C-05: a world's voice, a record spoken", "modes_signals.cpp", runVoice},

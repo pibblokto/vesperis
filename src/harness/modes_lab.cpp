@@ -534,6 +534,7 @@ int runLab(int argc, char** argv) {
     if (sub == "tree") return labTree();
     if (sub == "kin") return treeKin(argc > 3 ? atoi(argv[3]) : 12);
     if (sub == "catalogue") return labCatalogue();   // Z-07
-    printf("lab microscope | time | cultures | jars | tree | kin [r] | catalogue\n");
+    if (sub == "genes") return labGenes();           // Y-02
+    printf("lab microscope | time | cultures | jars | tree | kin [r] | catalogue | genes\n");
     return 2;
 }

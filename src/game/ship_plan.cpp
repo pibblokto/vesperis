@@ -197,6 +197,7 @@ constexpr ShipView VIEWS[] = {
     {"THE SEQUENCER", ROOM_LAB, {9.05, 2.3, 0.0, -0.36}},   // Z-06: the sequencer on the bow bench; the tree of kin's screen on the port wall
     {"THE TREE OF KIN", ROOM_LAB, {8.3, 2.85, -PI / 2, -0.02}},
     {"THE STERN BENCH", ROOM_LAB, {10.6, 0.6, 2.9, -0.2}},
+    {"THE GENE EDITOR", ROOM_LAB, {11.55, 2.3, 0.0, -0.36}},   // Y-02: the gene editor on the bow bench past the sequencer
 };
 
 template <class Row, int N> constexpr ShipRows<Row> planRows(const Row (&rows)[N]) { return {rows, N}; }
@@ -390,6 +391,13 @@ std::vector<ShipFixture> makeFixtures() {
         const ShipFixture wall = fin(boxAt(ROOM_LAB, FACE_TREE, 6.34, 2.85, PI / 2, 0.48, 0.04, af + 1.15, 0.9, AGAINST, {0.9, 0.8, 0.7, 0.7}, true), FIN_PANEL);
         v.push_back(wall); v.push_back(screenOn(wall, 0.06, 0.84, 0.05, 1));   // its screen
         v.push_back(kindOf(boxAt(ROOM_LAB, FACE_NOTHING, 6.397, 2.85, PI / 2, 0.43, 0.005, af + 1.21, 0.78, {}, {}, true), FX_TREE));   // the tree's lines over it
+    }
+    {   // Y-02: the gene editor on the bow bench past the sequencer, under the jars' shelf (its case, its stage's lid, its screen beside it)
+        const double top = af + 0.92;
+        v.push_back(fin(boxAt(ROOM_LAB, FACE_EDITOR, 11.3, 3.62, PI, 0.32, 0.2, top, 0.2, CONSOLE, CONSOLE_SHADE, true), FIN_PANEL));
+        v.push_back(fin(boxAt(ROOM_LAB, FACE_EDITOR, 11.3, 3.6, PI, 0.12, 0.1, top + 0.2, 0.06, CONSOLE, {0.95, 0.85, 0.75, 0.75, 0.8}, true), FIN_BRASS));   // its stage
+        const ShipFixture scr = fin(boxAt(ROOM_LAB, FACE_EDITOR, 11.95, 3.76, PI, 0.26, 0.05, top + 0.04, 0.42, CONSOLE, CONSOLE_SHADE, true), FIN_PANEL);
+        v.push_back(scr); v.push_back(screenOn(scr, 0.06, 0.38, 0.03, 1));   // its map
     }
     v.push_back(kindOf(boxAt(ROOM_LAB, FACE_NOTHING, 6.68, -2.9, PI / 2, 0.55, 0.38, af, 2.3, AGAINST, {0.9, 0.85, 0.65, 0.65}), FX_STORE, 0, 8));
     {

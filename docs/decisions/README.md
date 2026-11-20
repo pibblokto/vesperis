@@ -18,6 +18,8 @@ changing anything there.
 - `rules-life-cultures.md`: the incubator (its flasks, their names and choosers), the jars and their bands, the culture collection (kept
   by itself and by hand).
 - `rules-life-record.md`: the sequencer and the tree; the record (the catalogue, the counts).
+- `rules-life-genes.md`: the genes (a genesis's map and code, a species' genes read from what it is, an edit's values, a cut), the gene
+  editor and its lines, learning what a gene does.
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and the screens, controls and the frame, auto-explore.

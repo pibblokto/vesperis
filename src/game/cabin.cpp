@@ -118,6 +118,12 @@ const RowList<CabinDevice>& Game::cabinDevices() {
         // R-428: the quarters' wall of photographs, faced from the room; E hangs them
         {FACE_PRINTS, ROOM_QUARTERS, -3.15, -6.35, 2.4, {-3.15, -8.1, 0.0, 0.05}, "PHOTOGRAPHS - E TO HANG THEM", "THE PHOTOGRAPHS", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
          [](Game& g) { g.openScreen(GameState::WALL); }},
+        // Y-02: the gene editor on the bow bench past the sequencer, under the jars' shelf: a blue-violet (a home past the banks; 0.43 from
+        // the nearest, the star map's)
+        {FACE_EDITOR, ROOM_LAB, 11.55, 3.35, 1.5, {11.55, 2.2, 0.0, -0.45}, "GENE EDITOR - E TO EDIT A CULTURE'S GENES", "THE GENE EDITOR", 48, RGB(0.25f, 0.15f, 0.95f),
+         [](Game& g) { g.openScreen(GameState::EDITOR); },
+         [](const Game& g, const CabinFrame& f) {   // brighter as it writes, pulsing
+             return (g.lab.edit.writing ? 42 + 8 * std::sin(g.realTime * 4) : (g.cabin.facing == FACE_EDITOR ? 50 : 30)) * f.flick; }},
     };
     static constexpr RowList<CabinDevice> LIST = rowsOf(ROWS);
     static_assert(devicesWhole(LIST), "a device a row, in CabinFacing's order, with its lines and its act");

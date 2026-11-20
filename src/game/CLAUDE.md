@@ -24,14 +24,19 @@ cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by 
   `cabin_life`'s `drawIncubator` and `drawJars`; the microscope's list takes the flasks (a drop of a culture on the stage). Z-06: `sequencer`
   (the state `SEQUENCER`: a species read in SEQUENCE_S on the lab's clock, its end told as the clock reaches it (`sequencerTick` in
   `updateLab`), the sheet's kin, the log's KIN, a made species' watermark to the decoder; its `seq` line) and `tree_screen` (the state `TREE`:
-  every species read and the ship's own by kinship, Enter a kin's star the remote target); `cabin_life`'s `drawTreeWall`; the decoder's
+  Y-01, a tree a page: the ship's own, each world with a species read, each folder holding a culture; the lab's lines as twigs, Backspace
+  and A (`treeoff`); Enter a kin's star the remote target); `cabin_life`'s `drawTreeWall`; the decoder's
   watermarks (`shardWatermarkAdd`). Z-07: `catalogue` (the state `CATALOGUE`, the guide's row: every species with a sheet and a friend's
   lent, by world or by kin, a sheet beside its form drawn live; `guide_screens`' LIFE page on the statistics (`renderStatsLife`)).
   `lab_lists` (R-432, R-433): the lists in folders (the vials a folder a world, the cultures' folders, the choosers' folders and their
   keys and rows; R-441, the choosers' two tabs, `chooserTabs`; B-442, rows alike told apart, `apartRows`) and the culture collection (every
   species and strain a flask grows, kept: `keepCulture` from `updateLab`, B-441's pair with it once; R-440, kept by hand: `keepOpen`,
   `keepKeys`, `keptAdd`, a copy in a folder from the microscope's K or a flask's, the lists' C; its folders; a kept culture on the stage;
-  its `keptfolder` and `kept` lines through the incubator's)
+  its `keptfolder` and `kept` lines through the incubator's). Y-02: `editor` (the state `EDITOR`, E at the bow bench past the sequencer:
+  a culture read put on, its genes on its genesis's map, a gene's letters changed or the gene cut, its line written in EDIT_S on the lab's
+  clock into an empty flask (`editorTick` in `updateLab`); the lines' words (`lineTag`: S a strain, E an edited line; `lineMoveWords`); what
+  a gene does learned (`geneSeen` from `flaskLearn`, `scopeLearn`, `scopeAnswerLearn`; `strainReadLearn` from the sequencer); its
+  `editor` lines)
 - The ship: `ship_plan` (I-01's rows; I-02's three decks and eight spaces: rooms, ways (the arches, the stair's landings, the lift),
   windows, fixtures, lamps and views; the mesh built once from them; the walk and the stair; the routes; the sight; the banks'
   dealing; I-03's finishes, the lamps' light on the vertices, the sun's patches, the hull outside; I-04's explorer's things),
@@ -77,15 +82,26 @@ cabin, chart_draw, game.h, shards_screen; ship_plan is 125 KB, refused whole by 
   explorer's place kept.
 - A place in the ship is the plan's (a view, a device's stand, a fixture's row), never a number in code; drawing moved into the
   rows keeps each expression's shape (lessons.md, "Proving and timing").
-- A species with no name is its look in the lab's rows (`flaskSpeciesWords`, B-442), never UNNAMED alone: two of a vial read alike else.
+- A species with no name is its look in the lab's rows (`flaskSpeciesWords`, B-442), never UNNAMED alone: two of a vial read alike else;
+  on the tree too (`treeLeaves`, B-443), the sequencer saying a species in the tree's words (`treeWords`).
   K's chooser of folders (`keep`) is the game's, over the microscope's slide or the incubator's page, each closing it on entering.
+- The tree's `leaves` are every species read (the LIFE page's geneses, the sequencer's words); a page's rows are `shown` (`treePage`),
+  made again whenever the page or what is on it changes (a line taken off or put back, a folder's culture). Y-01.
 - The incubator's lines are its state row's (`save`, `load`, `reset`); a flask's culture is made again from its species and events
   (`flaskMake`: its kinds read from their worlds) whenever they change or after a load, never saved. The lab's tones (the flasks', the
   jars') are homes past the banks (32-47): ask them only for what is drawn, in front of the eye, after the screens near them.
-- The sequencer's line is its state row's (`seq`); what is on it is made again (`sequencerMake`: its lineage, a made one's watermark), never
-  saved. A sequenced species' lineage is kept by key (`tree.known`, `lineageOfKey`): its world drawn once a game. A made species' watermark
-  sits after its people's records in the decoder (`ShardWorld::watermark`): the language's count is `recordsHeld()` (it teaches no word), the
-  list's `shardHeld.size()`; the history page never reads it (it tells no event).
+- An edited line is a strain of its species (its record SM_EDIT and its edits): every reader of strains reads it, `flaskKind` applying its
+  lines from the wild one in their order (a strain's move, an edit's genes: `applyEdits` on the genes at that point). Its parent's kind and
+  form are made with its flask (`Flask::parentKind`), what it is compared with as it grows and its drop is looked at; a strain arisen in its
+  flask since ends the comparison. Its answers on the slide go to no sheet (its species' would take a line's behaviour). Y-02.
+- The editor reads no letter key: P (a photograph) and T (the warp) are the game's own in a screen that simulates. A said line is 51
+  characters at most (`UW - 12`): the genes' findings wait their turn (`EditorState::said`, `geneSay` in `updateLab`), what was seen
+  then what it says (`statusNext`), each logged at once (GENE). Y-02.
+- The sequencer's line is its state row's (`seq`; Y-02: a line's number after it); what is on it is made again (`sequencerMake`: its
+  lineage, a made one's watermark), never saved. A sequenced species' lineage and form are kept by key (`tree.known`, `tree.forms`:
+  `lineageOfKey`, `formOfKey`): its world drawn once a game for both (`kinDraw`, B-443). A made species' watermark sits after its people's
+  records in the decoder (`ShardWorld::watermark`): the language's count is `recordsHeld()` (it teaches no word), the list's
+  `shardHeld.size()`; the history page never reads it (it tells no event).
 - The catalogue draws a sheet's form in a framebuffer of its own (`cat.fb`: every bank its way's), its middle copied into the canvas; it
   reads the sheets through `catalogueSheet` (the explorer's, else a friend's lent: `guide.lentMicrobes`, cyan, in no count) and a sheet's
   lines through `sheetLinesOf` (the microscope's). Every count of the living small is the explorer's own and the other screens' (the LIFE

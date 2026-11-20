@@ -13,8 +13,8 @@
 #include <map>
 #include <sstream>
 
-namespace {
-std::string moveWords(int what, double value) {
+// a strain's move in words (its line said, the tree's twig)
+std::string Game::strainMoveWords(int what, double value) {
     switch (what) {
         case SM_HOT: return fmt("IT GROWS TO %.0f C", value);
         case SM_COLD: return fmt("IT GROWS DOWN TO %.0f C", value);
@@ -25,7 +25,6 @@ std::string moveWords(int what, double value) {
         default: return "A STRAIN";
     }
 }
-}   // namespace
 
 std::string Game::flaskSpeciesKey(const FlaskSpecies& w) const { return Guide::bodyKey(w.sx, w.sy, w.sz, w.body) + "/M" + std::to_string(w.species); }
 std::string Game::flaskStrainKey(const FlaskSpecies& w) const { return w.strain > 0 ? flaskSpeciesKey(w) + "/S" + std::to_string(w.strain) : flaskSpeciesKey(w); }
@@ -34,19 +33,20 @@ std::string Game::flaskSpeciesName(const FlaskSpecies& w) const {
     const std::string sp = nameOfKey(flaskSpeciesKey(w)), species = sp == "UNKNOWN" ? "UNNAMED" : upper(sp);
     if (w.strain <= 0) return species;
     const std::string st = nameOfKey(flaskStrainKey(w));
-    return st == "UNKNOWN" ? fmt("%s S%d", species.c_str(), w.strain) : upper(st);
+    return st == "UNKNOWN" ? species + " " + lineTag(w) : upper(st);
 }
 // B-442: its words in the lab's rows: its name (or its strain's), else what it looks like ("A ROD"; sized, "A ROD, 2.6 UM BY 0.5 UM") and an
 // unnamed strain's number: a vial's unnamed species told apart
 std::string Game::flaskSpeciesWords(const FlaskSpecies& w, const Morph& form, bool sized) const {
     const std::string n = flaskSpeciesName(w);
     if (n.compare(0, 7, "UNNAMED") != 0) return n;
-    return (sized ? formWordsOf(form, CF_CELL) : std::string(planWords(form.plan))) + (w.strain > 0 ? fmt(" S%d", w.strain) : std::string());
+    return (sized ? formWordsOf(form, CF_CELL) : std::string(planWords(form.plan))) + (w.strain > 0 ? " " + lineTag(w) : std::string());
 }
 
 // what a flask's species is: its world's (its values, its form), the strain it went in as (its moves from the wild one), and a vial's spores'
-// sleep (its world's end, its drifter's leaving, the impact that carried them)
-bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept) const {
+// sleep (its world's end, its drifter's leaving, the impact that carried them); Y-02: its lines' genes (the wild ones its species', a strain's
+// its move's gene stepped, an edited line's its edits: `applyEdits`)
+bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes) const {
     LabSystems systems;
     const StarSystem* S = systems.get(sys, w.sx, w.sy, w.sz);
     if (!S || w.body < 0 || w.body >= (int)S->bodies.size()) return false;
@@ -58,18 +58,27 @@ bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, doub
     kind = cultureKindOf(B, w.species, 2 * form.bodyUm());
     const Microbe& s = B.species[w.species];
     slept = s.state != SS_DORMANT ? 0 : (s.fromBody >= 0 ? s.ageYears : B.dormantYears);
-    std::vector<StrainRecord> chain;   // its strain's moves, the wild one's first
+    std::vector<std::pair<int, StrainRecord>> chain;   // its lines' records (a strain's move, an edited line's edits), the wild one's first
+    bool edits = false;
     for (int n = w.strainIn, guard = 0; n > 0 && guard < 64; guard++) {
         const auto it = guide.strains.find(flaskSpeciesKey(w) + "/S" + std::to_string(n));
         if (it == guide.strains.end()) break;
-        chain.push_back(it->second);
+        chain.push_back({n, it->second});
+        edits = edits || it->second.what == SM_EDIT;
         n = it->second.parent;
     }
+    MicrobeGenes G;
+    GeneCode code;
+    if (genes || edits) { G = microbeGenesOf(s, form, B.genesis); code = geneCodeOf(B.genesis); }
     for (auto r = chain.rbegin(); r != chain.rend(); ++r) {
-        applyStrain(kind, r->what, r->value);
-        if (r->what == SM_SIZE) { form.lengthUm *= r->value; form.widthUm *= r->value; }
-        if (r->what == SM_PIGMENT) form.pigment = (int)r->value;
+        const StrainRecord& R = r->second;
+        if (R.what == SM_EDIT) { applyEdits(kind, form, G, geneEditsOf(R.edits)); continue; }
+        if (G.valid) strainGenes(G, code, kind, R.what, R.value, fnv1a(flaskSpeciesKey(w) + "/S" + std::to_string(r->first)));
+        applyStrain(kind, R.what, R.value);
+        if (R.what == SM_SIZE) { form.lengthUm *= R.value; form.widthUm *= R.value; }
+        if (R.what == SM_PIGMENT) form.pigment = (int)R.value;
     }
+    if (genes) *genes = G;
     return true;
 }
 
@@ -88,6 +97,18 @@ void Game::flaskMake(int i) {
         }
         F.culture.kind[k] = kind; F.forms.push_back(form); F.sleptYears[k] = slept;
         F.label[k] = flaskSpeciesWords(F.who[k], form, false);
+        // Y-02: an edited line, compared with its parent as it grows and is looked at (a strain arisen in the flask since ends it)
+        F.edited[k] = false; F.changed[k].clear(); F.genesis[k] = 0;
+        const auto rec = guide.strains.find(flaskSpeciesKey(F.who[k]) + "/S" + std::to_string(F.who[k].strainIn));
+        if (F.who[k].strainIn > 0 && F.who[k].strain == F.who[k].strainIn && rec != guide.strains.end() && rec->second.what == SM_EDIT) {
+            FlaskSpecies p = F.who[k]; p.strain = p.strainIn = rec->second.parent;
+            MicrobeGenes pg;
+            double ps = 0;
+            if (flaskKind(p, F.parentKind[k], F.parentForm[k], ps, &pg)) {
+                F.edited[k] = true; F.genesis[k] = pg.genesis.id;
+                for (const GeneEdit& e : geneEditsOf(rec->second.edits)) if (pg.at(e.place)) F.changed[k].push_back(e.place);
+            }
+        }
     }
     F.culture.events = F.events;
     if (F.n > 0) F.run = runCulture(F.culture);
@@ -106,6 +127,7 @@ CultureNow Game::flaskNow(int i) const {
 void Game::updateLab(double realDt) {
     lab.clock += realDt;
     sequencerTick();   // Z-06: the sequencer's reading, its end as the clock reaches it
+    editorTick();      // Y-02: the gene editor's writing, its line into a flask as the clock reaches its end
     for (int j = 0; j < (int)lab.jars.size(); j++) {   // R-439: a jar settled, said as the clock reaches it
         Jar& J = lab.jars[j];
         if (J.told || lab.clock - J.t0 < JAR_SETTLED_S) continue;
@@ -132,13 +154,14 @@ void Game::updateLab(double realDt) {
             F.who[k].strain = n;
             F.told &= ~(FT_KEPT << k);   // R-433: the strain kept in its turn, as it grows
             flaskMake(i);
-            const std::string line = fmt("A STRAIN OF %s IN FLASK %d: %s", was.c_str(), i + 1, moveWords(r.what, r.value).c_str());
+            const std::string line = fmt("A STRAIN OF %s IN FLASK %d: %s", was.c_str(), i + 1, strainMoveWords(r.what, r.value).c_str());
             status(line + " - N NAMES IT", 6);
             logEvent("STRAIN", line);
             guide.save(guidePath);
         }
         for (int k = 0; k < F.n; k++)   // R-433: grown (its curve past its lag): kept in the collection; B-441: with what fed it
             if (!(F.told & (FT_KEPT << k)) && (cultureStagesBy(F.run, k, lab.clock) & LC_GROWING)) keepCulture(i, k);
+        flaskLearn(i);   // Y-02: an edited line against its parent
         if (!(F.told & FT_WOKEN)) for (int k = 0; k < F.n; k++) {
             if (F.run.wokeT[k] < 0 || F.run.wokeT[k] > lab.clock) continue;
             F.told |= FT_WOKEN;
@@ -157,6 +180,7 @@ void Game::updateLab(double realDt) {
             for (int k = 0; k < now.n; k++) if (now.one[k].glowing) { F.told |= FT_GLOW; status(fmt("FLASK %d GLOWS: %s, ITS CROWD'S OWN LIGHT", i + 1, F.label[k].c_str()), 5); break; }
         }
     }
+    geneSay();   // Y-02: what the genes showed, said in its turn
 }
 
 // what the incubator's screen shows of a flask goes to its species' sheets: the stages its curve has passed, the quickest it was seen to grow
@@ -546,7 +570,7 @@ void Game::incubatorName() {
         incub.pickKeys.push_back(flaskSpeciesKey(w)); incub.pickStrain.push_back(0);
         if (F.who[k].strain <= 0) continue;
         const std::string st = nameOfKey(flaskStrainKey(F.who[k]));
-        incub.pickLines.push_back(fmt("ITS STRAIN S%d", F.who[k].strain) + (st == "UNKNOWN" ? std::string() : ": " + upper(st)));
+        incub.pickLines.push_back((lineEdited(flaskStrainKey(F.who[k])) ? "ITS LINE " : "ITS STRAIN ") + lineTag(F.who[k]) + (st == "UNKNOWN" ? std::string() : ": " + upper(st)));
         incub.pickKeys.push_back(flaskStrainKey(F.who[k])); incub.pickStrain.push_back(1);
     }
     if (incub.pickKeys.size() == 1) { incubatorNameKey(incub.pickKeys[0], incub.pickStrain[0]); return; }

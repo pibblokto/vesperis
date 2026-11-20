@@ -313,16 +313,52 @@ int labTree() {
                (L.name + ", " + L.world).c_str(), why.c_str(), L.line.clade, L.line.leaf, L.line.leaves, L.line.made ? ", MADE" : "", L.drifter ? ", A DRIFTER'S" : "",
                nk < 0 ? "none" : fmt("%s (%s ago)", T.leaves[nk].key.c_str(), yearsWords(std::max(1.0, ny * 1e9)).c_str()).c_str());
     }
+    // Y-01: the lab's lines and a folder: the flow's world's first pick given two strains (the second of the first), a folder holding a kin
+    // star's pick, a mirrored life's and that second strain kept alone; every page printed, five drawn
+    std::string lined, drifterKey;
+    if (!picks.empty()) {
+        const Pick& p = picks[0];
+        lined = Guide::bodyKey(p.sys.star.sx, p.sys.star.sy, p.sys.star.sz, p.body) + "/M" + std::to_string(p.species);
+        StrainRecord s1, s2;
+        s1.what = SM_HOT; s1.value = std::round(lifeOf(p.sys)->bodies[p.body].species[p.species].tMax + 3);
+        s2.parent = 1; s2.what = SM_SIZE; s2.value = 1.25;
+        g.guide.strains[lined + "/S1"] = s1; g.guide.strains[lined + "/S2"] = s2;
+        CultureFolder f; f.id = 1; f.name = "THE PICKS";
+        g.testLab().folders.push_back(f);
+        auto keep = [&](const Pick& q, int strain) {
+            KeptCulture K; K.folder = 1;
+            K.who.sx = q.sys.star.sx; K.who.sy = q.sys.star.sy; K.who.sz = q.sys.star.sz; K.who.body = q.body; K.who.species = q.species;
+            K.who.strain = K.who.strainIn = strain;
+            g.testLab().kept.push_back(K);
+        };
+        for (const Pick& q : picks) if (q.why == "a kin star's" || q.why == "a mirrored life") keep(q, 0);
+        keep(p, 2);
+    }
+    for (const TreeLeaf& L : g.testTree().leaves) if (L.drifter && drifterKey.empty()) drifterKey = L.key;
+    g.closeScreen(); g.openScreen(GameState::TREE);
+    printf("\nits pages (Y-01): %zu\n", T.pages.size());
+    for (size_t p = 0; p < T.pages.size(); p++) {
+        g.testTreePage((int)p);
+        printf("  %zu. %s: %zu rows, %d not read, its years %s\n", p + 1, T.pages[p].name.c_str(), T.shown.size(), T.unread,
+               yearsWords(std::max(1.0, g.testTreeYears() * 1e9)).c_str());
+        for (const TreeLeaf& L : T.shown)
+            printf("     %*s%s%s\n", 3 * L.depth, "", TestGame::testTreeLine(L, T.pages[p].kind != TP_WORLD).c_str(), L.lab ? "  (a lab's line)" : "");
+    }
     std::vector<std::pair<std::vector<uint32_t>, std::string>> treeShots;
-    std::vector<std::pair<int, std::string>> at = {{0, "THE SHIP'S OWN AT ITS ROOT"}};
-    for (size_t k = 0; k < T.leaves.size(); k++) if (T.leaves[k].drifter) { at.push_back({(int)k, "A DRIFTER'S BESIDE THE STAR IT LEFT"}); break; }
-    for (size_t k = 0; k < T.leaves.size(); k++) if (T.leaves[k].line.made) { at.push_back({(int)k, "THE MADE ONE"}); break; }
-    for (const auto& a : at) { g.testTree().sel = a.first; grab(treeShots, a.second); }
+    g.testTreePage(0); grab(treeShots, "THE SHIP'S OWN");
+    if (!lined.empty()) {
+        g.testTreeShow(lined);
+        for (size_t k = 0; k < T.shown.size(); k++) if (T.shown[k].key == lined + "/S1") T.sel = (int)k;
+        grab(treeShots, "THE FLOW'S WORLD: A STRAIN AND ITS STRAIN");
+    }
+    if (!drifterKey.empty()) { g.testTreeShow(drifterKey); grab(treeShots, "A DRIFTER'S, ITS KIN THE STAR IT LEFT"); }
+    if (!madeKey.empty()) { g.testTreeShow(madeKey); grab(treeShots, "THE MADE ONE'S WORLD"); }
+    for (size_t p = 0; p < T.pages.size(); p++) if (T.pages[p].kind == TP_FOLDER) { g.testTreePage((int)p); grab(treeShots, "A FOLDER'S TREE"); break; }
     g.closeScreen();
     {
         const int gap = 4, head = 14;
         Sheet sh((int)treeShots.size() * (FBW + gap) + gap, FBH + 2 * gap + head);
-        sh.label(4, 3, fmt("lab tree: the tree of kin, %zu leaves, life began at least %d times", T.leaves.size(), T.geneses));
+        sh.label(4, 3, fmt("lab tree: the tree of kin by world and by folder, %zu leaves read, life began at least %d times", T.leaves.size(), T.geneses));
         for (size_t i = 0; i < treeShots.size(); i++) { sh.blit(treeShots[i].first, FBW, FBH, gap + (int)i * (FBW + gap), head + gap); sh.label(gap + (int)i * (FBW + gap) + 2, head + gap + FBH - 11, treeShots[i].second); }
         sh.save("shots/tests/lab_tree.png");
     }
@@ -420,7 +456,7 @@ int labCatalogue() {
             m.seen |= SEEN_MOTION | SEEN_FLAGELLA | SEEN_DNA | SEEN_WALL; m.forms |= (1u << CF_SPORE) | (1u << CF_COLONY);
             m.stages = LC_GROWING | LC_COLONY | LC_SPORULATING; m.doublingS = 840; m.cell = 1; m.tempC = 31; m.light = 1; m.energy = 1; m.salt = 0;
             G.names[keyOf(flowPicks[i])] = "CORAL ROD";
-            G.strains[keyOf(flowPicks[i]) + "/S1"] = StrainRecord{0, 0, 41};
+            G.strains[keyOf(flowPicks[i]) + "/S1"] = StrainRecord{0, 0, 41, ""};
             G.names[keyOf(flowPicks[i]) + "/S1"] = "FAST BLOOM";
         }
         if (i == 1) m.seen |= SEEN_MOTION;

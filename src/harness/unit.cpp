@@ -142,6 +142,7 @@ const UnitGroup UNIT_GROUPS[] = {
     {"lab", "unit_lab.cpp", 1, 2, unitLab},
     {"experiments", "unit_lab_answers.cpp", 1, 2, unitLabAnswers},   // R-435 to R-438, B-441
     {"incubator", "unit_lab_incubator.cpp", 1, 2, unitLabIncubator},   // B-442, R-439 to R-442
+    {"genes", "unit_lab_genes.cpp", 1, 2, unitLabGenes},   // the Y series: Y-01's trees
     {"files", "unit.cpp", 1, 2, unitFiles},   // B-440: last, after every group's games
 };
 

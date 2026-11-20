@@ -11,7 +11,8 @@ const char* const CULTURE_CELL_NAMES[CC_COUNT] = {"WATER", "ACID", "AMMONIA", "C
 const char* const CULTURE_LIGHT_NAMES[CL_COUNT] = {"DARK", "WHITE", "RED", "BLUE"};
 const char* const CULTURE_ENERGY_NAMES[CE_COUNT] = {"NONE", "HYDROGEN", "SULPHIDE", "IRON", "METHANE", "AMMONIA", "ACETYLENE", "BROTH"};
 const char* const CULTURE_SALT_NAMES[3] = {"FRESH", "SEA SALT", "BRINE"};
-const char* const GROWTH_FIT_NAMES[GF_COUNT] = {"GROWS", "TOO COLD", "TOO HOT", "THE WRONG SALT", "THE WRONG SOLVENT", "NOTHING IT EATS", "NO LIGHT"};
+const char* const GROWTH_FIT_NAMES[GF_COUNT] = {"GROWS", "TOO COLD", "TOO HOT", "THE WRONG SALT", "THE WRONG SOLVENT", "NOTHING IT EATS", "NO LIGHT",
+                                               "IT DOES NOT LIVE"};
 const char* const CULTURE_STAGE_NAMES[SG_COUNT] = {"EMPTY", "ASLEEP", "WAKING", "IN ITS LAG", "GROWING", "IN COLONIES", "AT ITS CROWD", "STARVING",
                                                    "TOO COLD TO GROW", "GATHERING", "FRUITING", "SPORULATING", "ENCYSTING", "DYING", "DEAD",
                                                    "CYCLING", "OUTGROWN"};
@@ -109,7 +110,7 @@ struct SpState {
 };
 void startState(SpState& S, const Traits& T, const CultureKind& k, double N) {
     S = SpState();
-    if (k.spores) S.Sp = N; else S.N = N;
+    if (k.spores && !k.dead) S.Sp = N; else S.N = N;   // Y-02: a line that does not live never wakes: its cells lyse
     S.q = T.q0;
 }
 
@@ -140,15 +141,16 @@ void advance(const Traits& T, const CultureKind& k, const Growth& g, SpState& S,
         CultureSeg s;
         s.t0 = t; s.N = S.N; s.q = S.q; s.Sp = S.Sp; s.G = S.G;
         s.K = std::pow(10.0, g.crowdLog); s.fit = g.fit; s.edge = g.edge;
-        s.glows = k.s.glows; s.colony = (k.s.cycle & LC_COLONY) != 0;
+        s.glows = k.s.glows; s.colony = (k.s.cycle & LC_COLONY) != 0; s.quorum = k.quorum;
         double end = tb;
         bool crowd = false;
         if (S.N <= 0) {
             if (S.Sp > 0 && g.fit == GF_GROWS && !S.spent) { s.mode = MD_WAKING; end = std::min(tb, t + std::max(0.0, T.wakeS - S.wake)); }
             else { s.mode = S.Sp > 0 ? MD_ASLEEP : MD_DEAD; S.wake = 0; }
-        } else if (g.fit == GF_HOT || g.fit == GF_SALT || g.fit == GF_SOLVENT) {
-            s.mode = MD_DECLINE; s.kd = T.kdStress; s.sigma = g.fit == GF_SOLVENT ? 0 : T.sigmaStress;
-            s.stage = g.fit == GF_SOLVENT ? SG_DYING : T.stressDecline;
+        } else if (g.fit == GF_HOT || g.fit == GF_SALT || g.fit == GF_SOLVENT || g.fit == GF_UNVIABLE) {
+            const bool lyses = g.fit == GF_SOLVENT || g.fit == GF_UNVIABLE;   // Y-02: a line that does not live lyses in seconds
+            s.mode = MD_DECLINE; s.kd = g.fit == GF_UNVIABLE ? 1.0 : T.kdStress; s.sigma = lyses ? 0 : T.sigmaStress;
+            s.stage = lyses ? SG_DYING : T.stressDecline;
             if (S.declineT0 < 0) S.declineT0 = t;
             end = std::min(tb, t + std::log(S.N / CULTURE_EXTINCT) / s.kd);
         } else if (g.fit == GF_COLD) s.mode = MD_WAIT;
@@ -293,6 +295,7 @@ Medium mediumOfPlace(const Biota& B, int bodyType, int starClass, const Microhab
 Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
     Growth g;
     const Microbe& s = k.s;
+    if (k.dead) { g.fit = GF_UNVIABLE; return g; }   // Y-02: a vital gene changed
     if (cellChemistry(m.cell) != k.chemistry) { g.fit = GF_SOLVENT; return g; }
     if (m.tempC >= s.tMax) { g.fit = GF_HOT; return g; }
     if (m.tempC <= s.tMin) { g.fit = GF_COLD; return g; }
@@ -333,6 +336,7 @@ Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
 }
 
 double bestDoublingS(const CultureKind& k) { return std::log(2.0) / traitsOf(k).muMax; }
+int cultureDecline(const CultureKind& k) { return traitsOf(k).decline; }
 
 void applyStrain(CultureKind& k, int what, double value) {
     switch (what) {
@@ -342,7 +346,7 @@ void applyStrain(CultureKind& k, int what, double value) {
         case SM_SALT_LO: k.s.saltLo = clampi((int)value, 0, 2); break;
         case SM_SALT_HI: k.s.saltHi = clampi((int)value, 0, 2); break;
         case SM_PIGMENT: k.s.pigment = clampi((int)value, 0, PG_COUNT - 1); break;
-        default: break;
+        default: break;   // Y-02: an edited line's are its genes' (`applyEdits`)
     }
 }
 
@@ -490,7 +494,7 @@ CultureRun runCulture(const FlaskCulture& c) {
                     sk.role = k == lead ? 1 : 0;
                     sk.N = k == lead ? Zstar * std::exp(cy) : Pstar * std::exp(cx);
                     sk.Sp = S[k].Sp; sk.G = S[k].G;
-                    sk.K = k == lead ? 10 * Zstar : 10 * Pstar; sk.glows = K[k].s.glows; sk.edge = g[k].edge;
+                    sk.K = k == lead ? 10 * Zstar : 10 * Pstar; sk.glows = K[k].s.glows; sk.quorum = K[k].quorum; sk.edge = g[k].edge;
                     R.seg[k].push_back(sk);
                 }
                 if (tb < INF) cycleAt(s, tb - t, cx, cy);
@@ -552,7 +556,7 @@ CultureNow cultureAt(const FlaskCulture& c, const CultureRun& R, double t) {
             case MD_CYCLE: o.stage = SG_CYCLING; break;
             default: break;
         }
-        o.glowing = s->glows && o.cells > 0 && o.cells >= 0.03 * s->K;
+        o.glowing = s->glows && o.cells > 0 && o.cells >= s->quorum * s->K;
     }
     if (R.n == 2 && R.pair == PA_COMPETE && R.exT >= 0 && t > R.exT) {   // the loser outgrown (all it makes the fewer)
         CultureOne& o = now.one[1 - R.lead];

@@ -175,6 +175,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   steps cancel) [Z-04]; replaced by [R-438]
 - Spores, cysts, the inactive and microcolonies are still (the jiggle); a stressed kind acts from where it is and ends still in its form
   [Z-04]; replaced by [R-438]
+- The tree (`TREE`): every species read and the ship's own at its root, a genesis a clade; Enter a kin's world's star the remote target
+  [Z-06]; replaced by [Y-01]
 
 ## The harness and the proof
 
@@ -371,3 +373,5 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [R-438]: log/7-1.5.0.md
 [Z-03]: log/7-1.5.0.md
 [Z-04]: log/7-1.5.0.md
+[Z-06]: log/7-1.5.0.md
+[Y-01]: log/7-1.5.0.md

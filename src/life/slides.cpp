@@ -386,8 +386,10 @@ SlideMount mountOf(const Biota& B, const std::vector<Morph>& forms, const Sample
         K.taxis = K.lives && m.motion != MO_NONE ? m.taxis : 0;
         K.speed = m.speed;
         K.lightFeeder = sp.way == LW_LIGHT;
-        K.flees = K.lives && m.motion != MO_NONE && !K.lightFeeder && !(m.taxis & (TX_LIGHT | TX_FIELD)) &&
-                  (sp.niche == NI_SOIL || sp.niche == NI_SILT || sp.niche == NI_VENT || sp.niche == NI_ROCK || sp.niche == NI_PLUME);
+        K.flees = K.lives && m.motion != MO_NONE && !K.lightFeeder &&
+                  (sp.flees >= 0 ? sp.flees == 1
+                                 : !(m.taxis & (TX_LIGHT | TX_FIELD)) &&
+                                       (sp.niche == NI_SOIL || sp.niche == NI_SILT || sp.niche == NI_VENT || sp.niche == NI_ROCK || sp.niche == NI_PLUME));
         if (K.lives) {   // the stage's stress past its top: a spore former's spores, a large cell's cyst, else its lysis (still or moving)
             if (actSuits(m, AN_SPORULATE)) { K.stress = AN_SPORULATE; K.stressForm = CF_SPORE; }
             else if (actSuits(m, AN_ENCYST)) { K.stress = AN_ENCYST; K.stressForm = CF_CYST; }

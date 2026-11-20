@@ -24,6 +24,9 @@ and from Z-03 the surface and the game.
 - `sequences` (Z-06: a species' genome and its place in its genesis's tree: `Lineage`, `lineageOf`, `shipLineage`; `commonAncestorGyr`,
   `treeBefore` the tree's order; the marker's letters `markerLetter`, `markerOf`, `markerAlike`; `genomeLetters`, `watermarkLetters`,
   `alphabetOf`)
+- `genes` (Y-02: a species' genes: `GeneCode` a genesis's map and code, `microbeGenesOf` a species' genes read from what it is (its wild
+  letters its own values), `applyEdits` a line's values from its edits, `strainGenes` a strain's from its move, `genesDiffer`,
+  `geneValueWords`; `fleesLight`, the dark-dweller's flight R-438 drew)
 - `morph_draw.h` (the public slide: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`, `seeingsFor`,
   `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands, waves in slide micrometres; the slide's banks),
@@ -76,3 +79,8 @@ and from Z-03 the surface and the game.
   (a comb's under the exchange, the exchange under the near box's): the unit's ranking check holds it. A carried spore is its source's leaf.
   A marker's letter walks its branches root first; find a lineage's comb path once a run (`pathOf`), never a letter at a time.
 - The made species are the peoples' (peoples/made.h, the one file there that reads life): this module never names a people.
+- The genes draw nothing of 17: a species' are read from its values and form on salts of their own (`SALT_GENE_*`); an unedited line is
+  its species bit for bit (the unit's `genes` group over forty worlds: its values, its culture's segments, its slide's kinds). An edit is
+  relative to its parent's letters, so a strain's exact move and the wild value hold; a cut gene stays cut down its lines. The harness
+  meets the peoples' `Genome` and `genomeOf` and the giants' `GK_`: hence `MicrobeGenes`, `microbeGenesOf`, `GN_` and `SE_`. A new field
+  of `Microbe` or `CultureKind` (Y-02's `flees`, `dead`, `quorum`) defaults to what the wild species was.

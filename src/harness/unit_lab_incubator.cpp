@@ -1,7 +1,8 @@
 // B-442 and R-439 to R-442 (2026-11-19; the unit's `incubator` group, after `experiments`): the lab's rows telling a vial's organisms apart by
-// their looks (the incubator's chooser, the sequencer's, a flask's); N naming a flask's organism; the choosers' two tabs; K keeping a copy (the
-// cell under the crosshair alone, a flask's two together) in a folder, a new one made for it, C copying, a pair kept twice merged; the jars'
-// bands in their places, told on the page and kept on the sheets, a jar's settling said once
+// their looks (the incubator's chooser, the sequencer's, a flask's; B-443, the tree's leaves and the sequencer's title, kin and log); N naming a
+// flask's organism; the choosers' two tabs; K keeping a copy (the cell under the crosshair alone, a flask's two together) in a folder, a new one
+// made for it, C copying, a pair kept twice merged; the jars' bands in their places, told on the page and kept on the sheets, a jar's settling
+// said once
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "life/cultures.h"
@@ -110,6 +111,56 @@ void unitLabIncubator(const Check& check) {
                   "a flask of two: %s",
                   vials, many, same, example.empty() ? "" : (" (" + example + ")").c_str(), unnamed, manyQ, sameQ,
                   exampleQ.empty() ? "" : (" (" + exampleQ + ")").c_str(), unnamedQ, labels.empty() ? "NONE PUT IN" : labels.c_str()));
+    }
+    {   // B-443 (KI-447): the tree's leaves and the sequencer in looks. The scan region's first forty living worlds a vial each, every species of
+        // each seen and read but a vial's first living one: no leaf UNNAMED, none drawn alike another of its world; that one read last: the
+        // sequencer's title its leaf's words, its kin in theirs, the log's KIN without UNNAMED; named ROSY on a flask (N), the sequencer's title ROSY
+        TestGame g; Input in;
+        labGame(g);
+        const int vials = stockVials(g, 40);
+        int a = -1, b = -1;
+        const int v = firstPair(g, a, b);
+        const std::string ka = v >= 0 ? speciesKeyOf(g.testColdStore()[v], a) : std::string();
+        for (auto& kv : g.guide.microbes) if (kv.first != ka) kv.second.seen |= SEEN_KIN;
+        int leaves = 0, same = 0, unnamed = 0;
+        std::string example;
+        std::map<std::string, std::set<std::string>> drawn;   // each world's leaves as drawn
+        for (const TreeLeaf& L : g.testTree().leaves) {
+            if (L.body < 0) continue;
+            leaves++;
+            const std::string line = TestGame::testTreeLine(L);
+            if (!drawn[L.key.substr(0, L.key.rfind("/M"))].insert(line).second) { same++; if (example.empty()) example = line; }
+            unnamed += L.name.compare(0, 7, "UNNAMED") == 0;
+        }
+        std::string title, leaf, kin, logged, renamed;
+        bool kinLeaf = false;
+        if (v >= 0) {
+            const Vial& V = g.testColdStore()[v];
+            g.testSeqPut(V.sx, V.sy, V.sz, V.body, a);
+            title = g.testLab().seq.name;
+            g.testLabSkip(SEQUENCE_S + 1);
+            const std::vector<std::string>& R = g.testLab().seq.result;
+            kin = R.size() > 2 && R[2].compare(0, 22, "ITS NEAREST KIN READ: ") == 0 ? R[2].substr(22) : std::string();
+            for (const TreeLeaf& L : g.testTree().leaves) {
+                if (L.key == ka) leaf = L.name;
+                else if (!kin.empty() && kin.compare(0, L.name.size(), L.name) == 0) kinLeaf = true;
+            }
+            for (const LogEntry& e : g.guide.log) if (e.kind == "KIN") logged = e.text.substr(std::min(e.text.size(), e.text.find("KIN: ")));   // (after its date)
+            if (g.testFlaskPut(0, v, a)) {   // N names it on its flask: the sequencer says the name
+                g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
+                g.testIncub().sel = 0; g.testIncub().page = 0;
+                pressKey(g, in, KEY_N); typeWord(g, in, "ROSY"); pressKey(g, in, KEY_ENTER);
+                g.testLabSkip(0.1);
+                renamed = g.testLab().seq.name;
+            }
+        }
+        check("incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)",
+              vials == 40 && leaves > 100 && same == 0 && unnamed == 0 && !title.empty() && title.compare(0, 7, "UNNAMED") != 0 && title == leaf &&
+                  kinLeaf && logged.compare(0, 5 + title.size(), "KIN: " + title) == 0 && logged.find("UNNAMED") == std::string::npos && renamed == "ROSY",
+              fmt("%d vials; the tree: %d leaves of species, %d drawn alike another of their world%s, %d UNNAMED; read last: '%s' (its leaf '%s'), its kin "
+                  "'%s' %s; the log '%s'; named on its flask: '%s'",
+                  vials, leaves, same, example.empty() ? "" : (" (" + example + ")").c_str(), unnamed, title.c_str(), leaf.c_str(), kin.c_str(),
+                  kinLeaf ? "a leaf's" : "NOT A LEAF'S", logged.c_str(), renamed.c_str()));
     }
     {   // R-442: N names a flask's organism. A flask of a vial's first two living species: N on its page offers both (each its look), the second
         // chosen and named ROSY by its keys; the flask's row says ROSY; a flask of one: N names it at once

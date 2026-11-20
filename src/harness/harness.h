@@ -479,10 +479,18 @@ bool labDenseVial(Vial& out);   // the densest slide the lab knows (`lab time`'s
 void unitLab(const Check& check);
 void unitLabAnswers(const Check& check);   // R-435 to R-438, B-441: the group `experiments`
 void unitLabIncubator(const Check& check);   // B-442, R-439 to R-442: the group `incubator`
+void unitLabGenes(const Check& check);   // the Y series (Y-01: the trees by world and by folder): the group `genes`
 // ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`, `lab jars`)
 int labCultures();
 int labJars();
 int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: twelve flasks of a living world's species, four jars
+// ---- modes_genes.cpp (Y-02: `lab genes`): the first living world of each alphabet and hand; the genes' laws (the unit's `genes` group)
+struct GeneWorld { int letters = 4; bool mirrored = false; StarSystem sys; int body = -1; std::vector<Morph> forms; };
+bool geneWorlds(GeneWorld (&out)[6]);
+struct GeneLaw { bool ok = false; std::string detail; };
+struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed; };
+GeneLaws geneLaws();
+int labGenes();
 // ---- modes_tree.cpp (Z-06; Z-07's `lab catalogue`)
 int treeKin(int r);
 int lifeMade(int want);

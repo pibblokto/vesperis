@@ -43,6 +43,10 @@ specimens (only the small comes aboard), the V and L series.
 | 9 | The lab | Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars | XL | done 2026-11-17 |
 | 10 | The lab | Z-06 | The genome and the tree: the sequencer, kin across worlds and stars, the geneses, the made organisms | L | done 2026-11-17 |
 | 11 | The close | Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | done 2026-11-17 |
+| 12 | The genes | Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs (R-444) | M | done 2026-11-19 |
+| 13 | The genes | Y-02 | The gene editor: a species' own genes cut, changed by hand, put into a flask, learned (R-443) | XL | done 2026-11-20 |
+| 14 | The genes | Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, needs (R-443) | L | planned |
+| 15 | The genes | Y-04 | The switches: when a gene is on, in the culture's segments and the drop (R-443) | L | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.
@@ -412,3 +416,82 @@ the trait banks, the hot springs, the descent, the drones' clock, the guide's ke
   * `tools/prove compare` against the series' last base, every difference named;
   * `bench check` within all budgets, and `make check`;
   * `tools/prove snapshot z07`.
+
+## Phase 5: the genes
+
+Added 2026-11-19 on the user's requests after Z-07, talked through first: R-443 (genes changed: "smart but not boring so that you can
+somehow understand and learn what affects what") and R-444 (the trees by world and by folder). The design is `IDEAS-genes.md`. No
+generation change: a species' genes are read from what it is, and an unedited line is its species bit for bit. Y-01 first (the smallest;
+the strains are the lab's lines already), then the editor on a species' own genes (one organism, "tons of variations"), then genes from
+others, then the switches, which act on every gene before them.
+
+Decided by default (2026-11-19), from the sketch and the user's five calls:
+
+1. **The editor is a machine of its own** in the laboratory (`EDITOR`), on the bow bench beside the sequencer where the plan's rows give it
+   room; it takes a culture (a flask's or a kept one) whose species the sequencer read, and writes its edit in 120 s on the lab's clock.
+2. **An edited line goes into an empty flask** in its source's medium, a new culture the collection keeps as it grows; a line is edited
+   again the same way.
+3. **Versions:** a gene's working part changed by hand (its genesis's code: a letter's weight, a table's choice) and, from Y-03, a gene
+   moved in from a species read or a culture kept of the same genesis.
+4. **Learning:** one gene changed and seen against its parent; several, the candidates said; a vital gene's death; a strain read.
+5. **Fixed:** how it lives and its plan's family; its values within its cell's range; the worlds as generated.
+6. **The trees:** the ship's page, a page a world, a page a folder; no tree of everything (the user's call); the lab's lines on their
+   world's page as they arise, Backspace off, A back; a folder's page what it holds.
+
+### Y-01: the trees by world and by folder
+
+* **Pages** (Left and Right): THE SHIP (its own three), each world with a species read or a line of one, each of the collection's
+  folders (UNSORTED, then the explorer's); the page's name and its place among them in the head.
+* **A world's page:** its species read in the tree's order, those seen and not read counted; its species' lines (strains now) as twigs at
+  today's edge under their parents; Backspace takes a line off, A puts one back (the guide keeps which are off).
+* **A folder's page:** what it holds (a pair two leaves; a line under its parent where both are in it); those not read counted.
+* **Each page its own years;** a leaf's nearest kin read anywhere told under the tree; the room's screen the page last shown.
+* Done when:
+  * `lab tree` prints every page of a stocked lab (the ship's, its worlds', its folders') with their leaves and twigs;
+  * unit checks pass: a world's page holds its species read and no other world's; a folder's what it holds; a strain's twig under its
+    parent as it arises, Backspace taking it off and A putting it back, kept over a save and load; a page's axis to its oldest ancestor;
+    the nearest kin read anywhere; the LIFE page's geneses count as before;
+  * the tour runs the pages; frames of a world's page and a folder's;
+  * `tools/prove compare b443`, every difference named; `bench check`; `make check`; `tools/prove snapshot y01`.
+
+### Y-02: the gene editor and a species' own genes
+
+* **The genes** (`life/genes`): a species' genes by what it is (three vital, one to three quiet; warmth, salt, size; pigment, food,
+  motion, up to three senses, rest, glow, shape by what it uses), a genesis's map (its numbers) and code (its letters' weights, its
+  tables), the wild letters its own values; a line's values from its edits, within its limits.
+* **The machine:** its row, fixtures, stand, light and screen (`game/editor.cpp`); its chooser (THE CULTURES, read ones); the map, a
+  gene's working part, C, the letters by hand, Backspace; writing in 120 s, into an empty flask; N names a line.
+* **A line** read as a strain is: its flask's culture, the microscope's drop, the sequencer (what differs from its parent), the
+  collection, the trees (a twig); the guide's `line` and `gene` lines, the save's editor.
+* **Learning:** said as seen in the incubator, the microscope and the sequencer (1.4 of the design); the map's words.
+* Done when:
+  * `lab genes` prints a world's species' genes for worlds of four, six and eight letters and both hands, and an edit's values before
+    and after;
+  * unit checks pass: genes deterministic; every species of forty worlds unedited is itself (its culture's segments, its slide's kinds);
+    each gene's edit moves its value as its code says, within its limits; a vital gene's edit kills, a quiet one shows nothing; how it
+    lives and its plan's family never move; a line's flask, drop, reading and keeping; learned from one change, candidates from several,
+    a strain read; the editor, the lines and their flasks over a save and load;
+  * the machine in the lab (`ship rooms`' laboratory, the tour's stand), frames of its screen; the flow writes an edit into a flask;
+  * the battery against y01, every difference named; `bench check`; `make check`; `tools/prove snapshot y02`.
+
+### Y-03: genes from others
+
+* **M moves a gene in** from a species read or a culture kept of its genesis (refused across geneses: another alphabet, the other hand);
+  **D duplicates** one; the price by the donor's distance and of power and glow; what a gene needs (a sense without motion, a pigment or
+  a food in another way of living); the donor's line on the trees.
+* Done when:
+  * unit checks pass: a moved gene takes its donor's letters and value; refused across geneses with its words; the price by distance in
+    the doubling and two in a flask; a duplicate's place; a sense without motion answers nothing; the donor's line drawn;
+  * `lab genes` prints a moved gene and its price;
+  * the battery against y02; `bench check`; `make check`; `tools/prove snapshot y03`.
+
+### Y-04: the switches
+
+* **S sets a gene's switch:** ALWAYS, NEVER, IN THE LIGHT, IN THE DARK, WHEN CROWDED, WHEN STARVING, WHEN COLD; the wild ones a glow's
+  crowd and a rest's hunger; the culture's segments where its condition changes, the drop as its flask has it; a gene off costs nothing.
+* **The close:** 13-life's genes and trees, a `rules-life-genes.md`, KNOWN-ISSUES rows for what stays, the generated pages.
+* Done when:
+  * unit checks pass: each switch's condition in the culture's segments (the light, the warmth against the line's best, starving, the
+    crowd's share) and in a drop; a gene off costs nothing; the wild switches give every species' curve as before;
+  * `lab cultures` prints a switched line's curve; frames of a switched glow and rest;
+  * the battery against y03, every difference named; `bench check`; `make check`; `tools/prove snapshot y04`.

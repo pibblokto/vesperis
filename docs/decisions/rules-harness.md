@@ -26,6 +26,7 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - Unit checks about giants read every giant (the made classes too), not the gas giant's type [P-07]
 - The flow only reports: a landing in the sea or a buggy at 0 km/h still exits 0, so its status lines are read [G-04]
 - The flow lands by `testLandSite` (lit, level, dry, from the body's seed) and drives only briefly: `drive` is the long-drive test [G-04], [S-01], [N4-02]
+- The flow's game runs its stages before those making games of their own (KI-450); a new stage of it goes where no later frame moves [Y-02]
 - `descent` holds B-307's bar (grade 0.45, nothing airborne; checked every 2 m, 3 m clear of colliders) at the mountain pin (KI-343: it fails) [G-04], [S-01]
 - `tour` opens each stop's state as the game does, then every row by `openScreen` or its setup by name, its commands run [U-01], [U-06]
 - A new screen needs no harness edit: the tour's rows and `unit states` read the table; a scene or a world set up first is a stop [U-06]
@@ -70,3 +71,4 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 [U-03]: log/6-1.4.0.md
 [B-438]: log/7-1.5.0.md
 [B-440]: log/7-1.5.0.md
+[Y-02]: log/7-1.5.0.md

@@ -154,7 +154,7 @@ std::string Game::keptWordsOf(KeptCulture& c) const {
         const std::string n = flaskSpeciesName(w);
         if (n.compare(0, 7, "UNNAMED") != 0) return n;
         if (plan < 0) { CultureKind kind; Morph form; double slept = 0; if (flaskKind(w, kind, form, slept)) plan = form.plan; }   // looked up once
-        return (plan >= 0 ? std::string(planWords(plan)) : std::string("A CULTURE")) + (w.strain > 0 ? fmt(" S%d", w.strain) : std::string());
+        return (plan >= 0 ? std::string(planWords(plan)) : std::string("A CULTURE")) + (w.strain > 0 ? " " + lineTag(w) : std::string());
     };
     const std::string one = words(c.who, c.plan);
     return c.paired ? one + " + " + words(c.partner, c.partnerPlan) : one;

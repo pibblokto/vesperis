@@ -58,7 +58,7 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   `rules-life-record.md`, `rules-game.md`,
   `rules-peoples-grammar.md` and `rules-ship.md`. Committed on the user's word (2026-11-18) with B-434 to B-438 below (0c90433),
   B-439 after it (455c7ad), B-440 with R-427 to R-434 below (82592c5, 2026-11-19) and R-435 to R-442 with B-441 and B-442 below
-  (2026-11-19), each on the user's word: four commits on the branch, not pushed.
+  (d12a9ea, 2026-11-19) and B-443, Y-01 and Y-02 below (2026-11-20), each on the user's word: five commits on the branch, not pushed.
 - **Fixed before the release** (2026-11-18, the user's reports in play): B-434, the laboratory's sunlight over its arch from the
   hall (a room's sun patches cast onto its surfaces' own pieces, round their holes); B-435, far things aboard grey until near (the
   ship's banks dealt once the outside is drawn: every bank the glass does not show; KI-439's flasks with it); B-436, a small moon
@@ -94,6 +94,23 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   the collection by hand (K keeps a copy in a folder: the cell under the microscope's crosshair alone, a flask's one or two; C copies; a
   pair one entry); R-441, the choosers' two tabs (THE VIALS, THE CULTURES; the sequencer's too); R-442, naming in the incubator (N). With
   them B-442, found in their save: a vial's unnamed species read alike in the lab's rows (now each its look).
+- **Then B-443** (2026-11-19, KI-447 on the user's word): the tree of kin's leaves and the sequencer said a species with no name UNNAMED (a
+  world's leaves alike, the log's "KIN: UNNAMED OF UNKNOWN AND UNNAMED OF UNKNOWN"); each now its look and size, its form kept with its
+  lineage, two of a world told apart, the sequencer in the tree's words. Its B file and entry in `7-1.5.0.md`.
+- **The genes** (2026-11-19, the user's after asking what the sequencer is for, talked through first; their five calls): R-443, a gene
+  editor of its own in the laboratory (a species' genes cut and changed by hand, then moved in from its kin and the cultures kept, then
+  switched; an edited line written into a flask as a new culture), and R-444, the tree of kin by world and by folder (no tree of
+  everything). The Y series, Y-01 to Y-04 (`docs/ideas/ITERATION-1.5.0.md`, Phase 5; the design `docs/ideas/IDEAS-genes.md`), no
+  generation change: a species' genes are read from what it is.
+  Y-01 done (2026-11-19), the trees by world and by folder: the tree's pages (THE SHIP, each world with a species read, each folder
+  holding a culture; Left and Right), each on its own years; the strains as twigs under their parents on their world's page,
+  Backspace taking one off and A putting it back (the guide's `treeoff`); a folder's page what it holds; Tab from the sequencer on the
+  page of what it read. Its entry in `7-1.5.0.md`; R-444 done. Y-02 done (2026-11-20), the gene editor and a species' own genes
+  (`life/genes`, `game/editor.cpp`; `docs/decisions/rules-life-genes.md`): a species' genes read from what it is (a genesis's map of
+  eighteen places and its code, every kin's; nothing generated moves); the gene editor on the bow bench (`EDITOR`): a culture read put on,
+  a gene's letters changed by hand or the gene cut, W writing the line in two minutes into an empty flask, a strain of its species read
+  everywhere a strain is (E1); what a gene does learned as an edited line shows it against its parent, a vital gene's death, a strain
+  read. Its entry in `7-1.5.0.md`.
 - **The ship to walk:** `vesperis_test ship rooms`, `ship light` and `ship life` draw its spaces, their light and what is kept in them
   into `shots/tests/ship/`, and the game walks it (Shift runs, Page Up the lift, U the light, Y the glass hull, E at the bunk, the desk,
   the deck (the player), the capsule, the quarters' wall (its photographs hung) and a garden bed (trimmed); the buggy and the drone in
@@ -101,8 +118,9 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   `life kit` plays a landing's kit, `life sight` the vision. In the laboratory E at the microscope opens its lists (the vials by world,
   the cultures by folder; on a slide L the light, M the magnet, H a warmth typed, F food, K keeps a cell), E at the incubator its flasks (a
   digit types a flask's warmth, N names, K keeps a copy) and the jars, E at the
-  sequencer a genome's reading, E at the tree's screen the tree of kin; `lab microscope`, `lab cultures`, `lab jars` and `lab tree` draw
-  them into `shots/tests/`. The guide's THE CATALOGUE lists every species seen and the statistics' `L` their LIFE page (`lab catalogue`).
+  sequencer a genome's reading, E at the tree's screen the tree of kin, E at the gene editor a culture's genes (Enter a gene's letters, C
+  cuts, W writes the line into a flask); `lab microscope`, `lab cultures`, `lab jars`, `lab tree` and `lab genes` draw them into
+  `shots/tests/`. The guide's THE CATALOGUE lists every species seen and the statistics' `L` their LIFE page (`lab catalogue`).
 - **The plates judged:** the user's verdict on Z-02's plates (`life plates`, `strips`, `forms`), 2026-11-16: "microbes pictures you
   made today looked great"; Z-04 builds the microscope on them as they are.
 - **In 1.4.0:** the sixteen world milestones, P-00 to P-07, Q-01 to Q-03 and D-01 to D-05 (R-421 to R-423: the kinds, the traits,
@@ -110,25 +128,28 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   B-433, the last four the known issues KI-423, KI-432, KI-433 and KI-434, fixed on 2026-10-29. Each has its entry in
   `docs/decisions/log/6-1.4.0.md` or its B file. The iteration, its ideas and its two plans moved to `docs/archive/ideas/`
   (`ITERATION-1.4.0.md`, `IDEAS-worlds-and-wanderers.md`, `PLAN-reorganisation.md`, `PLAN-screens.md`).
-- **Next:** 1.5.0's iteration is done; the release (the `release` skill: the branch merged by its pull request, the tag `v1.5.0`, six
-  zips; the Linux builds need Docker, asked first) on the user's word, and commits only when asked.
-- **The proof's base:** `build/prove/r442` (35 items: r438's, with R-439 to R-442's and B-442's checks and frames: the unit's `incubator`
-  group, the jars' bands numbered and named, the lab's rows in looks, the tour's N, K and the choosers' tabs, its 489 pictures).
-- **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; B-440's leftovers in their `shots/` (the
-  test's `probe_1` and `probe_2`, theirs to remove); KI-424 (the grammar's picture register, which
-  no call expands); KI-425 (the radar's heard list); KI-428 (a T typed at the console warps time); KI-429 (the settings' title over
-  their first row); KI-430 (a race in the unit's lent piece frame); KI-431 (the almanac's STOP THE RUN, offered and ignored); KI-435
-  (aboard, the local target's HUD label over the ship's walls, found in I-04); KI-436 (a chemotroph world made from a hot tectonic one reads
-  188 C on its ground, found in Z-03); KI-437 (the microscope's electron view over large cells, 25-47 ms a frame at 4x) and KI-438 (Z-02's
-  plates draw spores moving as their cells), found in Z-04; KI-440 (the data sheet's GRAVITY line past the frame's edge), found in
-  Z-07; KI-444 (`surface 4x` the bench's tightest budget, 1.30 times its median), found by B-439; KI-446 (the battery's `rogues` and
-  `sweeps` items each differing once and the same alone), found in R-438; KI-447 (the tree's leaves still UNNAMED alone), found in
-  B-442; offered by B-430: the tables' dump as a harness mode for the container, and parallel.h's misleading indentation (38 of the
-  Linux builds' 46 warnings); offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant; our Docker images
-  `vesperis-build:arm64` and `:amd64` (removed on the user's word); the old proof kits (`build/p00` to `build/d05`, about 9 GB),
-  deleted only on the user's word.
-- **The disk:** about 127 GB free (2026-11-19: the old snapshots and their compares' outputs went on the user's word, then r438 and r442
-  were made; `build/prove` keeps r434, r438 and r442 and the compares' outputs against r434 and r438, 2.6 GB, with their logs); a snapshot
-  and a compare's outputs about 1.3 GB each (`life_look`'s 60 pictures are 0.2 GB of it).
-- **Next free ids:** bugs B-443, requests R-443, known issues KI-448. Milestone ids go by letter series in
-  `docs/ideas/MILESTONES.md` (1.5.0 took Z and I).
+- **Next:** Y-03 (genes from others: a gene moved in from kin read or a culture kept, its price by the donor's distance, duplicates, what
+  a gene needs), then Y-04 (the switches), each on the user's "proceed"; then the release (the `release` skill: the branch merged by its
+  pull request, the tag `v1.5.0`, six zips; the Linux builds need Docker, asked first) on the user's word, and commits only when asked.
+- **The proof's base:** `build/prove/y02` (35 items: y01's, with Y-02's checks and frames: the unit's `genes` laws and editor, `lab genes`,
+  the flow's editor step, the tour's editor stop and row, `ship life`'s editor; 2,257 s).
+- **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; B-440's leftovers in their `shots/` (the test's
+  `probe_1` and `probe_2`, theirs to remove); KI-424 (the grammar's picture register, which no call expands); KI-425 (the radar's heard
+  list); KI-428 (a T typed at the console warps time); KI-429 (the settings' title over their first row); KI-430 (a race in the unit's
+  lent piece frame); KI-431 (the almanac's STOP THE RUN, offered and ignored); KI-435 (aboard, the local target's HUD label over the
+  ship's walls, found in I-04); KI-436 (a chemotroph world made from a hot tectonic one reads 188 C on its ground, found in Z-03); KI-437
+  (the microscope's electron view over large cells, 25-47 ms a frame at 4x) and KI-438 (Z-02's plates draw spores moving as their cells),
+  found in Z-04; KI-440 (the data sheet's GRAVITY line past the frame's edge), found in Z-07; KI-444 (`surface 4x` the bench's tightest
+  budget, 1.30 times its median), found by B-439; KI-446 (the battery's `rogues` and `sweeps` items each differing once and the same
+  alone), found in R-438; KI-448 (two leaves of two unnamed worlds alike by chance), found in B-443; KI-449 (two unnamed worlds' tree
+  pages of a kind alike), found in Y-01; KI-450 (the flow's game run on after the harness's own games were destroyed broke its heap),
+  found in Y-02; offered by B-430: the tables' dump as a harness mode for the container, and parallel.h's
+  misleading indentation (38 of the Linux builds' 46 warnings); offered by B-431: the `returnState =` lines before a scene's `openScreen`,
+  now redundant; our Docker images `vesperis-build:arm64` and `:amd64` (removed on the user's word); the old proof kits (`build/p00` to
+  `build/d05`, about 9 GB), deleted only on the user's word.
+- **The disk:** about 120 GB free (2026-11-20: the old snapshots and their compares' outputs went on the user's word, then r438 and r442
+  were made, then b443, y01 and y02; `build/prove` keeps r434, r438, r442, b443, y01 and y02 and the compares' outputs against r434,
+  r438, r442, b443 and y01, with their logs: 14 GB in all); a snapshot and a compare's outputs about 1.3 GB each (`life_look`'s 60
+  pictures are 0.2 GB of it).
+- **Next free ids:** bugs B-444, requests R-445, known issues KI-451. Milestone ids go by letter series in
+  `docs/ideas/MILESTONES.md` (1.5.0 took Z, I and Y).

@@ -819,6 +819,7 @@ protected:
     LabState lab;
     IncubatorState incub;
     std::string textStrainKey;   // the strain a text entry of TEXT_STRAIN names
+    std::string textGeneKey;     // Y-02: the gene a text entry of TEXT_GENE names (`geneKey`)
     void incubatorEnter(); void updateIncubator(const Input& in, double dt, double realDt); void renderIncubator(); void incubatorPad(PadMenu& m) const;
     void incubatorSave(std::string& lines) const; bool incubatorLoad(const std::string& line); void incubatorReset();
     void updateLab(double realDt);
@@ -836,7 +837,8 @@ protected:
     std::string flaskStrainKey(const FlaskSpecies& w) const;
     std::string flaskSpeciesName(const FlaskSpecies& w) const;
     std::string flaskSpeciesWords(const FlaskSpecies& w, const Morph& form, bool sized) const;   // B-442: its name, else its look
-    bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept) const;
+    static std::string strainMoveWords(int what, double value);   // a strain's move ("IT GROWS TO 31 C"; Y-01: the tree's too)
+    bool flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, double& slept, MicrobeGenes* genes = nullptr) const;   // Y-02: its genes
     void incubatorChoices();
     bool jarPut(int vial);
     void jarEmpty(int j);
@@ -856,11 +858,51 @@ protected:
     void sequencerTick();             // the reading's end as the lab's clock reaches it (`updateLab`)
     std::string sequencerResult();    // its result's lines (its kin among those read), the log's line
     double sequencerRead() const;     // the share read, 0 .. 1
+    // ---- the gene editor (editor.cpp, lab_state.h, life/genes.h; Y-02): the laboratory's fourth device, a screen over the room: a culture read
+    // on the sequencer (a flask's or a kept one) put on, its genes on its genesis's map (NOT KNOWN till seen), a gene's working part changed by
+    // hand or the gene cut, the line written in EDIT_S on the lab's clock into an empty flask (the guide's `strain` line, SM_EDIT); what a gene
+    // does learned as an edited line shows it against its parent (the incubator, the microscope), a vital one's death, a strain read (the
+    // guide's `gene` lines)
+    void editorEnter(); void updateEditor(const Input& in, double dt, double realDt); void renderEditor(); void editorPad(PadMenu& m) const;
+    void editorSave(std::string& lines) const; bool editorLoad(const std::string& line); void editorReset();
+    void editorChoices();
+    bool editorPut(const EditorChoice& c);
+    void editorMake();
+    void editorEdited();              // its kind, form and genes with its edits
+    void editorTick();                // the writing's end as the lab's clock reaches it (`updateLab`)
+    bool editorWrite();               // W: the writing begun
+    void editorLetterKeys(const Input& in);
+    void editorSet(int place, bool cut, const std::string& part);   // a gene's edit made (dropped where it is its parent's again)
+    std::string geneKey(uint64_t genesis, int place) const;
+    const GeneKnown* geneKnown(uint64_t genesis, int place) const;
+    std::string geneWords(uint64_t genesis, int place) const;   // the map's words: its name, what it was seen to do, NOTHING SEEN, NOT KNOWN
+    void geneSeen(int flask, int who, int kind, const std::string& what, int how = GENE_SEEN_EDIT);
+    void geneSay();                   // the findings said in their turn (`updateLab`)
+    void flaskLearn(int i);           // an edited line against its parent as the lab's clock runs (its fit, its rest, its glow; a vital death)
+    void scopeLearn();                // a flask's edited line in view on the microscope (its shape, size, colour, motion; nothing seen)
+    void scopeAnswerLearn(int kind, uint32_t bits, int unanswered = -1);   // its answers on the slide (a sense)
+    std::string strainReadLearn();    // the sequencer's reading of a strain: the gene its move was in (the line said; "" none)
+    int strainGene(const FlaskSpecies& w, uint64_t& genesis) const;   // a strain's one gene differing from its parent's (-1 none)
+    std::string lineTag(const FlaskSpecies& w) const;             // a line's number as drawn: S3 (a strain), E4 (an edited line)
+    std::string lineTagOf(const std::string& speciesKey, int n) const;
+    std::string lineMoveWords(const std::string& lineKey) const;  // a strain's move, an edited line's edits ("GENE 3 CHANGED, GENE 8 CUT OUT")
+    bool lineEdited(const std::string& lineKey) const;
     bool speciesOfKey(const std::string& key, FlaskSpecies& w) const;
     const Lineage& lineageOfKey(const std::string& key);
+    const Morph* formOfKey(const std::string& key);   // B-443: a sequenced species' form (nullptr: its world gone)
+    void kinDraw(const std::string& key);             // its world drawn once: its lineage and its form kept
     void treeEnter(); void updateTree(const Input& in, double dt, double realDt); void renderTree(); void treePad(PadMenu& m) const;
     void treeBuild();
+    std::vector<TreeLeaf> treeLeaves(const std::string& with = std::string());   // B-443: the leaves in their order and words (`with` too)
+    std::string treeWords(const std::string& key);    // B-443: a species' words on the tree (its name, else its look)
+    static std::string treeLeafLine(const TreeLeaf& L, bool world = true);   // B-443: a leaf's line as drawn (a long look before its world)
     int treeNearest(int i, double& gyr) const;
+    // Y-01 (R-444): the page shown (its rows, joins, what is not read), its years, a species' page; Backspace, A and its chooser; a world's
+    // page's name, a lab's line's words, a twig's
+    void treePage(); double treeYears() const; void treeShow(const std::string& key);
+    void treeTakeOff(); void treePickOpen(); void treePickKeys(const Input& in);
+    std::string treeWorldWords(const std::string& world); std::string treeLineWords(const std::string& key);
+    std::string treeTwigWords(const std::string& key);   // Y-01: a twig's (its strain's name or number, its move)
     void drawTreeWall(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);   // cabin_life.cpp: its lines over the screen in the room
     // the decoder's watermarks (shards_screen.cpp): a made species' sequenced, read beside its people's records, its language theirs
     void shardWatermarkAdd();

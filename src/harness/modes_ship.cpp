@@ -452,6 +452,25 @@ int lifeMode(int argc, char** argv) {
     differ("the sequencer reading", seqIdle, seqReading);
     game.testCabinView("THE TREE OF KIN");
     shot("tree");
+    // Y-02: the gene editor on the bow bench past the sequencer, idle, then writing a line of flask 1's species (its screen pulsing)
+    game.testCabinView("THE GENE EDITOR");
+    std::vector<uint32_t> edIdle, edWriting;
+    shot("editor", &edIdle);
+    {
+        const Flask& F = game.testLab().flasks[0];
+        if (F.n > 0) {
+            FlaskSpecies w = F.who[0];
+            game.guide.microbes[Guide::bodyKey(w.sx, w.sy, w.sz, w.body) + "/M" + std::to_string(w.species)].seen |= SEEN_FORM | SEEN_KIN;
+            if (game.testEditorPut(w, F.medium, true))
+                for (const MicrobeGene& G : game.testEditor().genes.genes)
+                    if (G.kind == GN_QUIET && game.testEditor().edits.empty()) { std::string p = G.part; p[0] = p[0] == 'A' ? 'C' : 'A'; game.testEditorSet(G.place, false, p); }
+            game.testFlaskEmpty(INCUBATOR_FLASKS - 1);   // a flask for its line
+            game.testEditorWrite();
+        }
+    }
+    game.testLabSkip(EDIT_S / 3);
+    shot("editor_writing", &edWriting, game.testEditor().writing ? "writing" : "NOTHING ON IT");
+    differ("the gene editor writing", edIdle, edWriting);
     game.testStatusPut(keptStatus);
     // the drive's core at rest and in a flight; R-427: the maintenance room, the buggy and the drone on their platforms
     std::vector<uint32_t> rest, flight;

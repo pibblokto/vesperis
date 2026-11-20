@@ -327,10 +327,32 @@ public:
     // Z-06: the sequencer: a species put on it (its world and index), its save line, its result told on the lab's clock (the skip hook's); the tree
     // built from the guide, its leaves, a leaf's nearest kin; the decoder's world opened (a watermark among its records)
     bool testSeqPut(int64_t sx, int64_t sy, int64_t sz, int body, int species) { FlaskSpecies w; w.sx = sx; w.sy = sy; w.sz = sz; w.body = body; w.species = species; return sequencerPut(w); }
+    bool testSeqPutLine(const FlaskSpecies& w) { return sequencerPut(w); }   // Y-02: a line read as it is
     void testSeqSave(std::string& lines) const { sequencerSave(lines); }
     bool testSeqLoad(const std::string& line) { return sequencerLoad(line); }
     TreeState& testTree() { treeBuild(); return tree; }
+    static std::string testTreeLine(const TreeLeaf& L, bool world = true) { return treeLeafLine(L, world); }   // B-443: as drawn
     int testTreeNearest(int i, double& gyr) const { return treeNearest(i, gyr); }
+    // Y-02: the gene editor: its state, a culture put on it (read or not), a gene's edit, the writing begun, its chooser, its save lines; a line's
+    // kind, form and genes; an edited line's drop looked at (its learning)
+    EditorState& testEditor() { return lab.edit; }
+    bool testEditorPut(const FlaskSpecies& w, const Medium& m, bool read) {
+        EditorChoice c; c.who = w; c.medium = m; c.asWorld = m; c.from = "THE TEST"; c.read = read; return editorPut(c);
+    }
+    void testEditorSet(int place, bool cut, const std::string& part) { editorSet(place, cut, part); }
+    bool testEditorWrite() { return editorWrite(); }
+    std::vector<EditorChoice>& testEditorChoices() { editorChoices(); return lab.edit.choices; }
+    void testEditorSave(std::string& lines) const { editorSave(lines); }
+    bool testEditorLoad(const std::string& line) { return editorLoad(line); }
+    bool testFlaskKind(const FlaskSpecies& w, CultureKind& k, Morph& m, MicrobeGenes* g) const { double slept = 0; return flaskKind(w, k, m, slept, g); }
+    std::string testLineTag(const FlaskSpecies& w) const { return lineTag(w); }
+    std::string testGeneWords(uint64_t genesis, int place) const { return geneWords(genesis, place); }
+    std::string testGeneKey(uint64_t genesis, int place) const { return geneKey(genesis, place); }
+    // Y-01: a page of the tree shown (its rows made again), a species' page, the page's years
+    void testTreePage(int p) { tree.page = p; tree.sel = tree.top = 0; treePage(); }
+    void testTreeShow(const std::string& key) { treeShow(key); }
+    bool testSpeciesOfKey(const std::string& key, FlaskSpecies& w) const { return speciesOfKey(key, w); }
+    double testTreeYears() const { return treeYears(); }
     bool testShardWorld(const std::string& key, int which) { return openShardWorld(key, which); }
     ShardWorld& testShardWorldNow() { return shardWorld; }
     void testListShardsHeld() { listShardsHeld(); }

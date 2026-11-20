@@ -88,6 +88,8 @@ constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
      &G::updatePlayerScreen, &G::renderPlayerScreen, nullptr, nullptr, &G::playerPad, &G::playerEnter, to(S::SPACE)},
     {S::WALL, "WALL", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // R-428: the quarters' wall, over the room
      &G::updateWall, &G::renderWall, nullptr, nullptr, &G::wallPad, &G::wallEnter, to(S::SPACE)},
+    {S::EDITOR, "EDITOR", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // Y-02: a screen over the room; its lines its own
+     &G::updateEditor, &G::renderEditor, nullptr, nullptr, &G::editorPad, &G::editorEnter, to(S::SPACE), &G::editorSave, &G::editorLoad, &G::editorReset},
 };
 
 namespace {

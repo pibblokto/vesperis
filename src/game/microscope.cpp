@@ -415,6 +415,7 @@ void Game::microscopeFrame() {
     }
     microscopeSee();
     microscopeAnswers();
+    scopeLearn();   // Y-02: a flask's edited line against its parent
 }
 
 // what the explorer sees of each species in the frame: a cell in the view's middle, in focus, big enough for the part (its form and its stage
@@ -524,6 +525,8 @@ void Game::microscopeAnswers() {
         if (fresh & SA_STRESSED)
             say(fmt("%s %s AT %.0f C", who.c_str(), K.stress == AN_SPORULATE ? "FORMS SPORES" : (K.stress == AN_ENCYST ? "ENCYSTS" : "BURSTS"), K.tMax + 2), SD_WARM);
         told = (told & ~STATE) | a | SCOPE_LOOKED;
+        if (fresh & (SA_LIGHT | SA_FLEES | SA_FOOD | SA_FIELD)) scopeAnswerLearn(k, fresh);   // Y-02: an edited line's against its parent's
+        if (scope.flask >= 0 && K.species >= 0 && K.species < 2 && lab.flasks[scope.flask].edited[K.species]) continue;   // (its answers its line's, not its species' sheet's)
         auto it = guide.microbes.find(speciesKey(K.species));   // its sheet (made at its form's first sight)
         if (it == guide.microbes.end()) continue;
         MicrobeSheet& m = it->second;
@@ -553,6 +556,9 @@ void Game::microscopeAnswers() {
             const uint32_t yes = d == SD_LIGHT ? (AW_LIGHT | AW_FLEES) : (d == SD_FOOD ? (AW_FOOD | AW_LIT) : AW_FIELD);
             for (int k = 0; k < nk; k++) {
                 if (!inView[k] || !(now[k] & SA_MOVING) || (scope.told[k] & want)) continue;
+                scopeAnswerLearn(k, 0, d);   // Y-02: an edited line that did not answer where its parent would
+                const int sp = scope.mount.kinds[k].species;
+                if (scope.flask >= 0 && sp >= 0 && sp < 2 && lab.flasks[scope.flask].edited[sp]) continue;
                 auto it = guide.microbes.find(speciesKey(scope.mount.kinds[k].species));
                 if (it != guide.microbes.end() && !(it->second.answers & (yes | none))) { it->second.answers |= none; scope.answersDirty = true; }
             }
