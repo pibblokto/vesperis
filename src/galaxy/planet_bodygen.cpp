@@ -252,11 +252,12 @@ BodyGen BodyGen::make(const Body& b, double season) {
     g.R = b.radiusKm;
     g.season = K.cover != DC_NONE ? 0.0 : season;   // P-04: a dead world's ground keeps no season (its climate is its then-world's)
     g.starSx = b.starSx; g.starSy = b.starSy; g.starSz = b.starSz; g.starKnown = b.starKnown; g.bodyIndex = b.index;
+    g.hasAir = bodyHasAir(b);   // J-02: what the site, the globe and the maps read (an air fallen as snow in the dark is none)
     // a living world's air keeps it 33 degrees over its equilibrium temperature (Earth's greenhouse), so an Earth-like
     // orbit gives an Earth-like climate; without it two thirds of the felisian land was ice sheet (`vesperis_test encounters`).
     // a dead world's the climate it had in its people's time (`Body::thenTempK`), its present's mean apart
     g.tempBias = ((b.thenTempK > 0 ? b.thenTempK : b.tempK) + K.greenhouseK - 288.0) * 0.3;
-    if (K.cover != DC_NONE) g.nowTempC = (b.tempK - 273.15) * 0.75 + K.tempOffset;
+    if (K.cover != DC_NONE) g.nowTempC = (b.tempK - 273.15) * 0.75 + g.airWarmthC();   // (J-02: the kind's, through the generator)
     Rng rng(b.seed ^ 0xB0D7ULL);
     g.sA = rng.next(); g.sB = rng.next(); g.sC = rng.next(); g.sD = rng.next(); g.sE = rng.next(); g.sF = rng.next();
     g.sG = rng.next();
@@ -503,4 +504,21 @@ double climateTempC(const BodyGen& g, double absLatDeg, double heightM, double w
     // terminator world's)
     if (g.locked) T += g.subContrast * sub - 6.0 + 0.35 * absLatDeg;
     return T;
+}
+
+// (moved from `SurfaceView::placeMeanC` in J-03, each expression as it was: the site's generator, its air and its unit at the place)
+double placeMeanC(const BodyGen& g, double bodyTempK, bool sunless, const Vec3& u, double h) {
+    const KindDef& K = KINDS[g.type];
+    const double absLat = std::fabs(std::asin(clampd(u.z, -1, 1))) / DEG;
+    if (sunless) return bodyTempK - 273.15 - (g.hasAir ? 6.5 * h / 1000.0 : 0.0);
+    const double sinAlt = g.locked ? dot(u, g.lockedDir) : 0.0;
+    double base = bodyTempK - 273.15;
+    if (livingGround(g.type)) base = climateTempC(g, absLat, h, 0, sinAlt) - 3 + K.daySwing * sinAlt;
+    else if (g.hasAir && K.reachClimate && g.locked) base = g.airWarmthC() + K.tempSwing * (sinAlt - std::cos(g.seaReachDeg * DEG));
+    else if (g.hasAir) base = base * 0.75 + g.airWarmthC() + K.tempSwing * sinAlt - 0.4 * absLat;   // (J-02: the greenhouse through the generator)
+    else base = base * 1.3 - 60 + (g.locked ? (sinAlt > 0 ? 110 * sinAlt : -70) : 35 * std::cos(absLat * DEG) - 35) - 0.5 * absLat;
+    if (!livingGround(g.type)) base -= 6.5 * (h / 1000.0);
+    base += K.tempAdd;
+    if (K.nightSideC > -1e8 && g.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);
+    return std::max(base, -270.0);
 }

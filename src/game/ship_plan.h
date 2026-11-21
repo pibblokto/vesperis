@@ -98,14 +98,14 @@ struct ShipStair {
 // (its doors); the photographs' wall (a box's corners on the wall: `slots` across, `boards` down), the case's display (the instruments
 // against its glass: its box's front, `boards` shelves of `slots`), the drive's core under the floor glass (its pit `height` deep). Z-04: the
 // laboratory's cold store (its door's lamps, `slots` of them, lit by how full it is). Z-05: the incubator's cabinet (its flasks, `boards`
-// shelves of `slots`, behind its glass door) and the jars' shelf (`slots` jars behind its glass). Z-06: the tree of kin's lines over its screen
-// (a box's corners on the screen's face, no faces of its own)
+// shelves of `slots`, behind its glass door). Z-06: the tree of kin's lines over its screen (a box's corners on the screen's face, no faces of
+// its own)
 enum ShipFixtureKind { FX_BOX, FX_SCREEN, FX_CAGE, FX_RACK, FX_TUBE, FX_RING, FX_MAST, FX_SHELF, FX_BED, FX_DECK, FX_LOCKER, FX_PRINTS, FX_DISPLAY, FX_CORE,
-                       FX_STORE, FX_INCUBATOR, FX_JARS, FX_TREE, FX_VEHICLE };   // R-427: a vehicle on its platform (`slots`: 0 the buggy, 1 the drone)
-constexpr int INCUBATOR_FLASKS = 12, JAR_PLACES = 8;   // Z-05: the incubator's flasks (three shelves of four), the jars' places
+                       FX_STORE, FX_INCUBATOR, FX_TREE, FX_VEHICLE };   // R-427: a vehicle on its platform (`slots`: 0 the buggy, 1 the drone)
+constexpr int INCUBATOR_FLASKS = 12;   // Z-05: the incubator's flasks (three shelves of four)
 // a box's kinds: its corners and height a box's, its faces drawn as a box's (the boxes' shadows, colliders and tops)
 constexpr bool fixtureBoxLike(int kind) {
-    return kind == FX_BOX || kind == FX_SHELF || kind == FX_BED || kind == FX_DECK || kind == FX_LOCKER || kind == FX_STORE || kind == FX_INCUBATOR || kind == FX_JARS;
+    return kind == FX_BOX || kind == FX_SHELF || kind == FX_BED || kind == FX_DECK || kind == FX_LOCKER || kind == FX_STORE || kind == FX_INCUBATOR;
 }
 // a box's faces by its corners a b c d and their heights (+h): BF_TOP a+h b+h c+h d+h, BF_FRONT b b+h c+h c, BF_SIDE_A a b b+h a+h,
 // BF_SIDE_D d c c+h d+h, BF_BOTTOM a b c d, BF_BACK a d d+h a+h
@@ -232,9 +232,9 @@ void shipSight(const ShipPlace& p, const Vec3& eye, const Mat3& look, const Proj
 // drawn); MAT_FEATURE, what stands outside it (lit so, drawn whatever the hull); MAT_GLOW, the drive's ring's inner face (the light's bank,
 // the drive's pulse). I-04: what the frame fills with the explorer's things where it comes in its room's order, each its fixture's
 // (`fixture`): the shards on a shelf, the photographs, a bed's plants, the drive's core, the instruments in the case, the deck's reels,
-// the capsule in its cradle and the hatch under it; Z-04: the cold store's door's lamps; Z-05: the incubator's flasks, the jars; Z-06: the tree
+// the capsule in its cradle and the hatch under it; Z-04: the cold store's door's lamps; Z-05: the incubator's flasks; Z-06: the tree
 enum ShipPieceKind { PIECE_POLYGON, PIECE_LINE, PIECE_RACK, PIECE_MAST, PIECE_SHELF, PIECE_PRINTS, PIECE_GARDEN, PIECE_CORE, PIECE_DISPLAY, PIECE_DECK, PIECE_CAPSULE,
-                     PIECE_STORE, PIECE_INCUBATOR, PIECE_JARS, PIECE_TREE, PIECE_VEHICLE };   // R-427: a vehicle on its platform
+                     PIECE_STORE, PIECE_INCUBATOR, PIECE_TREE, PIECE_VEHICLE };   // R-427: a vehicle on its platform
 enum ShipMaterial { MAT_HULL, MAT_SOLID, MAT_SCREEN, MAT_PLAIN, MAT_PANE, MAT_TINT, MAT_OUTSIDE, MAT_FEATURE, MAT_GLOW };
 struct ShipPiece {
     int room = 0, kind = PIECE_POLYGON, mat = MAT_HULL, finish = FIN_HULL, bank = 0, device = 0;
@@ -285,8 +285,8 @@ double shipGlassToward(int room, const Vec3& dir);
 // looking out the outside's one (`cabinDeal`: what shows through the glass is in it, read through the space view's own palette)
 struct ShipBankAsk { int home; RGB col; double near; };
 // Z-05: the homes are keys: a bank's number (its own when the pool has it) or past them (SHIP_LIFE_HOMES on: the lab's cultures' tones,
-// always a free bank); Y-02: the gene editor's screen 48
-constexpr int SHIP_HOMES = 49;
+// always a free bank); Y-02: the gene editor's screen 48; J-01: the flasks' tissue, dyes and sediments 49 to 62
+constexpr int SHIP_HOMES = 63;
 struct ShipBanks {
     int of[SHIP_HOMES];      // a home's dealt bank, -1 dimmed or not asked
     RGB col[SHIP_HOMES];     // a home's colour as asked

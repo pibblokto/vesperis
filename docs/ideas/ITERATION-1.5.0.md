@@ -11,22 +11,28 @@ the stage its life reached (from protocells to colonies, the spores and fossils 
 genesis it descends from (kin across worlds and stars), and its species, each with a niche, a way to live, limits, a life cycle and a
 form of about forty values seen six ways. The explorer finds them by choosing where life would be (a sample's microhabitat, its
 activity read on the spot, the lamp's ultraviolet, the signs the ground shows) and studies them in a laboratory aboard: the
-microscope, the incubator's cultures and their stages, waking spores, mixed flasks, strains, the world in a jar, the sequencer and
-the tree of kin, and the organisms a dead people made.
+microscope, the incubator's cultures and their stages, waking spores, mixed flasks, strains, the sequencer and the tree of kin, and
+the organisms a dead people made. (Z-05's jars were taken out by R-447, 2026-11-20.)
 
 **The interior** (`R-426`): the Stardrifter "way way more spacious"; a player called it utilitarian. The 5 x 5 m room becomes three
 decks and eight spaces, about 820 square metres: the bridge with its great window, the two-deck hall with the garden and the spiral
 stair, the library, the laboratory, the quarters, the hangar with the capsule, the engine room and the observatory under a glass
 dome; materials, lamps, the star's light through the windows, the hull seen outside, sound by room, and the explorer's things.
 
+**The seeded worlds** (`R-448`, Phase 6): a gene-edited culture sent down to a world changes it, "sometimes beneficial [...] sometimes
+neutral, sometimes harmful", more often harmful; fourteen new genes, nuanced ("more co2 which will transform planet into venusian type of
+planet"); made traits, some never found in the wild; die-offs with remains of the world's own animals, mutations, blights; worlds
+overgrown with flesh, fungus or other tissue, ruins included; and the animals drawn again with far more variety, still procedural.
+
 **Generation.** One change, 17, from Z-01: the biota is a new part of what a body is, drawn on salts of its own after every draw of
 16, so no star, system, body, map or ground moves with it. Z-03's two signs on the ground (the hot springs' bands, red snow) ride
 it and move only the worlds they are given. The I series is drawing alone: no generation change, `cabin_1x` blessed where named.
-Saves of 1.4.x load with the regeneration notice.
+Saves of 1.4.x load with the regeneration notice. Phase 6 makes one more, 18, from J-06: the animals drawn again. Seeding is no
+generation change: what the explorer did to a world is kept in the guide, and a world nobody seeded stays as generated.
 
 Left out on purpose: caves (the K series, still unplanned: no cave life), life in a giant's clouds (X-03's rule), drones that sample
-(the search is the explorer's), seeding or changing a world with a culture (the worlds stay as generated), plants and animals as
-specimens (only the small comes aboard), the V and L series.
+(the search is the explorer's), plants and animals as specimens (only the small comes aboard), the V and L series. Seeding a world
+with a culture, left out at first (the worlds stayed as generated), came in with R-448 (Phase 6).
 
 ## Order
 
@@ -40,13 +46,25 @@ specimens (only the small comes aboard), the V and L series.
 | 6 | The ship | I-04 | Life aboard: the quarters, the garden, the library's shelves, the hangar's capsule, sound by room | L | done 2026-11-17 |
 | 7 | The search | Z-03 | The search: microhabitats, the kit, the activity, the lamp's ultraviolet, the signs, the capsule's scoop | XL | done 2026-11-17 |
 | 8 | The lab | Z-04 | The microscope: a camera you enter, six ways of seeing, zoom, tracking, light and field; names and sheets | XL | done 2026-11-17 |
-| 9 | The lab | Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars | XL | done 2026-11-17 |
+| 9 | The lab | Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars (taken out by R-447) | XL | done 2026-11-17 |
 | 10 | The lab | Z-06 | The genome and the tree: the sequencer, kin across worlds and stars, the geneses, the made organisms | L | done 2026-11-17 |
 | 11 | The close | Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | done 2026-11-17 |
 | 12 | The genes | Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs (R-444) | M | done 2026-11-19 |
 | 13 | The genes | Y-02 | The gene editor: a species' own genes cut, changed by hand, put into a flask, learned (R-443) | XL | done 2026-11-20 |
 | 14 | The genes | Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, needs (R-443) | L | done 2026-11-20 |
 | 15 | The genes | Y-04 | The switches: when a gene is on, in the culture's segments and the drop (R-443) | L | done 2026-11-20 |
+| 16 | The seeded worlds | J-01 | World genes: fourteen new genes on every species, seen in the lab; the editor's second page | XL | done 2026-11-20 |
+| 17 | The seeded worlds | J-02 | The world now: a seeded world's layer over the world as generated; nothing drawn changes | L | done 2026-11-20 |
+| 18 | The seeded worlds | J-03 | Sending: the drones' seed trip, whether it takes, the spread, the record; the waters' colours | XL | done 2026-11-21 |
+| 19 | The seeded worlds | J-04 | Air and sky: the made climate, haze, ozone, clouds, rain | L | done 2026-11-21 |
+| 20 | The seeded worlds | J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | done 2026-11-21 |
+| 21 | The animals | J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | planned |
+| 22 | The animals | J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | planned |
+| 23 | The animals | J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | planned |
+| 24 | The overgrowth | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | planned |
+| 25 | The overgrowth | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | planned |
+| 26 | The close | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | planned |
+| 27 | The close | J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.
@@ -92,7 +110,7 @@ question that is the user's is still asked before building):
     HUD on the canvas; the other lab screens are screens over the room, as the decoder is.
 12. **The made organisms are in** (Z-06): one species on each world of a futuristic or far-future people, its watermark a record
     in the people's tongue. Left out by one word, the rest of Z-06 unchanged.
-13. **Lending:** species, names and sheets travel (cyan, in no statistic); samples, flasks and jars do not.
+13. **Lending:** species, names and sheets travel (cyan, in no statistic); samples and flasks do not.
 14. **Auto-explore** takes samples at water and springs on its walks; the lab's work stays the explorer's (it opens no screen).
 
 ## Phase 1: the living small
@@ -402,7 +420,7 @@ the trait banks, the hot springs, the descent, the drones' clock, the guide's ke
   sequenced, geneses, kin across stars; counts in the other screens' words.
 * **The rest of the record:** the data sheet's microbe line, the log's kinds (SAMPLE, FORM, WOKEN, KIN, STRAIN), micrographs in the
   gallery.
-* **Lending:** a friend's species, names and sheets in cyan, in no statistic; never their samples, flasks or jars.
+* **Lending:** a friend's species, names and sheets in cyan, in no statistic; never their samples or flasks.
 * **Auto-explore** takes samples at water and springs on its walks; the lab's work stays the explorer's (it opens no screen).
 * **The docs:**
   * a reference note for life (`docs/reference/13-life.md`), and the ship in 07;
@@ -495,3 +513,203 @@ Decided by default (2026-11-19), from the sketch and the user's five calls:
     crowd's share) and in a drop; a gene off costs nothing; the wild switches give every species' curve as before;
   * `lab cultures` prints a switched line's curve; frames of a switched glow and rest;
   * the battery against y03, every difference named; `bench check`; `make check`; `tools/prove snapshot y04`.
+
+## Phase 6: the seeded worlds
+
+Added 2026-11-20 on the user's request after Y-04 and R-447 (R-448), talked through first. The design is `IDEAS-seeded-worlds.md`. A
+world nobody seeds stays as generated, bit for bit. One generation change, 18, from J-06 (the animals are part of what a surface is);
+seeding is the explorer's, kept in the guide, and no generation change.
+
+Why this order:
+
+1. **The genes first:** a world changes by what a line carries, and the explorer learns each gene in a flask before a world shows it.
+   Nothing outside the lab moves.
+2. **The layer proven on what exists:** J-02 changes no picture (I-01's and P-00's way), so a difference after it is content, never
+   plumbing.
+3. **The loop early:** J-03 sends a culture and shows the first change, so the game can be played from the third milestone on.
+4. **The plain changes before the strange:** air, water, ground and plants (J-04, J-05) use paths that exist (tints, covers, the
+   flora's flags).
+5. **The animals before their fates:** remains are a world's own animals and changes act on their bodies, so the bodies (J-06, plates
+   judged first) and their ways (J-07) come before J-08.
+6. **The overgrowth last of the looks:** it covers everything that exists by then, remains and ruins included.
+7. **Could go otherwise:** the animals first (J-06 to J-08 before J-01), one word from the user.
+
+Decided by default (2026-11-20), until the user's calls on the sketch:
+
+1. **One release:** all twelve are 1.5.0 (the user: "we are including it in 1.5.0 nonetheless").
+2. **Sending:** the drone bay's second trip (S). One drone takes a culture from a flask that shows FULL to a place chosen on the
+   world's map, lets it go, watches two minutes and climbs. The flask keeps its culture.
+3. **Worlds:** any landable world but the home world, where every game starts. A furnace kills every culture. A people's world can be
+   seeded, ruins and all.
+4. **Whether it takes:** the solvent, the place's medium (warmth, salt, light, food), oxygen, pH and dose, land (DRY), the natives
+   (with the price paid). A line can change in the wild, found when a sample of it is read. The same seeding always gives the same world.
+5. **The clock:** the guide's own, seconds the game simulated across saves and expeditions. The warp does not hurry it.
+6. **Pace:** the place in about 5 minutes, the region in about 30, the whole world in about 2 hours, read in 24 steps.
+7. **Several lines:** up to three a world, each acting on the world the ones before left. Nothing undoes one.
+8. **Harm is common:** of seedings that take, about half harm the world's life, a third change only how it looks, a fifth make it more
+   livable. `seed` prints the shares over many worlds and lines.
+9. **Fourteen world genes** on every species (most doing nothing in the wild), at places 19 to 32. Places 1 to 18 are drawn as now.
+10. **Nothing moves the ground:** heights, rivers and lakes stay the world as generated. The made climate moves ice, snow and plants. A
+    runaway's seas dry to their old beds (the dead deserts' rule).
+11. **Banks:** a made colour first takes the bank of what it replaces, then a free one. At most four made colours a world.
+12. **Animals are named by the explorer,** as microbes are. The generated names go.
+13. **Loans** carry no seeded world. **Auto-explore** never seeds.
+
+### J-01: world genes
+
+* **Fourteen genes** (`life/genes`): GAS, DYE, LIFT, FROST, SLIME, SHELL, STOP, BIND, ROT, POISON, CARRIER, HOST, DRY, SHIELD. They are
+  appended to `GeneKind` and take places 19 to 32 of each genesis's map, on a salt of their own; places 1 to 18 are drawn as now. Their
+  tables come after `shape`, each on its own salt. A table gene has 2 letters of choice and 4 of weight, a weight gene 4.
+* **Wild values:** every species carries all fourteen. The wild letters give its own values: a methane-maker's GAS, a magnet-turner's
+  RUST, the red snow alga's DYE and FROST, a colony's BIND, a dead-eater's ROT, a hunter's POISON; the rest NONE or 0.
+* **The lab:** each flask shows them on the incubator's screen and in the room: bubbles, coloured water, scum, frost, sediment, a flask
+  overgrown with tissue. POISON and CARRIER show in a mixed flask, SHIELD under a new ULTRAVIOLET light. They are learned as Y-02's genes
+  are, against the parent. ROT, HOST and DRY show only on a world (from J-03).
+* **The editor:** the map on two pages (CELL GENES 1 to 18, WORLD GENES 19 to 32; Page Down and Page Up turn, as Tab chooses a culture).
+  Edits, moves, copies and switches work as
+  today. A working GAS, DYE, SLIME or SHELL is priced by its weight.
+* Done when:
+  * `lab genes` prints the new genes for worlds of four, six and eight letters, forty species' wild values, and each new gene's edit
+    before and after;
+  * unit checks pass: places 1 to 18, the old tables and every saved edit read as before (on a copy of the player's guide); every
+    unedited species of forty worlds is itself; each new gene's edit moves its value within limits; each gene the lab shows is shown and
+    learned from one change; POISON and CARRIER in a mixed flask; editor, lines and flasks over a save and load;
+  * frames: a flask for each new look (`lab cultures`) and the editor's second page; the flow writes a line with a world gene changed;
+  * `tools/prove compare r447`, every difference named; `bench check`; `make check`; `tools/prove snapshot j01`.
+
+### J-02: the world now (nothing drawn changes)
+
+* **The layer:** what a world was made into at a step, as data (`galaxy/made.h`), computed in `life/seeding` from the guide's records.
+  The game puts it into `BodyGen` by value where the drawing gets its generator (`SpaceRenderer::genFor`, `SurfaceSite::initFrame`, the
+  landing map's probe site), and `unseasoned` and `thenWorld` strip it.
+* **Reads,** each doing nothing without a layer: the planet function's last pass (after `darkGround`), the ground's palette, weather
+  and climate (`computeEnvironment`), the clouds, the globe's ramps and a land tint, the landing and sector maps (`mapColor`), the data
+  sheet. The kind-level reads a made world changes (`tempOffset`, `site.atmosphere`) go through `BodyGen`.
+* **Caches** keyed by the step as well as the seed: generators, maps, the telescope's plates, the zoom, the drone map.
+* **The record:** the guide's `seeded` and `clock` lines, byte-stable. A loan carries no `seeded` line.
+* **A test layer:** `seed test` puts a tint and a cover on a world, to prove every path draws them, and takes them off.
+* Done when:
+  * the battery against j01 is the same in every item (no layer, no difference);
+  * `seed test` draws a world's globe, landing map and ground with the test layer, and without it as before;
+  * unit checks pass: the layer the same on any thread and in any order; a map made with it differs, and one without it is the cached
+    one; the guide byte-stable with `seeded` lines; the clock the same skipped, stepped and reloaded; a loan without `seeded` lines;
+  * `bench check` (no cost on an unseeded world); `make check`; `tools/prove snapshot j02`.
+
+### J-03: sending a culture down
+
+* **The trip:** S on the drone bay, a flask that shows FULL, a place on the world's map, Enter. One drone goes down for two minutes and
+  comes back with its report; the log says SEEDED. Refused at home, at a giant, out of orbit, with the drones away or charging, and for a
+  fourth line.
+* **Whether it takes** (`life/seeding`, a pure function of world, line and place): the solvent, `growthIn` over `mediumOfPlace`,
+  oxygen, pH and dose (SHIELD), land (DRY), the natives (`pairOf` with the price). Then the drift in the wild.
+* **The spread** on the guide's clock in 24 steps, through the warmth, waters and land the line can live in; faster with LIFT.
+* **The first change:** the waters' colours from DYE (RED SEAS and the other colours) and GLOWING SEAS, on the ground, on the maps and
+  from orbit.
+* **Life:** samples of a seeded world find the line where it spread (drifted or not) and fewer of the natives it beat. The data sheet
+  gets SEEDED and MADE lines, the LANDING log what changed.
+* Done when:
+  * `seed` prints, for forty worlds and six lines (wild, warm, cold, a dye, a methane-maker, STOP cut), the verdict and why, the
+    spread's steps and what each shows; frames of a seeded sea from orbit and on the ground, before and after;
+  * unit checks pass: the verdict agrees with a flask in the place's medium; the spread the same skipped, stepped and reloaded; the
+    drift fixed by world, line and place; the record byte-stable; a loan leaves the borrower's world unchanged; an unseeded world bit
+    for bit; the home world refused;
+  * the flow seeds a world in its last stage (KI-450: where no later frame moves); a tour stop at the seed page;
+  * the battery against j02, every difference named; `bench check`; `make check`; `tools/prove snapshot j03`.
+
+### J-04: air and sky
+
+* **The made climate:** a temperature and a pressure of now (as `nowTempC` is) that move the ice caps, the snow line and the plants'
+  health, never the rivers; the HUD's TEMP and ATM, the data sheet's AIR line.
+* **Air:** THICK AIR, RUNAWAY (seas steaming, then dry to their old beds), ORANGE HAZE, SULPHUR AIR, OZONE, THIN OZONE, COLD HAZE.
+* **Clouds and rain:** GLOWING CLOUDS, COLOURED CLOUDS, BLOOD RAIN (coloured rain and puddles), SEA SMOKE (fog lying on the seas),
+  ENDLESS RAIN, SPORE CLOUDS.
+* Done when: `seed traits` draws each trait from orbit and on the ground (`shots/tests/made_*.png`); the climate before and after for
+  twenty worlds and each gas; unit; the battery against j03; `bench check`; `make check`; `tools/prove snapshot j04`.
+
+### J-05: water, ground and plants
+
+* **Water:** PURPLE SEAS, BLACK SEAS, MILK SEAS, FOAM SEAS (foam banks on the shores), JELLY SEAS (slow heavy waves), SOUP SEAS, SOUR
+  SEAS (reefs bleached), RUST RIVERS, BOILING SEAS.
+* **Ground:** COLOURED SNOW, DARK ICE (melting), CRUSTS, MATS, STROMATOLITES, RUST GROUND, CHALK GROUND, GLASS SANDS, SULPHUR CRUSTS,
+  PITTED STONE, SLIME.
+* **Plants:** BLIGHT, ROT (fallen forests), FROST BURN, GALLS (swellings on trunks and limbs), NEW LEAVES, GLOWING FORESTS, LUSH,
+  BLEACHED. The globe and the maps follow.
+* Done when: frames of each trait; unit; the battery against j04; `bench check` (the forest at 4x within its 13 ms, galls and all);
+  `make check`; `tools/prove snapshot j05`.
+
+### J-06: animal bodies (generation 18)
+
+* **A species as a body of parts:** segments with a girth, 0 to 6 pairs of limbs with joints and feet, neck, head (snout, beak, trunk
+  or mandibles; 0 to 8 eyes; horns, frills), tail, back (plates, spines, sail, shell), wings, hide and pattern, size. Sixteen plans as
+  recipes (the design's section 9). A world's animals share a style, and no two of a world look alike (a measure, as `MORPH_ALIKE`).
+* **Drawn:** a mesh built once a species and posed each frame, on the pool. Hides in two banks of their own a world; flyers with
+  bodies; several swimmer species; far animals in lines, as now.
+* **Generation 18:** each species from its own seed; a row and a section in `generations.md`; the regress blessed after the bump. The
+  player's guide loads with the regeneration notice.
+* **Plates to judge:** `bestiary plates` draws sixty-four worlds' animals side by side and in herds, for the user's verdict before J-07.
+* Done when:
+  * the plates; unit checks pass: species pure functions, under 1.5% of 1,000 species alike, every plan's poses within bounds, the
+    herds' cells as before;
+  * the scenes `creatures_lineup` and `felisian_herd` made again (named); `regress` blessed for the bump, then 24 of 24 both ways;
+  * the battery against j05, every difference named; `bench check` (the herd within 0.6 ms at 1x, the surface's budgets); `make check`;
+    `tools/prove snapshot j06`.
+
+### J-07: animal ways and the record
+
+* **Gaits** for every body: waves of legs, trot, gallop, bound, hop, slither, crawl, flap, glide, swim, drift.
+* **Ways:** grazers, browsers reaching up, hunters stalking and chasing, scavengers, burrowers, climbers, flocks and swarms, the
+  solitary and the territorial, night walkers; swimmers in shallows and breaking the surface; floaters on the wind.
+* **The record:** each species seen kept in the guide, N names one close by, the data sheet's LIFE line by what was seen. Loans carry
+  the names as microbes' names travel.
+* Done when: `bestiary ways` prints and draws each way; a scene each for a hunt, a flock and a swimmer; unit (gaits within bounds, the
+  record byte-stable, a loan's names); the battery against j06; `bench check`; `make check`; `tools/prove snapshot j07`.
+
+### J-08: the animals' fates
+
+* **Die-offs:** a share of each species dies of its cause. Remains are the species' own bodies (fresh, bloated, sunken, bones,
+  scattered), thickest at water; fliers fallen, swimmers washed up, flies, hunters feeding. A few old bones lie on wild worlds too.
+* **Sickness:** WASTING, MELTING, GROWTHS, SPROUTING (the animal climbs to high ground and dies there), BLOATED, CRAZED, STONE SKIN.
+* **Changed young:** the list in the design's section 8, one to three changes an animal, chosen by the line's genes and a hash of the
+  species; a share of each herd.
+* **Thriving** and **silence.** The record marks species DYING, GONE or CHANGED.
+* Done when: `seed fates` draws each fate and each change; a seeded world's herds over its steps; unit (the shares fixed by world and
+  line, remains a pure function of the cell, the marks); the battery against j07; `bench check` (a herd with remains within its
+  budget); `make check`; `tools/prove snapshot j08`.
+
+### J-09: the overgrowth
+
+* **Types** by how the line lives and its genes: FLESH, FUNGUS, SLIME MOULD, LICHEN, CORAL, SPONGE, HAIR, BLADDERS, CARPETS, FILMS.
+  Variants by colour, texture, grain, wetness, hardness, light and hair.
+* **The cover:** three new materials (soft tissue, threads, hard), a detail tile for each texture, a ragged creeping edge. Trees and
+  rocks are wrapped, remains taken in. From orbit a spreading stain, with lit veins at night.
+* **Structures:** mounds, ridges, blisters and sacs, stalks, folds, breathing vents, rib arches and teeth, membranes, polyps, and each
+  type's own (caps and shelves, creeping veins, spires, vases, waving hair, rising bladders); drawn and walked round.
+* **Plates first:** `overgrowth plates` draws each type and forty variants on a test ground, for the user's verdict.
+* Done when: the plates; frames of an overgrown world from orbit, on the landing map and on the ground at its steps; unit (the cover a
+  pure function of place and step, the structures' colliders, no tree in a structure); the battery against j08; `bench check` (the
+  surface and the forest on an overgrown world within their budgets); `make check`; `tools/prove snapshot j09`.
+
+### J-10: ruins overgrown, and the sound
+
+* **Ruins:** walls taken from the foot up (the rasteriser's second bank, the edge climbing with the steps); doorways and windows grown
+  shut with membranes the explorer pushes through; nodules and drapes; floors covered; graves and works too. PITTED STONE crumbles them.
+* **Sound:** WET GROUND (steps squelch), BREATHING (vents), creaks, hair hissing in the wind; the silence of a dead world.
+* Done when: frames of a city and a capital overgrown at their steps; WAVs of the sounds within the unit's bounds; unit (colliders,
+  membranes passable); the battery against j09; `bench check` (city and capital at 4x within 8.3 ms); `make check`;
+  `tools/prove snapshot j10`.
+
+### J-11: made kinds
+
+* **A world past a line** takes a made kind on the data sheet, with its heights and rivers as generated: MADE HOTHOUSE (the scorched
+  felisian's cover), MADE SNOWBALL (the frozen felisian's), HAZE WORLD, PURPLE WORLD, RUST WORLD, the overgrown worlds by type (FLESH
+  WORLD and the rest), CHARNEL WORLD, GREENED WORLD. The kind line ("FLESH WORLD, ONCE FELISIAN"), the sentence and the globe follow.
+* Done when: frames of each made kind; `seed` prints which of forty worlds and six lines end as which kind, and the shares of harm,
+  looks and livable; unit; the battery against j10; `bench check`; `make check`; `tools/prove snapshot j11`.
+
+### J-12: the record and the close
+
+* **The catalogue:** native species DIED OUT (with the line that did it), the line found wild and drifted, animals GONE or CHANGED.
+* **The LIFE page:** worlds seeded, made kinds, species died out. Auto-explore lands on seeded worlds as on any.
+* **The docs:** a reference note for seeded worlds, `rules-life-seeding.md`, the rules it changes ("the worlds stay as generated" to
+  `superseded.md`), KNOWN-ISSUES rows, the generated pages.
+* Done when: from a clean build, the whole battery against j11; `bench check`; `make check`; `tools/prove snapshot j12`.

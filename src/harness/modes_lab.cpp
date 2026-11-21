@@ -530,11 +530,10 @@ int runLab(int argc, char** argv) {
     if (sub == "microscope") return labMicroscope();
     if (sub == "time") return labTime();
     if (sub == "cultures") return labCultures();
-    if (sub == "jars") return labJars();
     if (sub == "tree") return labTree();
     if (sub == "kin") return treeKin(argc > 3 ? atoi(argv[3]) : 12);
     if (sub == "catalogue") return labCatalogue();   // Z-07
     if (sub == "genes") return labGenes();           // Y-02
-    printf("lab microscope | time | cultures | jars | tree | kin [r] | catalogue | genes\n");
+    printf("lab microscope | time | cultures | tree | kin [r] | catalogue | genes\n");
     return 2;
 }

@@ -226,6 +226,7 @@ private:
     TreeLook looks[10];                          // per silhouette on this planet
     std::vector<Vec3> dirLUT;
     std::vector<float> cloudGrid;
+    std::vector<float> cloudGlowGrid;   // J-04: per cell of the cloud grid, a seeded world's glowing clouds' light at night
     std::vector<float> auroraGrid;   // per cell of the cloud grid, the aurora's shade and its tops' share (the colour), drawn over the sky after the stars
     double lastWindUpdate = -1;
     double windDriftX = 0, windDriftZ = 0, lastEnvT = -1;   // the clouds' drift integrates the wind over time (metres)
@@ -303,6 +304,13 @@ private:
     int tintBankSprings = -1;   // the hot springs' mats (25: a world's water trait is the springs or a pink lake, never both)
     int tintBankStrata = -1;    // the rainbow strata's accent layers (27)
     int tintBankSnow = -1;      // Z-03: red snow's algae (28)
+    int tintBankMade = -1;      // J-02: a made world's tint over the land (28, else 27: a lent bank the world's traits leave free); J-03: or its waters
+    double tintGlowMade = 0;    // J-03: the made waters' glow tonight (a glowing line's; 0 by day)
+    int madeBanks[MC_COUNT] = {-1, -1, -1, -1};   // J-05: the land's, the snow's and the plants' made looks (lent banks left free; the waters' is `tintBankMade`)
+    double madeGlowPlants = 0;  // J-05: a glowing forest's light tonight (0 by day)
+    int madeFoamBank = -1;      // J-05: a foam's colour on the shores (a lent bank left free, else the snow's white)
+    bool madeOnSea = false;     // J-05: the made waters' tint lies on the sea (a line with a waters' look lives in it): the tide's flooded flats take it
+    bool madeCloudBank = false; // J-04: a seeded world's clouds drawn in bank 23 (coloured by day, glowing at night: `setupPalette`)
     // Z-03: the films under the lamp's ultraviolet: the world's biota (its systems' kept alive), each niche's density, the glow's colour; this
     // frame's grid of the near ring's corners round the eye (their height and their films' glow), the luminance of every bank's shades
     std::shared_ptr<const SystemLife> life;
@@ -597,7 +605,7 @@ private:
     // a corner of a cell's water sheet at (x, z): its place in view and its shade from the level `wl` and the drawn ground `hy`
     // under it. A vertex with its own level keeps its corner (`VtxCache::wv`, made by vertexOf in the warm, once, not by four cells
     // and every band again); a corner without one takes its cell's mean level and is made by the cell
-    RVert waterCorner(double x, double z, double wl, double hy) const;
+    RVert waterCorner(double x, double z, double wl, double hy, double jelly = 0) const;   // J-05: `jelly` a jelly sea's share here (its slow heavy waves)
     void materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const;
     // the points of a terrain cell's pieces that are not its corners, the same for the draw and the bin: a shore cut's point (O6-03:
     // the dry piece's edge SHORE_LIP over the water), the foot of the outermost ring's wall under a corner (KI-006: a cell and a half down)
@@ -631,6 +639,8 @@ private:
     void drawCometJets(Framebuffer& fb, double t);   // dust jets venting from the sunlit ground of an active comet
     void drawGeysers(Framebuffer& fb, double t);     // the geysers (europan cracks, geyser basins, tectonic fumaroles and steady fountains)
     void drawSpores(Framebuffer& fb, double t);      // the chemotroph's glowing spores over its springs at night (EV_SPRINGS)
+    void drawMadeAir(Framebuffer& fb, double t);     // J-04: a seeded world's dyed rain's puddles and the spores in its air
+    void drawMadeGround(Framebuffer& fb, double t);  // J-05: its foam, its boiling seas, glints, pits, a dark ice's meltwater
     void drawPlumes(Framebuffer& fb, double t);      // the cryovolcanic world's dark plumes and their flags (EV_PLUMES)
     void drawSpringJets(Framebuffer& fb, double t);  // the dry ice world's jets through its spring frost (EV_SPRING_JETS)
     void drawCurtains(Framebuffer& fb, double t);    // the tiger stripes' curtains of ice and the jets along them near the explorer (EV_CURTAINS)
@@ -711,6 +721,7 @@ public:
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
     std::string testHerdStates() const;            // "GRAZING 3 FLEEING 2 (calls 1)"
     int testAheadCells() const { return aheadStat; }
+    int testMadeBank(int cls) const { return cls >= 0 && cls < MC_COUNT ? madeBanks[cls] : -1; }   // J-05: a made look's bank (-1 none)
     double findOpenRun(double& x, double& z, double& heading);   // open ground within 800 m of the explorer and its longest clear run (metres)
     // tests: after a render, per ring edge (near/lod0, lod0/lod1, lod1/lod2, lod2/lod3), the largest gap in metres
     // between the finer ring's edge vertices as drawn and the coarser ring's surface there (`seam`; the rings meet when

@@ -3,11 +3,11 @@
 Microorganisms on every world (R-425, 1.5.0's Z series; the design `docs/ideas/IDEAS-small-and-spacious.md` section 1). `src/life/`
 reads `src/core` and `src/galaxy` alone. Z-01 made the biota (generation 17), Z-02 its forms and the slide they are seen on, Z-03 the
 search (the samples, the kit, the ultraviolet, red snow and the springs' bands), Z-04 the microscope (a vial's slide, what is done to it,
-what is seen of each species), Z-05 the incubator (cultures in twelve flasks, their stages, spores woken, two in a flask, strains) and the
-jars, Z-06 the genomes, the sequencer, the tree of kin and the organisms the late peoples made, Z-07 the record (the catalogue, the LIFE
+what is seen of each species), Z-05 the incubator (cultures in twelve flasks, their stages, spores woken, two in a flask, strains), Z-06 the
+genomes, the sequencer, the tree of kin and the organisms the late peoples made, Z-07 the record (the catalogue, the LIFE
 page, lending, auto-explore's samples). Then, on the user's word: R-432 the microscope's lists by world and the cold store without limit,
 R-433 the culture collection, R-434 the activity vision; the Y series (R-443, R-444): Y-01 the trees by world and by folder, Y-02 the genes
-and the gene editor, Y-03 genes from others, Y-04 the switches.
+and the gene editor, Y-03 genes from others, Y-04 the switches; R-447 took the jars out.
 
 <!-- contents -->
 Contents:
@@ -29,9 +29,10 @@ Contents:
   - The acts
 - The search (`life/samples.h`, `surface/sampling.cpp`)
 - The microscope (`life/slides.h`, `game/microscope.cpp`)
-- The incubator (`life/cultures.h`, `life/jars.h`, `game/incubator.cpp`)
+- The incubator (`life/cultures.h`, `game/incubator.cpp`)
 - The genomes and the tree (`life/sequences.h`, `game/sequencer.cpp`, `game/tree_screen.cpp`, `peoples/made.h`)
 - The genes (`life/genes.h`, `game/editor.cpp`)
+- The seeded worlds (`galaxy/made.h`, `life/seeding.h`, `game/seed_trip.cpp`)
 - The record (`game/catalogue.cpp`, the guide)
 - Determinism, cost and the cache
 - The harness
@@ -341,16 +342,17 @@ wall, the forms it was seen as; R-437, what it answered: TO LIGHT, TO FOOD, TO T
 warmths it was seen moving and still at and its stress's, the guide's `answers` line after the sheets) and the ways that would show more.
 `P` takes a micrograph to the gallery (the photograph's key, its caption the way, the magnification, the species and the vial).
 
-## The incubator (`life/cultures.h`, `life/jars.h`, `game/incubator.cpp`)
+## The incubator (`life/cultures.h`, `game/incubator.cpp`)
 
 Z-05: the laboratory's second device, a screen over the room (`E` at its cabinet on the stern bench; the state `INCUBATOR`, its row
-amber, home 20). Twelve flasks behind its glass door, three shelves of four, each a medium and a culture of one or two species; the
-jars' shelf over the bow bench. All of it runs on the lab's clock (`LabState::clock`, the drones' kind: real seconds while the game
+amber, home 20). Twelve flasks behind its glass door, three shelves of four, each a medium and a culture of one or two species. All
+of it runs on the lab's clock (`LabState::clock`, the drones' kind: real seconds while the game
 simulates, saved; none in the menus).
 
 **A flask** (`Flask`, `lab_state.h`): its species (`FlaskSpecies`: a vial's world and the species' index there, its strain now and the one
 it went in as), its medium (`Medium`: its cell, water's or the acid cell, the ammonia cell, the cryostat, each its chemistry and its range;
-its warmth; its light, dark, white, red or blue; its energy, a substrate or the broth; its salt), its events on the lab's clock
+its warmth; its light, dark, white, red, blue or ultraviolet (J-01: UV); its energy, a substrate or the broth; its salt), its events on
+the lab's clock
 (`CultureEvent`: started, the medium changed, a fresh broth, a second added, a strain) and AS ITS WORLD (`mediumOfPlace`: the vial's
 chemistry's cell, the warmth read at the take, the sun's light where it reached the place, the place's energy, a spring's sulphide, a
 plume's hydrogen, a rust world's iron, else the broth; its salt), the first guess a species goes in at. Enter puts in a species seen in a
@@ -372,13 +374,18 @@ longer). Too hot, the wrong salt or solvent kill at once (a spore former's spore
 from its seed (its crowd at its best in 8 to 20 minutes, its lag, its spores' waking 20-60 s, its hold). Spores wake once the medium suits
 them and feeds them, most of them, the rest asleep (`WOKEN AFTER ABOUT 12,000 YEARS`: its world's end, its drifter's leaving or the
 impact that carried it); a luminous crowd glows (from 3% of its crowd: Vibrio's quorum). The stages a curve passes are each species' own
-(`CultureStage`).
+(`CultureStage`). A line's world genes (J-01, `CultureWorld`) move its crowd (STOP); one that never stops passes its crowd by two decades
+and stays OVERGROWN till the flask is emptied. Below its salt's freezing point (fresh 0 C, the sea's -2, brine -20) a water flask stays
+liquid unless a culture's ice forms at its warmth (FROST): then everything in it waits, FROZEN. The UV light kills a line without a
+shield (KILLED BY UV), and feeds a shielded light-feeder little.
 
 **Two in a flask** (`pairOf`): mirrored hands ignore each other (each its own crowd); a grazer or a predator and a smaller cell cycle (the
 prey alone till the predator reaches its measure, then a damped Lotka-Volterra turn about its balance, the prey a decade down; the turn
 2 pi over the root of the prey's rate and the predator's death); a light-feeder and a heterotroph, or a fermenter and a hydrogen-eater,
 feed each other (the fed one held to a share of its feeder); the rest compete (Gause 1934: the one at its crowd, else the quicker, wins;
-the loser falls once the winner holds half its crowd). The screen says the pair once its curves show it. In a predator cycle, a switched
+the loser falls once the winner holds half its crowd). J-01: a poison one makes and the other does not kills the other, POISONED from
+when the poisoner holds a hundredth of its crowd (an e-fold in half a minute at the poison's strongest). The screen says the pair once its
+curves show it. In a predator cycle, a switched
 strain's state follows its numbers: it counts as crowded while past its quorum share, and the cycle is split into parts where that
 changes, each part growing at the rate of its state (`cycleCross`, B-446). A strain that cannot grow in its new state breaks the cycle.
 
@@ -392,23 +399,23 @@ strain's row among N's).
 pair's two, spores dotted), its species' stages and pace, its pair, what it came to (woken, a strain, the glow), its medium (the field
 chosen lit: Left and Right, `+`/`-`, Shift ten degrees; R-435, its warmth typed: a digit begins it, Enter sets it as one change within
 its cell's range, Esc keeps it; W as its world again; F a hundredth into fresh broth, a serial transfer; Backspace empties it); N names,
-K keeps a copy (the collection); Tab the jars. The microscope's list holds the flasks after the vials: Enter puts a drop of the culture
+K keeps a copy (the collection). The microscope's list holds the flasks after the vials: Enter puts a drop of the culture
 as it is on the stage (its cells, a quarter of them dividing while it grows, its spores, its lysed, the gatherers' slugs and stalks).
 What the curve shows of a species goes to its sheet (`MicrobeSheet::stages`, its quickest doubling seen and the medium of it: the sheet's
 `STAGES SEEN` and `GROWS` lines). In the room the flasks' liquids take their culture's tone (its pigment's, a broth's cloud), lit
 through by their light,
-aglow with a crowd's own; their tones and the jars' are homes past the banks (`ShipBanks`' 32 to 47), dealt a free bank while in view.
+aglow with a crowd's own; their tones are homes past the banks (`ShipBanks`' 32 to 62), dealt a free bank while in view.
 
-**The jars** (`jarRecipe`, `jarAt`) are Winogradsky columns. Enter on the jars page puts wet silt, a mat or soil from a vial into a
-jar (one per world, eight places on the shelf). The silt settles in the first minutes, and the living species come up in coloured bands,
-one species per band, all in by 20 minutes. A band's height says what its species lives on (`JarLayer`, `jarLayerOf`), top to bottom:
-light-feeders that make oxygen; where the air ends (iron's rust and every other chemical eater that needs air, a methane-eater's grey);
-light-feeders without air; the sulphide's white; the deep's grey (a chemical without air); the black of dead-matter eaters at the bottom.
-Bands of one height lie under those of the height above and never overlap. The page numbers each band beside the glass with a bar in its
-colour and lists it below: the species' name, or its look if seen (else UNSEEN SPECIES), and what it lives on ("1 A PLATE COLONY: LIGHT,
-MAKES OXYGEN"). An empty place explains what a jar does. The status line says once when a jar has settled ("JAR OF WET SILT SETTLED - 2
-BANDS TO READ"). Each band seen on the page goes to its species' sheet (`jarSeen`, `MicrobeSheet::jarLayer`, the guide's `jarband`
-line): "IN A JAR: AT THE TOP, LIVES ON LIGHT, MAKES OXYGEN". That is all a jar does: nothing can be taken out of it.
+**What a flask shows of its world genes** (J-01, `flaskShow`): bubbles of its gas while its cells grow (fewer at its crowd), its water
+dyed (the dye stays after its cells die), a scum of floating cells, slime, a sediment of its shells (chalk, glass, rust, sulphur), its cells
+in clumps, overgrown (tissue where its cells bind, else packed cells), ice, the other poisoned, genes passed to the other (two of one
+genesis, once both grew). The screen says them under the species' lines and draws the chosen flask under the list (its liquid, scum,
+sediment, clumps, rising bubbles, its lamp's light about it); in the room the flask's liquid takes its dye, tissue (up its neck) or ice
+(the glass's own tone, needing no bank), its sediment under it and a scum on top. A wild species shows its own (a methanogen's methane, a
+red snow alga's red); a long name or stage is cut to fit, never left out.
+
+There are no jars (R-447): a flask shows what a species lives on, and the sheet's GROWS line keeps the medium it grew best in. An
+older save's `jar` lines and an older guide's `jarband` lines are dropped when loaded.
 
 **The collection** (R-433, `game/lab_lists.cpp`): every species and strain a flask grows, kept frozen as labs keep their stocks. A
 species is kept once its curve passes its lag (`cultureStagesBy`'s GROWING), a strain as it arises (`keepCulture` from `updateLab`;
@@ -448,7 +455,7 @@ each branch down to the species where the branch's hash at that place falls unde
 place's rate; a third of the places never change), so two kin share their letters as far back as their common ancestor (92% alike on one
 world, 82% in one system, 66% across stars within a deep branch).
 
-**The sequencer** (the state `SEQUENCER`, E at it on the bow bench under the jars' shelf; its row magenta, home 47): Enter chooses a species
+**The sequencer** (the state `SEQUENCER`, E at it on the bow bench; its row magenta, home 47): Enter chooses a species
 seen in a vial or growing in a flask (never a fossil's stone or a protocell's chemistry) and reads it in 90 seconds on the lab's clock
 (`SEQUENCE_S`), the screen open or not: its letters as they are read in its genesis's dyes under a chromatogram's peaks, its helix turning
 its own way. Its end, as the clock reaches it (`sequencerTick` in `updateLab`): the sheet's kin (`SEEN_KIN`), its line (the genome's
@@ -489,7 +496,8 @@ hundred nearest home, 3.1% of its long sentences on a repeated frame (the record
 ## The genes (`life/genes.h`, `game/editor.cpp`)
 
 Y-02 to Y-04 (R-443; the design `docs/ideas/IDEAS-genes.md` section 1): a species' genes, read from what it already is, a machine that
-changes them, genes moved in from its kin and their switches. No generation change: nothing of generation 17 moves, and a line with no edit
+changes them, genes moved in from its kin and their switches. J-01 (R-448; `docs/ideas/IDEAS-seeded-worlds.md` section 4): the world
+genes. No generation change: nothing of generation 17 moves, and a line with no edit
 is its species bit for bit (its values, its culture's segments, its slide's kinds: the unit over forty worlds' 349 species), as is one with
 every gene switched to its own.
 
@@ -498,13 +506,17 @@ vital: its copying, its membrane, its making; three quiet; a warmth, a salt, a s
 glow, a shape), in an order of the genesis's hash; each letter's weight (home's pinned A 0, T 1, C 2, G 3: a G and C rich stem holds at a
 higher heat, Galtier and Lobry 1997; another genesis's a shuffle of its alphabet's), and its tables (a short run of letters read as a
 number in the alphabet's base: a pigment's two letters, a food's three, a motion's kind's two, a sense's two, a shape's two), every choice
-in each at least once, most runs synonyms.
+in each at least once, most runs synonyms. J-01: then the fourteen world genes at 19 to 32 (gas, dye, lift, frost, slime, shell, stop,
+bind, rot, poison, carrier, host, dry, shield), one each, shuffled on a salt of their own, and their six tables (a gas, a dye, a shell's
+mineral, what it rots, a poison, a host), each on its own salt; the first eighteen places and the old tables as before (the unit's
+digest of the cell genes, their tables and 7,702 edits over 349 species, the same as the code before J-01 gave).
 
 **A species' genes** (`microbeGenesOf`): the three vital, one to three quiet, the warmth, salt and size, then those it uses: a pigment (one
 that has one or lives by light), a food (a chemical-eater), a motion (one that moves), a sense for each thing it turns to (the light, or
 away from it: a dark-dweller's swimmers' flight, R-438; the food, the field, the warmth; three at most), a rest (one that ends in spores,
-cysts or the gatherers' fruit), a glow (a luminous one), a shape (a sphere, a rod, a curved rod or a spiral): 7 to 16 a species, a gap
-where it lacks one. Each has a working part, the run its effect lies in (warmth 12 letters, salt and motion 6, vital and quiet 8, size,
+cysts or the gatherers' fruit), a glow (a luminous one), a shape (a sphere, a rod, a curved rod or a spiral), and every world gene: 21 to
+30 a species, a gap where it lacks one. Each has a working part, the run its effect lies in (warmth 12 letters, salt and motion 6, vital
+and quiet 8, size,
 rest, glow and shape 4, food 3, pigment and sense 2), its wild letters chosen so that the code gives its own values: a warmth's weight its
 best over its cell's range (a heat-lover's heavy, a cold-lover's light), a salt's in its band's third, a size's by its cells' width (three
 a doubling about 1 um, 40 a large cell's, 50 a colony's), a table's run one that reads its own pigment, food, kind, target or plan.
@@ -520,9 +532,28 @@ al. 2001's MreB). A vital gene changed or cut: the line does not live (`CultureK
 seconds, its drop their ghosts); a quiet one changes nothing. How it lives and its plan's family never move. A strain's genes are its
 parent's with its move's gene stepped its way (`strainGenes`: a hotter top, heavier warmth letters), so the sequencer reads which.
 
-**The gene editor** (the state `EDITOR`, E at it on the bow bench past the sequencer, under the jars' shelf; deep blue, home 48): Enter
+**The world genes** (J-01): each a thing a cell makes or does; its world decides what that does to it (from J-03). A table gene's working
+part is two letters of choice and four of weight, a weight gene's four; an amount works past a quarter of its weight (`geneAmount`, 0 to
+1). Their wild values are read from what a species is (`wildWorld`, `worldOf`): a gas by how it lives and what it burns (the oxygen-makers
+OXYGEN, a sea's algae DIMETHYL SULPHIDE, the methanogens and Titan's acetylene-eaters METHANE, the methane-eaters CO2, the nitrifiers
+NITROUS OXIDE, the dead-eaters CO2 or, without oxygen, HYDROGEN SULPHIDE or HYDROGEN), a dye where a pigment leaks (red snow, a spring's
+band, a pink lake, a red tide), lift from its gas vesicles, frost for a snow, ice or cloud dweller of the melt (at its best above 0 C; a
+colder one keeps its water liquid), slime from its capsule, a shell from its wall's mineral or crystals (magnetite RUST, sulphur globules
+SULPHUR), stop at its own crowd, bind from its cells' arrangement, rot a
+dead-eater's or a rock-borer's, a hunter's poison too weak to work, carrier where it exchanges genes, no host, dry for dry ground, shield
+from its radiation's dose (and a dark or red pigment). A table reading NONE keeps a working weight, so one change of its choice shows.
+They move no cell value; their edits set a line's `CultureWorld` from their letters, STOP's crowd by twice the change of its weight's
+share (-1.5 to +1 decades; cut, it never stops), LIFT, SLIME and BIND the form's vesicles, coat and arrangement (a sphere's clusters, a
+rod's chains). A product a species does not make (a gas, a dye, a slime, a shell, a poison) costs its line 2% and up to 4% more by its
+amount (`genePrice`); its own nothing. Their own switch is ALWAYS. They are learned against the parent as the others are: a gas, a dye,
+a scum, slime, a sediment, clumps, an overgrowth, ice and growth under UV alone in a flask; a poison and genes passed with another in it;
+vesicles, a coat and bound cells in the drop. ROT, HOST and DRY show only on a world.
+
+**The gene editor** (the state `EDITOR`, E at it on the bow bench past the sequencer; deep blue, home 48): Enter
 (Tab once one is on) chooses a culture whose species the sequencer read, a flask's or the collection's, its line as it is (another is
-refused: SEQUENCE IT FIRST). Its map is two columns of nine places, each NOT KNOWN, NOTHING SEEN, what it was seen to do or
+refused: SEQUENCE IT FIRST). Its map is two pages (J-01): CELL GENES 1/2, two columns of nine, and WORLD GENES 2/2, two of seven; the
+arrows walk across both pages'
+columns, Page Up and Page Down turn (Tab already chooses another culture). Each place is NOT KNOWN, NOTHING SEEN, what it was seen to do or
 the explorer's name (N, every kin's), a dash where it has no gene, its mark where edited (= changed, - cut out, + moved in, * a copy; ~ its
 switch set after it); the
 arrows choose a gene, Enter opens its working part (Left and Right a letter boxed, Up and Down it through the alphabet, Backspace its
@@ -594,14 +625,128 @@ read on the sequencer, its one changed gene is its move's. A known gene that sho
 at once (GENE, the lab's notebook) and said in its turn when the status line is free (`geneSay`): what was seen (`FLASK 2: IT GROWS AT 29
 C - ITS PARENT DIES`), then what it says of the genes.
 
+## The seeded worlds (`galaxy/made.h`, `life/seeding.h`, `game/seed_trip.cpp`)
+
+R-448's J series. J-02 made the layer a seeded world is drawn through; J-03 sends a culture down and shows the first change, the waters'
+colours; J-04 makes its air and its climate; J-05 its waters, ground and plants. A world nobody seeded has no layer and is drawn as
+generated, bit for bit.
+
+**Sending a culture down.** Parked in orbit of a landable world, S on the drone bay opens the seed page (the state `SEEDING`): the
+world's map with the ground under the ship and the places of its lines, the culture (C: the next flask that shows FULL, at its crowd or
+overgrown), the place (the arrows, two degrees a press, ten with Shift) and what lies there, read at the world map's scale (`seedPlaceOf`:
+the sea, a lake, the sea shore, snow, ice, a salt crust, soil, sand, bare rock and the rest, as a vial there would be named). Enter sends
+drone 1 alone. It falls for about sixteen seconds, lets the culture go as it arrives (the guide's `seeded` line, SEEDED in the log),
+watches two minutes and climbs; its report is the verdict ("UNKNOWN: CULTURE GROWS", "CULTURE DIED, TOO COLD"). The flask keeps its
+culture, and the bay charges as after any trip. A save keeps a trip in flight (`bayseed`). Refused: at home (the pinned home star's first
+felisian planet, where every game starts), at a giant, out of orbit, with the drones away or charging, and where three lines live.
+
+**Whether it takes.** `seedVerdictOf` is a pure function of the world, the line and the place, checked in order, the first failure
+said: a furnace; the medium, the incubator's own (`mediumOfPlace` at the place's mean warmth, judged by `growthIn`: the wrong liquid,
+too hot, too cold, the wrong salt, no food, no light), its food a native it eats or one that feeds it; oxygen (an oxygen air kills a line
+that bears none, outside a sediment, a mat or a spring; a line that needs it dies without it); pH (an acid or ammonia world's, the rust's,
+a spring's, a soda lake's, the sea's 8, fresh water's 7.2, the ground's 6.8, half a unit of grace); the year's dose (1 Gy under an air
+with a field, ten times without a field, 300 times on an airless world, three times under a hot star, less under water, ice, rock and
+soil), which SHIELD raises 41 times at its full; land beyond the water needs DRY; and the natives at the place (the sample there, each
+taken as a flask takes it: `pairOf`). A competitor that grows there a tenth faster outgrows the line (its genes' price is in its rate);
+one slower is outgrown, and between them they live side by side; a line eats its prey, and its poison kills what it meets. `seed worlds`
+sends six lines of one sea light-feeder to forty worlds: 21 of 240 seedings take, most of the rest dying of the cold.
+
+**The drift.** A line that takes can change in the wild: one or two of its genes (never a vital one) stepped a letter or broken, by a
+hash of the world's seed, the line's key and the place, in about a third of seedings, twice as often under a strong ultraviolet. The
+spread and its looks are the changed line's. The sequencer reading the line from a vial of that world says CHANGED IN THE WILD: GENE n.
+
+**The layer.** `madeWorldOf` gives a world's layer from its seedings at the guide's clock: the first three that took, each a spread round
+its place, 2 km at step 1, 150 km at step 6, the whole world at step 24, a step each five minutes at the line's pace (its doubling there
+against two hours', half to one and a half, times one plus its LIFT). Within its reach a spread keeps to where its line lives: the waters
+of its salt (as `growthIn` passes them), the land where it lives dried out (or in snow and ice), its band of mean warmth (`placeMeanC`).
+A dye colours the waters a line lives in, a rust of the dye's colour mixed into the world's water (the latest dye's, from the first step);
+a glowing line lights them at night. The data sheet names the traits ("RED SEAS", "GLOWING SEAS", or "WATERS" on a world without seas).
+A layer that draws nothing (lines that only spread, or died) has key 0, so no map is made again for it. The layer's key hashes every field.
+
+**The made air (J-04).** What the lines that took give a world's air (`madeAirOf`, with the layer): each gas by its gene's amount, times
+the share of the world its line lives on over 0.15 (`SeedVerdict::share`, read at 96 points over the sphere), rising from the line's
+step 6 to its step 24, so the air changes after the looks. The world answers by what it is, a gas leaving an airless one. CO2 warms (20 C
+at its full times the world's own sensitivity, 0.6 to 1.5, less where its seas take it up: THICK AIR). Methane warms 24 C where no oxygen
+burns it, 3 C where it does, and past a third of its amount an orange haze builds that cools the ground (ORANGE HAZE: tan, orange, brown
+or olive by the world). Oxygen forms an ozone where the air had none (OZONE) and cools a methane air. Hydrogen sulphide yellows the
+horizon (SULPHUR AIR) and with nitrous oxide thins an oxygen air's ozone (THIN OZONE). Dimethyl sulphide cools under a pale haze (COLD
+HAZE) and lays a fog on the seas (SEA SMOKE). Ammonia warms, a cold world most; hydrogen warms a thick air only. A living world with seas
+whose mean over the sphere passes 42 C runs away (RUNAWAY): its seas steam for six steps under a fog to 70 m, 25 C more, then dry to
+their old beds (the deep basins' salt, the slopes' dust: a scorched world's rule). What LIFT carries up: a glow into the clouds (GLOWING
+CLOUDS: patches, veins or whole decks by how much, in the line's own glow), a dye into the clouds and the rain (RED CLOUDS; BLOOD RAIN
+for a red or crimson, YELLOW RAIN and the rest), ice nuclei (FROST) that make every cloud rain, or snow on a cold world (ENDLESS RAIN),
+spores (SPORE CLOUDS: gold, rust or white). Each look is 0 below the share its trait is named at.
+
+**The made climate (J-04).** The layer's warmth (`MadeWorld::warmC`) and pressure (`pressureK`) are the world's now. On a living world
+they move the caps' edge (1.6 degrees of latitude a degree), the snow line (154 m a degree), the ice and the frozen lakes and rivers; an
+endless rain on a cold world snows it over. A biome moves only across the ice's edge, and the ground's heights and rivers stay the
+world as generated (the reefs and the alpine belt read the cap and the snow line as generated). Its heat dries the plants toward straw
+from 5 C over, all of them at 18 C or in a runaway (`madeMatColour`), and kills up to seven trees in ten on the ground. The HUD's TEMP
+takes the warmth where there is air and ATM the pressure; the data sheet's AIR line says what moved ("THICKER, 14 C WARMER THAN IT
+WAS"). Samples, a later line's verdict and the spreads' bands read the warmth as generated.
+
+**The made waters, ground and plants (J-05).** What a line makes of what it lives in (`looksOf`), in four classes, each with a colour of
+its own: the waters (J-03's tint), the land, the snow and ice, the plants (a world's grass and forest where it has plants). A class's look
+is the latest line's that makes one, and it lies where any line that makes one lives. The waters: a line that never stops (STOP cut)
+blooms into a soup (SOUP SEAS: a light-feeder's pigment, else a murky brown), with slime a jelly whose waves come slow and heavy (JELLY
+SEAS); a chalk shell turns them milky (MILK SEAS); a rust shell turns its fresh waters orange (RUST RIVERS); lift with slime piles foam on
+their shores (FOAM SEAS: white, yellow or pink). A dye's colour wins over a milk's or a rust's. The land: a line of the waters lays mats
+on its shores and flats within 8 m over the water (MATS), stromatolites where it slimes on a chalk shell (STROMATOLITES); a line of the
+land (DRY, or of snow and ice) lays sulphur crusts, chalk, glass sands that glint, rust, crusts where its cells bind (CRUSTS) or slime on
+the rocks (SLIME); a stone rotter pits the rock (PITTED STONE). The snow: a dye colours a line's snow (RED SNOW and the rest), a dark one
+darkens and melts its ice (DARK ICE, 1.5 C warmer). The plants: a host of plants (HOST) lights the forests at night with its glow (GLOWING
+FORESTS), gives them its dye (RED LEAVES and the rest), burns them with its frost where the mean is under 10 C (FROST BURN), and swells
+them with galls where it never stops or passes its genes on (GALLS); a wood rotter blights them in spots, stands or all by how fast it
+rots (BLIGHT: grey, black or rust), and past 0.6 fells the forests (ROT: trees dead, logs down). The air turns the world's own colours
+everywhere: a sulphide's waters purple, black with no sun (PURPLE SEAS, BLACK SEAS, as a black dye's), a sour sea's reefs bleached (SOUR
+SEAS, on a world with reefs), an oxygen's rust over an oxygenless world's rock, sand, dust and mud (RUST GROUND), the plants lush under a
+new ozone or an endless rain (LUSH) and bleached under a thin one (BLEACHED); a runaway's seas boil while they steam (BOILING SEAS). A
+chalk sea cools the world 1.5 C at its full. A trait is named only where its look can show, and a cover lies at a share over a half on
+land alone; no height moves.
+
+**The record.** The guide keeps each seeding as a `seeded` line: the world, the place, the line's key and a copy of its edits (a strain's
+number is the guide's own), the flask's medium, the generation, and the guide's clock when it went down. The guide's clock (`clock`)
+counts the real seconds the game has run, across saves and expeditions; the warp never hurries it. With them, `madeseen` keeps what each
+world showed at its last landing. They are written only once a world is seeded, so a guide without a seeding saves as before. A loan
+carries none of them. The game works out a world's seedings once (`Game::seedingsAt`: each line read from its key as a flask reads it),
+again only when the guide's `seeded` lines change.
+
+**What the explorer is told.** The data sheet's SEEDED lines (the latest three: the line, how long ago, DIED where it did), MADE (what
+the layer shows: its waters' traits, then, J-05, its ground's and its plants', then its air's) and, J-04, AIR (what the made climate
+moved: `THICKER, HAZY, 6 C COLDER THAN IT WAS`). The LANDING log on a seeded world says what it shows that the last landing did not
+("UNKNOWN SINCE THE LAST LANDING: RED SEAS"). A vial keeps the guide's clock at its take (`vialclock`): taken where a line had spread by
+then, it holds the line (a tenth of its crowd) beside the world's species, and the natives it outgrew there are a hundredth of what they
+were. The microscope shows it (under its own key), the incubator puts it in a flask as it went down, and the sequencer reads it with its
+changes in the wild.
+
+**Where it is read.** Each frame the game gives the worlds of the system their layers (`Game::madeTick`, nothing in a game with no
+seeding). The renderer keeps them by the world's seed (`SpaceRenderer::setMade`). A new key drops the world's generator, and the world's
+map and the telescope's plates, keyed by the layer as by the season, are made again; so are the landing map, its zoom and the drone bay's
+map. A landing gives the ground its world's layer (`SurfaceSite::made`), kept until the next landing. The planet function's last pass
+draws the cover and the tint (`05-planet-function.md`). The globe draws the tint in a bank of its own, the maps through the tint's own
+ramp, and the ground in a lent bank (`02-rendering.md`). The air's greenhouse (`BodyGen::airWarmthC`) and whether a world has air
+(`BodyGen::hasAir`) are read through the generator. J-04: the sky pair (`typeSky`) and the cloud pattern take the made air, so the
+globe, the maps and the ground agree; the living ground reads the made warmth (`felisianSample`); the plants' colours come through
+`madeMatColour`. J-05: the made pass gives each point the share of its class's look (`madeClassOf`), the maps a made ramp for every
+material, the globe its made bank to one class (`madeGlobeClass`: the waters', else the land's, the plants', the snow's), and the ground a
+lent bank to each class, its trees and undergrowth in the plants' (`02-rendering.md`).
+
+**The harness.** `seed test` (J-02) draws a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test
+tint, with a test cover, and as generated again, the last pictures the first pixel for pixel. `seed worlds` prints the six lines' verdicts
+on forty worlds, their drifts, the spread's steps and what each shows. `seed sea` lets the dye line go in a sea off a coast and draws the
+map, the zoom, the globe and the ground before and at its eighth step, and a glowing line's sea at night. J-04: `seed climate` prints
+each gas on twenty worlds, their mean warmth, pressure and air before and after; `seed traits` draws each made air's trait from orbit and
+on the ground, before and after. J-05: `seed looks` draws each made water's, ground's and plants' trait on the landing map, from orbit and
+on the ground, before and after. The unit's `seeding` group holds the rest (`unit-checks.md`), and the flow seeds a world in its last stage.
+
 ## The record (`game/catalogue.cpp`, the guide)
 
 Z-07: what was found of the living small, kept and shown. **The guide** (`guide.txt`) keeps what is known: a species seen is a `microbe`
 line (its sheet: the parts seen, the forms of its life seen, the stages its cultures showed, its quickest growth and the medium, and the
 years its spores slept before a flask woke them), the explorer's names (`name`: a species `<body>/M<index>`, a strain `.../S<n>`, a gene
 `G<genesis>/<number>`), the strains and the edited lines (`strain`), what the genes were seen to do (`gene`), the made ones read
-(`watermark`), the samples taken (`stat samples`) and their worlds (`sampled`). The save keeps what runs aboard (the kit, the cold store,
-the flasks, the jars, the sequencer, the gene editor).
+(`watermark`), the samples taken (`stat samples`) and their worlds (`sampled`), and (J-02) the worlds seeded (`seeded`) with the guide's
+clock (`clock`). The save keeps what runs aboard (the kit, the cold store, the flasks, the sequencer, the gene editor).
 
 **The catalogue** (the state `CATALOGUE`, the guide's THE CATALOGUE; anywhere, as the log): every species with a sheet, the explorer's and a
 friend's lent, by world (a world's head, its name or UNKNOWN and its kind; its species by index, each its name or UNNAMED and its form in
@@ -623,8 +768,8 @@ caption the slide's.
 
 **Lending** (the guide's IMPORT AN INBOX FILE): the friend's sheets of the species they saw (their `microbe` lines; never those lent to
 them, nor one the explorer saw, whose own sheet wins; an earlier loan's added to) become `lentmicrobe` lines, their names coming with the
-inbox's. They show in the catalogue in cyan (their form drawn as they saw it, LENT BY A FRIEND'S INBOX) and in no count. Samples, flasks
-and jars never travel.
+inbox's. They show in the catalogue in cyan (their form drawn as they saw it, LENT BY A FRIEND'S INBOX) and in no count. Samples and
+flasks never travel.
 
 **Auto-explore's samples** (its water outing): it walks to the last dry ground before the water, eases the crosshair a metre down toward it
 and presses O once, the take's line as the explorer's; on a world with springs it goes first to the nearest spring's pool within 450 m (a
@@ -648,7 +793,7 @@ millisecond; `lab kin`'s ranking over 6,000 species and their 200,000 pairs in a
 
 `life list [n]`, `life survey [systems]`, `life kin [ly]`, `life plates [n]`, `life strips [plan]`, `life distinct [species]`,
 `life forms [plan]`, `life search [scene|all]`, `life kit`, `life made [n]`, `life auto`, `lab microscope`, `lab time`, `lab cultures`,
-`lab jars`, `lab tree`, `lab kin [r]`, `lab catalogue`
+`lab tree`, `lab kin [r]`, `lab catalogue`, `seed test`
 (`08-testing-and-tools.md`), `fingerprint life`
-(`harness/proof.md`), the unit's `life`, `search` and `lab` groups (`harness/unit-checks.md`), the battery's `fp_life`, `life`,
-`life_look` and `lab` items.
+(`harness/proof.md`), the unit's `life`, `search`, `lab` and `seeding` groups (`harness/unit-checks.md`), the battery's `fp_life`,
+`life`, `life_look`, `lab` and `seed` items.

@@ -10,7 +10,9 @@
 // and a vital gene changed or cut leaves a line that does not live. A strain's genes are its parent's with its move's gene changed
 // (`strainGenes`), so the sequencer reads which gene a strain's move was in. How it lives and its plan's family never change. Y-04: a gene's
 // switch (`GeneSwitch`, its kind's own as read): a gene off where its condition fails loses its work as one cut and pays no price, its culture
-// laid out by its state (`CultureKind::switches`), its drop as its flask has it (`switchedLine`)
+// laid out by its state (`CultureKind::switches`), its drop as its flask has it (`switchedLine`). J-01 (2026-11-20, R-448): fourteen world genes
+// at places 19 to 32 (each a thing a cell makes or does, its world deciding what that does to it: IDEAS-seeded-worlds.md section 4), on every
+// species, most of them doing nothing in the wild; places 1 to 18 drawn as Y-02 drew them, the new ones on salts of their own
 #include "life/cultures.h"
 #include "life/morphs.h"
 #include <cstdint>
@@ -20,10 +22,18 @@
 // what a gene does: its copying, its membrane or its making (vital: changed or cut, the line does not live); quiet (nothing in the lab shows
 // it: most of a real genome, Baba et al. 2006); its warmth (its range), its salt (its band), its size (its cells'); a pigment (the light that
 // feeds it, its colour), a food (what a chemical-eater burns), its motion (still or moving, its kind among its plan's, its pace), a sense (what
-// it turns to), its rest (spores, cysts or the gatherers' fruit at its end), its glow (a luminous crowd's), its shape (a small cell's plan)
-enum GeneKind { GN_VITAL = 0, GN_QUIET, GN_WARMTH, GN_SALT, GN_SIZE, GN_PIGMENT, GN_FOOD, GN_MOTION, GN_SENSE, GN_REST, GN_GLOW, GN_SHAPE, GN_COUNT };
-extern const char* const GENE_KIND_NAMES[GN_COUNT];   // the map's words: "VITAL", "QUIET", "WARMTH", ... "SENSE", ... "SHAPE"
-constexpr int GENE_PLACES = 18;                        // a genesis's map
+// it turns to), its rest (spores, cysts or the gatherers' fruit at its end), its glow (a luminous crowd's), its shape (a small cell's plan).
+// J-01, the world genes (`CultureWorld`, life/cultures.h): the gas it gives off, the dye it leaks, its lift (gas vesicles), its frost (an
+// ice-nucleating protein), its slime, its shell's mineral, the crowd it stops at, its cells bound after dividing, what it rots, its poison, its
+// genes passed to others, its host, its life dried out, its shield against ultraviolet
+enum GeneKind { GN_VITAL = 0, GN_QUIET, GN_WARMTH, GN_SALT, GN_SIZE, GN_PIGMENT, GN_FOOD, GN_MOTION, GN_SENSE, GN_REST, GN_GLOW, GN_SHAPE,
+                GN_GAS, GN_DYE, GN_LIFT, GN_FROST, GN_SLIME, GN_SHELL, GN_STOP, GN_BIND, GN_ROT, GN_POISON, GN_CARRIER, GN_HOST, GN_DRY, GN_SHIELD,
+                GN_COUNT };
+extern const char* const GENE_KIND_NAMES[GN_COUNT];   // the map's words: "VITAL", "QUIET", "WARMTH", ... "SHAPE", "GAS", ... "SHIELD"
+constexpr int CELL_GENE_PLACES = 18;                   // a genesis's map: the cell's genes, places 1 to 18 (Y-02's)
+constexpr int WORLD_GENES = GN_COUNT - GN_GAS;         // J-01: and the world's, one place each, 19 to 32
+constexpr int GENE_PLACES = CELL_GENE_PLACES + WORLD_GENES;
+inline bool worldGene(int kind) { return kind >= GN_GAS && kind < GN_COUNT; }
 int genePartLetters(int kind);                         // a kind's working part: warmth 12, salt and motion 6, vital and quiet 8, food 3, ...
 // what a sense turns to: nothing (cut, or a run its code reads so), the light, away from it (a dark-dweller's flight), the food, along the
 // field, the warmth (read and kept: the slide has no gradient of warmth)
@@ -32,14 +42,20 @@ extern const char* const GENE_SENSE_NAMES[SE_COUNT];   // "NOTHING", "LIGHT", "A
 
 // a genesis's code: its map (place p is gene number p + 1: its kind, and which of its kind's places it is), each letter's weight (the alphabet's
 // order, `alphabetOf`; home's pinned A 0, T 1, C 2, G 3), and its tables, each by its run of letters read as a number in the alphabet's base:
-// a pigment's two letters, a food's three, a motion's kind's two (0 still, else the plan's kinds in turn), a sense's two, a shape's two
+// a pigment's two letters, a food's three, a motion's kind's two (0 still, else the plan's kinds in turn), a sense's two, a shape's two. J-01:
+// the world genes' tables, each its first two letters (a gas, a dye, a shell's mineral, what it rots, a poison, a host: `CultureWorld`'s),
+// its other four a weight; a weight gene four letters
 struct GeneCode {
     uint64_t genesis = 0;
     int letters = 4;
     int kind[GENE_PLACES] = {}, slot[GENE_PLACES] = {};
     int weight[8] = {};
     std::vector<int> pigment, food, motion, sense, shape;
+    std::vector<int> gas, dye, shell, rot, poison, host;
 };
+const std::vector<int>* worldTable(const GeneCode& c, int kind);   // J-01: a world gene's table (none: a weight gene)
+// J-01: what a weight gene's (or a world table's) weight gives, 0 to 1: nothing to a quarter of its heaviest, then its share past it
+double geneAmount(const GeneCode& c, const std::string& part, int from, int n);
 GeneCode geneCodeOf(const Genesis& g);
 
 // Y-03: how far a gene not its own came, by its donor's place (the tree's distance as the stars have it): its own species', its world's, its
@@ -101,6 +117,10 @@ struct GeneEdit {
 };
 std::string geneEditsText(const std::vector<GeneEdit>& e);
 std::vector<GeneEdit> geneEditsOf(const std::string& text);
+
+// J-01: a line's world values read from its genes' letters (a species' wild ones: its crowd its own, a cut gene's work none, a STOP cut never
+// stopping); an edited line's are its edits' (`applyEdits`, its crowd moved from its parent's)
+void worldOf(CultureWorld& w, const MicrobeGenes& g);
 
 // what a gene's working part gives (for the editor's words and the said): the amounts by its letters' weights, a table's choice
 int geneWeight(const GeneCode& c, const std::string& part, int from = 0, int n = -1);

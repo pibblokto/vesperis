@@ -91,10 +91,6 @@ bool Guide::load(const std::string& path) {
             m.answers = a.answers; m.movingLo = a.movingLo; m.movingHi = a.movingHi; m.stillCold = a.stillCold; m.stillHot = a.stillHot;
             m.stressC = a.stressC; m.stressAct = a.stressAct;
         }
-        else if (key == "jarband" || key == "lentjarband") {   // R-439: <key> <layer> (after its sheet's line)
-            std::string k; int l = -1; is >> k >> l;
-            if (!is.fail() && l >= 0) (key == "jarband" ? microbes : lentMicrobes)[k].jarLayer = l;
-        }
         else if (key == "sampled") { std::string k; is >> k; if (!is.fail()) sampled.insert(k); }   // Z-07: a world a sample was taken on
         else if (key == "strain") {   // Z-05: <key> <parent> <what> <value>; Y-02: an edited line's edits after them
             std::string k; StrainRecord r; is >> k >> r.parent >> r.what >> r.value;
@@ -130,6 +126,12 @@ bool Guide::load(const std::string& path) {
         else if (key == "history") { std::string k; is >> k; history.push_back(k); }
         else if (key == "home") is >> home;
         else if (key == "gen") is >> genVersion;
+        else if (key == "clock") is >> clock;   // J-02
+        else if (key == "seeded") { std::string rest; std::getline(is, rest); SeedRecord r; if (parseSeeded(rest, r)) seeded.push_back(r); }
+        else if (key == "madeseen") {   // J-03
+            std::string body, rest; is >> body; std::getline(is, rest); if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
+            if (!body.empty()) madeSeen[body] = rest;
+        }
         else if (key == "records") is >> recordsScheme;
         else if (key == "log") {
             LogEntry e; std::string rest; is >> e.t >> e.kind; std::getline(is, rest);
@@ -212,14 +214,17 @@ bool Guide::save(const std::string& path) const {
     };
     for (auto& kv : microbes) answers("answers", kv.first, kv.second);
     for (auto& kv : lentMicrobes) answers("lentanswers", kv.first, kv.second);
-    for (auto& kv : microbes) if (kv.second.jarLayer >= 0) f << "jarband " << kv.first << " " << kv.second.jarLayer << "\n";   // R-439
-    for (auto& kv : lentMicrobes) if (kv.second.jarLayer >= 0) f << "lentjarband " << kv.first << " " << kv.second.jarLayer << "\n";
     for (auto& k : sampled) f << "sampled " << k << "\n";
     for (auto& kv : strains)
         f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << (kv.second.edits.empty() ? "" : " " + kv.second.edits) << "\n";
     for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << " " << kv.second.how << "\n";   // Y-02
     for (auto& k : treeOff) f << "treeoff " << k << "\n";   // Y-01
     for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
+    if (!seeded.empty()) {   // J-02: the clock and the worlds seeded, once there is one
+        f << "clock " << clock << "\n";
+        for (const SeedRecord& r : seeded) f << seededLine(r) << "\n";
+        for (const auto& [body, w] : madeSeen) f << "madeseen " << body << " " << w << "\n";   // J-03
+    }
     for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "
           << r.startX << " " << r.startY << " " << r.startZ << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " "
@@ -291,10 +296,30 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
         m.movingLo = std::min(m.movingLo, o.movingLo); m.movingHi = std::max(m.movingHi, o.movingHi);
         m.stillCold = std::max(m.stillCold, o.stillCold); m.stillHot = std::min(m.stillHot, o.stillHot);
         if (m.stressAct < 0 && o.stressAct >= 0) { m.stressAct = o.stressAct; m.stressC = o.stressC; }
-        if (m.jarLayer < 0) m.jarLayer = o.jarLayer;   // R-439
     }
     if (microbesOut) *microbesOut = un;
     return n;
+}
+
+std::string seededLine(const SeedRecord& r) {
+    std::ostringstream f;
+    f.precision(12);   // the guide's file
+    f << "seeded " << r.body << " " << r.lat << " " << r.lon << " " << r.line << " " << (r.edits.empty() ? "-" : r.edits) << " " << r.cell << " " << r.tempC << " " << r.light << " "
+      << r.energy << " " << r.salt << " " << r.gen << " " << r.clock;
+    return f.str();
+}
+
+bool parseSeeded(const std::string& rest, SeedRecord& r) {
+    std::istringstream is(rest);
+    is >> r.body >> r.lat >> r.lon >> r.line >> r.edits >> r.cell >> r.tempC >> r.light >> r.energy >> r.salt >> r.gen >> r.clock;
+    if (is.fail()) return false;
+    if (r.edits == "-") r.edits.clear();
+    return true;
+}
+
+void Guide::addSeeding(const SeedRecord& r) {
+    SeedRecord c;
+    if (parseSeeded(seededLine(r).substr(7), c)) seeded.push_back(c);
 }
 
 double Guide::deepestProbeKm() const {

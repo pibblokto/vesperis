@@ -32,7 +32,8 @@ struct Flow {
     void roads();   // the old roads on the landing zoom
     void autoSamples();   // Z-07: auto-explore on the coast of the flow's world, its walk to the water, the sample it takes
     void reload();   // the saves loaded again: the newest, then slot 2 mid-descent
-    void genes();    // Y-02: the gene editor, last: a line written from flask 1's culture into an empty flask
+    void genes();    // Y-02: the gene editor: a line written from flask 1's culture into an empty flask
+    void seed();     // J-03: a world seeded from the drone bay, last
 };
 
 void Flow::title() {
@@ -625,9 +626,10 @@ void Flow::landing() {
             press(KEY_TAB); run(0.1); shot("microscope_sheet"); press(KEY_TAB);
             press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
         }
-        {   // Z-05: the incubator: E at it, Enter (the chooser: the species seen in the vials; R-432: in a folder a world), Enter (the first world's),
-            // Enter (its first into flask 1, AS ITS WORLD), its clock skipped twenty minutes (its hook) and the flask read; Tab the jars and back; Esc
-            // to the laboratory. (R-432's two Enters' frames taken from the waits at the incubator and the sequencer: the frames after them in time)
+        {   // Z-05: the incubator: E at it, Enter (the chooser: the species seen in the vials; R-432: in a folder a world), Enter (the first
+            // world's), Enter (its first into flask 1, AS ITS WORLD), its clock skipped twenty minutes (its hook) and the flask read; Esc to the
+            // laboratory (R-447: after the five frames the jars page took, so that the frames after keep their clock). (R-432's two Enters' frames
+            // taken from the waits at the incubator and the sequencer: the frames after them in time)
             game.testCabinAtDevice(FACE_INCUBATOR); run(0.1); press(KEY_E); run(0.1);
             press(KEY_ENTER); run(0.1); shot("incubator_choose");
             const int choices = (int)game.testIncub().choices.size();
@@ -645,7 +647,7 @@ void Flow::landing() {
                    stateName(game.state), choices, F.n > 0 ? F.label[0].c_str() : "EMPTY", F.n > 0 ? MICROBE_PLAN_NAMES[F.culture.kind[0].s.plan] : "-",
                    F.n > 0 ? WAY_NAMES[F.culture.kind[0].s.way] : "-", asWorld, F.medium.tempC, CULTURE_CELL_NAMES[F.medium.cell], CULTURE_ENERGY_NAMES[F.medium.energy],
                    CULTURE_STAGE_NAMES[n.one[0].stage], n.one[0].cells > 0 ? std::log10(n.one[0].cells) : 0.0, n.one[0].spores > 0 ? std::log10(n.one[0].spores) : 0.0);
-            press(KEY_TAB); run(0.1); shot("incubator_jars"); press(KEY_TAB);
+            for (int k = 0; k < 5; k++) { game.frame(in, 1.0 / 30); in.newFrame(); }
             press(KEY_ESCAPE); run(0.1);
         }
         {   // Z-06: the sequencer: E at it, Enter (the chooser: the species seen; R-432: in a folder a world), Enter (the first world's), Enter (its
@@ -887,11 +889,11 @@ void Flow::reload() {
     printf("flow done in %.1f s\n", nowSec() - t0);
 }
 
-// Y-02: the gene editor, the flow's game's last stage (after the drones: nothing of its own after it moves in time; before the games of
-// its own the stages after it make, whose ends leave its frames unsafe: KI-450): E at it, Enter (the chooser: the cultures), Enter (THE
+// Y-02: the gene editor, near the flow's game's end (after the drones; before the games of its own the stages after it make, whose ends
+// leave its frames unsafe: KI-450; J-03's seeding follows it): E at it, Enter (the chooser: the cultures), Enter (THE
 // FLASKS), Enter (flask 1's culture, read on the sequencer); its map's first gene, Enter (its letters), Up (a letter changed), Enter (the
 // map), W (R-445: UNSORTED chosen, then its parent's name kept), its clock skipped past the writing (the skip hook): the line in an empty
-// flask; Esc
+// flask; Esc. J-01: Page Down (the world genes' page) and its first gene's letter changed too before W
 void Flow::genes() {
     game.setState(GameState::SPACE);
     game.testCabinAtDevice(FACE_EDITOR); run(0.167); press(KEY_E); run(0.1);
@@ -901,7 +903,10 @@ void Flow::genes() {
     const EditorState& E = game.testEditor();
     const int first = E.genes.genes.empty() ? -1 : E.genes.genes[0].place;
     press(KEY_ENTER); press(KEY_UP); run(0.1); shot("editor_letters");
-    press(KEY_ENTER); press(KEY_W); run(0.1); shot("editor_folder");   // R-445: its folder, then its name
+    press(KEY_ENTER); press(KEY_PAGE_DOWN); run(0.1); shot("editor_world");   // J-01: the world genes' page
+    const int world = E.sel;
+    press(KEY_ENTER); press(KEY_UP); press(KEY_ENTER); run(0.1);
+    press(KEY_W); run(0.1); shot("editor_folder");   // R-445: its folder, then its name
     press(KEY_ENTER); run(0.1); shot("editor_name");
     press(KEY_ENTER); run(0.1);
     game.testLabSkip(EDIT_S / 2); run(0.2); shot("editor_writing");
@@ -910,10 +915,51 @@ void Flow::genes() {
     for (int i = 0; i < INCUBATOR_FLASKS; i++) if (game.testLab().flasks[i].n > 0 && game.testLab().flasks[i].who[0].strain > 0 && game.testLab().flasks[i].edited[0]) line = i;
     int edits = 0;
     for (const LogEntry& e : game.guide.log) edits += e.kind == "EDIT";
-    printf("  the gene editor: %s, %d to choose from, %s on it (%zu genes, %d letters), gene %d changed, its line %s, %d EDIT in the log: '%s'\n", stateName(game.state),
-           choices, E.on ? E.name.c_str() : "NOTHING", E.genes.genes.size(), E.genes.letters, first + 1,
+    printf("  the gene editor: %s, %d to choose from, %s on it (%zu genes, %d letters), genes %d and %d (%s) changed, its line %s, %d EDIT in the log: '%s'\n",
+           stateName(game.state), choices, E.on ? E.name.c_str() : "NOTHING", E.genes.genes.size(), E.genes.letters, first + 1, world + 1,
+           world >= 0 && world < GENE_PLACES ? GENE_KIND_NAMES[E.code.kind[world]] : "-",
            line >= 0 ? fmt("in flask %d (%s)", line + 1, game.testLab().flasks[line].label[0].c_str()).c_str() : "NOT WRITTEN", edits, game.testStatus().c_str());
     press(KEY_ESCAPE); run(0.1);
+}
+
+// J-03: a world seeded from the drone bay, the flow's game's last stage (after the gene editor: nothing of its own after it moves in time,
+// and before the games of their own the stages after it make, KI-450): the dye line (`seed worlds`', a strain the explorer wrote) grown
+// full in an empty flask, the ship parked at its world, the bay charged, E at it, S (the seed page), its sea's first place where the line takes,
+// Enter; the bay's clock on past the culture let go and the dock, the guide's on half an hour: the report, the log, the data sheet's lines
+void Flow::seed() {
+    StarSystem ls; int lb = -1, sp = -1;
+    SeedLine wild;
+    double la = 0, lo = 0;
+    const std::vector<GeneEdit> dye = seedSource(ls, lb, sp, wild) ? seedLineEdits(wild.genes, SL_DYE) : std::vector<GeneEdit>();
+    const SeedLine line = dye.empty() ? SeedLine() : seedLineFor(ls, lb, sp, dye);
+    if (!line.valid || !seedPlaceTaking(ls, lb, line, la, lo)) { printf("seed           NO LINE OR PLACE\n"); return; }
+    const std::string speciesKey = line.key;
+    int n = 1;
+    while (game.guide.strains.count(speciesKey + "/S" + std::to_string(n))) n++;
+    StrainRecord rec; rec.parent = 0; rec.what = SM_EDIT; rec.edits = geneEditsText(dye);
+    game.guide.strains[speciesKey + "/S" + std::to_string(n)] = rec;
+    int flask = INCUBATOR_FLASKS - 1;
+    for (int i = 0; i < INCUBATOR_FLASKS; i++) if (game.testLab().flasks[i].n == 0) { flask = i; break; }
+    FlaskSpecies w; w.sx = ls.star.sx; w.sy = ls.star.sy; w.sz = ls.star.sz; w.body = lb; w.species = sp; w.strain = n;
+    const bool full = labFlaskFull(game, flask, w, seedBestMedium(line.kind));
+    game.testParkAt(ls.star, lb, false); game.setState(GameState::SPACE);
+    if (game.testBay().clock >= 0) game.testDronesSkip(game.testBay().back + DRONE_COOLDOWN_S + 1);   // the bay charged since the drones' trip
+    game.testCabinAtDevice(FACE_BAY); run(0.2); press(KEY_E); run(0.1);
+    press(KEY_S); run(0.1); shot("seed_page");
+    game.testSeedPage(la, lo); run(0.1); shot("seed_place");
+    press(KEY_ENTER); run(0.1); shot("seed_sent");
+    game.testDronesSkip(30); run(0.1); shot("seed_let_go");
+    game.testDronesSkip(400); run(0.1); shot("seed_back");
+    const std::string report = game.testStatus();
+    press(KEY_ESCAPE); run(0.1);
+    game.testClockSkip(1800);
+    press(KEY_I); run(0.1); press(KEY_RIGHT); run(0.1); shot("seed_data"); press(KEY_SPACE); run(0.1);   // (its page of numbers: SEEDED, MADE)
+    int seeded = 0;
+    for (const LogEntry& e : game.guide.log) seeded += e.kind == "SEEDED";
+    const std::vector<Seeding>& ss = game.testSeedings(lb);
+    printf("  the seed trip: flask %d %s, its line %s let go in %s at %.2f %.2f: '%s'; %zu seeded line(s), %d SEEDED in the log, the guide's clock %.0f s; made: %s\n", flask + 1,
+           full ? "full" : "NOT FULL", game.testLab().flasks[flask].label[0].c_str(), ss.empty() ? "-" : ss.back().verdict.place.name.c_str(), la / DEG, lo / DEG, report.c_str(),
+           game.guide.seeded.size(), seeded, game.guide.clock, game.testMadeWords(lb).c_str());
 }
 
 void runGameFlow() {
@@ -931,7 +977,8 @@ void runGameFlow() {
     f.chart();
     f.probe();
     f.roads();
-    f.genes();   // Y-02: the flow's game's last (nothing of its after it moves in time; before the other games: KI-450)
+    f.genes();   // Y-02
+    f.seed();    // J-03: the flow's game's last (nothing of its after it moves in time; before the other games: KI-450)
     f.autoSamples();
     f.reload();
 }

@@ -15,12 +15,17 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`, `modes_signals`,
   `modes_rogues`, `modes_life` (Z-01: the biota; Z-03: `life search`, `life kit`; Z-07: `life auto`, `coastSite`; R-434: `life sight`),
   `modes_life_look` (Z-02: plates of the forms, strips, distinctness, `everyForm`), `modes_lab` (Z-04: `lab microscope`, `lab time`,
-  `labVial`, `labDenseVial`; R-438: samples, `findAnswerSamples`), `modes_cultures` (Z-05: `lab cultures`, `lab jars`, and `labStock`,
+  `labVial`, `labDenseVial`; R-438: samples, `findAnswerSamples`), `modes_cultures` (Z-05: `lab cultures`, and `labStock`,
   the lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07: `lab catalogue`; Y-01:
   `lab tree`'s pages), `modes_genes` (Y-02: `lab genes`, `geneWorlds`, and `geneLaws`, the gene laws the unit holds; Y-03: moved genes,
   `lab_genes_kin.png`; Y-04: the law that default switches change no curve, `lab_genes_switch.png`), `modes_drones`, `modes_ship` (I-02:
   `ship rooms`, `ship walk`; I-03: `ship light`; I-04: `ship life`), `modes_game` (the flow, `Flow`), `modes_input`, `modes_tour` (every
-  state toured, `Tour`: its `STOPS`, then the rows), `modes_bench` (`Bench`'s stages), `modes_proof`.
+  state toured, `Tour`: its `STOPS`, then the rows), `modes_bench` (`Bench`'s stages), `modes_proof`, `modes_seed` (J-02: `seed test`,
+  the test layer in every view and off again; J-03: `seed worlds`, six lines on forty worlds, and `seed sea`, a dyed sea and a
+  glowing one before and after; the lines' helpers: `seedSource`, `seedLineFor`, `seedLineEdits`, `seedCases`, `seedPlaceTaking`,
+  `labFlaskFull`), `modes_seed_air` (J-04: `seed climate`, each gas on twenty worlds, and `seed traits`, each made air's trait from
+  orbit and on the ground; `seedGeneEdits`, `seedNativeLine`, `seedAirCases`), `modes_seed_looks` (J-05: `seed looks`, each made
+  water's, ground's and plants' trait from orbit and on the ground, `look_*.png`; its sites by the drawn ground's water and the drainage).
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`, `civ_peoples`,
   `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
 - `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`. Groups are in `unit_basics`, `unit_kinds`, `unit_drifters`, `unit_life`,
@@ -28,11 +33,14 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   (Z-03, R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's vials by world;
   R-433's collection; B-444's holds that end; B-446's switched strain in a predator cycle), `unit_lab_answers` (the group `experiments`:
   R-435 to R-438 and B-441, the typed warmths, the slide's answers, the partner), `unit_lab_incubator` (the group `incubator`: B-442,
-  B-443 and R-439 to R-442, rows and tree leaves told apart, N's names, the choosers' tabs, K's copies, the jars' bands),
+  B-443 and R-440 to R-442, rows and tree leaves told apart, N's names, the choosers' tabs, K's copies),
   `unit_lab_genes` (the group `genes`, the Y series: Y-01's tree by world and by folder; Y-02's laws, a line written and read
   everywhere, learning, the editor over a save; Y-03's kin, moves, price, copies and needs; Y-04's switches in the segments, their
-  price, S and a switched drop; R-445's folder and name prompts). The last group, `files` (B-440: the player's files left as the unit
-  found them), is in `unit.cpp`.
+  price, S and a switched drop; R-445's folder and name prompts), `unit_seeding` (the group `seeding`, J-02: the layer on any thread
+  and in any order, a map with it and without, the guide's `seeded` and `clock` lines, the clock, a loan; J-03: the verdict as a
+  flask's, the drift, the trip, home refused, an unseeded world, samples; J-04: the air by its world, after the looks, the made
+  climate's reads, a runaway's seas; J-05: the looks by their world, where they lie, the made ground drawn, the words). The last
+  group, `files` (B-440: the player's files left as the unit found them), is in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:

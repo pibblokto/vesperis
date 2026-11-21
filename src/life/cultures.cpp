@@ -8,15 +8,23 @@
 #include <limits>
 
 const char* const CULTURE_CELL_NAMES[CC_COUNT] = {"WATER", "ACID", "AMMONIA", "CRYOSTAT"};
-const char* const CULTURE_LIGHT_NAMES[CL_COUNT] = {"DARK", "WHITE", "RED", "BLUE"};
+const char* const CULTURE_LIGHT_NAMES[CL_COUNT] = {"DARK", "WHITE", "RED", "BLUE", "UV"};
 const char* const CULTURE_ENERGY_NAMES[CE_COUNT] = {"NONE", "HYDROGEN", "SULPHIDE", "IRON", "METHANE", "AMMONIA", "ACETYLENE", "BROTH"};
 const char* const CULTURE_SALT_NAMES[3] = {"FRESH", "SEA SALT", "BRINE"};
 const char* const GROWTH_FIT_NAMES[GF_COUNT] = {"GROWS", "TOO COLD", "TOO HOT", "WRONG SALT", "WRONG SOLVENT", "NOTHING TO EAT", "NO LIGHT",
-                                               "CANNOT LIVE"};
+                                               "CANNOT LIVE", "FROZEN", "KILLED BY UV"};
 const char* const CULTURE_STAGE_NAMES[SG_COUNT] = {"EMPTY", "ASLEEP", "WAKING", "ADAPTING", "GROWING", "IN COLONIES", "FULL", "STARVING",
                                                    "TOO COLD TO GROW", "GATHERING", "FRUITING", "SPORULATING", "ENCYSTING", "DYING", "DEAD",
-                                                   "CYCLING", "OUTGROWN"};
-const char* const CULTURE_PAIR_NAMES[PA_COUNT] = {"ALONE", "ONE WINS", "PREDATOR AND PREY", "FEED EACH OTHER", "MIRRORED: IGNORE EACH OTHER"};
+                                                   "CYCLING", "OUTGROWN", "OVERGROWN", "FROZEN", "POISONED"};
+const char* const CULTURE_PAIR_NAMES[PA_COUNT] = {"ALONE", "ONE WINS", "PREDATOR AND PREY", "FEED EACH OTHER", "MIRRORED: IGNORE EACH OTHER",
+                                                 "ONE POISONS THE OTHER"};
+const char* const WORLD_GAS_NAMES[WG_COUNT] = {"NO GAS", "CO2", "METHANE", "OXYGEN", "HYDROGEN SULPHIDE", "DIMETHYL SULPHIDE", "NITROUS OXIDE",
+                                               "AMMONIA", "HYDROGEN"};
+const char* const WORLD_DYE_NAMES[WD_COUNT] = {"NO DYE", "RED", "CRIMSON", "ORANGE", "YELLOW", "VIOLET", "BLUE", "BLACK", "FLUORESCENT"};
+const char* const WORLD_SHELL_NAMES[SHL_COUNT] = {"NONE", "CHALK", "GLASS", "RUST", "SULPHUR"};
+const char* const WORLD_ROT_NAMES[ROT_COUNT] = {"NOTHING", "WOOD", "FLESH", "SHELL", "STONE"};
+const char* const WORLD_POISON_NAMES[PZ_COUNT] = {"NONE", "NERVE", "BLOOD", "GUT"};
+const char* const WORLD_HOST_NAMES[HO_COUNT] = {"NONE", "PLANTS", "ANIMALS", "PLANTS AND ANIMALS"};
 const char* const GENE_SWITCH_NAMES[GW_COUNT] = {"ALWAYS", "NEVER", "IN THE LIGHT", "IN THE DARK", "WHEN CROWDED", "WHEN STARVING", "WHEN COLD"};
 const char* const GENE_SWITCH_KEYS[GW_COUNT] = {"ALWAYS", "NEVER", "LIGHT", "DARK", "CROWDED", "STARVING", "COLD"};
 
@@ -31,9 +39,10 @@ double h01(uint64_t h) { return unitFromHash(mix64(h)); }
 enum Mode { MD_EMPTY = 0, MD_ASLEEP, MD_WAKING, MD_GROW, MD_HOLD, MD_WAIT, MD_DECLINE, MD_DEAD, MD_CYCLE };
 
 // a light's use to a pigment (dark, white, red, blue): chlorophyll's red and blue, rhodopsin's green (poor in red and blue), the carotenoids'
-// blue, phycocyanin's red, the black's every light (Kiang et al. 2007)
-constexpr double LIGHT_FIT[PG_COUNT][CL_COUNT] = {
-    {0, 0.3, 0.2, 0.2}, {0, 1, 0.8, 0.8}, {0, 1, 0.3, 0.4}, {0, 1, 0.25, 0.9}, {0, 1, 0.3, 0.7}, {0, 1, 0.5, 0.8}, {0, 1, 0.9, 0.5}, {0, 1, 1, 1}};
+// blue, phycocyanin's red, the black's every light (Kiang et al. 2007); J-01: the ultraviolet's little (the carotenoids' and a dark pigment's
+// most), for a shielded cell
+constexpr double LIGHT_FIT[PG_COUNT][CL_COUNT] = {{0, 0.3, 0.2, 0.2, 0.05}, {0, 1, 0.8, 0.8, 0.15}, {0, 1, 0.3, 0.4, 0.1}, {0, 1, 0.25, 0.9, 0.25},
+                                                  {0, 1, 0.3, 0.7, 0.2},    {0, 1, 0.5, 0.8, 0.25}, {0, 1, 0.9, 0.5, 0.1}, {0, 1, 1, 1, 0.3}};
 // the crowd an energy feeds, log10 against the broth's (the lithotrophs' small yields: iron's the least, Hedrich et al. 2011)
 constexpr double SUBSTRATE_YIELD[SU_COUNT] = {0, -1.0, -1.0, -2.0, -0.5, -1.5, -1.0};
 
@@ -144,7 +153,10 @@ struct SwitchCtx {
     Growth gBase;
     uint32_t fixed = 0;
     double Nq = INF;
+    bool ice = false;   // J-01: its flask frozen by the other's ice
 };
+// J-01: a growth in a flask another's ice froze: what would live there waits in the ice (what dies there dies)
+void iced(Growth& g) { if (g.fit == GF_GROWS || g.fit == GF_COLD || g.fit == GF_HUNGRY || g.fit == GF_DARK) { g = Growth(); g.fit = GF_FROZEN; } }
 // its state from its numbers: crowded past its quorum's share, starving where the line as written would not grow (its crowd's food spent, nothing
 // it eats or no light, its medium killing it) but for the cold, which it waits out: judged of the line as written, so no switch turns it on itself
 uint32_t stateNow(const SwitchCtx& x, const SpState& S) {
@@ -152,7 +164,7 @@ uint32_t stateNow(const SwitchCtx& x, const SpState& S) {
     if (S.N > 0 && S.N >= x.Nq) st |= CST_CROWDED;
     const Growth& g = x.gBase;
     const bool grows = g.fit == GF_GROWS && !S.spent && (S.N <= 0 || S.N < 0.9 * std::pow(10.0, g.crowdLog));
-    if (!grows && g.fit != GF_COLD) st |= CST_STARVING;
+    if (!grows && g.fit != GF_COLD && g.fit != GF_FROZEN) st |= CST_STARVING;   // (J-01: frozen, it waits as in the cold)
     return st;
 }
 
@@ -170,7 +182,10 @@ void advance(const Traits& T0, const CultureKind& k0, const Growth& g0, SpState&
         uint32_t st = 0;
         if (sw) {
             st = stateNow(*sw, S);
-            if (st != was) { kv = switchedKind(*sw->base, st); tv = traitsOf(kv); gv = growthIn(kv, *sw->med, sw->fed); gv.crowdLog += sw->adj; was = st; }
+            if (st != was) {
+                kv = switchedKind(*sw->base, st); tv = traitsOf(kv); gv = growthIn(kv, *sw->med, sw->fed); gv.crowdLog += sw->adj; was = st;
+                if (sw->ice) iced(gv);
+            }
         }
         const Traits& T = sw ? tv : T0;
         const CultureKind& k = sw ? kv : k0;
@@ -185,14 +200,14 @@ void advance(const Traits& T0, const CultureKind& k0, const Growth& g0, SpState&
         if (S.N <= 0) {
             if (S.Sp > 0 && g.fit == GF_GROWS && !S.spent) { s.mode = MD_WAKING; end = std::min(tb, t + std::max(0.0, T.wakeS - S.wake)); }
             else { s.mode = S.Sp > 0 ? MD_ASLEEP : MD_DEAD; S.wake = 0; }
-        } else if (g.fit == GF_HOT || g.fit == GF_SALT || g.fit == GF_SOLVENT || g.fit == GF_UNVIABLE) {
+        } else if (g.fit == GF_HOT || g.fit == GF_SALT || g.fit == GF_SOLVENT || g.fit == GF_UNVIABLE || g.fit == GF_BURNT) {
             const bool lyses = g.fit == GF_SOLVENT || g.fit == GF_UNVIABLE;   // Y-02: a line that does not live lyses in seconds
             s.mode = MD_DECLINE; s.kd = g.fit == GF_UNVIABLE ? 1.0 : T.kdStress; s.sigma = lyses ? 0 : T.sigmaStress;
             s.stage = lyses ? SG_DYING : T.stressDecline;
             if (S.declineT0 < 0) S.declineT0 = t;
             const double tx = t + std::log(S.N / CULTURE_EXTINCT) / s.kd;
             end = std::min(tb, tx); gone = tx < tb;
-        } else if (g.fit == GF_COLD) s.mode = MD_WAIT;
+        } else if (g.fit == GF_COLD || g.fit == GF_FROZEN) s.mode = MD_WAIT;
         else if (g.fit == GF_GROWS && !S.spent && S.N < 0.9 * s.K) {
             s.mode = MD_GROW; s.mu = g.mu;
             if (g.edge == EG_NONE) S.gens = 0;   // off its edge: nothing pressing it to change
@@ -208,10 +223,13 @@ void advance(const Traits& T0, const CultureKind& k0, const Growth& g0, SpState&
                 const double ts = t + growTau(S.N, S.q, g.mu, s.K, Ns);
                 if (ts < end) { *mk.strainT = ts; strainMove(k0, *mk.m, g.edge, mk.strains, *mk.strainWhat, *mk.strainValue); }
             }
-        } else if (S.hold < T.holdS) {   // at its crowd, or with nothing to eat: its reserves held a while
+        } else if (S.hold < T.holdS || (k.world.overgrows && g.fit == GF_GROWS)) {   // at its crowd, or with nothing to eat: its reserves held a while
             s.mode = MD_HOLD; s.stage = g.fit == GF_GROWS ? SG_CROWD : SG_HUNGRY;
-            const double th = t + (T.holdS - S.hold);
-            end = std::min(tb, th); held = th <= tb;
+            if (k.world.overgrows && g.fit == GF_GROWS) { s.stage = SG_OVERGROWN; end = tb; }   // J-01: it never stops, nor ends till it is emptied
+            else {
+                const double th = t + (T.holdS - S.hold);
+                end = std::min(tb, th); held = th <= tb;
+            }
         } else {   // starved
             s.mode = MD_DECLINE; s.kd = T.kd; s.sigma = T.sigma; s.stage = T.decline;
             if (S.declineT0 < 0) S.declineT0 = t;
@@ -344,6 +362,34 @@ int lightOfStar(int cls) {
     }
 }
 
+double freezingC(int salt) { return salt >= 2 ? -20 : (salt == 1 ? -2 : 0); }
+bool flaskIce(const Medium& m, double frostC) {
+    return m.cell == CC_WATER && frostC > FROST_NONE + 1 && m.tempC < freezingC(m.salt) && m.tempC <= frostC;
+}
+
+RGB dyeColour(int dye) {
+    switch (dye) {
+        case WD_RED: return RGB(0.8f, 0.1f, 0.1f);
+        case WD_CRIMSON: return RGB(0.62f, 0.05f, 0.22f);
+        case WD_ORANGE: return RGB(0.92f, 0.45f, 0.1f);
+        case WD_YELLOW: return RGB(0.9f, 0.8f, 0.2f);
+        case WD_VIOLET: return RGB(0.5f, 0.2f, 0.72f);
+        case WD_BLUE: return RGB(0.15f, 0.3f, 0.82f);
+        case WD_BLACK: return RGB(0.1f, 0.09f, 0.08f);
+        case WD_FLUORESCENT: return RGB(0.35f, 1.0f, 0.45f);
+        default: return RGB(0.86f, 0.8f, 0.62f);
+    }
+}
+RGB shellColour(int shell) {
+    switch (shell) {
+        case SHL_CHALK: return RGB(0.92f, 0.9f, 0.84f);
+        case SHL_GLASS: return RGB(0.68f, 0.8f, 0.86f);
+        case SHL_RUST: return RGB(0.6f, 0.26f, 0.1f);
+        case SHL_SULPHUR: return RGB(0.92f, 0.84f, 0.2f);
+        default: return RGB(0.5f, 0.45f, 0.4f);
+    }
+}
+
 CultureKind cultureKindOf(const Biota& B, int species, double bodyUm) {
     CultureKind k;
     if (species < 0 || species >= (int)B.species.size()) return k;
@@ -380,8 +426,10 @@ Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
     if (k.dead) { g.fit = GF_UNVIABLE; return g; }   // Y-02: a vital gene changed
     if (cellChemistry(m.cell) != k.chemistry) { g.fit = GF_SOLVENT; return g; }
     if (m.tempC >= s.tMax) { g.fit = GF_HOT; return g; }
+    if (flaskIce(m, k.world.frostC)) { g.fit = GF_FROZEN; return g; }   // J-01: its own ice in the flask's water
     if (m.tempC <= s.tMin) { g.fit = GF_COLD; return g; }
     if (m.salt < s.saltLo - 1 || m.salt > s.saltHi + 1) { g.fit = GF_SALT; return g; }
+    if (m.light == CL_UV && k.world.shield < UV_SHIELD) { g.fit = GF_BURNT; return g; }   // J-01: the ultraviolet lamp, no shield
     const Traits T = traitsOf(k);
     const double fT = cardinal(m.tempC, s.tMin, s.tOpt, s.tMax);
     const bool saltEdge = m.salt < s.saltLo || m.salt > s.saltHi;
@@ -410,7 +458,7 @@ Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
         default: g.fit = GF_HUNGRY; return g;   // a protocell: no life of its own to grow
     }
     g.mu = T.muMax * fT * fE * (saltEdge ? 0.3 : 1);
-    g.crowdLog = T.baseLog + yield - (saltEdge ? 0.5 : 0);
+    g.crowdLog = T.baseLog + yield - (saltEdge ? 0.5 : 0) + k.world.stopShift + (k.world.overgrows ? OVERGROWN_DECADES : 0);   // (J-01: its STOP's)
     if (fT < 0.5) g.edge = m.tempC > s.tOpt ? EG_HOT : EG_COLD;
     else if (saltEdge) g.edge = EG_SALT;
     else if (s.way == LW_LIGHT && fE <= 0.4) g.edge = EG_LIGHT;
@@ -437,6 +485,20 @@ void cultureWorkOff(CultureKind& k, int work, uint32_t bits) {
         case CX_FOOD: k.s.substrate = SU_NONE; break;
         case CX_REST: k.s.cycle &= ~bits; k.s.sporeYears = 0; break;
         case CX_GLOW: k.s.glows = false; break;
+        case CX_GAS: k.world.gasRate = 0; break;   // J-01: a world gene's work
+        case CX_DYE: k.world.dyeRate = 0; break;
+        case CX_LIFT: k.world.lift = 0; break;
+        case CX_FROST: k.world.frostC = FROST_NONE; break;
+        case CX_SLIME: k.world.slime = 0; break;
+        case CX_SHELL: k.world.shellRate = 0; break;
+        case CX_STOP: k.world.overgrows = true; break;
+        case CX_BIND: k.world.bind = 0; break;
+        case CX_ROT: k.world.rotRate = 0; break;
+        case CX_POISON: k.world.poisonRate = 0; break;
+        case CX_CARRIER: k.world.carrier = 0; break;
+        case CX_HOST: k.world.hostRate = 0; break;
+        case CX_DRY: k.world.dry = 0; break;
+        case CX_SHIELD: k.world.shield = 0; break;
         default: break;
     }
 }
@@ -473,7 +535,8 @@ uint32_t stageCycleBit(int stage) {
         case SG_GATHERING: return LC_GATHERING;
         case SG_FRUITING: return LC_FRUITING;
         case SG_SPORULATING: case SG_ENCYSTING: return LC_SPORULATING;
-        case SG_DYING: case SG_OUTGROWN: return LC_DYING;
+        case SG_DYING: case SG_OUTGROWN: case SG_POISONED: return LC_DYING;
+        case SG_OVERGROWN: return LC_GROWING | LC_DIVIDING;
         default: return 0;
     }
 }
@@ -481,6 +544,9 @@ uint32_t stageCycleBit(int stage) {
 int pairOf(const CultureKind& a, const CultureKind& b, int& lead) {
     lead = -1;
     if (a.mirrored != b.mirrored) return PA_IGNORE;   // neither can eat what the other is made of
+    // J-01: a poison one makes and the other does not kills the other (a bacteriocin's way: Riley and Wertz 2002)
+    if (a.world.poisons() && !b.world.poisons()) { lead = 0; return PA_POISON; }
+    if (b.world.poisons() && !a.world.poisons()) { lead = 1; return PA_POISON; }
     auto eats = [](const CultureKind& z, const CultureKind& p) {
         if (z.s.way != LW_GRAZER && z.s.way != LW_PREDATOR) return false;
         if (p.bodyUm >= 0.7 * z.bodyUm) return false;
@@ -572,6 +638,9 @@ CultureRun runCulture(const FlaskCulture& c) {
             capped[k] = fed && R.pair == PA_FEED;
             fedK[k] = fed;
         }
+        // J-01: the flask frozen by either's ice: both wait in it (what would die there dies)
+        const bool ice = two && flaskIce(med, std::max(K[0].world.frostC, K[1].world.frostC));
+        if (ice) for (int k = 0; k < 2; k++) if (present[k]) iced(g[k]);
         if (two && R.pair == PA_COMPETE) g[1 - lead].crowdLog -= std::log10(2.0);   // the loser's share of the energy
         if (two && R.pair == PA_FEED) g[lead].crowdLog += std::log10(2.0);          // the feeder helped in turn
         if (two && R.pair == PA_CYCLE) {
@@ -589,9 +658,11 @@ CultureRun runCulture(const FlaskCulture& c) {
             x.adj = g[k].crowdLog - growthIn(K[k], med, fedK[k]).crowdLog;
             x.fixed = (med.light != CL_DARK ? CST_LIGHT : 0u) | (med.tempC < K[k].s.tOpt ? CST_COLD : 0u);
             x.Nq = K[k].quorum * std::pow(10.0, g[k].fit == GF_GROWS ? g[k].crowdLog : T[k].baseLog + bestYieldLog(K[k].s));
+            x.ice = ice;
             vk[k] = switchedKind(K[k], stateNow(x, S[k]));
             g[k] = growthIn(vk[k], med, fedK[k]);
             g[k].crowdLog += x.adj;
+            if (ice) iced(g[k]);
         }
         auto swOf = [&](int k) { return K[k].switches.empty() ? nullptr : &sx[k]; };
         double t = ta;
@@ -670,9 +741,11 @@ CultureRun runCulture(const FlaskCulture& c) {
         for (int k = 0; k < 2; k++) if (present[k]) advance(T[k], K[k], g[k], S[k], t, tb, R.seg[k], marks(k), swOf(k));
         for (int k = 0; k < 2; k++) for (size_t j = had[k]; j < R.seg[k].size(); j++) R.seg[k][j].capped = capped[k];
     }
-    // one wins: from when the winner holds half its crowd the loser falls (Gause 1934)
-    if (R.pair == PA_COMPETE && R.n == 2) {
+    // one wins: from when the winner holds half its crowd the loser falls (Gause 1934); J-01: a poisoner's from a hundredth of its crowd, the
+    // other falling by its poison's strength (an e-fold in half a minute at its strongest)
+    if ((R.pair == PA_COMPETE || R.pair == PA_POISON) && R.n == 2) {
         const int w = R.lead, l = 1 - w;
+        const double share = R.pair == PA_POISON ? 0.01 : 0.5;
         const std::vector<CultureSeg>& v = R.seg[w];
         for (size_t i = 0; i < v.size(); i++) {
             const CultureSeg& s = v[i];
@@ -681,10 +754,10 @@ CultureRun runCulture(const FlaskCulture& c) {
             const double from = std::max(s.t0, R.tAdd);
             double N, Sp, G, q;
             evalSeg(s, from, N, Sp, G, q);
-            if (N > 0 && N >= 0.5 * s.K) { R.exT = from; break; }
-            if (s.mode == MD_GROW) { const double th = s.t0 + growTau(s.N, s.q, s.mu, s.K, 0.5 * s.K); if (th >= from && th < t1) { R.exT = th; break; } }
+            if (N > 0 && N >= share * s.K) { R.exT = from; break; }
+            if (s.mode == MD_GROW) { const double th = s.t0 + growTau(s.N, s.q, s.mu, s.K, share * s.K); if (th >= from && th < t1) { R.exT = th; break; } }
         }
-        R.exRate = 0.15 * traitsOf(K[l]).muMax;
+        R.exRate = R.pair == PA_POISON ? 0.004 + 0.03 * K[w].world.poisonRate : 0.15 * traitsOf(K[l]).muMax;
     }
     return R;
 }
@@ -707,7 +780,7 @@ CultureNow cultureAt(const FlaskCulture& c, const CultureRun& R, double t) {
             case MD_ASLEEP: o.stage = SG_ASLEEP; break;
             case MD_WAKING: o.stage = SG_WAKING; break;
             case MD_DEAD: o.stage = SG_DEAD; break;
-            case MD_WAIT: o.stage = SG_WAITING; break;
+            case MD_WAIT: o.stage = s->fit == GF_FROZEN ? SG_FROZEN : SG_WAITING; break;
             case MD_GROW: o.stage = q < 1 ? SG_LAG : (s->colony && o.cells >= 0.01 * s->K ? SG_COLONY : SG_GROWING); break;
             case MD_HOLD: o.stage = s->stage; break;
             case MD_DECLINE:
@@ -720,12 +793,12 @@ CultureNow cultureAt(const FlaskCulture& c, const CultureRun& R, double t) {
         }
         o.glowing = s->glows && o.cells > 0 && o.cells >= s->quorum * s->K;
     }
-    if (R.n == 2 && R.pair == PA_COMPETE && R.exT >= 0 && t > R.exT) {   // the loser outgrown (all it makes the fewer)
+    if (R.n == 2 && (R.pair == PA_COMPETE || R.pair == PA_POISON) && R.exT >= 0 && t > R.exT) {   // the loser outgrown (all it makes the fewer); J-01: poisoned
         CultureOne& o = now.one[1 - R.lead];
         const double f = std::exp(-R.exRate * (t - R.exT));
         o.cells *= f; o.spores *= f; o.ghosts *= f;
         if (o.cells < CULTURE_EXTINCT) o.cells = 0;
-        if (o.cells > 0 && o.stage != SG_DEAD && o.stage != SG_ASLEEP) o.stage = SG_OUTGROWN;
+        if (o.cells > 0 && o.stage != SG_DEAD && o.stage != SG_ASLEEP) o.stage = R.pair == PA_POISON ? SG_POISONED : SG_OUTGROWN;
         else if (o.cells <= 0) o.stage = o.spores > 0 ? SG_ASLEEP : SG_DEAD;
     }
     if (R.n == 2 && R.pair == PA_FEED && R.lead >= 0) {   // the fed one held to a share of its feeder

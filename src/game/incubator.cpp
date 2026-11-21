@@ -1,11 +1,10 @@
-// Z-05: the incubator (R-425; docs/ideas/ITERATION-1.5.0.md Z-05, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h, life/cultures.h,
-// life/jars.h), the laboratory's second device: a screen over the room, E at its cabinet. Twelve flasks: Up and Down choose one, Left and Right
-// the medium's field (its cell, its warmth, its light, its energy, its salt), + and - change it (Shift ten degrees), W sets it AS ITS WORLD
-// again; Enter on an empty flask puts in a species seen in a vial or a flask's culture, on a culture a second; F a fresh broth (a hundredth into
-// new medium), Backspace empties it, N names a strain. Tab the jars' shelf: Enter makes a world's jar from a vial of its wet silt, a mat or
-// soil, Backspace empties one. The lab's clock is the drones' kind (real seconds while the game simulates); a culture is closed-form from its
-// events on it (`runCulture`); what happens in a flask is said and logged as the clock reaches it (WOKEN, STRAIN), and what its curve shows of
-// its species, its stages and its growth, goes to the species' sheet
+// Z-05: the incubator (R-425; docs/ideas/ITERATION-1.5.0.md Z-05, IDEAS-small-and-spacious.md 1.9; lab_state.h, life/cultures.h), the
+// laboratory's second device: a screen over the room, E at its cabinet. Twelve flasks: Up and Down choose one, Left and Right the medium's
+// field (its cell, its warmth, its light, its energy, its salt), + and - change it (Shift ten degrees), W sets it AS ITS WORLD again; Enter
+// on an empty flask puts in a species seen in a vial or a flask's culture, on a culture a second; F a fresh broth (a hundredth into new
+// medium), Backspace empties it, N names a strain. The lab's clock is the drones' kind (real seconds while the game simulates); a culture
+// is closed-form from its events on it (`runCulture`); what happens in a flask is said and logged as the clock reaches it (WOKEN, STRAIN),
+// and what its curve shows of its species, its stages and its growth, goes to the species' sheet
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -67,9 +66,10 @@ bool Game::flaskKind(const FlaskSpecies& w, CultureKind& kind, Morph& form, doub
         edits = edits || it->second.what == SM_EDIT;
         n = it->second.parent;
     }
-    MicrobeGenes G;
-    GeneCode code;
-    if (genes || edits) { G = microbeGenesOf(s, form, B.genesis); code = geneCodeOf(B.genesis); }
+    // its genes, and what its world genes make and do as its species (J-01: a wild species' too, in every flask)
+    MicrobeGenes G = microbeGenesOf(s, form, B.genesis);
+    const GeneCode code = geneCodeOf(B.genesis);
+    worldOf(kind.world, G);
     const CultureKind wild = kind;
     const Morph wildForm = form;
     for (auto r = chain.rbegin(); r != chain.rend(); ++r) {
@@ -180,20 +180,53 @@ CultureNow Game::flaskNow(int i) const {
     return cultureAt(F.culture, F.run, lab.clock);
 }
 
+// J-01: what a flask's world genes show now: each look by the species that makes it, as strong as its amount and its numbers (a gas only while
+// its cells grow; a dye and a sediment from all it grew, the dead's too); overgrown, frozen, poisoned as its stages say; genes passed between
+// two of one genesis once both grew, from the one that carries to the one that does not
+FlaskShow Game::flaskShow(int i) const {
+    FlaskShow S;
+    const Flask& F = lab.flasks[clampi(i, 0, INCUBATOR_FLASKS - 1)];
+    if (F.n == 0 || !F.made) return S;
+    const CultureNow now = flaskNow(i);
+    auto decades = [](double v, double from, double span) { return clampd((std::log10(std::max(1.0, v)) - from) / span, 0, 1); };
+    for (int k = 0; k < now.n && k < 2; k++) {
+        const CultureOne& o = now.one[k];
+        const CultureWorld& W = F.culture.kind[k].world;
+        const double d = decades(o.cells, 4, 5), all = decades(o.cells + o.ghosts + o.spores, 5, 4);
+        const bool active = o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_CYCLING || o.stage == SG_OVERGROWN;
+        auto take = [&](double v, double& to, int& who) { if (v > to) { to = v; who = k; } };
+        if (W.gives() && (active || o.stage == SG_CROWD)) {   // (at its crowd, fewer)
+            const double b = W.gasRate * std::max(0.3, d) * (active ? 1 : 0.4);
+            if (b > S.bubbles) { S.bubbles = b; S.gasWho = k; S.gas = W.gas; }
+        }
+        if (W.dyes()) { const double v = W.dyeRate * all; if (v > S.dyed) { S.dyed = v; S.dyeWho = k; S.dye = W.dye; } }
+        if (W.lift > 0) take(W.lift * d, S.scum, S.scumWho);
+        if (W.slime > 0) take(W.slime * d, S.slime, S.slimeWho);
+        if (W.shells()) { const double v = W.shellRate * all; if (v > S.sediment) { S.sediment = v; S.shellWho = k; S.shell = W.shell; } }
+        if (o.stage == SG_OVERGROWN) { S.overgrown = true; S.overWho = k; S.tissue = S.tissue || W.bind > 0; }
+        else if (W.bind > 0) take(W.bind * d, S.clumps, S.clumpWho);
+        if (o.stage == SG_FROZEN && !S.frozen) {
+            S.frozen = true;
+            S.iceWho = F.n > 1 && F.culture.kind[1].world.frostC > F.culture.kind[0].world.frostC ? 1 : 0;
+        }
+    }
+    if (F.n == 2 && F.run.pair == PA_POISON && F.run.lead >= 0 && now.one[1 - F.run.lead].stage == SG_POISONED) S.poisoned = 1 - F.run.lead;
+    if (F.n == 2 && F.run.pair != PA_IGNORE) {
+        const CultureKind &a = F.culture.kind[0], &b = F.culture.kind[1];
+        const bool ca = a.world.carrier > 0, cb = b.world.carrier > 0;
+        const bool kin = a.s.genesis != 0 && a.s.genesis == b.s.genesis;
+        const bool grew = (cultureStagesBy(F.run, 0, lab.clock) & LC_GROWING) && (cultureStagesBy(F.run, 1, lab.clock) & LC_GROWING);
+        if (kin && grew && ca != cb && now.one[0].cells > 0 && now.one[1].cells > 0) S.passedTo = ca ? 1 : 0;
+    }
+    return S;
+}
+
 // the lab's clock, every simulating frame (the drones' kind): what each flask comes to is said as the clock reaches it (its spores woken, a
 // strain arisen: an event of its own then, the strain the guide's), its crowd's glow
 void Game::updateLab(double realDt) {
     lab.clock += realDt;
     sequencerTick();   // Z-06: the sequencer's reading, its end as the clock reaches it
     editorTick();      // Y-02: the gene editor's writing, its line into a flask as the clock reaches its end
-    for (int j = 0; j < (int)lab.jars.size(); j++) {   // R-439: a jar settled, said as the clock reaches it
-        Jar& J = lab.jars[j];
-        if (J.told || lab.clock - J.t0 < JAR_SETTLED_S) continue;
-        J.told = true;
-        if (!J.made) jarMake(j);
-        const int n = (int)J.recipe.bands.size();
-        status(n == 0 ? "JAR OF " + J.name + " SETTLED - NO BANDS" : fmt("JAR OF %s SETTLED - %d BAND%s TO READ", J.name.c_str(), n, n == 1 ? "" : "S"), 5);
-    }
     for (int i = 0; i < INCUBATOR_FLASKS; i++) {
         Flask& F = lab.flasks[i];
         if (F.n == 0) continue;
@@ -301,7 +334,7 @@ bool Game::incubatorTypeKeys(const Input& in) {
 // ---- putting in, the medium, emptying -----------------------------------------------------------------------------------------------
 
 // the chooser's rows: for a flask, each living or sleeping species seen in a cold store's vial (never a fossil or a protocell: they do not
-// grow), each flask's culture (carried over) and (R-433) each culture of the collection; for the jars, the vials of wet silt, a mat or soil. R-432:
+// grow), each flask's culture (carried over) and (R-433) each culture of the collection. R-432:
 // in folders, a world's (a row a species and its state, cells or spores, from the first vial holding it), the flasks' and the collection's
 void Game::incubatorChoices() {
     flaskMadeAll();   // (the flasks' words)
@@ -309,17 +342,6 @@ void Game::incubatorChoices() {
     incub.pages = ChooserPage();
     std::vector<std::string> keys;
     LabSystems systems;
-    if (incub.page == 1) {
-        for (int v = 0; v < (int)coldStore.size(); v++) {
-            const Vial& V = coldStore[v];
-            if (!jarNiche(V.hab.niche)) continue;
-            IncubatorChoice c; c.vial = v;
-            c.line = fmt("%s, %.0f C", V.name.c_str(), std::fabs(V.readingC) < 0.5 ? 0.0 : V.readingC);
-            incub.choices.push_back(c); keys.push_back(Guide::bodyKey(V.sx, V.sy, V.sz, V.body));
-        }
-        incub.pages.folders = chooserFolders(keys);
-        return;
-    }
     std::map<std::string, int> listed;   // a species' row by its key and its state (its cells and its spores apart)
     std::vector<std::string> looks, rests, traits;   // B-442: each row's look, the rest of its words, its form's colour and motion
     auto add = [&](const IncubatorChoice& c, const std::string& key, const std::string& look, const std::string& rest, const std::string& trait) {
@@ -331,8 +353,19 @@ void Game::incubatorChoices() {
         if (!S || V.body < 0 || V.body >= (int)S->bodies.size()) continue;
         auto L = lifeOf(*S);
         const Biota& B = L->bodies[V.body];
-        const Sample smp = sampleOf(B, V.hab);
+        Sample smp = sampleOf(B, V.hab);
         std::vector<Morph> forms;
+        for (const VialLine& SL : vialLines(V, *S, smp)) {   // J-03: a seeded line where it spread, once seen (in a flask as it went down)
+            FlaskSpecies w;
+            if (!speciesOfKey(SL.key, w)) continue;
+            const size_t sp = SL.key.rfind("/S");
+            if (sp != std::string::npos && sp > SL.key.rfind("/M")) w.strain = w.strainIn = atoi(SL.key.c_str() + sp + 2);
+            const auto it = guide.microbes.find(flaskSpeciesKey(w));
+            if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM)) continue;
+            if (!listed.emplace(SL.key + "|" + std::to_string(v), (int)incub.choices.size()).second) continue;
+            IncubatorChoice c; c.vial = v; c.lineKey = SL.key;
+            add(c, Guide::bodyKey(V.sx, V.sy, V.sz, V.body), flaskSpeciesWords(w, SL.line.form, true), " - SEEDED, FROM " + V.name, formTraits(SL.line.form));
+        }
         for (const Held& H : smp.held) {
             if (H.state == SS_FOSSIL || H.state == SS_PROTO) continue;
             const std::string world = Guide::bodyKey(V.sx, V.sy, V.sz, V.body), key = world + "/M" + std::to_string(H.species);
@@ -401,6 +434,11 @@ bool Game::flaskPut(int i, const IncubatorChoice& c) {
     } else if (c.vial >= 0 && c.vial < (int)coldStore.size()) {
         const Vial& V = coldStore[c.vial];
         FlaskSpecies w; w.sx = V.sx; w.sy = V.sy; w.sz = V.sz; w.body = V.body; w.species = c.species;
+        if (!c.lineKey.empty()) {   // J-03: a seeded line, as it went down
+            if (!speciesOfKey(c.lineKey, w)) return false;
+            const size_t sp = c.lineKey.rfind("/S");
+            if (sp != std::string::npos && sp > c.lineKey.rfind("/M")) w.strain = w.strainIn = atoi(c.lineKey.c_str() + sp + 2);
+        }
         in.push_back(w);
         if (F.n == 0) {   // AS ITS WORLD: the vial's place's medium
             if (!vialMedium(V, asWorld)) { refuse("VIAL'S WORLD NO LONGER EXISTS"); return false; }
@@ -456,101 +494,18 @@ void Game::flaskFresh(int i) {
 
 Medium Game::flaskAsItsWorld(int i) const { return lab.flasks[clampi(i, 0, INCUBATOR_FLASKS - 1)].asWorld; }
 
-// ---- the jars ---------------------------------------------------------------------------------------------------------------------------
-
-void Game::jarMake(int j) {
-    if (j < 0 || j >= (int)lab.jars.size()) return;
-    Jar& J = lab.jars[j];
-    J.made = true; J.recipe = JarRecipe();
-    Star st; StarSystem S;
-    const StarSystem* P = &sys;
-    if (!(sys.valid && sys.star.sx == J.sx && sys.star.sy == J.sy && sys.star.sz == J.sz)) {
-        if (!placeInSector(J.sx, J.sy, J.sz, st, true)) return;
-        S.generate(st); P = &S;
-    }
-    if (J.body < 0 || J.body >= (int)P->bodies.size()) return;
-    auto L = lifeOf(*P);
-    const Biota& B = L->bodies[J.body];
-    J.recipe = jarRecipe(B, sampleOf(B, J.hab), J.hab);
-    const std::vector<Morph> forms = morphsOf(*P, J.body);   // R-439: each band's species' form (its words)
-    J.plans.clear();
-    for (const JarBand& b : J.recipe.bands) J.plans.push_back(b.species >= 0 && b.species < (int)forms.size() ? forms[b.species].plan : -1);
-}
-
-// R-439: what a band's species lives on, by its place in the jar and what it eats ("IRON, NEEDS AIR"; the sheet's "LIVES ON IRON, NEEDS AIR")
-std::string Game::jarWays(int layer, int substrate, bool full) {
-    const std::string on = substrate > SU_NONE && substrate < SU_COUNT ? SUBSTRATE_NAMES[substrate] : "A CHEMICAL";
-    std::string w;
-    switch (layer) {
-        case JL_OXYGEN: w = "LIGHT, MAKES OXYGEN"; break;
-        case JL_EDGE: w = on + ", NEEDS AIR"; break;
-        case JL_DARK_LIGHT: w = "LIGHT, NO AIR"; break;
-        case JL_SULPHIDE: w = "SULPHIDE"; break;
-        case JL_DEEP: w = on + ", NO AIR"; break;
-        default: w = "DEAD MATTER, NO AIR"; break;
-    }
-    return full ? "LIVES ON " + w : w;
-}
-// a band's line on the jars page: its species' name, else its look where it was seen (else AN UNSEEN KIND), and how it lives
-std::string Game::jarBandWords(const Jar& J, int b) const {
-    const JarBand& B = J.recipe.bands[b];
-    const std::string key = Guide::bodyKey(J.sx, J.sy, J.sz, J.body) + "/M" + std::to_string(B.species), named = nameOfKey(key);
-    const auto it = guide.microbes.find(key);
-    const std::string who = named != "UNKNOWN" ? upper(named)
-                          : (it != guide.microbes.end() && (it->second.seen & SEEN_FORM) && b < (int)J.plans.size() && J.plans[b] >= 0 ? planWords(J.plans[b]) : "UNSEEN SPECIES");
-    return who + ": " + jarWays(B.layer, B.substrate, false);
-}
-// R-439: what the jars page shows of a jar goes to its bands' species' sheets (those seen): each band's place once it has come in
-void Game::jarSeen(int j) {
-    if (j < 0 || j >= (int)lab.jars.size()) return;
-    Jar& J = lab.jars[j];
-    if (!J.made) jarMake(j);
-    const JarNow now = jarAt(J.recipe, lab.clock - J.t0);
-    bool changed = false;
-    for (size_t b = 0; b < J.recipe.bands.size() && b < now.strength.size(); b++) {
-        if (now.strength[b] < 0.5) continue;
-        const auto it = guide.microbes.find(Guide::bodyKey(J.sx, J.sy, J.sz, J.body) + "/M" + std::to_string(J.recipe.bands[b].species));
-        if (it == guide.microbes.end() || it->second.jarLayer == J.recipe.bands[b].layer) continue;
-        it->second.jarLayer = J.recipe.bands[b].layer; changed = true;
-    }
-    if (changed) guide.save(guidePath);
-}
-
-// a jar of a vial's wet silt: one a world on the shelf (its places eight); the vial's sample stays in the cold store
-bool Game::jarPut(int vial) {
-    if (vial < 0 || vial >= (int)coldStore.size()) return false;
-    const Vial& V = coldStore[vial];
-    if (!jarNiche(V.hab.niche)) { refuse("A JAR NEEDS WET SILT, A MAT OR SOIL", 3); return false; }
-    for (const Jar& J : lab.jars) if (J.sx == V.sx && J.sy == V.sy && J.sz == V.sz && J.body == V.body) { refuse("THIS WORLD ALREADY HAS A JAR ON THE SHELF", 3); return false; }
-    if ((int)lab.jars.size() >= JAR_PLACES) { refuse(fmt("SHELF FULL (%d JARS)", JAR_PLACES), 3); return false; }
-    Jar J;
-    J.sx = V.sx; J.sy = V.sy; J.sz = V.sz; J.body = V.body; J.hab = V.hab; J.name = V.name; J.t0 = lab.clock;
-    lab.jars.push_back(J);
-    jarMake((int)lab.jars.size() - 1);
-    status("JAR OF " + V.name + " ON THE SHELF - READY IN 20 MINUTES", 4);
-    audio.beep = BEEP_UI;
-    return true;
-}
-void Game::jarEmpty(int j) {
-    if (j < 0 || j >= (int)lab.jars.size()) return;
-    lab.jars.erase(lab.jars.begin() + j);
-    status("JAR EMPTIED", 3);
-    audio.beep = BEEP_UI;
-}
-
 // ---- the screen ------------------------------------------------------------------------------------------------------------------------
 
 void Game::incubatorEnter() {
     incub.choosing = false; incub.typing = false; incub.pick = PICK_NONE; keep.open = false;
     incub.sel = clampi(incub.sel, 0, INCUBATOR_FLASKS - 1);
     flaskMadeAll();
-    for (int j = 0; j < (int)lab.jars.size(); j++) if (!lab.jars[j].made) jarMake(j);
 }
 
 void Game::updateIncubator(const Input& in, double dt, double realDt) {
     if (keepKeys(in)) return;   // R-440: the folder a copy goes in
     if (incub.pick) { incubatorPickKeys(in); return; }   // R-440, R-442: what K keeps or N names of a flask of two
-    if (incub.page == 0 && !incub.choosing && incubatorTypeKeys(in)) return;   // R-435: its warmth typed (the other keys wait)
+    if (!incub.choosing && incubatorTypeKeys(in)) return;   // R-435: its warmth typed (the other keys wait)
     if (in.wasPressed(KEY_E) && !in.ctrl()) { closeScreen(); audio.beep = BEEP_UI; return; }
     if (incub.choosing) {   // R-432: its folders, then the rows of the one open
         const int r = incub.choices.empty() ? -2 : chooserKeys(in, incub.pages, incub.choiceSel);
@@ -559,28 +514,12 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
         if (r >= 0 && r < (int)incub.choices.size()) {
             const IncubatorChoice c = incub.choices[r];
             incub.choosing = false;
-            if (incub.page == 1) jarPut(c.vial); else flaskPut(incub.sel, c);
+            flaskPut(incub.sel, c);
         }
         return;
     }
     if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); audio.beep = BEEP_UI; return; }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
-    if (in.wasPressed(KEY_TAB)) { incub.page = 1 - incub.page; audio.beep = BEEP_UI; return; }
-    if (incub.page == 1) {   // the jars
-        menuStep(in, incub.jar, JAR_PLACES);
-        const bool has = incub.jar < (int)lab.jars.size();
-        if (enterKey(in)) {
-            if (has) refuse("JAR IN USE - BKSP EMPTIES IT", 3);
-            else {
-                incubatorChoices();
-                if (incub.choices.empty()) refuse("NO VIAL OF WET SILT, MAT OR SOIL IN THE COLD STORE", 3);
-                else { incub.choosing = true; audio.beep = BEEP_UI; }
-            }
-        }
-        if (has && (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE))) jarEmpty(incub.jar);
-        jarSeen(incub.jar);   // R-439: its bands' places to their sheets
-        return;
-    }
     menuStep(in, incub.sel, INCUBATOR_FLASKS);
     Flask& F = lab.flasks[incub.sel];
     if (in.wasPressed(KEY_LEFT)) { incub.field = (incub.field + 4) % 5; audio.beep = BEEP_UI; }
@@ -691,22 +630,18 @@ void Game::incubatorPad(PadMenu& m) const {
         m.item("BACK", KEY_ESCAPE);
         return;
     }
-    if (incub.page == 1) {
-        m.item("NEW JAR", KEY_ENTER); m.item("EMPTY JAR", KEY_BACKSPACE); m.item("FLASKS", KEY_TAB); m.item("BACK", KEY_ESCAPE);
-        m.button(PR_A, KEY_ENTER, "JAR"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_SELECT, KEY_TAB, "FLASKS");
-        return;
-    }
     const Flask& F = lab.flasks[incub.sel];
     m.item(F.n == 0 ? "PUT IN A CULTURE" : "ADD A SECOND", KEY_ENTER);
     m.item("NEXT FIELD", KEY_RIGHT); m.item("RAISE", KEY_EQUAL); m.item("LOWER", KEY_MINUS);
     m.item("LIKE ITS WORLD", KEY_W); m.item("FRESH BROTH", KEY_F); m.item("EMPTY FLASK", KEY_BACKSPACE); m.item("NAME IT", KEY_N);
     m.item("KEEP A COPY", KEY_K);
-    m.item("JARS", KEY_TAB); m.item("BACK", KEY_ESCAPE);
+    m.item("BACK", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "PUT IN"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_X, KEY_W, "AS WORLD"); m.button(PR_Y, KEY_F, "FRESH");
-    m.button(PR_LB, KEY_MINUS, "LOWER"); m.button(PR_RB, KEY_EQUAL, "RAISE"); m.button(PR_SELECT, KEY_TAB, "JARS");
+    m.button(PR_LB, KEY_MINUS, "LOWER"); m.button(PR_RB, KEY_EQUAL, "RAISE");
 }
 
-// ---- the save's lines: the lab's clock, each flask's medium and species and events, the jars (the line after them the screen's own) -----
+// ---- the save's lines: the lab's clock, each flask's medium and species and events (the line after them the screen's own) -------------
+// An older save's `jar` lines (R-447: the jars taken out) are skipped, as is any line no row takes
 
 void Game::incubatorSave(std::string& lines) const {
     std::ostringstream f;
@@ -728,9 +663,6 @@ void Game::incubatorSave(std::string& lines) const {
             f << " " << e.who << " " << e.what << " " << e.value << "\n";
         }
     }
-    for (const Jar& J : lab.jars)
-        f << "jar " << J.sx << " " << J.sy << " " << J.sz << " " << J.body << " " << J.hab.niche << " " << J.hab.meanC << " " << J.hab.salt << " "
-          << ((J.hab.shade ? 1 : 0) | (J.hab.bloom ? 2 : 0)) << " " << (J.hab.oldRock ? 1 : 0) << " " << J.hab.place << " " << J.t0 << " " << J.name << "\n";
     keptSave(f);   // R-433: the collection's folders and cultures
     lines += f.str();
 }
@@ -760,16 +692,6 @@ bool Game::incubatorLoad(const std::string& text) {
         int i = -1; CultureEvent e;
         is >> i >> e.kind >> e.t; medium(e.m); is >> e.who >> e.what >> e.value;
         if (!is.fail() && i >= 0 && i < INCUBATOR_FLASKS && e.kind >= 0 && e.kind < CD_COUNT) { lab.flasks[i].events.push_back(e); lab.flasks[i].made = false; }
-        return true;
-    }
-    if (key == "jar") {
-        Jar J; int shade = 0, old = 0;
-        is >> J.sx >> J.sy >> J.sz >> J.body >> J.hab.niche >> J.hab.meanC >> J.hab.salt >> shade >> old >> J.hab.place >> J.t0;
-        if (is.fail() || J.hab.niche < 0 || J.hab.niche >= NI_COUNT) return true;
-        std::getline(is, J.name); if (!J.name.empty() && J.name[0] == ' ') J.name.erase(0, 1);
-        J.hab.shade = (shade & 1) != 0; J.hab.bloom = (shade & 2) != 0; J.hab.oldRock = old != 0;
-        J.told = lab.clock - J.t0 >= JAR_SETTLED_S;   // R-439: settled before the load (the lab's line is before the jars')
-        if ((int)lab.jars.size() < JAR_PLACES) lab.jars.push_back(J);
         return true;
     }
     return keptLoad(key, is);   // R-433

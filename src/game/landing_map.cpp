@@ -97,7 +97,8 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
             status(fmt("%s OVERHEAD (%.1f%c WIDE)", upper(bodyNameOf(best)).c_str(), 2 * bestAng / DEG, CH_DEGREE), 3);
         } else status("NOTHING BIG IN THIS SKY", 2);
     }
-    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon))
+    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || zoomMade != spaceR.madeOf(sys.bodies[landBody].seed).key || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat ||
+                            std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon))   // (J-02: and the made layer's)
         buildLandingZoom();
     else if (landZoom && zoomDry) {   // the window was drawn without the drainage; again with it once its tiles are built
         const Body& zb = sys.bodies[landBody];
@@ -117,6 +118,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
             double la = landLat, lo = landLon;
             if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("LANDING OUTSIDE THE RUINS", 4); }
         }
+        surf.site.made = madeNow(landBody);   // J-02: the ground takes its world's layer at the landing
         surf.init(&sys, landBody, landLat, landLon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
         surf.cameraOverrideAlt = 1800;
@@ -182,7 +184,7 @@ void Game::renderLandingMap() {
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
     const double dayFloor = sys.sunless() ? 1.0 : 0.22;   // the survey has no night side
     const int S = FB_SCALE;
-    if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
+    if (mapBaseSeed != b.seed || mapBaseMade != m.madeKey || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();   // J-02: the map's layer
     static std::vector<Vec3> unitLUT;   // body-frame unit vector per texel
     if (unitLUT.empty()) {
         unitLUT.resize(PlanetMap::W * PlanetMap::H);
@@ -357,9 +359,11 @@ void Game::renderLandingMap() {
     drawLineRGB(canvas, cx, oy, cx, oy + MAP_LH - 1, rgb(255, 255, 255));
     drawRectRGB(canvas, cx - 3, cy - 3, cx + 3, cy + 3, HUD_AMBER);
     // info
-    if (probeBody != landBody || probeLat != landLat || probeLon != landLon) {
+    const uint64_t madeKey = spaceR.madeOf(sys.bodies[landBody].seed).key;   // J-02: the probe's ground the made world's
+    if (probeBody != landBody || probeLat != landLat || probeLon != landLon || probeMade != madeKey) {
+        probeSite.made = spaceR.madeOf(sys.bodies[landBody].seed);
         probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
-        probeBody = landBody; probeLat = landLat; probeLon = landLon;
+        probeBody = landBody; probeLat = landLat; probeLon = landLon; probeMade = madeKey;
     }
     const SurfaceSite& probe = probeSite;
     SunInfo si = probe.sun(t);
@@ -381,7 +385,8 @@ void Game::renderLandingMap() {
     drawText(canvas, 8, ry + 8, l2.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     {
         const BodyGen& g = spaceR.genFor(b);
-        RGB gc = materialRampColor(g.matColor[mat] * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, noSun ? 1.0 : clampd(si.lightFactor, 0, 1.15), bodyHasAir(b)));
+        const RGB base = g.made.on() ? madeColourAt(g, mat, tvp.mtint / 255.0) : g.matColor[mat];   // J-02: a made world's tint, as the map's (J-03: a water's too; J-05: its looks)
+        RGB gc = materialRampColor(base * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, noSun ? 1.0 : clampd(si.lightFactor, 0, 1.15), g.hasAir));
         int sx0 = 8 + textWidth(l2.c_str()) + 8;
         drawText(canvas, sx0, ry + 8, "GROUND", HUD_DIM);
         int bx = sx0 + textWidth("GROUND") + 4;

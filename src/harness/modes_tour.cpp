@@ -460,6 +460,35 @@ bool openIncubator(Tour& t) {
     return t.deviceNamed("THE INCUBATOR");
 }
 
+// J-03: the seed page: a culture of the home world grown full in the first flask (its vial in the cold store, its best medium, a minute at a time till it is),
+// the ship parked at the home system's first landable world but home, then E at the drone bay and S
+bool openSeeding(Tour& t) {
+    if (!t.start()) return false;
+    const StarSystem& sys = t.g->testSystem();
+    int home = -1, seed = -1;
+    for (const Body& b : sys.bodies) if (b.type == PT_FELISIAN && b.parent < 0 && home < 0) home = b.index;
+    for (const Body& b : sys.bodies) if (KINDS[b.type].landable && b.index != home && seed < 0) seed = b.index;
+    Vial v;
+    if (home < 0 || seed < 0 || !labVial(sys, home, v)) return false;
+    t.g->testColdStore().push_back(v);
+    const Biota& B = lifeOf(sys)->bodies[home];
+    for (const Held& H : sampleOf(B, v.hab).held) {   // its first living species that can grow alone, in its best medium
+        const Microbe& m = B.species[H.species];
+        if (H.state != SS_LIVING || m.way == LW_NONE || m.way == LW_PREDATOR || !t.g->testFlaskPut(0, 0, H.species)) continue;
+        Medium md; md.cell = chemistryCell(B.chemistry); md.tempC = std::round(m.tOpt); md.salt = m.saltLo;
+        md.energy = m.way == LW_CHEMICAL ? m.substrate : (m.way == LW_LIGHT ? CE_NONE : CE_BROTH); md.light = m.way == LW_LIGHT ? CL_WHITE : CL_DARK;
+        t.g->testFlaskSet(0, md);
+        break;
+    }
+    for (int q = 0; q < 240 && t.g->testFlaskNow(0).n > 0 && t.g->testFlaskNow(0).one[0].stage != SG_CROWD; q++) t.g->testLabSkip(60);   // (at its crowd, before its decline)
+    t.g->testParkAt(sys.star, seed, false);
+    t.g->setState(GameState::SPACE);
+    t.frame();
+    if (!t.deviceNamed("THE DRONE BAY")) return false;
+    t.press(KEY_S);
+    return true;
+}
+
 // ---- the keys: its help's and its footer's, its menus' rows by label; what writes a save or leaves the start, last
 void keysTitle(Tour& t) { t.keys("H C N ENTER"); }
 void keysSpace(Tour& t) {
@@ -566,14 +595,15 @@ void keysProbe(Tour& t) {
 void keysRecording(Tour& t) { t.keys("SPACE SPACE HOME END RIGHT LEFT DOWN UP PGDN PGUP X N ENTER"); }
 void keysInstruments(Tour& t) { t.keys("DOWN UP ENTER,DOWN,UP,LEFT,RIGHT,1,2,9,0,ENTER,SPACE,ESC"); }
 void keysDrones(Tour& t) { t.keys("DOWN UP ENTER"); }
-void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
+void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }
+// J-03: the next full flask, the place moved each way (ten degrees with Shift), Enter (drone 1 sent, the bay again)
+void keysSeeding(Tour& t) { t.keys("C LEFT RIGHT UP DOWN SHIFT+RIGHT ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
 // the flasks: down to the culture, the medium's fields and their changes (ten degrees with Shift), as its world, a fresh broth, its organism's
 // name begun and left (R-442: N, Esc); up to the empty flask, Enter (the chooser; R-432: its folders), Enter (the first folder) and Enter (put
 // in), Enter (a second: the chooser), Tab (R-441: the cultures) and Esc; R-435: its warmth typed (37, then 150 refused and Esc); R-440: a copy
-// kept in a new folder (K, N, its name, Enter); Tab the jars, Enter (the chooser of wet silt, or its refusal) and Esc, Tab back; Backspace
-// empties the second flask
+// kept in a new folder (K, N, its name, Enter); Backspace empties the second flask
 void keysIncubator(Tour& t) {
-    t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N,ESC UP ENTER ENTER ENTER ENTER TAB ESC 3 7 ENTER 1 5 0 ENTER ESC K,N,A,B,ENTER TAB ENTER ESC TAB "
+    t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N,ESC UP ENTER ENTER ENTER ENTER TAB ESC 3 7 ENTER 1 5 0 ENTER ESC K,N,A,B,ENTER "
            "DOWN BACKSPACE");
 }
 // Z-07: the catalogue: a species down, its sheet (Enter), the next species and back on it, the next way of seeing, back to the list; by kin and
@@ -625,6 +655,7 @@ constexpr Stop STOPS[] = {
     {GameState::MICROSCOPE, "two vials in the cold store, then E at the microscope", openMicroscope, keysMicroscope, openMicroscopeStaged},
     {GameState::INCUBATOR, "a seen vial in the cold store and a culture in the second flask, then E at the incubator", openIncubator, keysIncubator},
     {GameState::CATALOGUE, "the home system's species seen (one read) in the guide, then the guide's THE CATALOGUE", openCatalogue, keysCatalogue},
+    {GameState::SEEDING, "a home culture grown full, the ship at another world of home's system, then E at the drone bay and S", openSeeding, keysSeeding},
 };
 constexpr int STOP_COUNT = (int)(sizeof(STOPS) / sizeof(STOPS[0]));
 constexpr bool stopsInOrder() {   // U-06: a state's stop once, in the table's order; a state with none is toured by its row
@@ -637,10 +668,11 @@ const Stop* stopOf(GameState s) { for (const Stop& st : STOPS) if (st.state == s
 
 // U-06: the states the rows' pass opens as the first pass does, by name: the scenes (the title, the ship, the capsule's way down
 // and up, the ground), a map of the ground, a probe falling, a recording; Z-04: the microscope with vials in the cold store; Z-05: the
-// incubator with a culture; Z-07: the catalogue with species seen; every other state a fresh game opens by its row
+// incubator with a culture; Z-07: the catalogue with species seen; J-03: the seed page with a culture grown full; every other
+// state a fresh game opens by its row
 constexpr GameState SETUPS[] = {GameState::TITLE, GameState::SPACE, GameState::DESCENT, GameState::SURFACE, GameState::ASCENT,
                                 GameState::SECTOR_MAP, GameState::PROBE, GameState::RECORDING, GameState::MICROSCOPE, GameState::INCUBATOR,
-                                GameState::CATALOGUE};
+                                GameState::CATALOGUE, GameState::SEEDING};
 // a state by its row: the ship in its parking, the row's way in (`openScreen`), a frame
 bool openByRow(Tour& t) {
     if (!t.start()) return false;

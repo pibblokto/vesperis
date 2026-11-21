@@ -241,7 +241,9 @@ public:
     void testWaitMapOf(int bi);   // any body's map made before the test's next frame (`testParkAt` waits for a landable world's only)
     bool testMapReadyNow() { return landBody >= 0 && landBody < (int)sys.bodies.size() && spaceR.mapIfReady(sys.bodies[landBody]) != nullptr; }
     int testLandableBody() const;
-    void testParkAt(const Star& s, int body, bool waitMap = true);   // arrive at a star, park at a body, open the landing map (F-02: its world mapped first unless `waitMap` is false)
+    // arrive at a star, park at a body, open the landing map (F-02: its world mapped first unless `waitMap` is false); J-04: the parking over the
+    // night side where `nightSide` (the star behind the world)
+    void testParkAt(const Star& s, int body, bool waitMap = true, bool nightSide = false);
     void testParkAtBelt(const Star& s, int k);  // arrive at a star and park beside a rock of belt k at once
     // ---- the buggy, herds, the landing map's colours, fronts and shadows (game.cpp, landing_map.cpp, landing_map_build.cpp)
     bool testGotoHerd(double dist) { return surf.testGotoHerd(dist); }
@@ -287,17 +289,17 @@ public:
     void testClearStatus() { statusMsg.clear(); statusUntil = 0; }
     std::pair<std::string, double> testStatusKept() const { return {statusMsg, statusUntil}; }   // Z-06: a status kept across a step and put back
     void testStatusPut(const std::pair<std::string, double>& s) { statusMsg = s.first; statusUntil = s.second; }
-    // Z-05: the incubator: the lab's state and the screen's, a vial's species put in a flask (or a flask's culture carried over), a jar made, the
-    // lab's clock run on (what it comes to said and logged as a frame's would: its skip hook), a flask's culture now, its controls, a drop on the
+    // Z-05: the incubator: the lab's state and the screen's, a vial's species put in a flask (or a flask's culture carried over), the lab's clock
+    // run on (what it comes to said and logged as a frame's would: its skip hook), a flask's culture now, its controls, a drop on the
     // microscope's stage
     LabState& testLab() { return lab; }
     double& testBayClock() { return bay.clock; }   // the drones' clock, the lab's kind
     IncubatorState& testIncub() { return incub; }
     bool testFlaskPut(int flask, int vial, int species) { IncubatorChoice c; c.vial = vial; c.species = species; return flaskPut(flask, c); }
     bool testFlaskCarry(int flask, int from) { IncubatorChoice c; c.flask = from; return flaskPut(flask, c); }
-    bool testJarPut(int vial) { return jarPut(vial); }
     void testLabSkip(double s) { updateLab(s); }
     CultureNow testFlaskNow(int i) { if (!lab.flasks[i].made) flaskMake(i); return flaskNow(i); }
+    FlaskShow testFlaskShow(int i) { if (!lab.flasks[i].made) flaskMake(i); return flaskShow(i); }   // J-01
     void testFlaskSet(int i, const Medium& m) { flaskSet(i, m); }
     void testFlaskFresh(int i) { flaskFresh(i); }
     void testFlaskSeen(int i) { flaskSeen(i); }
@@ -316,15 +318,13 @@ public:
     // R-435 to R-438: the slide's told answers forgotten (a frame with no history: the closed-form check's), the lines waiting; the choosers made
     void testScopeFresh() { scope.told.clear(); scope.said.clear(); for (int d = 0; d < SD_COUNT; d++) { scope.tried[d] = -1; scope.answered[d] = scope.judged[d] = false; } }
     std::vector<std::string>& testScopeSaid() { return scope.said; }
-    std::vector<IncubatorChoice>& testIncubatorChoices(int page) { incub.page = page; incubatorChoices(); return incub.choices; }
+    std::vector<IncubatorChoice>& testIncubatorChoices() { incubatorChoices(); return incub.choices; }
     std::vector<SequencerChoice>& testSequencerChoices() { sequencerChoices(); return lab.seq.choices; }
-    // B-442, R-439 to R-442: K's folder chooser (what it keeps), a kept culture copied to a folder, the jars page's bands to their sheets, any
-    // species' sheet lines
+    // B-442, R-440 to R-442: K's folder chooser (what it keeps), a kept culture copied to a folder, any species' sheet lines
     KeepPick& testKeep() { return keep; }
     const std::string& testTextBuffer() const { return textBuffer; }   // R-445: what a text entry holds, and what it names
     int testTextKind() const { return textKind; }
     void testKeptCopy(int k, int id) { keptCopy(k, id); }
-    void testJarSeen(int j) { jarSeen(j); }
     std::vector<std::string> testSheetLinesOf(const std::string& key, const Microbe& s, const Morph& m, const MicrobeSheet& seen) const { return sheetLinesOf(key, s, m, "A WORLD", seen); }
     // Z-06: the sequencer: a species put on it (its world and index), its save line, its result told on the lab's clock (the skip hook's); the tree
     // built from the guide, its leaves, a leaf's nearest kin; the decoder's world opened (a watermark among its records)
@@ -385,6 +385,8 @@ public:
     bool testDroneLanded() const { return surf.drone.landed; }
     bool testFlySetup(double altM);   // deploy the drone beside the capsule, get in, lift it to altM over the ground (for the bench)
     void testSetPitch(double p) { surf.player.pitch = p; }
+    // J-04: the photo mode's free camera from the eye, raised `up` metres, looking along a yaw and a pitch
+    void testFreeCamUp(double up, double yaw, double pitch) { surf.enterFreeCam(); surf.freePos.y += up; surf.freeYaw = yaw; surf.freePitch = pitch; }
     void testSetYaw(double y) { surf.player.yaw = y; }
     double testPitch() const { return surf.player.pitch; }   // the flow's look put back
     std::string testRangeInfo() const { return "range=" + std::to_string((int)surf.lastRange) + " water=" + std::to_string((int)surf.lastRangeWater); }
@@ -539,6 +541,24 @@ public:
     int testAlmanacEvents() const { return (int)almanacEvents.size(); }
     std::string testAlmanacInfo() const;                 // the place, its state line, the events with their countdowns
     bool testAlmanacSelect(int kind, int body = -1);     // the open menu's selection onto the first event of a kind (of a body; kind -1 any); false when none
+    // ---- J-02: the seeded worlds' layers (game.cpp's `madeTick`): the harness's test layer on a world of the system, the guide's clock
+    void testMadeSet(int bi, const MadeWorld& m) { madeTest[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi)] = m; madeTick(0); }
+    void testMadeClear() { madeTest.clear(); madeTick(0); }
+    void testClockSkip(double s) { madeTick(s); }   // the guide's clock moved on in one step (a frame moves it by its real seconds)
+    MadeWorld testMadeNow(int bi) { return madeNow(bi); }
+    // J-03: the seed page's cursor set (and what lies there read); the bay; a world's seedings worked out; a vial's seeded lines
+    void testSeedPage(double lat, double lon) { bay.pageLat = lat; bay.pageLon = lon; seedPagePlace(); }
+    void testUnpark() { ship.mode = ShipState::STANDBY; ship.parkedBody = -1; }   // out of orbit, where it was
+    bool testBayReady() const { return droneBayReady(); }
+    using Game::VialLine;
+    const DroneBay& testBay() const { return bay; }
+    const std::vector<Seeding>& testSeedings(int bi) { return seedingsOf(bi); }
+    std::vector<VialLine> testVialLines(const Vial& v, Sample& smp) { return vialLines(v, sys, smp); }
+    std::string testMadeWords(int bi) { return madeWords(bi); }
+    uint64_t testMadeKeyHeld(int bi) const { return sys.valid && bi >= 0 && bi < (int)sys.bodies.size() ? spaceR.madeOf(sys.bodies[bi].seed).key : 0; }
+    uint64_t testGenMadeKey(int bi) { return spaceR.genFor(sys.bodies[bi]).made.key; }   // the generator the views read
+    const PlanetMap& testMapOf(int bi) { return spaceR.mapFor(sys.bodies[bi]); }
+    uint64_t testSiteMadeKey() const { return surf.site.gen.made.key; }
     // ---- the telescope (telescope.cpp)
     bool testTelescopeOn() const { return tele.on; }
     double testTelescopeZoom() const { return telescopeZoom(); }

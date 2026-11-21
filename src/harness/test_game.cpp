@@ -132,14 +132,14 @@ int TestGame::testLandableBody() const {
     return -1;
 }
 
-void TestGame::testParkAt(const Star& s, int body, bool waitMap) {
+void TestGame::testParkAt(const Star& s, int body, bool waitMap, bool nightSide) {
     arriveAtStar(s, Vec3(0, 0, -1));
     if (body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
     Vec3 bp = sys.bodyPos(body, t);
     Vec3 toStar = normalize(sys.star.pos - bp);
     Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
-    ship.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0));
+    ship.parkDir = normalize(toStar * (nightSide ? -0.7 : 0.7) + side * 0.7 + Vec3(0, 0.2, 0));
     ship.parkDist = parkDistanceFor(b);
     ship.parkedBody = body; ship.localTarget = body; ship.mode = ShipState::PARKED;
     ship.pos = bp + ship.parkDir * ship.parkDist;
@@ -953,14 +953,13 @@ std::string TestGame::testSelection() const {
                                          scope.flask >= 0 ? scope.flask : (scope.kept >= 0 ? scope.kept : scope.vial),
                                          SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "",
                                          keep.open ? " keeping" : "", (int)scope.events.size(), (int)lab.kept.size());   // R-440: K's folders, the collection
-        case GameState::INCUBATOR:   // Z-05: the page, the flask and the medium's field, the chooser's row; R-440 to R-442: its tab, N's and K's rows,
+        case GameState::INCUBATOR:   // Z-05: the flask and the medium's field, the chooser's row; R-440 to R-442: its tab, N's and K's rows,
             // K's folders, the collection
             if (keep.open) return fmt("keeping row %d, %d kept", keep.sel, (int)lab.kept.size());
             if (incub.pick) return fmt("picking %s row %d of %d", incub.pick == PICK_NAME ? "a name" : "a copy", incub.pickSel, (int)incub.pickLines.size());
             return incub.choosing ? fmt("choosing tab %d folder %d of %d%s", incub.pages.tab, incub.pages.folder, (int)incub.pages.folders.size(),
                                         incub.pages.open ? fmt(" row %d", incub.choiceSel).c_str() : "")
-                                  : (incub.page == 1 ? fmt("jars row %d of %d", incub.jar, (int)lab.jars.size())
-                                                     : fmt("flask %d field %d, %d in it, %d kept", incub.sel, incub.field, lab.flasks[incub.sel].n, (int)lab.kept.size()));
+                                  : fmt("flask %d field %d, %d in it, %d kept", incub.sel, incub.field, lab.flasks[incub.sel].n, (int)lab.kept.size());
         case GameState::CATALOGUE:   // Z-07: its order, the row chosen; on a sheet its way of seeing
             return cat.page == 1 ? fmt("%s row %d of %d, its sheet in %s", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size(), SEEING_NAMES[cat.seeing])
                                  : fmt("%s row %d of %d", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size());

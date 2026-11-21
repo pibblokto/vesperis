@@ -131,6 +131,7 @@ inline double plateCloud(const PlateHit& h) {
 }
 inline double plateVeg(const PlateHit& h) { return h.p->veg[(size_t)h.jn * h.p->W + h.in] / 255.0; }
 inline int plateMaterial(const PlateHit& h) { return h.p->material[(size_t)h.jn * h.p->W + h.in]; }
+inline double plateMadeTint(const PlateHit& h) { return h.p->mtint.empty() ? 0.0 : h.p->mtint[(size_t)h.jn * h.p->W + h.in] / 255.0; }   // J-02
 // the slopes (rise over run) along e1 and e2 over the nearest cell's block step
 inline void plateSlopes(const PlateHit& h, double& ga, double& gb) {
     const DetailPlate& p = *h.p;
@@ -201,6 +202,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
         }
     }
     const int rockMat = familyRep(g.type, FAM_ROCK);
+    const bool mt = !p.mtint.empty();   // J-02: a made world's tint
     while (!p.done() && left > 0) {
         int L = DetailPlate::BLOCKS[p.pass];
         int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
@@ -246,6 +248,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         p.albedo[o] = (uint8_t)clampi((int)(alb * 255 + 0.5), 0, 255);
                         p.veg[o] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
                         p.cloud[o] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon + p.cloudDrift0, lat) * 255 + 0.5), 0, 255);
+                        if (mt) p.mtint[o] = (uint8_t)clampi((int)(s.madeTint * 255 + 0.5), 0, 255);
                         mine++;
                     } else p.material[o] = 255;   // off the sphere
                     p.exact[o] = 1;
@@ -257,6 +260,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         size_t q = (size_t)jj * p.W + ii;
                         if (q == o || p.exact[q]) continue;
                         p.height[q] = p.height[o]; p.material[q] = p.material[o]; p.albedo[q] = p.albedo[o]; p.cloud[q] = p.cloud[o]; p.veg[q] = p.veg[o]; p.level[q] = (uint8_t)L;
+                        if (mt) p.mtint[q] = p.mtint[o];
                     }
             }
             taken += mine;
@@ -324,7 +328,7 @@ void SpaceRenderer::updatePlate(const SpaceContext& c) {
     const BodyGen& g = genFor(b);
     double cloudDrift = cloudDriftOf(b, c.t);
     auto fits = [&](const DetailPlate& p) {
-        if (!p.valid() || p.body != bi || p.seed != b.seed || p.seasonBucket != bucket || std::fabs(p.texel / texel - 1) >= 0.25) return false;
+        if (!p.valid() || p.body != bi || p.seed != b.seed || p.seasonBucket != bucket || p.madeKey != g.made.key || std::fabs(p.texel / texel - 1) >= 0.25) return false;
         if (dot(u0, p.u0) <= 0.77) return false;   // the aim within forty degrees of the plate's centre
         double extA, extB; extent(p.e1, p.e2, extA, extB);
         if (extA > 0.5 * p.W * p.texel || extB > 0.5 * p.H * p.texel) return false;   // the field left the plate
@@ -339,6 +343,8 @@ void SpaceRenderer::updatePlate(const SpaceContext& c) {
             DetailPlate& q = plates[plateCur];
             double extA, extB; extent(e1, e2, extA, extB);
             plateBegin(q, bi, b.seed, bucket, u0, e1, e2, texel, R, cloudDrift, std::min(1.0, extA * 1.25 + 4 * texel), std::min(1.0, extB * 1.25 + 4 * texel));
+            q.madeKey = g.made.key;   // J-02: the made layer it samples, and its tint's cells
+            if (g.made.on() && g.made.shares()) q.mtint.assign((size_t)q.W * q.H, 0);   // (J-05: the land's, snow's and plants' looks too)
             // the rivers and the lakes: their tiles for the plate's ground when the step is under the drainage's own limit and
             // the ground is a few tiles (a hemisphere at 1500 m a step would be a hundred); built now for a photo or a harness
             // frame, in the background otherwise (the plate sampled without them meanwhile and begun again when they are in)
@@ -513,10 +519,10 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     if (bi == c.detailBody && !c.skyMode)
         for (int k = 0; k < 2; k++) {
             const DetailPlate& q = plates[k == 0 ? plateCur : 1 - plateCur];
-            if (!q.valid() || q.body != bi || q.seed != b.seed || q.samples <= 0) continue;
+            if (!q.valid() || q.body != bi || q.seed != b.seed || q.madeKey != bgen.made.key || q.samples <= 0) continue;
             pl[npl] = &q; plE1W[npl] = frameT * q.e1; plE2W[npl] = frameT * q.e2; plK[npl] = 2.5 + 3.5 * smoothstep(200.0, 1500.0, q.texelM); npl++;
         }
-    bool atmosphere = bodyHasAir(b);   // an air fallen as snow in the dark has no limb
+    bool atmosphere = bgen.hasAir;   // an air fallen as snow in the dark has no limb (J-02: read through the generator)
     const bool ownCloudV = atmosphere && (deck || gasGiant);
     double bubble = atmosphere ? (giantCls == GC_PUFF ? 1.22 : (giantCls == GC_DWARF ? 1.07 : 1.045)) : 1.0;   // a hazy giant's air reaches far over its clouds
     const FrontMap* fmap = (atmosphere && !deck && worldHasFronts(b)) ? frontsFor(b, c.t) : nullptr;   // the fronts' bands
@@ -592,6 +598,17 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     const bool tintBank31 = tintMap && bank == 2 && (bgen.hasTrait(TR_BLOOMS) || bgen.hasTrait(TR_REEFS) || bgen.hasTrait(TR_PINK_LAKES));
     const bool pinkLakes = bgen.hasTrait(TR_PINK_LAKES), milkyGlow = tintMap && bgen.hasTrait(TR_MILKY_SEAS);
     const bool waterLights = tintMap && bgen.hasTrait(TR_LIGHTS_IN_WATER);   // a dark ocean's shoals of light
+    // J-02: a made world's tint over its land, the first disc's in bank 25, the second's in 26 (none in a sky, on a giant or a deck); J-03: or
+    // over its waters (a dye's, in a water's ramp), with a glow on the night side where its line glows
+    // J-05: or its land's, plants' or snow's look where the waters have none (`madeGlobeClass`; a glowing forest's light on the night side)
+    const int madeCls = madeGlobeClass(bgen.made);
+    const int madeBank = !c.skyMode && (bgen.made.tinted || madeCls >= 0) && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck ? (bank == 2 ? 25 : 26) : -1;
+    const bool madeOnWater = bgen.made.tintOn == MADE_ON_WATER, madeGlow = bgen.made.tinted ? madeOnWater && bgen.made.glow > 0 : madeCls == MC_PLANTS && bgen.made.plantGlow > 0;
+    int madeClassOfMat[MAT_COUNT];
+    for (int m = 0; m < MAT_COUNT; m++) madeClassOfMat[m] = madeClassOf(bgen, m, false);
+    // J-04: its made clouds in the same bank (a dye's or the spores' colour; a glow on the night side, by its form), and a fog on its seas
+    const int madeCloudPb = !c.skyMode && (bgen.made.cloudTintK > 0 || bgen.made.cloudGlow > 0) && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck ? (bank == 2 ? 25 : 26) : -1;
+    const double madeSmoke = c.skyMode ? 0.0 : bgen.made.seaSmoke;
     parallelFor(y1 - y0 + 1, 48, [&](int rb, int re) {
     for (int y = y0 + rb; y < y0 + re; y++) {
         for (int x = x0; x <= x1; x++) {
@@ -652,6 +669,10 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (tintBank31 && std::max(map.lifeTintAt(ti), pinkLakes ? map.waterTintAt(ti) : 0.0) > 0.5) tintPb = 31;
                     if (milkyGlow || waterLights) glowW = map.waterTintAt(ti);
                 }
+                if (madeBank >= 0 && (bgen.made.tinted ? (mat == MAT_WATER) == madeOnWater : mat < MAT_COUNT && madeClassOfMat[mat] == madeCls)) {
+                    const double mtw = ph.ok ? plateMadeTint(ph) : (haveMap ? map.madeTintAt(map.texelIndex(lon, lat)) : 0.0);
+                    if (mtw > 0.5) { tintPb = madeBank; if (madeGlow) glowW = std::max(glowW, mtw); }
+                }
                 if ((ph.ok || haveMap) && gasGiant) {   // storms grow and fade over about a day, band by band
                     double st = ph.ok ? plateVeg(ph) : map.veg[map.texelIndex(lon, lat)] / 255.0;
                     if (st > 0.01) {
@@ -706,6 +727,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                             else cl = std::max(cl, fc);
                         }
                     }
+                    if (madeSmoke > 0 && mat == MAT_WATER) cl = std::max(cl, 0.5 * madeSmoke);   // J-04: the seas pale under their fog
                     if (deck) { v = 63.0 * (0.6 + 0.4 * cl) * shade; }
                     else if (gasGiant) { v = 63.0 * std::pow(alb, 0.7) * shade * 1.05; }
                     else { v = v + (63.0 * 0.92 * shade - v) * cl; cloudy = cl > 0.6; }
@@ -720,6 +742,13 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 }
                 // a milky sea's glow on the night side, pale
                 if (glowW > 0.2 && lit < 0.05 && !cloudy && !waterLights) v = std::max(v, (46.0 + 10.0 * glowW) * smoothstep(0.2, 0.6, glowW) * smoothstep(0.05, -0.15, lit));
+                if (cloudy && madeCloudPb >= 0 && bgen.made.cloudGlow > 0 && lit < 0.05) {   // J-04: glowing clouds on the night side, by their form
+                    double form = 1;
+                    if (bgen.made.cloudGlowForm == MG_PATCHES) form = smoothstep(0.56, 0.74, 0.5 + 0.5 * fbm3(bf * 9.0, bgen.seed + 91, 3));
+                    else if (bgen.made.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm3(bf * 14.0, bgen.seed + 92, 3)));
+                    const double gv = form * bgen.made.cloudGlow * smoothstep(0.05, -0.15, lit);
+                    if (gv > 0.05) v = std::max(v, 44.0 + 4.0 * gv);   // (the ramp's glow from 44: faint)
+                }
                 if (waterLights && glowW > 0.06) v = std::max(v, 37.0 + 35.0 * std::min(glowW, 0.2));   // the shoals' faint sheen, toward the light's own stops (from 44)
                 if (nightGlow && lit < 0.12) {   // the hot giant's night side glowing (the ramp's low end), coming up through the terminator
                     const double night = smoothstep(0.12, -0.3, lit);
@@ -763,6 +792,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     // the material's family bank (oceans since M1-06); thick cloud goes to the snow bank so it reads white
                     int pb = matBank[cloudy ? MAT_CLOUD : mat];
                     if (tintPb >= 0 && !cloudy) pb = tintPb;
+                    if (cloudy && madeCloudPb >= 0) pb = madeCloudPb;   // J-04
                     fb.idx[o] = auroraPix >= 0 ? pix(12, auroraPix) : pix(pb, sphereVal); fb.invz[o] = (float)iz;
                 }
             } else if (atmosphere && !c.skyMode) {

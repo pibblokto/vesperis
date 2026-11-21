@@ -143,6 +143,8 @@ const UnitGroup UNIT_GROUPS[] = {
     {"experiments", "unit_lab_answers.cpp", 1, 2, unitLabAnswers},   // R-435 to R-438, B-441
     {"incubator", "unit_lab_incubator.cpp", 1, 2, unitLabIncubator},   // B-442, R-439 to R-442
     {"genes", "unit_lab_genes.cpp", 1, 2, unitLabGenes},   // the Y series: Y-01's trees
+    {"world", "unit_lab_genes.cpp", 1, 2, unitLabWorld},   // J-01: the world genes in the lab
+    {"seeding", "unit_seeding.cpp", 1, 2, unitSeeding},    // J-02: the seeded worlds' layer, its record and its clock
     {"files", "unit.cpp", 1, 2, unitFiles},   // B-440: last, after every group's games
 };
 

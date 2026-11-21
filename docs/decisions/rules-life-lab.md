@@ -1,7 +1,7 @@
 # Rules: the search and the microscope
 
 Rules for finding microbes and looking at them aboard (1.5.0, R-425: Z-03, Z-04; R-432, R-435 to R-438), one line per rule with its
-log entries (`log/`); a replaced rule moves to `superseded.md`. Where life is: `rules-life.md`; incubator, jars and collection:
+log entries (`log/`); a replaced rule moves to `superseded.md`. Where life is: `rules-life.md`; incubator and collection:
 `rules-life-cultures.md`; sequencer, tree and record: `rules-life-record.md`; the activity vision: `rules-surface.md`.
 
 ## The search

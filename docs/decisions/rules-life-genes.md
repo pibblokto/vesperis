@@ -6,7 +6,7 @@ record: `rules-life-record.md`.
 
 ## The genes
 - Genes are read from what a species is (values, form width and length) and its genesis, so nothing of generation 17 moves [Y-02]
-- A genesis has one map for all its kin, 18 places: 3 vital, 3 quiet, warmth, salt, size, pigment, food, motion, 3 senses, rest, glow, shape [Y-02]
+- A genesis has one map for all its kin: 3 vital, 3 quiet, warmth, salt, size, pigment, food, motion, 3 senses, rest, glow, shape; 14 world genes [Y-02] [J-01]
 - A genesis code weights each letter (home's A 0, T 1, C 2, G 3) and has tables with each value at least once, on its own salts [Y-02]
 - A species has a gene for each thing it uses, a gap where it lacks one; read by the genesis code, the wild letters give its values [Y-02]
 - An unedited line is its species bit for bit: values, culture segments and slide kinds (the unit checks forty worlds) [Y-02]
@@ -21,7 +21,7 @@ record: `rules-life-record.md`.
 - An edited line is a strain of its species: the `strain` line holds SM_EDIT and the edits, numbered as the species' next, drawn E [Y-02]
 - A line is read everywhere a strain is: in its flask (culture and form), the drop, the sequencer, the collection and the world's tree [Y-02]
 - W asks for a folder (the parent's first), then a name (the parent's and the new number); writes in EDIT_S into an empty flask, kept there [Y-02] [R-445]
-- Letters change by the arrows only (P and T are the game's own keys: a photograph, the warp); edits stay on the editor once written [Y-02]
+- Letters change by the arrows only (P and T are the game's own keys); edits stay on the editor once written [Y-02]
 - A gene the parent cut stays cut in its lines (to restore it, edit the parent); M can move a gene into it, or into a gap [Y-03]
 - An edited line's answers on the slide belong to the line, never to its species' sheet [Y-02]
 
@@ -37,7 +37,7 @@ record: `rules-life-record.md`.
 
 ## The switches
 - S sets the chosen gene's switch (ALWAYS, NEVER, IN THE LIGHT, IN THE DARK, WHEN CROWDED, WHEN STARVING, WHEN COLD), kept down its lines [Y-04]
-- A gene's own switch: a glow WHEN CROWDED, a rest WHEN STARVING (ALWAYS acts the same), others ALWAYS; a moved gene has its donor's, a copy its source's [Y-04]
+- A gene's own switch: a glow WHEN CROWDED, a rest WHEN STARVING, others ALWAYS; a moved gene has its donor's, a copy its source's [Y-04]
 - A gene switched off (its condition failing, or NEVER) works as if cut out and costs nothing; its letters and switch stay [Y-04]
 - Conditions: lit, colder than the best, starving where the line as written cannot grow (cold aside), population over the quorum (the glow's, or 3%) [Y-04]
 - A switched culture is laid out closed-form by state: light and cold fixed for a stretch, growth changing when the population passes the quorum [Y-04]
@@ -58,3 +58,4 @@ record: `rules-life-record.md`.
 [Y-03]: log/7-1.5.0.md
 [Y-04]: log/7-1.5.0.md
 [R-445]: log/7-1.5.0.md
+[J-01]: log/7-1.5.0.md

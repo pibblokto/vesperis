@@ -1,11 +1,11 @@
-# Rules: the incubator, the jars and the collection
+# Rules: the incubator and the collection
 
-Rules for growing microbes aboard (1.5.0, R-425: Z-05; R-433, R-435, R-439 to R-442, B-441, B-442), one line per rule with its log
+Rules for growing microbes aboard (1.5.0, R-425: Z-05; R-433, R-435, R-440 to R-442, R-447, B-441, B-442), one line per rule with its log
 entries (`log/`); a replaced rule moves to `superseded.md`. The search and the microscope are in `rules-life-lab.md`, the sequencer,
 the tree and the record in `rules-life-record.md`, and where life is in `rules-life.md`.
 
-## The incubator and the jars
-- The incubator is a screen over the room (`INCUBATOR`, E at its cabinet); flasks, jars and the lab's clock (like the drones') have their own save lines [Z-05]
+## The incubator
+- The incubator is a screen over the room (`INCUBATOR`, E at its cabinet); flasks and the lab's clock (like the drones') have their own save lines [Z-05]
 - A culture is closed-form in its events on the lab's clock (`runCulture`): the same whether skipped, stepped or laid out again from saved events [Z-05]
 - A flask takes a species seen in a vial (never a fossil or a protocell) or a flask's culture, at first in the medium of its world (`mediumOfPlace`) [Z-05]
 - A species' pace comes from its seed: at best a flask reaches the crowd in 8-20 minutes; spores wake in 20-60 s in a medium that suits and feeds them [Z-05]
@@ -17,11 +17,8 @@ the tree and the record in `rules-life-record.md`, and where life is in `rules-l
 - N on a flask names its organism; with two (or a strain) the explorer first chooses which. The name is the guide's, as on the microscope [R-442]
 - In the lab's rows an unnamed species is shown by its look (with its size in a chooser); rows still alike add colour and motion, then a number [B-442]
 - The incubator and sequencer choosers have two tabs, the vials by world and the cultures, and open on the tab last shown [R-441]
-- A jar holds one world's sample (eight jar places); its bands are a pure function of the sample and the jar's age, every band in by twenty minutes [Z-05]
-- Jar bands are ordered top to bottom by what each species lives on and never overlap; a chemical eater that needs air sits where the air ends [R-439]
-- A band that comes in is numbered beside the glass and named under the list (by its look where seen); its place goes on the species sheet (`jarband`) [R-439]
-- A jar's settling is said once, as the clock reaches it; a jar that settled before a load is not said again [R-439]
-- Flask and jar tones use home keys past the banks (`ShipBanks`, 32-47), asked for only in front of the eye and after the screens near them [Z-05]
+- No jars: an older save's `jar` lines and an older guide's `jarband` lines are dropped when loaded [R-447]
+- Flask tones use home keys past the banks (`ShipBanks`, 32-47), asked for only in front of the eye and after the screens near them [Z-05]
 - A drop from a flask on the microscope is the culture as it is now; vial and flask slides read one list of species, keys and worlds [Z-05]
 
 ## The collection
@@ -34,10 +31,10 @@ the tree and the record in `rules-life-record.md`, and where life is in `rules-l
 [Z-05]: log/7-1.5.0.md
 [R-433]: log/7-1.5.0.md
 [R-435]: log/7-1.5.0.md
-[R-439]: log/7-1.5.0.md
 [R-440]: log/7-1.5.0.md
 [R-441]: log/7-1.5.0.md
 [R-442]: log/7-1.5.0.md
 [B-441]: log/7-1.5.0.md
 [B-446]: log/7-1.5.0.md
 [B-442]: log/7-1.5.0.md
+[R-447]: log/7-1.5.0.md

@@ -275,7 +275,7 @@ render at that resolution scale (tests default to 1x for speed; the game default
   for the microscope (its keys: the list, a vial on the stage, each way, the zoom, the focus, the stage, tracking, the four things
   done, the sheet, a name, a micrograph, a vial emptied); Z-05: a vial whose species were seen and a culture in the second flask for the
   incubator (its keys: the flasks, the medium's fields and changes, as its world, a fresh broth, a strain's name refused, the chooser
-  and a species put in, a second's chooser left, the jars and their chooser, a flask emptied). U-06: then the rows, every
+  and a species put in, a second's chooser left, a flask emptied). U-06: then the rows, every
   row of the table in its order: opened by its row (`openScreen`, from the ship in its parking) or, a scene or a world set up first,
   by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording, Z-04: the microscope with two vials
   of the home system's first worlds that show something in the cold store, Z-05: the incubator with its culture; the capsule's way down
@@ -316,7 +316,7 @@ render at that resolution scale (tests default to 1x for speed; the game default
   the player's deck, Z-04: the microscope from its stand and the cold store's door empty and with forty vials (five of its eight lamps
   lit; they must differ), Z-05: the incubator empty and stocked (`labStock`: a living world's species in the twelve flasks, each in its
   best medium under the lights in turn, a luminous crowd in the dark, fifteen minutes on; they must differ, and twelve filled) and by
-  night, the jars' shelf with four worlds' jars settled, the laboratory's stern bench whole, Y-02: the gene editor idle and writing a line
+  night, the laboratory's stern bench whole, Y-02: the gene editor idle and writing a line
   of flask 1's species (the twelfth flask emptied for it; they must differ), the drive's core at rest and in a flight (they must differ),
   R-427: the maintenance room from its arch and the buggy on its platform from the walk (`maintenance`, `maintenance_platforms`); R-428:
   `E` at the wall, its screen (`wall_screen`), the photographs for its third frame (`wall_pick`), the oldest hung there and the sixth
@@ -369,7 +369,8 @@ render at that resolution scale (tests default to 1x for speed; the game default
   incubator, `incubator_choose` its chooser (R-432: its folders), `Enter` twice puts the first in flask 1 at AS ITS WORLD (R-432's three
   keys' frames taken from the waits at the incubator and the sequencer, so the frames after them keep their times), its warmth turned to
   the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook), `incubator` with its line (the species, its
-  medium, its stage, its cells and spores), `incubator_jars` with Tab, Esc; Z-06: the sequencer reads the first species, its tree with
+  medium, its stage, its cells and spores), five frames (the jars page's, gone with R-447, so the frames after keep their times), Esc;
+  Z-06: the sequencer reads the first species, its tree with
   Tab; Y-02, the flow's game's last stage (after the drones, before the stages with games of their own: KI-450): `E` at the gene editor,
   `editor_choose` its chooser, `Enter` twice puts flask 1's culture on it (`editor`), its map's first gene's letter changed by `Enter` and
   `Up` (`editor_letters`), `W` writes its line (`editor_writing` halfway on the lab's clock, `editor_written` past it: the line in flask
@@ -1333,11 +1334,6 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   species (its curve, its stages, when it glows); then the incubator's screen in a game forty minutes on (the pairs, a dormant world's
   spores woken, the luminous crowd, a spore former at its hot edge giving a strain). Under a second (output: stdout,
   `shots/tests/lab_cultures.png`)
-* `lab jars`: Z-05: the scan region's first living worlds whose wet silt holds three bands (two of water, then one of each other
-  chemistry), each made a jar in a game and drawn on the incubator's jars page at 0, 5, 10 and 20 minutes (its bands printed: the tone,
-  the depth in the silt, when it is full; R-439: on the page each band come in numbered by the glass and named under the list), then the
-  shelf seen from the laboratory at twenty minutes, at 2x (output: stdout,
-  `shots/tests/lab_jars.png`, `lab_jars_shelf.png`)
 * `lab tree` (`modes_tree.cpp`): Z-06: a sequenced set in a game: the flow's world's species (the scan's first felisian world, where the
   flow lands and samples), home's world's, a kin star's (home's genesis across stars), a world of a genesis of its own, a mirrored life's,
   a drifter's and the star it left's (one deep branch), and the nearest made species, read on the sequencer (its screen halfway through
@@ -1373,6 +1369,49 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   LIGHT at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group holds (`geneLaws`, Y-03's gene moved in
   and Y-04's own switches among them). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`,
   `lab_genes_kin.png`, `lab_genes_switch.png`)
+* `seed test` (`modes_seed.cpp`): J-02: the first desert world of the scan region, parked at, its landing site the test game's: the
+  landing map, its zoom, the globe from the parking orbit, the telescope's plate and the ground (facing east) drawn as generated, then with
+  a test layer's tint, then with its cover (`madeTestLayer`: two spreads, 0.45 radians round the ground under the ship and 2 km round the
+  site), then as generated again after a warm run (the telescope's slots as they were). Prints each view's pixels the tint and the cover
+  moved and those that differ once the layer is off (none), and whether the generators and the ground held the layer. A first warm run
+  builds the drainage's tiles. About 3 s at 1x; exit 1 when a view did not draw a look or did not come back (output: stdout,
+  `shots/tests/seed_test_<map|zoom|globe|plate|ground>_<none|tint|cover>.png`)
+* `seed worlds` (`modes_seed.cpp`): J-03: six lines of the first felisian world's first sea light-feeder (`seedSource`: wild, warm and
+  cold with its warmth gene six weights heavier or lighter, a dye with DYE red at its heaviest, a methane-maker, STOP cut:
+  `seedLineEdits`) let go on forty worlds (the first of each landable kind, at its sea nearest the equator where it has one:
+  `seedCases`). For each: the verdict and why, what lies at the place and its medium, the native met and how many it beat, the drift;
+  for a seeding that took, its pace and, at steps 1, 6, 12 and 24, its reach and the share of the world's waters it tinted (the planet
+  function on a 48 by 24 grid), and what it shows by the last. Ends with the fates' counts, the lines that took, the drifts and the looks
+  shown. Under a second (output: stdout)
+* `seed sea` (`modes_seed.cpp`): J-03: the dye line, a strain record of its edits in the test game's guide, let go in the sea a few km
+  off a coast of the first world of seas where it takes (the kinds' order), the time chosen so the ground under the parked ship is that
+  sea: the landing map, its zoom, the globe and the ground at the coast facing the sea, before it went down and at its eighth step. Then a
+  glowing sea species let go wild in its own sea, the ground at night before and after. Prints each view's pixels changed and the traits
+  shown; exit 1 when a view did not change (output: stdout, `shots/tests/seed_sea_<map|zoom|globe|ground>_<before|after>.png`,
+  `seed_sea_glow_<before|after>.png`)
+* `seed climate` (`modes_seed_air.cpp`): J-04: twenty worlds of the living and the wet kinds (the first of each, then the second, the
+  third: `seedAirCases`), each with its own sea species (a light-feeder, else a dead-eater, else a chemical-eater: `seedNativeLine`) let
+  go where it takes; its gas gene set to each gas at its heaviest (`seedGeneEdits`). For each: the world's air, pressure and mean warmth
+  over the sphere, the line's share of it, then per gas the mean and the pressure before and after it has the whole world (and a
+  runaway's hour), the traits it made, whether its seas are gone. Ends with the counts: warmer, colder, run away, each trait. Under a
+  second (output: stdout)
+* `seed traits` (`modes_seed_air.cpp`): J-04: each made air's trait (`traitRecipes`: its genes set on a world's own sea species, a glowing
+  or a spore-making one where it needs one) let go in the sea off a coast of the first world where it makes the trait, at a time its
+  coast's site is in the day (the night for glowing clouds), under a clear sky (a cloudy one for a cloud's trait): the globe from the
+  parking (over the night side for the night's) and the ground at the shore facing the sea (the eye raised over the fog of sea smoke and
+  of a runaway), before it went down and once it has the whole world, a runaway's again an hour on. Prints each trait's world, the
+  data sheet's MADE and AIR words, TEMP, ATM, the fog, the cloud and the rain before and after, and the pixels changed; exit 1 when a
+  trait found no world or a view did not change (output: stdout, `shots/tests/made_<trait>_<orbit|ground>_<before|after>.png`,
+  `made_runaway_<orbit|ground>_dry.png`)
+* `seed looks` (`modes_seed_looks.cpp`): J-05: each made water's, ground's and plants' trait (`lookRecipes`: its genes set on a world's
+  own sea species, a glowing one or a snow or ice one where it needs one; a wood rotter's own gene cut where its blight would hide the
+  look) let go where it takes on the first world where it makes the trait, without a drift where one place gives none, with the key the
+  game reads it by. Its site: for the waters a coast facing the sea (a reef's lagoon for a sour sea, a river's or a lake's bank for rust
+  rivers, found in a window round the world's land sites with the drainage built), for the land, snow and plants a point where the look
+  lies three times of four along a bearing with the rivers and lakes the landing builds. On the ground the eye moves to the drawn water's
+  nearest dry edge. The landing map, the globe and the ground before it went down and once it has the whole world, two steps on. Prints
+  each trait's world, the line's edits, the MADE words, the ground under the eye, and the pixels changed; exit 1 when a trait found no
+  world or its ground did not change (output: stdout, `shots/tests/look_<trait>_<map|orbit|ground>_<before|after>.png`)
 * `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
   its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
   five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of

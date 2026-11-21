@@ -149,12 +149,22 @@ bool Game::microscopeStage(int vial) {
     scope.body = v.body; scope.vial = vial; scope.flask = -1; scope.kept = -1; scope.lineState[0] = scope.lineState[1] = -1;
     scope.life = lifeOf(scope.sys);
     scope.forms = morphsOf(scope.sys, v.body);
-    const Biota& B = scope.life->bodies[v.body];
+    Biota B = scope.life->bodies[v.body];
     scope.sample = sampleOf(B, v.hab);
+    scope.keys.clear(); scope.worlds.clear();
+    for (const Microbe& m : B.species) { scope.keys.push_back(Guide::bodyKey(v.sx, v.sy, v.sz, v.body) + "/M" + std::to_string(m.index)); scope.worlds.push_back(vialWorldName(v)); }
+    for (const VialLine& L : vialLines(v, scope.sys, scope.sample)) {   // J-03: a seeded world's lines where they spread, after its own species
+        FlaskSpecies w;
+        if (!speciesOfKey(L.key, w)) continue;
+        Microbe m = L.line.kind.s; m.index = (int)B.species.size(); m.state = SS_LIVING;
+        B.species.push_back(m); scope.forms.push_back(L.line.form);
+        scope.keys.push_back(flaskSpeciesKey(w)); scope.worlds.push_back(nameOfKey(Guide::bodyKey(w.sx, w.sy, w.sz, w.body)));
+        Held h; h.species = m.index; h.state = SS_LIVING; h.cells = L.cells; h.active = true;
+        scope.sample.held.push_back(h);
+    }
     scope.mount = mountOf(B, scope.forms, scope.sample, v.hab);
     cellRange(chemistryCell(B.chemistry), scope.stageLo, scope.stageHi);   // R-438: the drop liquid there
-    scope.species = B.species; scope.keys.clear(); scope.worlds.clear();
-    for (const Microbe& m : B.species) { scope.keys.push_back(Guide::bodyKey(v.sx, v.sy, v.sz, v.body) + "/M" + std::to_string(m.index)); scope.worlds.push_back(vialWorldName(v)); }
+    scope.species = B.species;
     scope.title = upper(vialWorldName(v)); scope.line = v.name;
     microscopeView();
     return true;
@@ -191,7 +201,7 @@ bool Game::microscopeStageFlask(int i) {
         const bool alive = o.stage != SG_DEAD && (o.fit == GF_GROWS || o.fit == GF_HUNGRY || o.fit == GF_DARK);
         if (o.cells >= 1) {
             Held h; h.species = k; h.state = SS_LIVING; h.cells = o.cells; h.active = alive;
-            h.alive = alive || (o.stage != SG_DEAD && o.fit == GF_COLD) ? 1 : 0;   // R-438: a cold culture's cells wait for their warmth
+            h.alive = alive || (o.stage != SG_DEAD && (o.fit == GF_COLD || o.fit == GF_FROZEN)) ? 1 : 0;   // R-438: a cold culture's cells wait for their warmth (J-01: a frozen one's too)
             if (o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_CYCLING) h.dividing = 0.25;
             if (o.stage == SG_GATHERING) h.form = CF_SLUG;
             if (o.stage == SG_FRUITING) h.form = CF_STALK;
@@ -697,10 +707,6 @@ std::vector<std::string> Game::sheetLinesOf(const std::string& key, const Microb
         if (seen.stressAct >= 0)
             w += std::string(w.empty() ? "" : ", ") + (seen.stressAct == AN_SPORULATE ? "FORMS SPORES" : (seen.stressAct == AN_ENCYST ? "ENCYSTS" : "BURSTS")) + fmt(" AT %.0f C", seen.stressC);
         if (!w.empty()) out.push_back("WARMTH: " + w);
-    }
-    if (seen.jarLayer >= 0) {   // R-439: its band in a jar
-        static const char* const WHERE[JL_COUNT] = {"AT THE TOP", "WHERE THE AIR ENDS", "JUST BELOW THE AIR", "BELOW THE AIR", "DEEP", "AT THE BOTTOM"};
-        out.push_back(std::string("IN A JAR: ") + WHERE[clampi(seen.jarLayer, 0, JL_COUNT - 1)] + ", " + jarWays(seen.jarLayer, s.substrate, true));
     }
     if (seen.seen & SEEN_KIN) out.push_back("SEQUENCED: KIN SHOWN ON THE TREE");   // Z-06
     if (!cell) { out.push_back(spore ? "LIVING CELLS NOT SEEN" : "ONLY FOSSILS SEEN"); return out; }

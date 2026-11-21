@@ -27,7 +27,7 @@ void Game::takeSample() {
     if (!r.ok) { refuse(r.refusal ? r.refusal : "NOTHING TO TAKE HERE"); return; }
     Vial v;
     v.sx = sys.star.sx; v.sy = sys.star.sy; v.sz = sys.star.sz; v.body = surf.site.body;
-    v.unit = r.unit; v.hab = r.hab; v.name = r.name; v.readingC = r.readingC; v.t = t;
+    v.unit = r.unit; v.hab = r.hab; v.name = r.name; v.readingC = r.readingC; v.t = t; v.clock = guide.clock;
     v.activity = sampleOf(surf.biota(), r.hab).activity;
     kit.push_back(v);
     sampleTaken(v, "");
@@ -57,7 +57,7 @@ void Game::scoopClouds(double groundC) {
     v.unit = surf.site.unitAt(surf.player.x, surf.player.z);
     v.hab.niche = NI_CLOUD; v.hab.meanC = cloudC; v.hab.salt = 0;
     v.hab.place = placeKey(b.seed ^ 0xC10D5C00ULL, v.unit, b.radiusKm + std::round(altKm));   // the cloud's own cubic metre, a kilometre's layer
-    v.name = fmt("CLOUD DROPLETS AT %.0f KM", altKm); v.readingC = cloudC; v.t = t;
+    v.name = fmt("CLOUD DROPLETS AT %.0f KM", altKm); v.readingC = cloudC; v.t = t; v.clock = guide.clock;
     v.activity = sampleOf(surf.biota(), v.hab).activity;
     kit.push_back(v);
     sampleTaken(v, "THE SCOOP: ");
@@ -82,6 +82,7 @@ void Game::saveVials(std::ostream& f) const {
         f << "vial " << where << " " << v.sx << " " << v.sy << " " << v.sz << " " << v.body << " " << v.unit.x << " " << v.unit.y << " " << v.unit.z << " " << v.hab.niche
           << " " << v.hab.meanC << " " << v.hab.salt << " " << ((v.hab.shade ? 1 : 0) | (v.hab.bloom ? 2 : 0)) << " " << (v.hab.oldRock ? 1 : 0) << " " << v.hab.place << " " << v.readingC << " "
           << v.activity << " " << v.t << " " << v.name << "\n";
+        if (!guide.seeded.empty() && v.clock >= 0) f << "vialclock " << where << " " << v.clock << "\n";   // J-03: a seeded guide's (its lines' spread)
     };
     for (const Vial& v : kit) line(0, v);
     for (const Vial& v : coldStore) line(1, v);

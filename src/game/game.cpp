@@ -19,6 +19,7 @@
 #include <ctime>
 #include "core/png.h"
 #include "core/fs.h"
+#include "life/seeding.h"
 
 Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); if (droneJob.joinable()) droneJob.join(); }
 
@@ -273,6 +274,97 @@ void Game::renderPanorama(std::vector<uint32_t>& out, int& w, int& h) {
     wantsPanorama = false;
 }
 
+// J-02: the guide's clock on, then each world of the system its layer now; a game with no seeding and no test layer does nothing more
+void Game::madeTick(double clockDt) {
+    guide.clock += clockDt;
+    if (guide.seeded.empty() && madeTest.empty() && !spaceR.madeHeld()) return;
+    if (!sys.valid) return;
+    if (sys.star.seed != madeSysSeed) { spaceR.clearMade(); madeSysSeed = sys.star.seed; }   // another system's are dropped
+    for (int i = 0; i < (int)sys.bodies.size(); i++) spaceR.setMade(sys.bodies[i].seed, madeNow(i));
+}
+
+MadeWorld Game::madeNow(int bi) {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size() || (guide.seeded.empty() && madeTest.empty())) return MadeWorld();
+    const std::string key = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi);
+    const auto t = madeTest.find(key);
+    if (t != madeTest.end()) return t->second;
+    const std::vector<Seeding>& ss = seedingsOf(bi);
+    return ss.empty() ? MadeWorld() : madeWorldOf(sys, bi, ss, guide.clock);
+}
+
+const std::vector<Seeding>& Game::seedingsOf(int bi) { return seedingsAt(sys, bi); }
+
+const std::vector<Seeding>& Game::seedingsAt(const StarSystem& S, int bi) {
+    static const std::vector<Seeding> none;
+    if (guide.seeded.empty()) { seededWorlds.clear(); seededSeen = 0; seededLast.clear(); return none; }
+    const std::string last = seededLine(guide.seeded.back());
+    if (guide.seeded.size() != seededSeen || last != seededLast) { seededWorlds.clear(); seededSeen = guide.seeded.size(); seededLast = last; }
+    if (!S.valid || bi < 0 || bi >= (int)S.bodies.size()) return none;
+    const std::string key = Guide::bodyKey(S.star.sx, S.star.sy, S.star.sz, bi);
+    const auto it = seededWorlds.find(key);
+    if (it != seededWorlds.end()) return it->second;
+    std::vector<Seeding>& out = seededWorlds[key];
+    for (const SeedRecord& r : guide.seeded) {
+        if (r.body != key) continue;
+        Seeding s; s.lat = r.lat; s.lon = r.lon; s.line = r.line; s.edits = r.edits; s.gen = r.gen; s.clock = r.clock;
+        s.medium.cell = r.cell; s.medium.tempC = r.tempC; s.medium.light = r.light; s.medium.energy = r.energy; s.medium.salt = r.salt;
+        seedLineOf(r.line, r.edits, s.sent);
+        seedingRun(S, bi, s);
+        out.push_back(std::move(s));
+    }
+    return out;
+}
+
+std::vector<Game::VialLine> Game::vialLines(const Vial& V, const StarSystem& S, Sample& smp) {
+    std::vector<VialLine> out;
+    if (V.clock < 0 || guide.seeded.empty() || V.body < 0 || V.body >= (int)S.bodies.size()) return out;
+    const std::vector<Seeding>& ss = seedingsAt(S, V.body);
+    const Body& b = S.bodies[V.body];
+    const int n = V.hab.niche;
+    const bool wet = n == NI_LIQUID || n == NI_SILT || n == NI_MAT || n == NI_SPRING || n == NI_VENT;
+    int spread = 0;   // (each spread's index in its world's layer: its edge's noise is the layer's)
+    for (size_t i = 0; i < ss.size() && spread < MADE_LINES; i++) {
+        const Seeding& s = ss[i];
+        if (!s.verdict.takes()) continue;
+        const int step = seedingStep(s, V.clock);
+        if (step < 0) continue;
+        const int k = spread++;
+        MadeWorld one; one.lines = k + 1;
+        one.spread[k].place = StarSystem::bodyFromLatLon(s.lat, s.lon); one.spread[k].reach = madeReachOfStep(step, b.radiusKm);
+        const CultureKind& K = s.wild.kind;
+        MadeSpread lives; lives.waters = 0;
+        for (int salt = 0; salt < 3; salt++) if (salt >= K.s.saltLo - 1 && salt <= K.s.saltHi + 1) lives.waters |= 1 << salt;
+        lives.land = K.world.dry > 0 || K.s.niche == NI_SNOW || K.s.niche == NI_ICE; lives.tLo = K.s.tMin; lives.tHi = K.s.tMax;
+        if (madeSpreadAt(one, k, V.unit, b.seed) <= 0.5 || !madeLives(lives, wet, V.hab.salt, V.hab.meanC)) continue;
+        VialLine L; L.seeding = (int)i; L.key = s.line; L.line = s.wild;
+        L.cells = std::pow(10.0, std::max(3.0, s.verdict.growth.crowdLog - 1));   // a tenth of its crowd
+        for (const GeneEdit& e : s.verdict.drift) L.wild += (L.wild.empty() ? "" : ", ") + std::to_string(e.place + 1);
+        out.push_back(L);
+        for (Held& h : smp.held)   // the natives it beat there, a hundredth of what they were
+            if (h.state == SS_LIVING && std::find(s.verdict.beaten.begin(), s.verdict.beaten.end(), h.species) != s.verdict.beaten.end()) h.cells *= 0.01;
+    }
+    return out;
+}
+
+bool Game::seedLineOf(const std::string& key, const std::string& edits, SeedLine& out) const {
+    out = SeedLine(); out.key = key;
+    FlaskSpecies w;
+    if (!speciesOfKey(key, w)) return false;
+    const size_t sp = key.rfind("/S");
+    const bool strain = sp != std::string::npos && sp > key.rfind("/M");
+    if (strain) w.strain = w.strainIn = atoi(key.c_str() + sp + 2);
+    double slept = 0;
+    if (strain && !guide.strains.count(key)) {   // its record gone: its species with the record's copy of its edits
+        w.strain = w.strainIn = 0;
+        if (!flaskKind(w, out.kind, out.form, slept, &out.genes)) return false;
+        std::vector<GeneEdit> ed = geneEditsOf(edits);
+        for (GeneEdit& e : ed) if (e.how == GX_MOVED) geneDonor(w, e, 1);
+        if (!ed.empty() && out.genes.valid) applyEdits(out.kind, out.form, out.genes, ed);
+    } else if (!flaskKind(w, out.kind, out.form, slept, &out.genes)) return false;
+    out.valid = true;
+    return true;
+}
+
 void Game::frame(const Input& inRaw, double realDt) {
     if (realDt > 0.1) realDt = 0.1;
     realTime += realDt;
@@ -310,7 +402,8 @@ void Game::frame(const Input& inRaw, double realDt) {
     probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // Shift held on the probe's screen, this frame's clock x8
     if (simulating) updateProbe(realDt);   // the probe falls on the relay's clock (real time) wherever the explorer is aboard
     if (simulating) updateDrones(realDt);  // the drones' trip and the bay's cooldown on real time, wherever the explorer is
-    if (simulating) updateLab(realDt);     // Z-05: the lab's clock (its flasks' cultures, its jars) the drones' kind
+    if (simulating) updateLab(realDt);     // Z-05: the lab's clock (its flasks' cultures) the drones' kind
+    madeTick(simulating ? realDt : 0.0);   // J-02: the guide's clock (real time, as the lab's) and the seeded worlds' layers
     // the state's update; the ship moves on where its row says, the row taken before (a screen that closes still moves it)
     const StateRow& current = STATE_ROWS[(int)state];
     (this->*current.update)(in, dt, realDt);

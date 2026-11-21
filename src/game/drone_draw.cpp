@@ -417,13 +417,13 @@ void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, do
 
 // the screen's map of a world of this system (F-02: none until the world's map is made)
 void Game::buildDroneMap(int body) {
-    bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
+    bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0; bay.mapMade = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
     const PlanetMap* mp = spaceR.mapIfReady(b);   // never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
     if (!mp) return;
     const PlanetMap& m = *mp;
-    MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
+    MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
     const int W = 376, H = 188;   // twice the screen's box: crisp at 2x and over
     bay.map.assign((size_t)W * H, 0);
@@ -443,10 +443,10 @@ void Game::buildDroneMap(int body) {
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1, m.madeTintAt(i));
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);
     }
-    bay.mapW = W; bay.mapH = H; bay.mapSeed = b.seed;
+    bay.mapW = W; bay.mapH = H; bay.mapSeed = b.seed; bay.mapMade = m.madeKey;
 }

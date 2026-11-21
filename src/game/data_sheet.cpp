@@ -203,6 +203,25 @@ void Game::renderDataSheet() {
         if (seen > 0) put(fmt("MICROBES    %d SPECIES SEEN%s%s", seen, named ? fmt(", %d NAMED", named).c_str() : "", read ? fmt(", %d SEQUENCED", read).c_str() : ""), HUD_GREEN);
         else if (guide.sampled.count(prefix.substr(0, prefix.size() - 2))) put("MICROBES    SAMPLED, NONE SEEN YET", HUD_GREEN);
     }
+    {   // J-03: the lines let go on it (the latest three: its words, how long ago, DIED where it did) and what they made of it so far
+        const std::vector<Seeding>& ss = seedingsOf(bi);
+        bool first = true;
+        for (size_t i = ss.size() > 3 ? ss.size() - 3 : 0; i < ss.size(); i++) {
+            const Seeding& s = ss[i];
+            const double ago = std::max(0.0, guide.clock - s.clock);
+            const std::string when = ago < 3600 ? fmt("%.0f MIN AGO", ago / 60) : fmt("%.1f H AGO", ago / 3600);
+            put(fmt("%s%s, %s%s", first ? "SEEDED      " : "            ", trunc(seedLineWords(s.line), 22).c_str(), when.c_str(), s.verdict.takes() ? "" : ", DIED"),
+                s.verdict.takes() ? HUD_CYAN : HUD_DIM);
+            first = false;
+        }
+        const std::string made = madeWords(bi);
+        bool firstMade = true;
+        if (!made.empty()) for (const std::string& w : wrapText(made, 38)) { put(fmt("%s%s", firstMade ? "MADE        " : "            ", w.c_str()), HUD_CYAN); firstMade = false; }
+        if (!ss.empty()) {   // J-04: its air as the made climate left it
+            const std::string air = madeAirWords(madeNow(bi));
+            if (!air.empty()) put("AIR         " + air, HUD_CYAN);
+        }
+    }
     section(true);
     // seasons readout, M5-09 what is up in the sky (surface only)
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {

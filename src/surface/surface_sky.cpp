@@ -65,6 +65,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     double aurora = env.aurora;
     const int CELL = 4 * FB_SCALE;
     const int GX = FBW / CELL + 1, GY = FBH / CELL + 1;
+    // J-04: a seeded world's glowing clouds at night, their light per cell by their form (patches, veins along a ridged field, whole decks)
+    const MadeWorld& mw = site.gen.made;
+    const bool madeGlow = clouds && madeCloudBank && mw.cloudGlow > 0 && day < 0.35, madeTint = clouds && madeCloudBank && !madeGlow && mw.cloudTintK > 0;
+    if (madeGlow) cloudGlowGrid.assign(GX * GY, 0.f);
     if (clouds) {
         cloudGrid.assign(GX * GY * 3, 0.f);   // per cell: the density, the index, and (W-03) the share that is a front's deck
         double thrP = 1.0 - env.cloudPattern * 0.75;   // the pattern's threshold; a front's deck is read per cell from its line
@@ -116,6 +120,13 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 cloudGrid[(gy * GX + gx) * 3] = dens;
                 cloudGrid[(gy * GX + gx) * 3 + 1] = idx;
                 cloudGrid[(gy * GX + gx) * 3 + 2] = storm;
+                if (madeGlow && dens > 0) {   // where the ray met the low layer (the decks' noise drifts with the wind)
+                    const double tt = 2600.0 / std::max(0.012, el), x = camPos.x + d.x * tt + wx, z = camPos.z + d.z * tt + wz;
+                    double form = 0.45 + 0.55 * smoothstep(0.35, 0.7, 0.5 + 0.5 * fbm2(x / 9000.0, z / 9000.0, site.gen.seed + 93, 2, 2.0, 0.5));   // a deck brighter and darker in parts
+                    if (mw.cloudGlowForm == MG_PATCHES) form = smoothstep(0.56, 0.74, 0.5 + 0.5 * fbm2(x / 5200.0, z / 5200.0, site.gen.seed + 91, 3, 2.0, 0.5));
+                    else if (mw.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm2(x / 2600.0, z / 2600.0, site.gen.seed + 92, 3, 2.0, 0.5)));
+                    cloudGlowGrid[gy * GX + gx] = (float)(form * mw.cloudGlow);
+                }
             }
         });
     }
@@ -345,6 +356,12 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     v = v + (ci - v) * dens;
                     paleV *= 1 - dens;   // the clouds under them hide them
                     stormW = ((c00[2] * (1 - fx) + c10[2] * fx) * (1 - fy) + (c01[2] * (1 - fx) + c11[2] * fx) * fy) * dens;
+                    if (madeTint && dens > 0.5) stormW = 1;   // J-04: a coloured cloud in its bank
+                    if (madeGlow) {
+                        const float* g0 = &cloudGlowGrid[gy * GX + gx];
+                        const double gl = ((g0[0] * (1 - fx) + g0[1] * fx) * (1 - fy) + (g0[GX] * (1 - fx) + g0[GX + 1] * fx) * fy) * dens;
+                        if (gl > 0.03) { v = std::max(v, 10 + 12 * gl); stormW = 1; }   // (a living light: faint)
+                    }
                 }
                 if (curtain && el < 0.45) {   // over the clouds: the rain hangs in front of the deck's base, up to where the ray meets it
                     double hl = std::sqrt(d.x * d.x + d.z * d.z);

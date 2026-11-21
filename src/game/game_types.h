@@ -22,13 +22,14 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        DRONES,         // the drone bay's screen
                        AUTO,           // auto-explore's profiles
                        MICROSCOPE,     // Z-04: the laboratory's microscope (the cold store's vials, a slide)
-                       INCUBATOR,      // Z-05: the laboratory's incubator (its flasks, the jars' shelf)
+                       INCUBATOR,      // Z-05: the laboratory's incubator (its flasks)
                        SEQUENCER,      // Z-06: the laboratory's sequencer (a species' genome read)
                        TREE,           // Z-06: the tree of kin's screen (every species sequenced by kinship)
                        CATALOGUE,      // Z-07: the guide's catalogue of the species seen (by world, by kin)
                        PLAYER,         // R-431: the ship's player at its deck (its worlds, a world's music)
                        WALL,           // R-428: the quarters' wall of photographs, hung by the explorer
                        EDITOR,         // Y-02: the laboratory's gene editor (a culture's genes changed by hand, a line written into a flask)
+                       SEEDING,        // J-03: the drone bay's seed page (a flask's culture, a place on the world's map, a drone sent)
                        COUNT };        // U-06: no state, their count: a new state goes before it (a state's number is saved)
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
@@ -157,7 +158,7 @@ constexpr double CABIN_SHADE_FULL = 42, CABIN_AMBIENT = 0.1;
 // I-04: what drawing a piece the frame fills takes from the frame (`drawCabinPieces`): each finish's params (its dealt bank, its grain)
 // and without its grain, the light's bank's, a window's glass's (depth only)
 struct CabinDraw { const RasterParams* fin = nullptr; const RasterParams* plain = nullptr; const RasterParams* light = nullptr; const RasterParams* pane = nullptr;
-                   const RasterParams* tint = nullptr; };   // Z-05: a glass in front of what the frame fills (the incubator's door, the jars' shelf)
+                   const RasterParams* tint = nullptr; };   // Z-05: a glass in front of what the frame fills (the incubator's door)
 constexpr double EXPEDITION_T0 = 3.6e6;   // the game's clock at an expedition's start (I-04: the garden grows by the days since)
 
 // what a text entry names (`Game::textKind`): the star, a world, a note for the log, a star to find, a sector to go to, a mark, a piece

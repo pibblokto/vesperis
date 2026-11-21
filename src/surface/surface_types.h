@@ -193,6 +193,7 @@ struct TreeInst {
     int bank = 3;                  // leaf bank: 3 forest, 5 second family / autumn, 10 straw variant
     bool dead = false, bare = false;   // a dead skeleton; deciduous in winter
     bool stump = false;            // a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
+    bool made = false, galls = false;   // J-05: in a made plants' look (its leaves in its bank: a blight, new leaves, a glow), swellings on it
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };

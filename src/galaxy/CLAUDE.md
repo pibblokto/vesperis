@@ -13,6 +13,16 @@ planet_grounds2, starfield.
   `planet_grounds2` (each kind's ground)
 - `drainage` (rivers, valleys and lakes in cached tiles: `drainageAt`), `landmarks` (the scanner's sights: `sightsNear`), `describe.cpp`
   (`describeBody`, declared in planetmap.h)
+- `made` (J-02: what a seeded world was made into at a step, `MadeWorld`, carried in `BodyGen::made`: the spreads (`madeReachAt`, a
+  share that never fades with the detail), a cover and a tint over the land, `madeKey`). The planet function's last pass reads it.
+  J-03: each spread's habitat (the waters by their salt, the land, a band of warmth: `madeLives`, `madeSpreadAt`), a tint over the
+  waters with a glow at night. `placeMeanC` (planet_bodygen.cpp, moved from the surface's sampling): a place's mean warmth.
+  J-04: the made air's fields (`warmC`, `pressureK`, the traits, the looks; `ground()` what the last pass draws, with a runaway's dry
+  seas), `madeCapShare`; in planetmap `madeWetAt`, `madeSaltAt`, `madeMeanAt`, `madeMatColour`; `typeSky` and `sampleCloudPattern` read
+  the air; the living ground reads the made warmth (`felisianSample`: the caps, the snow line, the ice), its heights but the ice's never.
+  J-05: the made looks by class (`MadeClass`: the waters, the land, the snow and ice, the plants; `MadeLook`, a spread's `makes`, its
+  `landOn`, `lookWaters`, cover), the waters', ground's and plants' traits; in planetmap `madeClassOf`, `madeGlobeClass`, `madeLifeTint`,
+  `madeColourAt`, `madeMatColour` for a sulphide's waters, a rusted ground, lush and bleached plants; the made pass's shares by class
 - Sky: `almanac` (`almanacOf`, the finders' `registry()`), `nights` (showers, planetshine), `fronts` (`frontsOf`)
 - `probe` (giant atmospheres, the probe's fall: `probeStageAt`), `drifters` (sunless worlds: `drifterInSector`, and `placeInSector`,
   which resolves every saved place)
@@ -28,6 +38,9 @@ planet_grounds2, starfield.
   size. What shows from afar is hashed per cell of sectors, never per world. A new star class is a variety (`mix64(seed ^ c)`), and a
   special world a forced trait (its own hash, put first).
 - The view, the finders and the harness read the body, the system and `BodyGen`, never a site. A material never depends on a faded value.
+- J-02: a generator from `make` has no made layer; only the game puts one in (`SpaceRenderer::genFor`, `SurfaceSite::initFrame`). The
+  peoples, the sights and the drainage read the world as generated: `unseasoned` and `thenWorld` take the layer off, and `buildTile`
+  does for a living world. Every read of `made` does nothing when its key is 0.
 - `Rng` goes by reference (a copy forks the stream). Moved code keeps each expression's shape (clang fuses a multiply into an add within
   one expression). The ~120 expressions that draw twice stay as written.
 - kinds.cpp's tables are built at compile time: every row's arrays of non-zero defaults are set first, in order, and the checks read a

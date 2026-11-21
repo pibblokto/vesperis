@@ -126,7 +126,7 @@ constexpr ShipWindow WINDOWS[] = {
 // (R-427: and a lamp over each platform, the engine room's fuel orb gone), the dome dark for the eyes: a room, a kind, a place, a power,
 // a reach, a bulb's cone. I-04: the
 // quarters' picture lamp over the photographs and the desk's lamp (glows: U's night keeps them), the hangar's over the cradle's new place.
-// Z-05: the incubator's light inside its cabinet and the jars' behind them (glows: the lab lit by them in the dark ship)
+// Z-05: the incubator's light inside its cabinet (a glow: the lab lit by it in the dark ship)
 constexpr ShipLamp LAMPS[] = {
     {ROOM_BRIDGE, LAMP_BULB, 2.6, 4.4, 8.9, 1.5, 3.0, 0.9},        {ROOM_BRIDGE, LAMP_BULB, -3.4, 4.4, 8.5, 1.25, 3.0, 0.9},
     {ROOM_BRIDGE, LAMP_BULB, 0, 4.4, 7.0, 0.9, 3.0, 0.9},
@@ -135,7 +135,7 @@ constexpr ShipLamp LAMPS[] = {
     {ROOM_LIBRARY, LAMP_BULB, -10.3, 4.05, 0, 2.6, 3.5, 1.0},      {ROOM_LIBRARY, LAMP_GLOW, -13.4, 1.5, -0.6, 1.1, 1.6, 0},
     {ROOM_LIBRARY, LAMP_GLOW, -11.4, 1.35, 3.45, 0.8, 1.4, 0},
     {ROOM_LAB, LAMP_BULB, 8.3, 4.05, 0, 2.4, 3.5, 1.1},            {ROOM_LAB, LAMP_BULB, 12.3, 4.05, 0, 2.4, 3.5, 1.1},
-    {ROOM_LAB, LAMP_GLOW, 11.25, 1.55, -3.5, 0.7, 1.6, 0},         {ROOM_LAB, LAMP_GLOW, 11.4, 1.85, 3.7, 0.6, 1.6, 0},   // Z-05: the incubator's, the jars'
+    {ROOM_LAB, LAMP_GLOW, 11.25, 1.55, -3.5, 0.7, 1.6, 0},   // Z-05: the incubator's
     {ROOM_QUARTERS, LAMP_GLOW, -3.5, 0.95, -11.2, 1.1, 1.8, 0},    {ROOM_QUARTERS, LAMP_BULB, 0, 3.25, -9.3, 1.2, 3.0, 0.9},
     {ROOM_QUARTERS, LAMP_GLOW, -3.15, 2.76, -6.85, 1.4, 1.5, 0},   {ROOM_QUARTERS, LAMP_GLOW, 4.75, 1.12, -10.0, 0.6, 1.2, 0},
     {ROOM_HANGAR, LAMP_BULB, -6.4, -0.45, 0.0, 2.0, 3.5, 0.8},     {ROOM_HANGAR, LAMP_BULB, 4.4, -0.45, 2.4, 3.0, 4.0, 0.75},
@@ -191,9 +191,8 @@ constexpr ShipView VIEWS[] = {
     {"THE HATCH'S DROP", ROOM_HANGAR, {1.0, -3.4, 0.53, -0.2}},
     // Z-04: the cold store's door (its lamps lit by how full it is), from the laboratory's middle toward the arch
     {"THE COLD STORE", ROOM_LAB, {9.6, -1.35, -2.05, -0.1}},
-    // Z-05: the incubator's flasks behind its glass, close; the jars' shelf over the bow bench; the laboratory's stern bench whole (the bench's)
+    // Z-05: the incubator's flasks behind its glass, close; the laboratory's stern bench whole (the bench's)
     {"THE INCUBATOR", ROOM_LAB, {11.25, -2.15, PI, -0.32}},
-    {"THE JARS", ROOM_LAB, {11.6, 1.6, 0.0, 0.12}},
     {"THE SEQUENCER", ROOM_LAB, {9.05, 2.3, 0.0, -0.36}},   // Z-06: the sequencer on the bow bench; the tree of kin's screen on the port wall
     {"THE TREE OF KIN", ROOM_LAB, {8.3, 2.85, -PI / 2, -0.02}},
     {"THE STERN BENCH", ROOM_LAB, {10.6, 0.6, 2.9, -0.2}},
@@ -365,15 +364,12 @@ std::vector<ShipFixture> makeFixtures() {
     v.push_back(kindOf(fin(boxAt(ROOM_LIBRARY, FACE_DECK, -6.85, 2.7, -PI / 2, 0.45, 0.25, lf, 1.05, AGAINST, {0.9, 0.75, 0.65, 0.65}), FIN_PANEL, FIN_BRASS), FX_DECK));
     v.push_back(fin(boxAt(ROOM_LIBRARY, FACE_NOTHING, -12.7, -2.0, -PI / 2, 1.0, 0.4, lf, 0.45, AGAINST, {0.85, 0.7, 0.6, 0.6}), FIN_FABRIC));
     v.push_back(fin(boxAt(ROOM_LIBRARY, FACE_NOTHING, -12.2, -2.0, -PI / 2, 1.0, 0.12, lf, 0.9, CONSOLE, {0.85, 0.75, 0.6, 0.6, 0.7}), FIN_FABRIC));
-    // the laboratory: its benches along the bow and stern walls, the jars' shelf over the bow bench, the cold store's door by the arch (Z-06
-    // brings the rest of its devices). Z-04: the microscope on the stern bench by the arch (its stand, its arm and its head, the eyepieces' tube;
-    // its camera's screen beside it), the cold store's door lit by how full it is (eight lamps, R-432's by doublings). Z-05: the jars on
-    // their shelf behind its glass (eight), the incubator on the stern bench past the microscope (its cabinet's three shelves of four flasks
-    // behind its glass door, its screen beside it)
+    // the laboratory: its benches along the bow and stern walls, the cold store's door by the arch (Z-06 brings the rest of its devices).
+    // Z-04: the microscope on the stern bench by the arch (its stand, its arm and its head, the eyepieces' tube; its camera's screen beside
+    // it), the cold store's door lit by how full it is (eight lamps, R-432's by doublings). Z-05: the incubator on the stern bench past the
+    // microscope (its cabinet's three shelves of four flasks behind its glass door, its screen beside it)
     const double af = ROOMS[ROOM_LAB].floor;
     for (int s : {-1, 1}) v.push_back(boxAt(ROOM_LAB, FACE_NOTHING, 10.3, s * 3.65, s > 0 ? PI : 0, 2.6, 0.35, af, 0.92, AGAINST, {0.9, 0.78, 0.65, 0.65}));
-    v.push_back(kindOf(fin(boxAt(ROOM_LAB, FACE_NOTHING, 10.3, 3.82, PI, 2.4, 0.18, af + 1.55, 0.7, {BF_BOTTOM, BF_TOP, BF_SIDE_A, BF_SIDE_D}, {0.6, 0.9, 0.65, 0.65}, true),
-                              FIN_GLASS, FIN_HULL), FX_JARS, 1, JAR_PLACES));
     {
         const double top = af + 0.92;
         v.push_back(kindOf(fin(boxAt(ROOM_LAB, FACE_INCUBATOR, 11.25, -3.69, 0, 0.62, 0.28, top, 0.78, {BF_TOP, BF_SIDE_A, BF_SIDE_D}, {0.9, 0.7, 0.7}, true), FIN_PANEL),
@@ -381,8 +377,8 @@ std::vector<ShipFixture> makeFixtures() {
         const ShipFixture scr = fin(boxAt(ROOM_LAB, FACE_INCUBATOR, 12.42, -3.76, 0, 0.28, 0.05, top + 0.04, 0.4, CONSOLE, CONSOLE_SHADE, true), FIN_PANEL);
         v.push_back(scr); v.push_back(screenOn(scr, 0.06, 0.36, 0.03, 1));   // its screen: the flasks' curves
     }
-    {   // Z-06: the sequencer on the bow bench under the jars' shelf (its case, its lid, its screen beside it); the tree of kin's screen on the
-        // port wall to the bow of the arch
+    {   // Z-06: the sequencer on the bow bench (its case, its lid, its screen beside it); the tree of kin's screen on the port wall to the bow of
+        // the arch
         const double top = af + 0.92;
         v.push_back(fin(boxAt(ROOM_LAB, FACE_SEQUENCER, 8.75, 3.6, PI, 0.3, 0.2, top, 0.24, CONSOLE, CONSOLE_SHADE, true), FIN_PANEL));
         v.push_back(fin(boxAt(ROOM_LAB, FACE_SEQUENCER, 8.75, 3.63, PI, 0.22, 0.13, top + 0.24, 0.04, CONSOLE, {0.95, 0.85, 0.75, 0.75, 0.8}, true), FIN_BRASS));   // its lid
@@ -392,7 +388,7 @@ std::vector<ShipFixture> makeFixtures() {
         v.push_back(wall); v.push_back(screenOn(wall, 0.06, 0.84, 0.05, 1));   // its screen
         v.push_back(kindOf(boxAt(ROOM_LAB, FACE_NOTHING, 6.397, 2.85, PI / 2, 0.43, 0.005, af + 1.21, 0.78, {}, {}, true), FX_TREE));   // the tree's lines over it
     }
-    {   // Y-02: the gene editor on the bow bench past the sequencer, under the jars' shelf (its case, its stage's lid, its screen beside it)
+    {   // Y-02: the gene editor on the bow bench past the sequencer (its case, its stage's lid, its screen beside it)
         const double top = af + 0.92;
         v.push_back(fin(boxAt(ROOM_LAB, FACE_EDITOR, 11.3, 3.62, PI, 0.32, 0.2, top, 0.2, CONSOLE, CONSOLE_SHADE, true), FIN_PANEL));
         v.push_back(fin(boxAt(ROOM_LAB, FACE_EDITOR, 11.3, 3.6, PI, 0.12, 0.1, top + 0.2, 0.06, CONSOLE, {0.95, 0.85, 0.75, 0.75, 0.8}, true), FIN_BRASS));   // its stage
@@ -1160,30 +1156,26 @@ struct Builder {
         if (F.kind == FX_DISPLAY) { marker(PIECE_DISPLAY, index, FIN_BRASS); return; }
         if (F.kind == FX_TREE) { seen = Vec3((F.x[1] + F.x[2]) / 2, F.y[1] + F.height / 2, (F.z[1] + F.z[2]) / 2); marker(PIECE_TREE, index, FIN_PANEL); return; }   // Z-06
         if (F.kind == FX_VEHICLE) { seen = Vec3(F.x[0], F.y[0] + 1, F.z[0]); marker(PIECE_VEHICLE, index, FIN_DECK); return; }   // R-427: its model the frame's
-        if (F.kind == FX_INCUBATOR || F.kind == FX_JARS) {   // Z-05: the cabinet's faces and its inside (its back, its shelves), the shelf's; the flasks or the jars the frame's
+        if (F.kind == FX_INCUBATOR) {   // Z-05: the cabinet's faces and its inside (its back, its shelves); the flasks the frame's
             const Vec3 A[4] = {Vec3(F.x[0], F.y[0], F.z[0]), Vec3(F.x[1], F.y[1], F.z[1]), Vec3(F.x[2], F.y[2], F.z[2]), Vec3(F.x[3], F.y[3], F.z[3])};
             auto P = [&](double t, double back, double y) { return A[1] + (A[2] - A[1]) * t + ((A[0] + (A[3] - A[0]) * t) - (A[1] + (A[2] - A[1]) * t)) * back + Vec3(0, y, 0); };
             const Vec3 front = normalize(A[1] - A[0]), mid = P(0.5, 0.5, F.height / 2);
             ShipFixture box = F; box.kind = FX_BOX;
             fixture(box, index);
-            finish = F.kind == FX_INCUBATOR ? F.finish : FIN_HULL;
+            finish = F.finish;
             const double H = F.height;
             seen = mid + front * 3.0;
             quad(MAT_SOLID, 0.5, 1, P(0, 0.97, 0), P(1, 0.97, 0), P(1, 0.97, H), P(0, 0.97, H));   // the back, inside
-            if (F.kind == FX_INCUBATOR) {
-                seen = P(0.5, 0.5, H + 2.0);
-                quad(MAT_SOLID, 0.65, 1, P(0, 0, 0.01), P(1, 0, 0.01), P(1, 0.97, 0.01), P(0, 0.97, 0.01));   // its floor
-                for (int k = 1; k < F.boards; k++) {   // the shelves between, their edges toward the room
-                    const double y = k * H / F.boards;
-                    seen = P(0.5, 0.5, y + 2.0);
-                    quad(MAT_SOLID, 0.7, 1, P(0.01, 0, y), P(0.99, 0, y), P(0.99, 0.95, y), P(0.01, 0.95, y));
-                    seen = P(0.5, -3.0, y);
-                    quad(MAT_SOLID, 0.8, 1, P(0.01, 0, y - 0.02), P(0.99, 0, y - 0.02), P(0.99, 0, y), P(0.01, 0, y));
-                }
+            seen = P(0.5, 0.5, H + 2.0);
+            quad(MAT_SOLID, 0.65, 1, P(0, 0, 0.01), P(1, 0, 0.01), P(1, 0.97, 0.01), P(0, 0.97, 0.01));   // its floor
+            for (int k = 1; k < F.boards; k++) {   // the shelves between, their edges toward the room
+                const double y = k * H / F.boards;
+                seen = P(0.5, 0.5, y + 2.0);
+                quad(MAT_SOLID, 0.7, 1, P(0.01, 0, y), P(0.99, 0, y), P(0.99, 0.95, y), P(0.01, 0.95, y));
+                seen = P(0.5, -3.0, y);
+                quad(MAT_SOLID, 0.8, 1, P(0.01, 0, y - 0.02), P(0.99, 0, y - 0.02), P(0.99, 0, y), P(0.01, 0, y));
             }
-            marker(F.kind == FX_INCUBATOR ? PIECE_INCUBATOR : PIECE_JARS, index, FIN_GLASS);
-            m.finishes[F.room] |= 1u << FIN_DECK;   // the jars' silt
-            finish = F.finish;
+            marker(PIECE_INCUBATOR, index, FIN_GLASS);
             return;
         }
         if (F.kind == FX_STORE) {   // Z-04: the cold store: its door's seam and handle, then the lamps the frame lights

@@ -180,6 +180,18 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - The tree (`TREE`): every species read and the ship's own at its root, a genesis a clade; Enter a kin's world's star the remote target
   [Z-06]; replaced by [Y-01]
 - A parent's cut gene stays cut in its lines (edit the parent); a gap takes no gene till Y-03 moves one in [Y-02]; replaced by [Y-03]
+- A jar holds one world's sample (eight jar places); its bands are a pure function of the sample and the jar's age, every band in by
+  twenty minutes [Z-05]; replaced by [R-447] (no jars)
+- Jar bands go top to bottom by what each species lives on and never overlap; a chemical eater that needs air sits where the air
+  ends [R-439]; replaced by [R-447]
+- A band that comes in is numbered beside the glass and named under the list; its place goes on the species sheet (`jarband`)
+  [R-439]; replaced by [R-447]
+- A jar's settling is said once, as the clock reaches it; a jar that settled before a load is not said again [R-439]; replaced by
+  [R-447]
+- The made pass moves no height and never covers water, lava or a lake's bed [J-02]; replaced by [J-03] (a dye's tint lies on the
+  waters a line lives in; the cover still never on water)
+- A seeding's step comes every five minutes of the clock; a world takes three seedings at most [J-02]; replaced by [J-03] (at the
+  line's pace; three living lines, a dead one counting none)
 
 ## The harness and the proof
 
@@ -380,3 +392,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [Y-01]: log/7-1.5.0.md
 [Y-02]: log/7-1.5.0.md
 [Y-03]: log/7-1.5.0.md
+[Z-05]: log/7-1.5.0.md
+[R-439]: log/7-1.5.0.md
+[R-447]: log/7-1.5.0.md
+[J-02]: log/7-1.5.0.md
+[J-03]: log/7-1.5.0.md

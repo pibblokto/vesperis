@@ -15,11 +15,16 @@ before changing anything there.
   genomes and the tree, the made species.
 - `rules-life-lab.md`: the search (samples, the kit, the ultraviolet, the signs) and the microscope (lists by world and folder,
   the four things done to a slide and how the cells answer).
-- `rules-life-cultures.md`: the incubator (flasks, their names and choosers), jars and their bands, the culture collection (kept
-  automatically and by hand).
+- `rules-life-cultures.md`: the incubator (flasks, their names and choosers) and the culture collection (kept automatically and
+  by hand).
 - `rules-life-record.md`: the sequencer and the tree; the record (the catalogue, the counts).
 - `rules-life-genes.md`: genes (a genesis's map and code, a species' genes read from what it is, edit values, cuts), the gene
   editor and its lines, learning what a gene does.
+- `rules-life-world.md`: the world genes (places 19 to 32, their wild values, what they do in a flask and how the lab shows them), the
+  seeded worlds' layer (what a seeding made of a world, where it is read and what keeps the world as generated) and sending a culture
+  down (the drone bay's seed trip, the verdict, the drift, the spread and its looks): the J series.
+- `rules-life-made.md`: what a seeded world is made into, J-04 on: the made air and its climate (each gas's answer by its world, a
+  runaway, what lift carries up, the caps, the snow and the plants moved) and how it is drawn.
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and screens, controls and the frame, auto-explore.

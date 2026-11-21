@@ -20,9 +20,8 @@ since Z-03 the surface and the game do too.
 - `cultures` (Z-05: a flask's culture. `Medium` (cells, lights, energies, salts), `CultureKind`, `growthIn` (a species' rate and crowd
   in a medium), `pairOf` (two in a flask), `CultureEvent` (what is done to a flask), `runCulture` (lays out a culture's laws),
   `cultureAt` (the state at a time), `cultureStagesBy`, `applyStrain`, `mediumOfPlace` (AS ITS WORLD). Y-04: `GeneSwitch`, a line's
-  switches as its culture reads them (`CultureSwitch`, `switchedKind`, `cultureWorkOff`), `CultureState`) and `jars` (Z-05: a world in a
-  jar. `jarRecipe` gives the bands, `jarAt` the bands at a time. R-439: `JarLayer`, and `jarLayerOf`, which places a band by what its
-  species lives on, each place's bands under the place before)
+  switches as its culture reads them (`CultureSwitch`, `switchedKind`, `cultureWorkOff`), `CultureState`. J-01: `CultureWorld` (what a
+  line's world genes make and do), the UV light, `flaskIce`, the stages OVERGROWN, FROZEN and POISONED, `dyeColour`, `shellColour`)
 - `sequences` (Z-06: a species' genome and place in the tree of its genesis: `Lineage`, `lineageOf`, `shipLineage`, `commonAncestorGyr`,
   `treeBefore` (tree order), the marker's letters (`markerLetter`, `markerOf`, `markerAlike`), `genomeLetters`, `watermarkLetters`,
   `alphabetOf`)
@@ -31,7 +30,17 @@ since Z-03 the surface and the game do too.
   `genesDiffer`, `geneValueWords`. `fleesLight`: dark-dwellers fleeing light, as R-438 drew it. Y-03: an edit moved in or copied
   (`GeneEdit::how`), a moved gene taking its donor's value (`donorValue`), `geneBurden` (a line's price), `geneNeeds` (what a gene
   needs), `kindPace`. Y-04: a gene's switch (`MicrobeGene::sw`, and `geneOwnSwitch`, the default for each kind of gene), `genePrice`
-  (one gene's part of the price), `switchedLine` (a line in a given state))
+  (one gene's part of the price), `switchedLine` (a line in a given state). J-01: the world genes at places 19 to 32 (`worldGene`,
+  `worldTable`, `geneAmount`, `worldOf`: a line's `CultureWorld` from its letters, a species' read from what it is))
+- `seeding` (J-02: the seeded worlds. `Seeding`: a culture let go on a world, as the life code reads the guide's `seeded` line.
+  `seedingStep`: its step on the guide's clock. `madeWorldOf`: a world's layer (galaxy/made.h) from its seedings at the clock.
+  `madeTestLayer`: `seed test`'s tint and cover. J-03: `seedPlaceOf` (what lies at a place, read at the world map's scale, and its
+  microhabitat), `SeedLine` (a line as a world takes it), `seedVerdictOf` (whether it takes and why not, `SEED_FATE_NAMES`),
+  `seedDriftOf` and `seedWildLine` (its changes in the wild), `seedingRun`, `madeTraitWords` ("RED SEAS", "GLOWING SEAS"). J-04: the
+  made air in the layer (`madeAirOf`: each gas's answer by its world, a runaway, what lift carries up), a line's habitat share and the
+  world's mean (`SeedVerdict::share`, `worldC`), `madeAirWords` (the data sheet's AIR line), `MADE_AIR_NAMES`. J-05: what a line makes
+  of the waters, land, snow and plants it lives in (`looksOf`, `LineLooks`), the air's world-wide looks in `madeAirOf`, the names
+  `MADE_SEA_NAMES`, `MADE_GROUND_NAMES`, `MADE_PLANT_NAMES`)
 - `morph_draw.h` (the slide's public interface: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`,
   `seeingsFor`, `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands and waves in slide micrometres, and the slide's banks),
@@ -94,6 +103,21 @@ since Z-03 the surface and the game do too.
   value. Y-03: the game reads a moved gene's donor and hands it in with the edit (the donor's kind, form and gene). This module never
   parses a key (the peoples have `GE_`, hence `GX_`). `flees` is -1 (its niche's rule) until a sense is edited: compare `fleesLight`,
   never the field.
+- J-02's layer: `madeWorldOf` is a pure function of the world, its seedings and the clock (the unit, forty worlds in any order and on
+  the pool). Its key hashes every field, so a cache that keys on it is made again exactly when a step or a look changes. J-03: a layer
+  that draws nothing (lines that only spread, or died) has key 0, so no cache is made again for it. J-04: a layer with no air keeps
+  J-03's key (the air's fields are hashed only when it has one); each look is 0 below its trait's share, so what is drawn is named.
+  J-05: a layer without the waters', ground's or plants' looks keeps J-04's key; a class's look is the latest line's that makes one, its
+  share the greatest of the lines that make one there; a trait named only where its look can show (plants on a world with plants).
+- J-03's verdict is a pure function of the world, the line and the place: its medium is `mediumOfPlace` and its growth `growthIn`, the
+  incubator's own (the unit holds the verdict to a flask in that medium), and the natives are the place's sample, each taken as a
+  flask takes it. The drift hashes the world's seed, the line's key and the place: it never draws on a world's stream, and it never
+  touches a vital gene. The life code hashes a line's key but never parses one (the game reads the line: `Game::seedLineOf`).
+- J-01's world genes: places 1 to 18 and the old tables must draw as before, so the world places and each new table take salts of their
+  own (`SALT_GENE_WORLD_MAP`, `SALT_GENE_GAS` and on); a new place among the first 18, or a longer old table, would move every saved
+  edit (the unit's digest of the cell genes, e58ae38013b383cd, catches it). `cultureKindOf` leaves `CultureKind::world` empty: a flask
+  fills it from the species' genes (`worldOf`, the game's `flaskKind`) before its edits, and the harness does the same. Wild values are
+  read from what a species is: never a new draw from its stream.
 - Y-04's switches: a line's kind has all its genes on. The switched genes are listed for the culture (`CultureKind::switches`), which
   switches each off where its condition fails (`switchedKind`). A gene switched off works as if cut out, as `applyEdits` cuts, and costs
   nothing. That is never baked into the kind (a cut size would halve again: not idempotent). A kind with no switches takes `advance`'s

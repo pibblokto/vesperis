@@ -18,5 +18,6 @@ struct Vial {
     double readingC = 0;              // the temperature read at the take
     int activity = VA_NONE;
     double t = 0;                     // the game's time at the take
+    double clock = -1;                // J-03: the guide's clock at the take (a seeding's spread by then; -1 a vial from before, no line in it)
 };
 constexpr int KIT_VIALS = 8;      // a descent's vials, refilled aboard (R-432: the cold store holds any number)

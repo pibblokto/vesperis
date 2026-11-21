@@ -38,25 +38,33 @@ struct BoxAt {
     double width() const { return length(A[2] - A[1]); }
 };
 // Z-05: the lab's tones, homes past the banks (`ShipBanks` deals each a free one while it is in view): the pigments' (a home a pigment, green to
-// black), a crowd's own light, the incubator's red and blue lights, the jars' rust and sulphur, a broth's cloud
-constexpr int LAB_TONE = 32, LAB_GLOW = 40, LAB_RED_LIGHT = 41, LAB_BLUE_LIGHT = 42, LAB_RUST = 43, LAB_SULPHUR = 44, LAB_CLOUD = 45;
+// black), a crowd's own light, the incubator's red and blue lights, a broth's cloud; J-01: the ultraviolet's light, a flask's ice, its tissue,
+// its dyes (a home a dye) and its sediments (a home a mineral)
+constexpr int LAB_TONE = 32, LAB_GLOW = 40, LAB_RED_LIGHT = 41, LAB_BLUE_LIGHT = 42, LAB_UV_LIGHT = 43, LAB_ICE = 44, LAB_CLOUD = 45;
+constexpr int LAB_TISSUE = 49, LAB_DYE = 50, LAB_SEDIMENT = LAB_DYE + WD_COUNT - 1;
+static_assert(LAB_SEDIMENT + SHL_COUNT <= SHIP_HOMES, "the lab's homes past the banks");
 RGB labToneColour(int home) {
     if (home > LAB_TONE && home < LAB_TONE + PG_COUNT) return pigmentColour(home - LAB_TONE);
+    if (home > LAB_DYE && home < LAB_DYE + WD_COUNT) return dyeColour(home - LAB_DYE);
+    if (home > LAB_SEDIMENT && home < LAB_SEDIMENT + SHL_COUNT) return shellColour(home - LAB_SEDIMENT);
     switch (home) {
         case LAB_GLOW: return RGB(0.3f, 0.95f, 0.8f);
         case LAB_RED_LIGHT: return RGB(1.0f, 0.28f, 0.18f);
         case LAB_BLUE_LIGHT: return RGB(0.35f, 0.5f, 1.0f);
-        case LAB_RUST: return RGB(0.62f, 0.3f, 0.12f);
-        case LAB_SULPHUR: return RGB(0.88f, 0.86f, 0.74f);
+        case LAB_UV_LIGHT: return RGB(0.55f, 0.3f, 1.0f);
+        case LAB_ICE: return ICE_COLOUR;
+        case LAB_TISSUE: return TISSUE_COLOUR;
         default: return RGB(0.86f, 0.8f, 0.62f);
     }
 }
-// a jar band's home (the deep's grey the hull's own: -1)
-int jarToneHome(int tone) { return tone > 0 && tone < PG_COUNT ? LAB_TONE + tone : (tone == JT_RUST ? LAB_RUST : (tone == JT_SULPHUR ? LAB_SULPHUR : (tone == JT_BLACK ? LAB_TONE + PG_BLACK : -1))); }
 // a flask's look now: its liquid's home (its crowd's pigment, a broth's cloud; its own light when it glows), how cloudy (0 clear .. 1 a crowd), and
-// its light's home (-1 dark; the white the light's bank)
-struct FlaskLook { int liquid = LAB_CLOUD; double cloud = 0; int light = -1; bool glows = false; };
-FlaskLook flaskLook(const Flask& F, const CultureNow& now) {
+// its light's home (-1 dark; the white the light's bank); J-01: its liquid its dye's, its ice or its tissue (solid: no light through it),
+// overgrown up its neck, its sediment's home (-1 none) and depth, a scum on top
+struct FlaskLook {
+    int liquid = LAB_CLOUD; double cloud = 0; int light = -1; bool glows = false;
+    bool solid = false, overgrown = false; int sediment = -1; double settled = 0, scum = 0;
+};
+FlaskLook flaskLook(const Flask& F, const CultureNow& now, const FlaskShow& S) {
     FlaskLook L;
     if (F.n == 0) return L;
     double best = 0;
@@ -66,7 +74,13 @@ FlaskLook flaskLook(const Flask& F, const CultureNow& now) {
         L.glows = L.glows || now.one[k].glowing;
     }
     L.cloud = clampd((std::log10(std::max(1.0, best)) - 3) / 6, 0, 1);
-    L.light = F.medium.light == CL_WHITE ? BANK_LIGHT : (F.medium.light == CL_RED ? LAB_RED_LIGHT : (F.medium.light == CL_BLUE ? LAB_BLUE_LIGHT : -1));
+    L.light = F.medium.light == CL_WHITE ? BANK_LIGHT : (F.medium.light == CL_RED ? LAB_RED_LIGHT : (F.medium.light == CL_BLUE ? LAB_BLUE_LIGHT :
+              (F.medium.light == CL_UV ? LAB_UV_LIGHT : -1)));
+    if (S.frozen) { L.liquid = LAB_ICE; L.solid = true; }
+    else if (S.overgrown) { L.overgrown = true; L.solid = true; if (S.tissue) L.liquid = LAB_TISSUE; L.cloud = 1; }
+    else if (S.dyed > 0.15) { L.liquid = LAB_DYE + S.dye; L.solid = true; }
+    if (S.sediment > 0.05) { L.sediment = LAB_SEDIMENT + S.shell; L.settled = S.sediment; }
+    L.scum = S.frozen || S.overgrown ? 0 : S.scum;
     return L;
 }
 
@@ -130,26 +144,21 @@ void Game::lifeSight(CabinFrame& f, std::vector<ShipBankAsk>& asks) {
     printsCollect();
     if (f.sight.seen[ROOM_QUARTERS] && (prints.stale || prints.dir != shotsDir)) printsAsk();
     if (f.sight.seen[ROOM_HALL]) gardenMake();
-    if (f.sight.seen[ROOM_LAB]) {   // Z-05: the flasks' tones and lights, the jars' bands (after the screens near them: they dim first)
+    if (f.sight.seen[ROOM_LAB]) {   // Z-05: the flasks' tones and lights (after the screens near them: they dim first)
         for (const ShipFixture& F : shipFixtures()) {
-            if (F.kind != FX_INCUBATOR && F.kind != FX_JARS) continue;
+            if (F.kind != FX_INCUBATOR) continue;
             const Vec3 mid(0.25 * (F.x[0] + F.x[1] + F.x[2] + F.x[3]), F.y[0] + 0.5 * F.height, 0.25 * (F.z[0] + F.z[1] + F.z[2] + F.z[3]));
             if ((f.look * (mid - f.eye)).z <= 0) continue;   // behind the eye: nothing of it drawn
             const double near = std::hypot(mid.x - f.eye.x, mid.z - f.eye.z) + 1.5;
-            if (F.kind == FX_INCUBATOR)
-                for (int i = 0; i < INCUBATOR_FLASKS; i++) {   // the tone each is drawn in (`drawIncubator`'s), its light's for the shelf
-                    const Flask& L = lab.flasks[i];
-                    if (L.n == 0 || !L.made) continue;
-                    const FlaskLook k = flaskLook(L, flaskNow(i));
-                    const int home = k.glows && k.light < 0 ? LAB_GLOW : (k.light >= 0 && k.cloud <= 0.6 ? k.light : k.liquid);
-                    if (home >= 32) asks.push_back({home, labToneColour(home), near});
-                    if (k.light >= 32 && k.light != home) asks.push_back({k.light, labToneColour(k.light), near});
-                }
-            if (F.kind == FX_JARS)
-                for (Jar& J : lab.jars) {
-                    if (!J.made) { const int j = (int)(&J - lab.jars.data()); jarMake(j); }
-                    for (const JarBand& b : J.recipe.bands) { const int h = jarToneHome(b.tone); if (h >= 0) asks.push_back({h, labToneColour(h), near}); }
-                }
+            for (int i = 0; i < INCUBATOR_FLASKS; i++) {   // the tone each is drawn in (`drawIncubator`'s), its light's for the shelf
+                const Flask& L = lab.flasks[i];
+                if (L.n == 0 || !L.made) continue;
+                const FlaskLook k = flaskLook(L, flaskNow(i), flaskShow(i));
+                const int home = k.glows && k.light < 0 && !k.solid ? LAB_GLOW : (k.light >= 0 && k.cloud <= 0.6 && !k.solid ? k.light : k.liquid);
+                if (home >= 32 && home != LAB_ICE) asks.push_back({home, labToneColour(home), near});   // (J-01: ice is the glass's own, pale)
+                if (k.light >= 32 && k.light != home) asks.push_back({k.light, labToneColour(k.light), near});
+                if (k.sediment >= 32) asks.push_back({k.sediment, labToneColour(k.sediment), near});   // J-01
+            }
         }
     }
     if (!f.sight.seen[ROOM_LIBRARY]) return;
@@ -291,7 +300,6 @@ void Game::drawLifePiece(CabinFrame& f, const ShipPiece& pc, const CabinDraw& d)
         case PIECE_CAPSULE: drawCapsule(f, F, d); break;
         case PIECE_STORE: drawStore(f, F, d); break;
         case PIECE_INCUBATOR: drawIncubator(f, F, d); break;
-        case PIECE_JARS: drawJars(f, F, d); break;
         case PIECE_TREE: drawTreeWall(f, F, d); break;
         case PIECE_VEHICLE: drawVehicle(f, F); break;   // R-427: vehicles_draw.cpp
         default: break;
@@ -344,19 +352,41 @@ void Game::drawIncubator(CabinFrame& f, const ShipFixture& F, const CabinDraw& d
         for (int k = 0; k < 6; k++) q[k] = vertAt(f, g[k], lifeShade(f, F.room, g[k], nullptr, 0.35));
         f.shapes.polygon(q, 6, d.plain[FIN_GLASS]);
         if (L.n == 0 || !L.made) continue;
-        // its liquid: its tone, lit through by its light, aglow with its crowd's own
-        const FlaskLook k = flaskLook(L, flaskNow(i));
+        // its liquid: its tone, lit through by its light, aglow with its crowd's own (J-01: its dye, its ice or its tissue its own, up its neck
+        // where it overgrew; its sediment under it, a scum on top)
+        const FlaskLook k = flaskLook(L, flaskNow(i), flaskShow(i));
         int home = k.liquid;
         double shade = 14 + 26 * k.cloud;
-        if (k.glows && k.light < 0) { home = LAB_GLOW; shade = 56; }
+        if (k.solid) shade = 30 + 12 * k.cloud;
+        else if (k.glows && k.light < 0) { home = LAB_GLOW; shade = 56; }
         else if (k.light >= 0) { home = k.cloud > 0.6 ? k.liquid : k.light; shade = 40 + 14 * (1 - k.cloud); }
-        RasterParams lp = home == BANK_LIGHT ? *d.light : d.plain[FIN_GLASS];
-        if (home != BANK_LIGHT) { const int b = f.banks.bankOf(home); if (b < 0) { lp = d.plain[FIN_GLASS]; shade *= 0.6; } else lp.bank = b; }
-        const double ly = 0.065, lw = bw - (bw - nw) * (ly / bodyH);
+        auto paint = [&](int h, double& sh) {
+            RasterParams p = h == BANK_LIGHT ? *d.light : d.plain[FIN_GLASS];
+            if (h == LAB_ICE) { sh = 54; return p; }   // J-01: ice in the glass's tone, bright
+            if (h != BANK_LIGHT) { const int b = f.banks.bankOf(h); if (b < 0) { p = d.plain[FIN_GLASS]; sh *= 0.6; } else p.bank = b; }
+            return p;
+        };
+        const RasterParams lp = paint(home, shade);
+        const double ly = k.overgrown ? bodyH : 0.065, lw = bw - (bw - nw) * (ly / bodyH);
         const Vec3 p[4] = {B.at(tc - bw * 0.92, back - 0.02, y0 + 0.004), B.at(tc + bw * 0.92, back - 0.02, y0 + 0.004), B.at(tc + lw * 0.92, back - 0.02, y0 + ly),
                            B.at(tc - lw * 0.92, back - 0.02, y0 + ly)};
         quad(p[0], p[1], p[2], p[3], shade, lp);
-        if (k.light >= 0 && !(k.glows && k.light < 0)) {   // its light's glow on the shelf under it
+        if (k.overgrown)   // up its neck
+            quad(B.at(tc - nw * 0.85, back - 0.02, y0 + bodyH), B.at(tc + nw * 0.85, back - 0.02, y0 + bodyH), B.at(tc + nw * 0.85, back - 0.02, y0 + bodyH + 0.7 * neckH),
+                 B.at(tc - nw * 0.85, back - 0.02, y0 + bodyH + 0.7 * neckH), shade, lp);
+        if (k.sediment >= 0) {
+            double ss = 34;
+            const RasterParams sp = paint(k.sediment, ss);
+            const double sy = 0.004 + 0.003 + 0.01 * k.settled, sw = bw - (bw - nw) * (sy / bodyH);
+            quad(B.at(tc - bw * 0.92, back - 0.025, y0 + 0.004), B.at(tc + bw * 0.92, back - 0.025, y0 + 0.004), B.at(tc + sw * 0.92, back - 0.025, y0 + sy),
+                 B.at(tc - sw * 0.92, back - 0.025, y0 + sy), ss, sp);
+        }
+        if (k.scum > 0.05) {
+            const double sy = ly - 0.004 - 0.004 * k.scum, sw = bw - (bw - nw) * (sy / bodyH);
+            quad(B.at(tc - sw * 0.92, back - 0.025, y0 + sy), B.at(tc + sw * 0.92, back - 0.025, y0 + sy), B.at(tc + lw * 0.92, back - 0.025, y0 + ly),
+                 B.at(tc - lw * 0.92, back - 0.025, y0 + ly), std::min(63.0, shade + 14), lp);
+        }
+        if (k.light >= 0) {   // its light's glow on the shelf under it
             RasterParams gl = k.light == BANK_LIGHT ? *d.light : lp;
             if (k.light != BANK_LIGHT) { const int b = f.banks.bankOf(k.light); if (b >= 0) gl.bank = b; }
             quad(B.at(tc - bw * 1.6, back + 0.25, y0 - 0.008), B.at(tc + bw * 1.6, back + 0.25, y0 - 0.008), B.at(tc + bw * 1.6, back - 0.3, y0 - 0.008),
@@ -377,46 +407,6 @@ void Game::drawIncubator(CabinFrame& f, const ShipFixture& F, const CabinDraw& d
     quad(B.at(0, -0.012, 0), B.at(1, -0.012, 0), B.at(1, -0.012, 0.025), B.at(0, -0.012, 0.025), sh, d.fin[FIN_PANEL]);
     quad(B.at(0.93, -0.03, H * 0.38), B.at(0.945, -0.03, H * 0.38), B.at(0.945, -0.03, H * 0.62), B.at(0.93, -0.03, H * 0.62),
          lifeShade(f, F.room, B.at(0.94, 0, H * 0.5), nullptr, 0.9), d.plain[FIN_BRASS]);
-}
-
-// Z-05: the jars on their shelf, a world's each: its water over its silt (the silt still in the water while it settles), its bands coming in
-// over twenty minutes in their tones, lit from within; the shelf's glass in front
-void Game::drawJars(CabinFrame& f, const ShipFixture& F, const CabinDraw& d) {
-    const BoxAt B(F);
-    if (dot(B.front(), f.eye - B.at(0.5, 0, F.height * 0.5)) <= 0) return;
-    const double w = B.width(), jw = 0.075 / w, jh = 0.5, back = 0.5;
-    auto strip = [&](double tc, double half, double bk, double ya, double yb, double shade, const RasterParams& p) {
-        RVert q[4] = {vertAt(f, B.at(tc - half, bk, ya), shade), vertAt(f, B.at(tc + half, bk, ya), shade), vertAt(f, B.at(tc + half, bk, yb), shade),
-                      vertAt(f, B.at(tc - half, bk, yb), shade)};
-        f.shapes.polygon(q, 4, p);
-    };
-    for (int j = 0; j < (int)lab.jars.size() && j < F.slots; j++) {
-        Jar& J = lab.jars[j];
-        if (!J.made) jarMake(j);
-        const double tc = (j + 0.5) / F.slots, y0 = 0.03, waterY = y0 + jh * (1 - J.recipe.waterShare), top = y0 + jh;
-        const JarNow now = jarAt(J.recipe, lab.clock - J.t0);
-        const RasterParams water = d.plain[FIN_GLASS], silt = d.plain[FIN_DECK];
-        strip(tc, jw * 1.18, back + 0.02, y0 - 0.012, top + 0.006, 5, d.plain[FIN_HULL]);   // its glass's dark rim behind it
-        strip(tc, jw * 1.1, back - 0.01, top, top + 0.035, lifeShade(f, F.room, B.at(tc, back, top), nullptr, 0.9), d.plain[FIN_BRASS]);   // its lid
-        strip(tc, jw, back, waterY, top, 34 + 18 * (1 - now.cloud), now.cloud > 0.5 ? silt : water);   // its water, clearing, lit from under
-        strip(tc, jw, back, y0, waterY, 46, silt);   // its silt
-        const double sh = waterY - y0;
-        for (size_t b = 0; b < J.recipe.bands.size(); b++) {   // its bands as they come in
-            const JarBand& band = J.recipe.bands[b];
-            const double s = now.strength[b];
-            if (s < 0.05) continue;
-            const int home = jarToneHome(band.tone), dealt = home >= 0 ? f.banks.bankOf(home) : -1;
-            RasterParams p = d.plain[FIN_GLASS];
-            if (home < 0) p = d.plain[FIN_HULL]; else if (dealt >= 0) p.bank = dealt; else continue;
-            strip(tc, jw, back - 0.005, waterY - sh * band.bottom, waterY - sh * band.top, 20 + 36 * s, p);
-        }
-    }
-    if (d.tint) {   // the shelf's glass: what is behind it a little darker, a faint sheen of the room's light
-        RVert q[4];
-        const Vec3 c[4] = {B.at(0, 0, 0), B.at(1, 0, 0), B.at(1, 0, F.height), B.at(0, 0, F.height)};
-        for (int i = 0; i < 4; i++) q[i] = vertAt(f, c[i], lifeShade(f, F.room, c[i], nullptr, 0.12));
-        f.shapes.polygon(q, 4, *d.tint);
-    }
 }
 
 // the photographs on the quarters' wall, the newest at the top left: each in a dark frame, printed in one tone (the print's bank, its

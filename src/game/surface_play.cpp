@@ -39,6 +39,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
                 logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), KINDS[lb.type].name,
                                         std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S", std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W",
                                         surf.env.temperatureC, surf.env.pressureAtm, lb.gravity / 9.8, surf.env.sun.altitude > 0 ? "DAY" : "NIGHT"));
+                madeLanding(surf.site.body);   // J-03: a seeded world's change since the last landing
                 walkMax = 0; lastWalkX = surf.player.x; lastWalkZ = surf.player.z; lastOdometer = 0; drivenLanding = 0; flownLanding = 0;
                 sectorIndexOf(surf.env.latDeg, surf.env.lonDeg, lastSecX, lastSecY);   // O2: the landing sector is not "entered"
             }

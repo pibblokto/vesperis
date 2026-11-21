@@ -97,7 +97,6 @@ struct MicrobeSheet {
     uint32_t answers = 0;
     double movingLo = 1e9, movingHi = -1e9, stillCold = -1e9, stillHot = 1e9, stressC = 1e9;
     int stressAct = -1;
-    int jarLayer = -1;           // R-439: its band's place in a jar (life/jars.h's JarLayer; -1 none seen); the guide's `jarband` line
     bool answered() const { return answers || movingHi >= movingLo || stillCold > -1e8 || stillHot < 1e8 || stressAct >= 0; }
 };
 // Z-05: a strain arisen in a flask, keyed `<body key>/M<index>/S<n>` (its species' key and its number): the strain it came of (0 the wild),
@@ -108,6 +107,19 @@ struct StrainRecord { int parent = 0, what = 0; double value = 0; std::string ed
 // (life/genes.h's `GeneKind`; -1 none yet: NOTHING SEEN) and how (GENE_SEEN_*). `gene` lines
 enum GeneHow { GENE_SEEN_EDIT = 1, GENE_SEEN_DEATH, GENE_SEEN_STRAIN, GENE_SEEN_NOTHING };
 struct GeneKnown { int kind = -1, how = 0; };
+// J-02 (R-448): a culture let go on a world (J-03's drone trip), kept by its world: the place, the line (its key, and its edits copied, a
+// strain's number being the guide's own), the flask's medium it grew in, the generation and the guide's clock when it went down. `seeded`
+// lines in the order they went down; a loan carries none (a friend's seeded worlds never reach the borrower's game)
+struct SeedRecord {
+    std::string body;                                                  // the world's key
+    double lat = 0, lon = 0;                                           // the place (radians)
+    std::string line, edits;                                           // the line's key; its edits (life/genes.h's text, "" none)
+    int cell = 0, light = 0, energy = 0, salt = 0; double tempC = 0;   // the medium (life/cultures.h's `Medium`)
+    int gen = 0;                                                       // the generation it went down in
+    double clock = 0;                                                  // the guide's clock then
+};
+std::string seededLine(const SeedRecord& r);                 // its `seeded` line, without the newline
+bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after its key
 
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
@@ -131,6 +143,12 @@ struct Guide {
     std::set<std::string> treeOff;                // Y-01: the lab's lines ("<body key>/M<index>/S<n>") taken off their world's tree (`treeoff` lines)
     std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a genesis was seen to do ("<genesis>/<number>": `gene` lines)
     std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
+    // J-02: the worlds seeded (`seeded` lines) and the guide's clock, the seconds the game ran across its saves and expeditions on real time
+    // (the warp never hurries it: `clock`), which the spreads read; both written once a world is seeded, so a guide without them is as before
+    std::vector<SeedRecord> seeded;
+    double clock = 0;
+    std::map<std::string, std::string> madeSeen;   // J-03: what each seeded world showed at its last landing (`madeseen` lines, a seeded guide's)
+    void addSeeding(const SeedRecord& r);         // kept as its line reads back (the file's precision): a reload gives the same layer
     // Z-07: the samples taken (`stat samples`) and the worlds they came from (`sampled` lines); a friend's sheets of the species they saw, lent by
     // their inbox file (`lentmicrobe` lines, as `microbe` lines): in the catalogue in cyan, in no statistic; the explorer's own sheet wins
     int samplesTaken = 0;

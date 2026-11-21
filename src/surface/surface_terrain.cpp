@@ -184,6 +184,19 @@ void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& al
     albedo = v.albedo;
     bank = 0;
     // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
+    if (v.mtint > 127 && v.material != MAT_WATER && v.material != MAT_LAVA) {   // J-02: last of all
+        if (site.gen.made.tinted && (site.gen.made.tintOn & MADE_ON_LAND)) { if (tintBankMade >= 0) { bank = (uint8_t)tintBankMade; return; } }   // (the test layer's land)
+        else {   // J-05: the land's, the snow's or the plants' made look in its bank, at its family's albedo
+            const int cls = madeClassOf(site.gen, v.material, false);
+            if (madeBanks[cls] >= 0) {
+                bank = (uint8_t)madeBanks[cls];
+                if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg;
+                else if (v.material == MAT_GRASS) albedo = 0.36 + 0.2 * v.veg;
+                else if (v.material == MAT_SNOW) albedo = site.gen.made.snow.albedo > 0 ? std::min((double)KINDS[site.gen.type].snowAlbedo, site.gen.made.snow.albedo) : KINDS[site.gen.type].snowAlbedo;
+                return;
+            }
+        }
+    }
     if (tintBankSprings >= 0 && v.material == MAT_MATS) { bank = (uint8_t)tintBankSprings; return; }   // the hot springs' mats in their own bank
     if (tintBankStrata >= 0 && v.gtint > 127) { bank = (uint8_t)tintBankStrata; return; }             // a rainbow stratum's accent layer
     if (tintBankSnow >= 0 && v.material == MAT_SNOW && v.stint > 127) {   // Z-03: red snow, deeper where the algae are thicker
@@ -371,13 +384,13 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     vc.sh = (float)shore;
     vc.front = vv.z >= NEAR_Z;
     vc.sy = vc.front ? (float)(proj.cy - proj.f * vv.y / vv.z) : 0.f;
-    if (site.hasWater && (double)vc.wy > -1e8) vc.wv = waterCorner(x, z, (double)vc.wy, (double)vc.hy);   // the stored floats, as the cells read them
+    if (site.hasWater && (double)vc.wy > -1e8) vc.wv = waterCorner(x, z, (double)vc.wy, (double)vc.hy, site.gen.made.jelly > 0 ? site.gen.made.jelly * smoothstep(0.25, 0.75, tv.mtint / 255.0) : 0.0);   // the stored floats, as the cells read them
     vc.stamp = frameStamp;
     bank = bk;
     return vc.v;
 }
 
-RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
+RVert SurfaceView::waterCorner(double x, double z, double wl, double hy, double jelly) const {
     double ddx = x - camPos.x, ddz = z - camPos.z;
     Vec3 vv = toView(x, wl, z);
     double depth = clampd(wl - hy, 0, 8);   // B-322: the depth under the drawn ground (morphed at the ring edges), or the shade jumped at every seam
@@ -392,6 +405,10 @@ RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
     double cosT = clampd(std::fabs(toV.y) / std::max(dist, 0.1), 0.04, 1);   // the waves' slopes keep the mirror short of grazing: from an eye at the surface the water stays water, not a sheet of sky
     double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
     double body = 24 + (1 - depth / 8) * 8, skyR = 55;
+    if (jelly > 0) {   // J-05: a jelly sea's slow heavy swell, a quarter of the waves' pace and three times their length, its mirror dulled
+        const double heavy = 4.0 * std::sin((x * waterWdx + z * waterWdz) / 8.0 - lastT * 0.35 + 0.5 * std::sin((x * waterWdz - z * waterWdx) / 21.0));
+        wave += (heavy - wave) * jelly; fres *= 1 - 0.5 * jelly; glint *= 1 - 0.6 * jelly;
+    }
     double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
     double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist) + fogSeaWall(x, wl, z, dist)));   // W-03; Q-02
     RVert w;
@@ -898,7 +915,28 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                         w[i] = (double)vcw[i]->wy > -1e8 ? vcw[i]->wv : waterCorner((cx + ox[i]) * cs, (cz + oz[i]) * cs, wCorner[i], vcw[i]->hy);
                     if (bt) { const TraceClock::time_point tC = TraceClock::now(); bt->waterMs += traceMs(tA, tC); bt->wet++; tA = tC; }
                     rpw.bank = 2; rpw.bank2 = -1;
-                    if (tintBankW >= 0 || tintBankL >= 0) {   // the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else
+                    bool madeW = false;   // J-03: a made world's waters first (a dye's colour, a glow at night), their edge wobbled as the traits'
+                    if (tintBankMade >= 0 && site.gen.made.tintOn == MADE_ON_WATER) {
+                        double tw[4], wmin = 1, wmax = 0, mx = 0, own = -1;
+                        // J-05: a corner of land the tide floods takes its cell's water's share (its sea's where the cell has none of its own)
+                        for (int i = 0; i < 4; i++) if (tv[i]->material == MAT_WATER) own = std::max(own, tv[i]->mtint / 255.0);
+                        if (own < 0) own = madeOnSea ? 1.0 : 0.0;
+                        for (int i = 0; i < 4; i++) { tw[i] = tv[i]->material == MAT_WATER ? tv[i]->mtint / 255.0 : own; mx = std::max(mx, tw[i]); }
+                        if (mx > 0.25) {
+                            madeW = true;
+                            for (int i = 0; i < 4; i++) {
+                                w[i].w = 1 - smoothstep(0.25, 0.75, tw[i]);
+                                wmin = std::min(wmin, w[i].w); wmax = std::max(wmax, w[i].w);
+                                if (tintGlowMade > 0.02) {   // its own faint light in drifting patches, the night's shade (the milky seas')
+                                    const double patch = 0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0 + lastT * 0.01, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6109);
+                                    w[i].shade = 14 + 16 * tw[i] * (0.4 + 0.6 * patch) * tintGlowMade;
+                                }
+                            }
+                            if (wmax < 0.149) rpw.bank = tintBankMade;
+                            else if (wmin < 0.851) { rpw.bank2 = tintBankMade; rpw.edge = &grainEdge; rpw.edgeScale = 4.0 / cs; rpw.edgeAmp = 0.35; rpw.shade2 = 0; }
+                        }
+                    }
+                    if (!madeW && (tintBankW >= 0 || tintBankL >= 0)) {   // the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else
                         // a pink lake's or the milky glow), its edge wobbled as two materials' are; the glow lit by its share
                         double tw[4] = {0, 0, 0, 0}, mx = 0; int tb = -1;
                         if (tintBankL >= 0) for (int i = 0; i < 4; i++) { tw[i] = tv[i]->ltint / 255.0; mx = std::max(mx, tw[i]); }
@@ -948,7 +986,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                                 Vec3 fv = toView(fx, wCorner[i] + 0.05, fz);
                                 if (fv.z < NEAR_Z) continue;
                                 RVert p; p.x = fv.x; p.y = fv.y; p.z = fv.z; p.shade = 50 + 12 * ph;
-                                rasterPoint3(fb, p, 2, proj, true, 1);
+                                rasterPoint3(fb, p, madeW ? rpw.bank : 2, proj, true, 1);   // (J-05: in the made waters' own bank there)
                             }
                         }
                     }

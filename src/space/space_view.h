@@ -70,6 +70,8 @@ struct SpaceContext {
 // turn and the ship's orbit: the lookup turns the point, not the plate.
 struct DetailPlate {
     int body = -1; uint64_t seed = 0; int seasonBucket = -1;
+    uint64_t madeKey = 0;      // J-02: the made layer it was sampled with (`MadeWorld::key`), and the layer's tint over its cells (empty: none)
+    std::vector<uint8_t> mtint;
     Vec3 u0, e1, e2;
     double texel = 0, texelM = 0;
     int W = 0, H = 0;
@@ -124,6 +126,13 @@ public:
     const PlanetMap& mapFor(const Body& b);          // synchronous: waits for a background generation
     const PlanetMap* mapIfReady(const Body& b);      // starts a background generation, nullptr until ready
     const BodyGen& genFor(const Body& b);
+    // J-02: a world's made layer (the seeded worlds: galaxy/made.h), set by the game for the worlds of the system before a frame
+    // (`Game::madeTick`) and kept by the seed: a changed key drops the world's generator (made again with it on request), and its map and
+    // the telescope's plates, keyed by it as by the season, are made again
+    void setMade(uint64_t seed, const MadeWorld& m);
+    const MadeWorld& madeOf(uint64_t seed) const;   // none where none was set
+    void clearMade();
+    size_t madeHeld() const { return made.size(); }
     // the fronts' cloud at t on the map's grid (`buildFrontMap`), for the globe and the landing map; nullptr for a world
     // without fronts; built again when the clock has moved four minutes (a front moves a texel in an hour). `coarse` flags the
     // 16 x 16 texel blocks that hold any band (a texel's neighbours counted), so a globe pixel off every band costs one byte
@@ -166,6 +175,7 @@ public:
     int mapsMaking() const { int n = 0; for (const auto& kv : maps) n += kv.second->generating ? 1 : 0; return n; }   // B-439: on their threads now
 private:
     std::map<uint64_t, BodyGen> gens;
+    std::map<uint64_t, MadeWorld> made;   // J-02: the made layers by the body's seed (none held for a world as generated)
     std::map<uint64_t, std::vector<EmberField>> emberFields;   // a young interior's fields by the body's seed (`emberFieldsOf`, once a body)
     // the lights of a world in the dark after its disc is drawn: its ember fields' glow, a dead people's cities still lit
     void drawDarkLights(Framebuffer& fb, const SpaceContext& c, int bi, int bank, const Vec3& posW, const Mat3& frameT, double R, double depthUnit, const Vec3& starDirW, bool dark);

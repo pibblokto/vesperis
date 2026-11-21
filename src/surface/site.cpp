@@ -41,6 +41,7 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
     t.wtint = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); t.ltint = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255);
     t.gtint = (uint8_t)clampi((int)(s.groundTint * 255 + 0.5), 0, 255);
     t.stint = (uint8_t)clampi((int)(s.snowTint * 255 + 0.5), 0, 255);
+    if (s.madeTint > 0) t.mtint = (uint8_t)clampi((int)(s.madeTint * 255 + 0.5), 0, 255);   // J-02
     if (!edits.empty()) applyEdits(x, z, detailM, t);   // T-03: the works' cuts, pits, ditches, craters, flats, reservoirs and lines
     if (!roads.empty() && detailM <= 100) {   // an old road through this vertex (the coarse rings see nothing: a seven-metre road is a hundredth of their cells)
         double d, along, hd; const SiteRoad* rd;
@@ -599,6 +600,7 @@ void SurfaceSite::initFrame(const StarSystem* s, int bodyIndex, double lat, doub
     const Body& b = s->bodies[bodyIndex];
     season = s->seasonOf(bodyIndex, t);
     gen = BodyGen::make(b, season);
+    gen.made = made;   // J-02: what a seeding made of it (none on a world nobody seeded)
     R = b.radiusKm * 1000.0;
     gravity = b.gravity;
     up0 = StarSystem::bodyFromLatLon(lat0, lon0);
@@ -606,7 +608,7 @@ void SurfaceSite::initFrame(const StarSystem* s, int bodyIndex, double lat, doub
     east0 = normalize(cross(pole, up0));
     if (length(cross(pole, up0)) < 1e-6) east0 = Vec3(0, 1, 0);
     north0 = cross(up0, east0);
-    atmosphere = bodyHasAir(b);   // D-04: an air fallen as snow in the dark is no air
+    atmosphere = gen.hasAir;   // D-04: an air fallen as snow in the dark is no air (J-02: read through the generator)
     hasWater = (kindHas(b.type, KT_SEA) || gen.liquidLevel > -1e8) && !gen.frozenSeas;   // exotic seas are a sea too; D-04: a sea frozen in the dark is ice
     seaLevel = gen.liquidLevel > -1e8 ? gen.liquidLevel : 0;
     lavaLevel = KINDS[b.type].ground == GR_MOLTEN ? gen.lavaLevel : -1e9;   // the molten ground's lava lakes

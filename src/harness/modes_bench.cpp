@@ -224,8 +224,8 @@ void Bench::space() {
                 game.testColdStore().pop_back();
             }
         }
-        {   // Z-05: the laboratory stocked (`ship life`'s: a living world's species in the twelve flasks under the lights in turn, a crowd's own light,
-            // four jars) from its stern bench: the incubator's flasks lit, both screens, the window; then the lab emptied for the rows after
+        {   // Z-05: the laboratory stocked (`ship life`'s: a living world's species in the twelve flasks under the lights in turn, a crowd's own light)
+            // from its stern bench: the incubator's flasks lit, both screens, the window; then the lab emptied for the rows after
             const size_t vials = game.testColdStore().size();
             const int stocked = labStock(game);
             game.testCabinView("THE STERN BENCH");
@@ -233,7 +233,7 @@ void Bench::space() {
             const double t0 = nowSec();
             for (int k = 0; k < 60; k++) { game.frame(in, 0); in.newFrame(); }
             flasks4x = (nowSec() - t0) / 60 * 1000;
-            printf("%-12s %.2f ms/frame (%d flasks lit, %zu jars)%s\n", "flasks 4x", flasks4x, stocked, game.testLab().jars.size(), madeFirst(made).c_str());
+            printf("%-12s %.2f ms/frame (%d flasks lit)%s\n", "flasks 4x", flasks4x, stocked, madeFirst(made).c_str());
             game.testLab() = LabState();
             game.testColdStore().resize(vials);
         }
@@ -358,6 +358,22 @@ void Bench::forest() {
                 printf("forest 4x    %.2f ms/frame at the game's 3x3 mush (F-01)\n", ms3);
                 budget("forest 4x 3x3", ms3, 12);   // 7.97 after F-10
                 g_mushKernel = k0;
+            }
+            {   // J-05: the same forest under a made plants' look over the whole world (red new leaves in a bank of their own, galls on three trees in
+                // four), the ground sampled again with it: the 4x row's budget
+                MadeWorld m; m.step = MADE_STEPS; m.lines = 1;
+                m.spread[0].place = sv4.site.up0; m.spread[0].reach = PI; m.spread[0].makes = 1 << MC_PLANTS; m.spread[0].plants = true;
+                m.plant.on = m.plant.tinted = true; m.plant.kind = MP_NEW_LEAVES; m.plant.dye = WD_RED; m.plant.tint = RGB(0.62f, 0.2f, 0.18f);
+                m.flora = MP_NEW_LEAVES | MP_GALLS; m.galls = 1; m.key = madeKey(m);
+                sv4.site.made = m; sv4.site.gen.made = m;
+                for (TerrainCache* c : {&sv4.site.lodN, &sv4.site.lod0, &sv4.site.lod1, &sv4.site.lod2, &sv4.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
+                for (int i = 0; i < 5; i++) { sv4.update(1.0 / 30, in4, t4, false); sv4.render(fb4, t4, nb4.stars, sr4, 1.0); }
+                const double t5 = nowSec();
+                for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
+                const double ms5 = (nowSec() - t5) * 1000 / 30;
+                printf("forest 4x    %.2f ms/frame made (J-05: new leaves and galls; flora sections trees %.1f, cells %.1f ms)\n", ms5, sv4.lastFloraMs[0], sv4.lastFloraMs[1]);
+                saveFB(fb4, "shots/tests/bench_forest_made.png");
+                budget("forest 4x made", ms5, 13);
             }
         } }
         setFramebufferScale(saved);

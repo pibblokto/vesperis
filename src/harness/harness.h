@@ -10,6 +10,7 @@
 #include "core/fs.h"
 #include "galaxy/starfield.h"
 #include "life/morphs.h"
+#include "life/seeding.h"
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
 #include "galaxy/planet_features.h"
@@ -472,23 +473,64 @@ bool coastSite(const BodyGen& g, double radiusKm, double& latDeg, double& lonDeg
 int runLifeLook(int argc, char** argv);
 std::vector<Morph> everyForm();   // every plan's every variant, of home's genesis (the forms' sheets, the unit)
 void unitLife(const Check& check);
+// ---- modes_seed.cpp (J-02: the seeded worlds, `seed test`; J-03: `seed worlds`, `seed sea`); unit_seeding.cpp: the unit's `seeding` group
+int runSeed(int argc, char** argv);
+void unitSeeding(const Check& check);
+// J-03: a line of a world's species as the game reads one (its form, its genes, its world genes; its edits applied, their price), keyed as the
+// guide keys it; and a seeding of it at a place (its record's fields), worked out (`seedingRun`)
+SeedLine seedLineFor(const StarSystem& sys, int body, int species, const std::vector<GeneEdit>& edits);
+Seeding seedingFor(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double clock);
+// the six lines `seed worlds` sends (ITERATION-1.5.0.md J-03): a species wild; warm and cold (its warmth gene six weights heavier or
+// lighter); a dye (DYE red, its weight the heaviest); a methane-maker (GAS methane); STOP cut. Their edits on a species' genes
+enum SeedLineKind { SL_WILD = 0, SL_WARM, SL_COLD, SL_DYE, SL_METHANE, SL_STOP, SL_COUNT };
+extern const char* const SEED_LINE_NAMES[SL_COUNT];
+std::vector<GeneEdit> seedLineEdits(const MicrobeGenes& g, int kind);
+// the lines' species: the first felisian world's first sea light-feeder (else its first that lives on the dead), wild
+bool seedSource(StarSystem& ls, int& lb, int& sp, SeedLine& wild);
+// a world's place for a seeding: its sea nearest the equator where it has one (the world map's scale), else a lake's (true), else a hashed
+// place of its land (false); the forty worlds `seed worlds` and the unit send to (the first of each landable kind) and their places
+bool seedPlaceFor(const StarSystem& sys, int body, double& lat, double& lon);
+struct SeedCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; bool wet = false; };
+bool seedPlaceTaking(const StarSystem& sys, int body, const SeedLine& line, double& lat, double& lon);   // its sea's first place where a line takes
+std::vector<SeedCase> seedCases();
+// ---- modes_seed_air.cpp (J-04: `seed climate`): edits setting world genes (each {kind, value}: a table gene to the run reading the value, its
+// weight the heaviest; a weight gene, value -1, the heaviest); a world's own line (its sea's first light-feeder, else dead-eater, else chemical-
+// eater, wild); the worlds of the living and the wet kinds (the first of each, then the second, the third: n at most) with their own line and
+// its sea's place where it takes
+int seedClimate();
+int seedTraits();   // J-04: each made air's trait from orbit and on the ground, before and after (`made_<trait>_<orbit|ground>_<before|after>.png`)
+std::vector<GeneEdit> seedGeneEdits(const MicrobeGenes& g, const std::vector<std::pair<int, int>>& wants);   // (J-05: a value of -2 cuts the gene)
+// ---- modes_seed_looks.cpp (J-05: `seed looks`, each made waters', ground's and plants' trait from orbit and on the ground, before and after:
+// `look_<trait>_<map|orbit|ground>_<before|after>.png`)
+int seedLooks();
+bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild);
+struct SeedAirCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; SeedLine wild; };
+std::vector<SeedAirCase> seedAirCases(int n);
+// a game's flask filled with a line in a medium, the lab's clock stepped a minute at a time till it shows FULL (false: not within four hours);
+// a kind's best medium (its cell, its best warmth, its salt, its light and its energy)
+bool labFlaskFull(TestGame& g, int i, const FlaskSpecies& w, const Medium& m);
+Medium seedBestMedium(const CultureKind& k);
 // ---- modes_lab.cpp: the laboratory (Z-04: `lab microscope`, `lab time`); unit_lab.cpp: the unit's `lab` group
 int runLab(int argc, char** argv);
 bool labVial(const StarSystem& sys, int body, Vial& out);   // a vial of a world's ground as the kit takes it (its most abundant living species of a drop)
 bool labDenseVial(Vial& out);   // the densest slide the lab knows (`lab time`'s, the bench's microscope row)
 void unitLab(const Check& check);
 void unitLabAnswers(const Check& check);   // R-435 to R-438, B-441: the group `experiments`
-void unitLabIncubator(const Check& check);   // B-442, R-439 to R-442: the group `incubator`
+void unitLabIncubator(const Check& check);   // B-442, R-440 to R-442: the group `incubator`
 void unitLabGenes(const Check& check);   // the Y series (Y-01: the trees by world and by folder): the group `genes`
-// ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`, `lab jars`)
+// a gene's letters a weight `d` heavier (a letter at a time, the first that can), a table's run that reads `want` (its first `n` letters)
+std::string heavier(const GeneCode& c, std::string p, int d);
+std::string runReading(const GeneCode& c, const std::vector<int>& t, int want, int n);
+void unitLabWorld(const Check& check);   // J-01: the world genes in the lab, the group `world`
+// ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`)
 int labCultures();
-int labJars();
-int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: twelve flasks of a living world's species, four jars
+int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: twelve flasks of a living world's species
+int labWorldLooks(TestGame& g, std::vector<std::string>& names);   // J-01: the twelve flasks with the world genes' looks
 // ---- modes_genes.cpp (Y-02: `lab genes`): the first living world of each alphabet and hand; the genes' laws (the unit's `genes` group)
 struct GeneWorld { int letters = 4; bool mirrored = false; StarSystem sys; int body = -1; std::vector<Morph> forms; };
 bool geneWorlds(GeneWorld (&out)[6]);
 struct GeneLaw { bool ok = false; std::string detail; };
-struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed, moved, wild; };   // Y-04: wild, the own switches
+struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed, moved, wild, cellAsBefore, worldCarried, worldPrice; };   // Y-04: wild; J-01: the last three
 GeneLaws geneLaws();
 int labGenes();
 // ---- modes_tree.cpp (Z-06; Z-07's `lab catalogue`)

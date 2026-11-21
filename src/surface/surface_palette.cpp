@@ -23,23 +23,28 @@ SurfaceLook lookFor(const BodyGen& g, const Star& star) {
     if (g.hasTrait(TR_HAZE)) { L.fogDistance *= 0.3; L.skyDensity *= 1.25; }
     if (g.hasTrait(TR_FROZEN_AIR)) { L.fogDistance = 45000; L.cloudsLayer = false; }   // its air on its ground, its sky an airless world's
     const RGB* m = g.matColor;
-    L.ground = m[familyRep(g.type, FAM_ROCK)];
-    L.sand = m[familyRep(g.type, FAM_SAND)];
+    L.ground = madeMatColour(g, familyRep(g.type, FAM_ROCK));   // (J-05: rusted by a made oxygen)
+    L.sand = madeMatColour(g, familyRep(g.type, FAM_SAND));
     L.snow = m[familyRep(g.type, FAM_SNOW)];
-    L.grass = m[familyRep(g.type, FAM_GRASS)];   // a kind's first accent where it lends the grass bank
-    L.flora2 = g.vegColor2;
+    L.grass = madeMatColour(g, familyRep(g.type, FAM_GRASS));   // a kind's first accent where it lends the grass bank; J-04: plants dried by a made heat
+    L.flora2 = madeFlora2(g);
     // bank 2 (secondary): water where there is a sea, lava on hot worlds, else the bright crystal/ejecta tint
-    if ((K.tags & KT_SEA) || g.liquidLevel > -1e8) L.secondary = m[MAT_WATER];
+    if ((K.tags & KT_SEA) || g.liquidLevel > -1e8) L.secondary = madeMatColour(g, MAT_WATER);   // (J-05: purple or black with a made sulphide)
     else if (isLavaWorld(g.type)) L.secondary = m[MAT_LAVA];
     else if (g.hasTrait(TR_GLASSED)) L.secondary = m[MAT_GLASS];   // the sheets of glass own bank 2 (the family's rep is the water the palette coloured as glass)
     else if (K.famRep[FAM_WATER] != MAT_WATER) L.secondary = m[K.famRep[FAM_WATER]];   // a kind's own in the water family's bank (the glass world's glass)
     else if (K.tags & KT_CRYSTAL) L.secondary = lerp(m[MAT_QUARTZ], white, 0.4f);
     else L.secondary = lerp(L.ground, white, 0.5f);
     // bank 3 (tertiary): the forest on living worlds (P-00: a kind's second accent), elsewhere boulders a shade lighter than the ground
-    L.tertiary = ((K.tags & KT_FLORA) || K.accent[1] >= 0) ? m[familyRep(g.type, FAM_FOREST)] : lerp(L.ground, white, 0.25f);
+    L.tertiary = ((K.tags & KT_FLORA) || K.accent[1] >= 0) ? madeMatColour(g, familyRep(g.type, FAM_FOREST)) : lerp(L.ground, white, 0.25f);
+    L.zenith = L.zenith * lc; L.horizon = L.horizon * lc;
+    if (g.made.haze > 0) {   // J-04: a made haze filters the light the ground is lit by toward its own colour (its luminance kept)
+        const RGB h = g.made.hazeTint;
+        const float y = 0.2126f * h.r + 0.7152f * h.g + 0.0722f * h.b;
+        lc = lerp(lc, lc * (h * (1.0f / std::max(0.05f, y))), (float)(0.55 * g.made.haze));
+    }
     L.ground = L.ground * lc; L.secondary = L.secondary * lc; L.tertiary = L.tertiary * lc;
     L.sand = L.sand * lc; L.snow = L.snow * lc; L.grass = L.grass * lc; L.flora2 = L.flora2 * lc;
-    L.zenith = L.zenith * lc; L.horizon = L.horizon * lc;
     return L;
 }
 
@@ -234,7 +239,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
                             {63, RGB(1, 0.97f, 0.86f)}});   // the lamps' and the windows' light
         if ((site.gen.hasTrait(TR_BLOOMS) || site.gen.hasTrait(TR_REEFS)) && !formsStaged) {
             tintBankL = 26;
-            waterTint(26, site.gen.hasTrait(TR_BLOOMS) ? lerp(site.gen.matColor[MAT_WATER], site.gen.lifeTintColour, 0.75f) : site.gen.lifeTintColour);
+            waterTint(26, site.gen.hasTrait(TR_BLOOMS) ? lerp(site.gen.matColor[MAT_WATER], site.gen.lifeTintColour, 0.75f) : madeLifeTint(site.gen));   // (J-05: a sour sea's reefs bleached)
         }   // a bloom the water's own colour turned
         tintBankStrata = -1;
         if (site.gen.hasTrait(TR_STRATA) && !formsStaged) {   // the rainbow strata's accent: a red, an orange or a green by the world
@@ -246,9 +251,59 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             static const RGB S[3] = {RGB(0.94f, 0.66f, 0.70f), RGB(0.90f, 0.56f, 0.58f), RGB(0.95f, 0.70f, 0.62f)};
             tintBankSnow = 28; matRamp(28, S[(int)(hash01(mix64(site.gen.seed ^ 0x5A0A1CAEULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
+        tintBankMade = -1; tintGlowMade = 0;
+        if (site.gen.made.tinted && peoples < 2 && !formsStaged) {   // J-02: a made world's tint over the land, in a lent bank its traits leave free
+            tintBankMade = tintBankSnow != 28 ? 28 : (tintBankStrata != 27 ? 27 : -1);
+            if (tintBankMade >= 0 && site.gen.made.tintOn == MADE_ON_WATER) {   // J-03: over the waters, a water's ramp; a glowing line's light at night
+                tintGlowMade = site.gen.made.glow > 0 ? 1 - smoothstep(0.04, 0.3, day) : 0.0;
+                if (tintGlowMade > 0.02) {
+                    const RGB m = site.gen.made.glowTint, dark = site.gen.made.tint * 0.25f * dayF;
+                    setRamp(fb.pal, tintBankMade,
+                            {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)tintGlowMade)}, {44, lerp(dark, m * 0.85f, (float)tintGlowMade)},
+                                    {63, lerp(dark, lerp(m, white, 0.35f), (float)tintGlowMade)}});
+                } else waterTint(tintBankMade, site.gen.made.tint);
+            } else if (tintBankMade >= 0) matRamp(tintBankMade, site.gen.made.tint * lerp(site.sys->star.color, white, 0.5f));
+        }
         if (site.gen.hasTrait(TR_PETRIFIED) && !formsStaged) {   // the stone trunks' jasper: red-brown, ochre or a purple grey by the world
             static const RGB J[3] = {RGB(0.62f, 0.32f, 0.22f), RGB(0.70f, 0.52f, 0.28f), RGB(0.54f, 0.42f, 0.52f)};
             matRamp(26, J[(int)(hash01(mix64(site.gen.seed ^ 0x9E7AULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
+        }
+        // J-05: the land's, the plants' and the snow's made looks, each in a lent bank the traits and the waters' tint leave free (28, 27, 26,
+        // 25 in turn); a glowing forest's leaves carry its light at night (the luminous flora's ramp, in its colour)
+        for (int& mb : madeBanks) mb = -1;
+        madeGlowPlants = 0; madeFoamBank = -1;
+        const MadeWorld& mw = site.gen.made;
+        madeOnSea = false;
+        for (int i = 0; i < mw.lines && i < MADE_LINES; i++) madeOnSea = madeOnSea || (mw.spread[i].looks && (mw.spread[i].waters & mw.spread[i].lookWaters & MADE_SEA));
+        if (mw.on() && (mw.land.on || mw.snow.on || mw.plant.on || mw.foam > 0) && peoples < 2 && !formsStaged) {
+            static const int LENT[4] = {28, 27, 26, 25};
+            auto taken = [&](int bk) {
+                return bk == tintBankMade || bk == tintBankSnow || bk == tintBankStrata || bk == tintBankL || bk == tintBankW || bk == tintBankSprings ||
+                       (bk == 26 && site.gen.hasTrait(TR_PETRIFIED)) || bk == madeBanks[MC_LAND] || bk == madeBanks[MC_PLANTS] || bk == madeBanks[MC_SNOW];
+            };
+            const RGB lt = lerp(site.sys->star.color, white, 0.5f);
+            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {
+                const MadeLook& ml = *mw.lookOf(cls);
+                const bool glows = cls == MC_PLANTS && mw.plantGlow > 0;
+                if (!ml.on || (!ml.tinted && !glows)) continue;
+                int bk = -1;
+                for (int lb : LENT) if (!taken(lb)) { bk = lb; break; }
+                if (bk < 0) break;
+                madeBanks[cls] = bk;
+                const RGB c = (ml.tinted ? ml.tint : madeMatColour(site.gen, familyRep(site.gen.type, FAM_FOREST))) * lt;   // (an undyed glow: the forest's own by day)
+                matRamp(bk, c);
+                if (glows && day < 0.5) {   // (fainter than the luminous flora's: a seeded glow in the leaves, the floor's dimmer)
+                    madeGlowPlants = 1 - day * 2;
+                    const float k = (float)(0.7 * madeGlowPlants);
+                    const RGB g3 = lerp(c, mw.plantGlowTint, 0.6f), gl = lerp(g3, white, 0.2f);
+                    setRamp(fb.pal, bk, {{0, RGB(0, 0, 0)}, {14, lerp(c * 0.25f, g3 * 0.2f, k)}, {34, lerp(c * 0.6f, g3 * 0.6f, k)}, {47, lerp(c, gl, k)},
+                                         {56, lerp(c, white, 0.5f)}, {63, white}});
+                }
+            }
+            if (mw.foam > 0) {   // the foam's colour last (else the snow's white)
+                for (int lb : LENT) if (!taken(lb)) { madeFoamBank = lb; break; }
+                if (madeFoamBank >= 0) matRamp(madeFoamBank, mw.foamTint * lt);
+            }
         }
     }
     // Z-03: bank 15, the films' glow under the lamp's ultraviolet in their own colour where nothing else holds it (a comet's tail, the spores'
@@ -299,6 +354,22 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
                         {{0, g0}, {18, g1}, {36, hor}, {44, lerp(hor, RGB(0.8f, 0.82f, 0.9f), 0.25f)}, {54, lerp(hor, RGB(0.8f, 0.82f, 0.9f), (float)(0.6 + 0.3 * day))},
                                 {63, lerp(RGB(0.8f, 0.82f, 0.9f), sunC, (float)day)}});
             else setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {36, lerp(g1, hor, 0.8f)}, {40, hor}, {50, glow}, {56, lerp(glow, sunC, 0.6f)}, {63, sunC}});
+            // J-04: a seeded world's clouds in this bank too (`drawSky`): by day coloured (a dye's, the spores'), its lit stops toward their
+            // colour in the light; at night a glowing line's light in its upper stops
+            const MadeWorld& mw = site.gen.made;
+            madeCloudBank = false;
+            if (mw.cloudGlow > 0 && day < 0.35) {
+                const RGB c = mw.cloudGlowTint, d0 = g1 * 0.6f;
+                const float k = (float)(1 - day / 0.35);
+                setRamp(fb.pal, 23, {{0, g0}, {14, d0}, {24, lerp(d0, c * 0.3f, k)}, {40, lerp(d0, c * 0.7f, k)}, {54, lerp(hor, c, k)}, {63, lerp(hor, lerp(c, white, 0.4f), k)}});
+                madeCloudBank = true;
+            } else if ((mw.cloudTintK > 0 || mw.spores > 0) && day >= 0.35) {   // (a world of spores and no clouds: their motes' colour)
+                const RGB c = (mw.cloudTintK > 0 ? mw.cloudTint : mw.sporeTint) * starC;
+                const float k = (float)clampd(0.75 * (mw.cloudTintK > 0 ? mw.cloudTintK : 0.6), 0, 1);
+                setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {30, lerp(lerp(g1, hor, 0.6f), c * 0.75f, k)}, {40, lerp(hor, c, k)}, {50, lerp(glow, lerp(c, white, 0.35f), k)},
+                                            {56, lerp(lerp(glow, sunC, 0.6f), lerp(c, white, 0.6f), k)}, {63, sunC}});
+                madeCloudBank = true;
+            }
         }
     } else {
         RGB grey(0.42f, 0.43f, 0.48f);

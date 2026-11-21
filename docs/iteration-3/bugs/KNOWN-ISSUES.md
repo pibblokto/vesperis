@@ -161,6 +161,16 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-452 | S4 | life | A switched line in a predator and prey's cycle keeps its state as the stretch began through the cycle's law (its crowd's share and starving not followed while they turn); alone, beside a rival or fed it follows them. | resolved 2026-11-20 (B-446: the cycle in parts) |
 | KI-453 | S4 | game | The data sheet calls a planet of a system's second sun a moon: its kind line reads "- MOON OF" and the second sun's name, since any parent does (`renderDataSheet`). Found in R-446. | open, found 2026-11-20 |
 | KI-454 | S4 | game | A heard sound's status line can run past 53 letters with a long medium ("SOMETHING THAT HUMS OF THE OLD PEOPLE - 103 OF 200 ON THIS WORLD", 64): the line is centred and cut at both edges (`names.cpp`). Found in R-446. | open, found 2026-11-20 |
+| KI-455 | S4 | game | Twelve flasks each with its own world look ask the room for more free banks than it has: the last on the shelves dim to the glass's tone (I-03's rule; ice needs none). The incubator's screen draws each in full. Found in J-01. | open, found 2026-11-20 |
+| KI-456 | S3 | life | J-04's made climate moves only a living world's caps, snow, ice and plants: another kind's caps, frosts and ice sheets, and a living world's ice sheets, stay as generated whatever the warmth. Found in J-04. | open, found 2026-11-21 |
+| KI-457 | S4 | life | Samples, a later line's verdict and the spreads' bands read a seeded world's warmth as generated: a vial from a world 20 C warmer is read at its old warmth, and a second line is judged by the old climate. Found in J-04. | open, found 2026-11-21 |
+| KI-458 | S4 | life | Only a living world with seas runs away: an ocean, a hycean or another wet kind warms past 42 C and keeps its seas. Found in J-04. | open, found 2026-11-21 |
+| KI-459 | S4 | life | On a world of two peoples, or with red snow and strata, a dyed rain falls in the sky's colour and leaves no puddles: no bank is lent for its colour (J-02's lent banks). Found in J-04. | open, found 2026-11-21 |
+| KI-460 | S4 | life | One colour a class: two lines with looks in one class (two dyes, a milk and a rust, crusts and sulphur) draw the later's colour wherever either lives. Found in J-05. | open, found 2026-11-21 |
+| KI-461 | S4 | space | The globe gives its one made bank to one class, the waters' first: a world with a waters' look and a land's or plants' shows only the waters' colour from orbit (the maps and the ground show all). Found in J-05. | open, found 2026-11-21 |
+| KI-462 | S4 | life | A line's air answers to its waters and land alone: a host of plants or a wood rotter living in the forests gives its gas as if it lived in its waters only (`seedHabitatOf`). Found in J-05. | open, found 2026-11-21 |
+| KI-463 | S4 | surface | A crust's three forms (polygons, ripples, rosettes) are kept but drawn with the one crust texture; LUSH deepens the plants' colours but grows no more trees. Found in J-05. | open, found 2026-11-21 |
+| KI-464 | S4 | surface | The made looks take the four lent banks (28 to 25): where the traits or a second people hold them, a look past the free ones is drawn in its family's bank. Found in J-05. | open, found 2026-11-21 |
 
 ## The long rows, continued
 

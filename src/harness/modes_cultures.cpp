@@ -2,12 +2,12 @@
 // cycle, a chemistry, a salt, a warmth), grown an hour in four media (as its world, the lab's standard broth, its best, its hot edge): each curve
 // by five minutes, the times its stages began, its doubling and any strain; then pairs of them in a flask (one wins, they cycle, they feed each
 // other, mirrored they ignore each other), the cycles' periods, the winners; Y-04, lines switched (a glow IN THE DARK, a rest IN THE LIGHT) lit and
-// dark beside their species
+// dark beside their species. J-01: the world genes' looks, a line each changed once (`labWorldLooks`): the incubator's screen of each
+// (`lab_cultures_world.png`)
 #include "harness/harness.h"
 #include "life/cultures.h"
 #include "life/genes.h"
 #include "life/morphs.h"
-#include "life/jars.h"
 #include <set>
 
 namespace {
@@ -399,119 +399,161 @@ int labCultures() {
             ds.save("shots/tests/lab_cultures_drops.png");
         }
     }
+    {   // J-01: the world genes' looks, the incubator's screen of each flask forty minutes on
+        TestGame g; Input in;
+        g.savePrefix = "shots/tests/lab_cultures_save"; g.settingsPath = "shots/tests/lab_cultures_settings.txt"; g.guidePath = "shots/tests/lab_cultures_world_guide.txt";
+        g.keysPath = "shots/tests/test_keys.txt";
+        remove(g.guidePath.c_str()); remove(g.settingsPath.c_str());
+        g.newGame(); g.setState(GameState::SPACE);
+        applyTestScale(g);
+        std::vector<std::string> names;
+        const int f = labWorldLooks(g, names);
+        g.openScreen(GameState::INCUBATOR);
+        std::vector<std::pair<std::vector<uint32_t>, std::string>> ps;
+        printf("\nthe world genes' looks (a line each, at its height):\n");
+        for (int i = 0; i < f; i++) {
+            g.testIncub().sel = i;
+            g.testClearStatus(); g.frame(in, 0); in.newFrame();
+            g.testClearStatus(); g.frame(in, 0); in.newFrame();
+            ps.push_back({std::vector<uint32_t>(g.output(), g.output() + (size_t)FBW * FBH), fmt("FLASK %d: %s", i + 1, names[i].c_str())});
+            const FlaskShow S = g.testFlaskShow(i);
+            const CultureNow now = g.testFlaskNow(i);
+            printf("  flask %2d %-24s %s%s; bubbles %.2f, dyed %.2f, scum %.2f, slime %.2f, sediment %.2f, clumps %.2f%s%s%s%s\n", i + 1, names[i].c_str(),
+                   CULTURE_STAGE_NAMES[now.one[0].stage], now.n > 1 ? (std::string(" + ") + CULTURE_STAGE_NAMES[now.one[1].stage]).c_str() : "", S.bubbles, S.dyed, S.scum,
+                   S.slime, S.sediment, S.clumps, S.overgrown ? (S.tissue ? ", overgrown in tissue" : ", overgrown") : "", S.frozen ? ", frozen" : "",
+                   S.poisoned >= 0 ? ", the other poisoned" : "", S.passedTo >= 0 ? ", genes passed" : "");
+        }
+        const int gap = 4, head = 14, cols = 3, rows = ((int)ps.size() + cols - 1) / cols;
+        Sheet sh(cols * (FBW + gap) + gap, rows * (FBH + gap) + gap + head);
+        sh.label(4, 3, "lab cultures: the world genes' looks, a line each changed once, at its height (J-01)");
+        for (size_t i = 0; i < ps.size(); i++) {
+            const int x = gap + (int)(i % cols) * (FBW + gap), y = head + gap + (int)(i / cols) * (FBH + gap);
+            sh.blit(ps[i].first, FBW, FBH, x, y);
+            sh.label(x + 2, y + FBH - 11, ps[i].second);
+        }
+        sh.save("shots/tests/lab_cultures_world.png");
+    }
     const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     printf("\nlab cultures: %d species (%d not found), %d media (%d grow), %d pairs: %d cycling, %d won, %d feeding, %d mirrored; %d lines switched (%.1f s)\n",
            CW_WANTS - missing, missing, media, grew, pairsRun, cycles, winners, fed, ignored, switched, secs);
     return 0;
 }
 
-// Z-05: the jars (`lab jars`): the scan region's first living worlds whose wet silt holds three bands or more (a water world's two, the other
-// chemistries' where their silt has them), each made a jar in a game and drawn on the incubator's jars page at 0, 5, 10 and 20 minutes; the
-// bands each jar settles into; then the shelf seen from the laboratory with them all at twenty minutes
-namespace {
-struct JarFound { StarSystem sys; int body = -1; Microhabitat hab; JarRecipe r; std::string world; };
-// the scan region's first living worlds whose wet silt holds three bands or more: two of water, then one of each other chemistry
-std::vector<JarFound> jarPlaces(size_t want) {
-    std::vector<JarFound> J;
-    int water = 0;
-    std::set<int> chems;
-    for (auto& [x, z, s, scanned] : scanSystems(150, 340, 20, 160, [&] { return J.size() < want; })) {
-        const StarSystem& sys = scanned;
-        auto L = lifeOf(sys);
-        for (int i = 0; i < (int)sys.bodies.size() && J.size() < want; i++) {
-            const Biota& B = L->bodies[i];
-            if (!livingStage(B.stage) || !(B.habitats & nicheBit(NI_SILT))) continue;
-            if (B.chemistry == CH_WATER ? water >= 2 : chems.count(B.chemistry) > 0) continue;
-            for (int k = 0; k < 200; k++) {
-                Microhabitat h;
-                h.niche = NI_SILT; h.meanC = B.meanC; h.salt = 0; h.place = mix64(sys.bodies[i].seed ^ (uint64_t)(k + 1) * 0x9E3779B97F4A7C15ULL);
-                const JarRecipe r = jarRecipe(B, sampleOf(B, h), h);
-                if (r.bands.size() < 3) continue;
-                JarFound f; f.sys = sys; f.body = i; f.hab = h; f.r = r; f.world = fmt("%s (%s, %s)", sys.bodies[i].name.c_str(), upper(shortType(sys.bodies[i].type)).c_str(), CHEMISTRY_NAMES[B.chemistry]);
-                J.push_back(f);
-                if (B.chemistry == CH_WATER) water++; else chems.insert(B.chemistry);
-                break;
+// J-01: the twelve flasks stocked with the world genes' looks, each a line of a scan region's species changed once (its gene written in the guide):
+// METHANE bubbles, RED water, a scum, slime, a CHALK sediment, clumps, overgrown into tissue (STOP cut, BIND at its heaviest), overgrown packed
+// (STOP cut), frozen at -4 C, grown under the ultraviolet light, a NERVE poison killing another, genes passed to another; each begun so long ago
+// that its look is at its height now (a gas while it grows, an overgrowth past its crowd). Their names in `names`; returns the flasks filled
+int labWorldLooks(TestGame& g, std::vector<std::string>& names) {
+    struct Line { FlaskSpecies w; std::string key; CultureKind k; MicrobeGenes genes; };
+    auto lines = [&](const StarSystem& sys, int body) {
+        std::vector<Line> out;
+        for (const Microbe& m : lifeOf(sys)->bodies[body].species) {
+            if (m.state != SS_LIVING) continue;
+            Line l; l.w.sx = sys.star.sx; l.w.sy = sys.star.sy; l.w.sz = sys.star.sz; l.w.body = body; l.w.species = m.index;
+            l.key = Guide::bodyKey(l.w.sx, l.w.sy, l.w.sz, body) + "/M" + std::to_string(m.index);
+            Morph f;
+            if (g.testFlaskKind(l.w, l.k, f, &l.genes) && l.genes.valid) out.push_back(l);
+        }
+        return out;
+    };
+    auto bestIn = [](const CultureKind& k) {
+        Medium m; m.cell = chemistryCell(k.chemistry); m.tempC = std::round(k.s.tOpt); m.salt = k.s.saltLo;
+        m.light = k.s.way == LW_LIGHT ? CL_WHITE : CL_DARK;
+        m.energy = k.s.way == LW_CHEMICAL ? k.s.substrate : (k.s.way == LW_LIGHT ? CE_NONE : CE_BROTH);
+        return m;
+    };
+    auto grows = [&](const Line& l) { return growthIn(l.k, bestIn(l.k)).fit == GF_GROWS; };
+    auto geneOf = [](const Line& l, int kind) { for (const MicrobeGene& G : l.genes.genes) if (G.kind == kind) return &G; return (const MicrobeGene*)nullptr; };
+    auto heaviest = [](const GeneCode& c, std::string p) {
+        const char* abc = alphabetOf(c.letters);
+        for (int l = 0; l < c.letters; l++) if (c.weight[l] == c.letters - 1) for (char& ch : p) ch = abc[l];
+        return p;
+    };
+    auto reading = [](const GeneCode& c, const std::vector<int>& t, int v) {
+        const char* abc = alphabetOf(c.letters);
+        for (int r = 0; r < (int)t.size(); r++) if (t[r] == v) return std::string() + abc[r % c.letters] + abc[(r / c.letters) % c.letters];
+        return std::string();
+    };
+    int f = 0, n = 0;
+    names.clear();
+    g.testLabSkip(3600);   // (an hour on, so each culture can be begun its own while ago)
+    // a line of the first species a look wants (and a second of its world for a pair), its edits, its medium
+    auto stock = [&](const char* name, const std::function<bool(const Line&)>& want, const std::function<std::string(const Line&, const GeneCode&)>& edits,
+                     const std::function<void(Medium&)>& med, bool pair, double minutes) {
+        bool done = false;
+        for (auto& [x, z, sv, sys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
+            auto L = lifeOf(sys);
+            for (int b = 0; b < (int)sys.bodies.size() && !done; b++) {
+                if (!livingStage(L->bodies[b].stage) || L->bodies[b].genesis.id == 0) continue;
+                const std::vector<Line> ls = lines(sys, b);
+                for (size_t i = 0; i < ls.size() && !done; i++) {
+                    if (!want(ls[i])) continue;
+                    const Medium m0 = bestIn(ls[i].k);
+                    int other = -1, lead = -1;
+                    for (size_t j = 0; pair && j < ls.size() && other < 0; j++)
+                        if (j != i && growthIn(ls[j].k, m0).fit == GF_GROWS && !ls[j].k.world.poisons() && ls[j].k.world.carrier <= 0 &&
+                            pairOf(ls[i].k, ls[j].k, lead) == PA_COMPETE)
+                            other = (int)j;
+                    if (pair && other < 0) continue;
+                    const GeneCode c = geneCodeOf(ls[i].genes.genesis);
+                    StrainRecord r; r.what = SM_EDIT; r.edits = edits(ls[i], c);
+                    const int sn = ++n;
+                    g.guide.strains[ls[i].key + "/S" + std::to_string(sn)] = r;
+                    g.guide.microbes[ls[i].key].seen |= SEEN_FORM | SEEN_KIN;
+                    Flask& F = g.testLab().flasks[f];
+                    Medium m = m0;
+                    med(m);
+                    F = Flask(); F.n = 1; F.who[0] = ls[i].w; F.who[0].strain = F.who[0].strainIn = sn; F.medium = F.asWorld = m;
+                    CultureEvent e; e.kind = CD_START; e.t = g.testLab().clock - 60 * minutes; e.m = m;
+                    F.events.push_back(e);
+                    if (other >= 0) {
+                        F.n = 2; F.who[1] = ls[other].w;
+                        CultureEvent a; a.kind = CD_ADD; a.t = e.t; a.m = m; a.who = 1;
+                        F.events.push_back(a);
+                    }
+                    F.made = false;
+                    names.push_back(name);
+                    f++; done = true;
+                }
             }
         }
-    }
-    return J;
-}
-}   // namespace
-
-int labJars() {
-    const auto t0 = std::chrono::steady_clock::now();
-    const std::vector<JarFound> J = jarPlaces(4);
-    if (J.empty()) { printf("lab jars: no living world's silt with three bands in the scan region\n"); return 1; }
-    TestGame g; Input in;
-    g.savePrefix = "shots/tests/lab_jars_save"; g.settingsPath = "shots/tests/lab_jars_settings.txt"; g.guidePath = "shots/tests/lab_jars_guide.txt"; g.keysPath = "shots/tests/test_keys.txt";
-    remove(g.guidePath.c_str()); remove(g.settingsPath.c_str());
-    g.newGame(); g.setState(GameState::SPACE);
-    applyTestScale(g);
-    for (const JarFound& f : J) {
-        Vial v; v.sx = f.sys.star.sx; v.sy = f.sys.star.sy; v.sz = f.sys.star.sz; v.body = f.body; v.hab = f.hab; v.name = "WET SILT"; v.readingC = f.hab.meanC;
-        g.testColdStore().push_back(v);
-    }
-    for (int j = 0; j < (int)J.size(); j++) g.testJarPut(j);
-    printf("lab jars: %zu jars of the scan region's wet silt (their bands: the tone, the depth in the silt, when it is full)\n", J.size());
-    struct Panel { std::vector<uint32_t> px; std::string label; };
-    std::vector<Panel> ps;
-    const double mins[4] = {0, 5, 10, 20};
-    g.openScreen(GameState::INCUBATOR);
-    g.testIncub().page = 1;
-    for (int j = 0; j < (int)J.size(); j++) {
-        const Jar& jar = g.testLab().jars[j];
-        printf("\n%d %s:", j + 1, J[j].world.c_str());
-        for (const JarBand& b : jar.recipe.bands)
-            printf("\n    M%d tone %d at %.2f-%.2f, full at %s", b.species, b.tone, b.top, b.bottom, mmss(b.fullS).c_str());
-        printf("\n   ");
-        for (double m : mins) {
-            g.testLab().clock = jar.t0 + 60 * m;
-            g.testIncub().jar = j;
-            g.frame(in, 0); in.newFrame();
-            g.testClearStatus();
-            g.frame(in, 0); in.newFrame();
-            const JarNow n = jarAt(jar.recipe, 60 * m);
-            int in2 = 0;
-            for (double st : n.strength) in2 += st > 0.5;
-            printf(" %.0f min: cloud %.2f, %d of %zu bands in;", m, n.cloud, in2, n.strength.size());
-            Panel p; p.px.assign(g.output(), g.output() + (size_t)FBW * FBH); p.label = fmt("JAR %d AT %.0f MIN", j + 1, m);
-            ps.push_back(p);
-        }
-    }
-    printf("\n");
-    {
-        const int gap = 4, head = 14, cols = 4, rows = ((int)ps.size() + cols - 1) / cols;
-        Sheet sh(cols * (FBW + gap) + gap, rows * (FBH + gap) + gap + head);
-        sh.label(4, 3, "lab jars: each jar on the incubator's page at 0, 5, 10 and 20 minutes");
-        for (size_t i = 0; i < ps.size(); i++) {
-            const int x = gap + (int)(i % cols) * (FBW + gap), y = head + gap + (int)(i / cols) * (FBH + gap);
-            sh.blit(ps[i].px, FBW, FBH, x, y);
-            sh.label(x + 2, y + FBH - 11, ps[i].label);
-        }
-        sh.save("shots/tests/lab_jars.png");
-    }
-    // the shelf from the laboratory at twenty minutes (its jars lit from within), the lamps on and the hull polarised (`ship life`'s)
-    g.closeScreen();
-    g.settings.renderScale = 2; g.applySettings();
-    const int lights = g.testCabinLights();
-    if (!(lights & 1)) pressKey(g, in, KEY_U);
-    if (lights & 2) pressKey(g, in, KEY_Y);
-    g.testLab().clock = g.testLab().jars[0].t0 + JAR_SETTLED_S;
-    g.testCabinView("THE JARS");
-    for (int k = 0; k < 3; k++) { g.frame(in, 0); in.newFrame(); }
-    g.testClearStatus();
-    g.frame(in, 0); in.newFrame();
-    writePNG("shots/tests/lab_jars_shelf.png", g.output(), FBW, FBH);
-    printf("wrote shots/tests/lab_jars_shelf.png\n");
-    const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-    printf("lab jars: %zu jars, %zu frames (%.1f s)\n", J.size(), ps.size() + 1, secs);
-    return 0;
+    };
+    auto one = [&](int kind, std::function<std::string(const Line&, const GeneCode&, const MicrobeGene&)> part) {
+        return [kind, part, geneOf](const Line& l, const GeneCode& c) { const MicrobeGene* G = geneOf(l, kind); return fmt("%d=%s", G->place + 1, part(l, c, *G).c_str()); };
+    };
+    auto table = [&](int value) {
+        return [value, reading](const Line&, const GeneCode& c, const MicrobeGene& G) { return reading(c, *worldTable(c, G.kind), value) + G.part.substr(2); };
+    };
+    auto heavy = [&](const Line&, const GeneCode& c, const MicrobeGene& G) { return heaviest(c, G.part); };
+    auto best = [](Medium&) {};
+    stock("METHANE BUBBLES (GAS)", [&](const Line& l) { return grows(l) && !l.k.world.gives(); }, one(GN_GAS, table(WG_METHANE)), best, false, 7);
+    stock("RED WATER (DYE)", [&](const Line& l) { return grows(l) && !l.k.world.dyes(); }, one(GN_DYE, table(WD_RED)), best, false, 15);
+    stock("A SCUM (LIFT)", [&](const Line& l) { return grows(l) && l.k.world.lift <= 0; }, one(GN_LIFT, heavy), best, false, 12);
+    stock("SLIME (SLIME)", [&](const Line& l) { return grows(l) && l.k.world.slime <= 0; }, one(GN_SLIME, heavy), best, false, 12);
+    stock("A CHALK SEDIMENT (SHELL)", [&](const Line& l) { return grows(l) && !l.k.world.shells(); }, one(GN_SHELL, table(SHL_CHALK)), best, false, 20);
+    stock("CLUMPS (BIND)", [&](const Line& l) { return grows(l) && l.k.world.bind <= 0; }, one(GN_BIND, heavy), best, false, 12);
+    stock("TISSUE (STOP CUT, BIND)", grows, [&](const Line& l, const GeneCode& c) {
+              const MicrobeGene *S = geneOf(l, GN_STOP), *B = geneOf(l, GN_BIND);
+              return fmt("%d=-;%d=%s", S->place + 1, B->place + 1, heaviest(c, B->part).c_str());
+          }, best, false, 40);
+    stock("OVERGROWN (STOP CUT)", [&](const Line& l) { return grows(l) && l.k.world.bind <= 0; }, [&](const Line& l, const GeneCode&) { return fmt("%d=-", geneOf(l, GN_STOP)->place + 1); },
+          best, false, 40);
+    stock("FROZEN AT -4 C (FROST)", [&](const Line& l) { return l.k.chemistry == CH_WATER && l.k.world.frostC <= FROST_NONE + 1 && l.k.s.saltLo <= 1 && l.k.s.tMax > 0; },
+          one(GN_FROST, heavy), [](Medium& m) { m.tempC = -4; m.salt = 0; }, false, 5);
+    stock("UNDER UV (SHIELD)", [&](const Line& l) { return grows(l) && l.k.world.shield < UV_SHIELD && l.k.s.way != LW_LIGHT; }, one(GN_SHIELD, heavy),
+          [](Medium& m) { m.light = CL_UV; }, false, 10);
+    stock("A NERVE POISON (POISON)", grows, one(GN_POISON, [&](const Line&, const GeneCode& c, const MicrobeGene& G) {
+              return reading(c, c.poison, PZ_NERVE) + heaviest(c, G.part.substr(2)); }), best, true, 12);
+    stock("GENES PASSED (CARRIER)", [&](const Line& l) { return grows(l) && l.k.world.carrier <= 0; }, one(GN_CARRIER, heavy), best, true, 12);
+    for (int i = 0; i < f; i++) g.testFlaskNow(i);   // (made)
+    g.testLabSkip(1);
+    return f;
 }
 
 // Z-05: a laboratory stocked for the pictures and the bench: the scan region's living water world with the most species that grow (a luminous one
 // among them where there is one), a vial of its ground in the cold store, its species in the twelve flasks in turn, each in its best medium
-// under the lights in turn (white, red, blue, dark; a light-feeder never dark), the lab's clock run fifteen minutes on; four worlds' jars at
-// twenty minutes. Returns the flasks filled
+// under the lights in turn (white, red, blue, dark; a light-feeder never dark), the lab's clock run fifteen minutes on. Returns the flasks
+// filled
 int labStock(TestGame& g) {
     StarSystem best; int bestBody = -1, bestN = 0; bool bestGlow = false;
     for (auto& [x, z, s, scanned] : scanSystems(150, 340, 20, 160, [&] { return !(bestN >= 8 && bestGlow); })) {
@@ -549,12 +591,6 @@ int labStock(TestGame& g) {
         g.testFlaskSet(i, md);
         put++;
     }
-    for (const JarFound& f : jarPlaces(4)) {
-        Vial j; j.sx = f.sys.star.sx; j.sy = f.sys.star.sy; j.sz = f.sys.star.sz; j.body = f.body; j.hab = f.hab; j.name = "WET SILT"; j.readingC = f.hab.meanC;
-        g.testColdStore().push_back(j);
-        g.testJarPut((int)g.testColdStore().size() - 1);
-    }
     g.testLabSkip(15 * 60);
-    for (Jar& J : g.testLab().jars) J.t0 = g.testLab().clock - JAR_SETTLED_S;
     return put;
 }

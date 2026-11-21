@@ -249,7 +249,7 @@ void unitLabAnswers(const Check& check) {
             put = sp >= 0 && g.testFlaskPut(0, 0, sp);
             if (put) {
                 g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
-                g.testIncub().sel = 0; g.testIncub().page = 0;
+                g.testIncub().sel = 0;
                 const Flask& F = g.testLab().flasks[0];
                 const size_t ev0 = F.events.size();
                 press(g, in, KEY_3); press(g, in, KEY_7); press(g, in, KEY_ENTER);

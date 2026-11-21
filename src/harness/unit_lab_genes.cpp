@@ -70,6 +70,8 @@ Medium bestOf(const CultureKind& k) {
     m.energy = k.s.way == LW_CHEMICAL ? k.s.substrate : (k.s.way == LW_LIGHT ? CE_NONE : CE_BROTH);
     return m;
 }
+}   // namespace
+
 // a run of a gene's letters of a weight `d` heavier (one letter at a time, the first that can), or a table's run that reads `want`
 std::string heavier(const GeneCode& c, std::string p, int d) {
     const char* abc = alphabetOf(c.letters);
@@ -91,6 +93,8 @@ std::string runReading(const GeneCode& c, const std::vector<int>& t, int want, i
     }
     return "";
 }
+
+namespace {
 const MicrobeGene* geneOfKind(const MicrobeGenes& g, int kind) { for (const MicrobeGene& G : g.genes) if (G.kind == kind) return &G; return nullptr; }
 // the log's last GENE line (each finding is logged as it is seen, said in its turn after)
 std::string lastGene(const TestGame& g) {
@@ -276,6 +280,9 @@ void unitLabGenes(const Check& check) {
         check("genes: how it lives and its plan's family never move; its values within their limits (Y-02)", R.fixed.ok, R.fixed.detail);
         check("genes: a gene moved in takes its donor's letters and value, over its own or into a gap; its way and family fixed (Y-03)", R.moved.ok, R.moved.detail);
         check("genes: the own switches (a glow's WHEN CROWDED, a rest's WHEN STARVING, the rest ALWAYS) give every species' curve as before (Y-04)", R.wild.ok, R.wild.detail);
+        check("genes: the cell's genes (places 1 to 18, the old tables, every edit of them) as before the world genes (J-01)", R.cellAsBefore.ok, R.cellAsBefore.detail);
+        check("genes: every species carries the fourteen world genes at 19 to 32, read from what it is (J-01)", R.worldCarried.ok, R.worldCarried.detail);
+        check("genes: a world product not its own (a gas, a dye, a slime, a shell, a poison) costs its line, its own nothing (J-01)", R.worldPrice.ok, R.worldPrice.detail);
     }
     {   // Y-02: a line written by the editor's keys and read everywhere a strain is. A rod of a four letters' world (ours), read, in flask 1
         // at its best: E on the editor opens the chooser (THE FLASKS), Enter its row; its shape gene's letters by hand (Enter, Up: an edit;
@@ -1124,6 +1131,199 @@ void unitLabGenes(const Check& check) {
                          sGrow, mCrowd == X->k.s.motion ? "swimming" : "STILL", sCrowd);
         }
         check("genes: S sets a gene's switch on the editor, kept over a save; a switched line's drop as its flask has it (Y-04)", keyed && kept && still && swims, detail);
+        remove(GUIDE); remove(SAVE.c_str());
+    }
+}
+
+// J-01 (2026-11-20, R-448; the unit's `world` group, after `genes`): the world genes in the lab. Each gene the lab shows changed once in a line
+// alone in its flask, its look in the flask and learned against its parent: GAS bubbles of METHANE, DYE the water RED, LIFT a scum, SLIME, SHELL a
+// CHALK sediment, STOP cut overgrown, BIND clumps, FROST its ice at -4 C, SHIELD growing under the ultraviolet light; POISON and CARRIER with another
+// in its flask; the editor's two pages walked by the arrows and turned by Page Down; a line with world genes over a save and a load
+namespace {
+// the scan region's first two living species of one world a check wants together, as the flasks take them
+template <class Want> bool findPair(TestGame& g, Want want, Cult& a, Cult& b) {
+    bool found = false;
+    for (auto& [x, z, sv, sys] : scanSystems(150, 340, 20, 160, [&] { return !found; })) {
+        auto L = lifeOf(sys);
+        for (int bi = 0; bi < (int)sys.bodies.size() && !found; bi++) {
+            if (!livingStage(L->bodies[bi].stage) || L->bodies[bi].genesis.id == 0) continue;
+            const std::vector<Cult> cs = culturesOf(g, sys, bi);
+            for (size_t i = 0; i < cs.size() && !found; i++)
+                for (size_t j = 0; j < cs.size() && !found; j++)
+                    if (i != j && want(cs[i], cs[j])) { a = cs[i]; b = cs[j]; found = true; }
+        }
+    }
+    return found;
+}
+bool growsIn(const Cult& c, const Medium& m) { return growthIn(c.k, m).fit == GF_GROWS; }
+// the flask's GENE finding in the log (its flask's number first), "" none
+std::string flaskFinding(const TestGame& g, int i) {
+    const std::string at = fmt("  FLASK %d:", i + 1);   // (after the log's date)
+    for (auto it = g.guide.log.rbegin(); it != g.guide.log.rend(); ++it) {
+        const size_t p = it->kind == "GENE" ? it->text.find(at) : std::string::npos;
+        if (p != std::string::npos) return it->text.substr(p + 2);
+    }
+    return "";
+}
+// a second species put in a flask with the first (the incubator's add), on its lab's clock
+void addIn(TestGame& g, int i, const FlaskSpecies& w) {
+    Flask& F = g.testLab().flasks[i];
+    F.n = 2; F.who[1] = w; F.who[1].strainIn = w.strain;
+    CultureEvent e; e.kind = CD_ADD; e.t = g.testLab().clock; e.m = F.medium; e.who = 1;
+    F.events.push_back(e);
+    F.made = false;
+    g.testLabSkip(0);
+}
+}   // namespace
+
+void unitLabWorld(const Check& check) {
+    {   // J-01: each world gene the lab shows, one change in a line alone in its flask: its look, learned against its parent
+        TestGame g;
+        labGame(g);
+        int flask = 0, strain = 1, shown = 0, learned = 0, cases = 0;
+        std::string detail;
+        auto one = [&](int kind, const std::function<bool(const Cult&)>& want, const std::function<std::string(const GeneCode&, const MicrobeGene&)>& part,
+                       const std::function<void(Medium&)>& med, const std::function<bool(const FlaskShow&, const CultureOne&)>& shows, int minutes) {
+            cases++;
+            Cult c;
+            const bool found = findCult(g, [&](const Cult& x) { return geneOfKind(x.g, kind) && want(x); }, c);
+            if (!found) { detail += fmt(" [%s: no culture]", GENE_KIND_NAMES[kind]); return; }
+            readIt(g, c);
+            const GeneCode code = geneCodeOf(c.g.genesis);
+            const MicrobeGene* G = geneOfKind(c.g, kind);
+            const std::string p = part(code, *G);
+            const int n = strain++;
+            lineOf(g, c, n, fmt("%d=%s", G->place + 1, p.c_str()));
+            FlaskSpecies line = c.w; line.strain = line.strainIn = n;
+            Medium m = bestOf(c.k);
+            med(m);
+            const int i = flask++;
+            putIn(g, i, line, m);
+            bool saw = false;
+            for (int t = 0; t < minutes; t++) {
+                g.testLabSkip(60);
+                saw = saw || shows(g.testFlaskShow(i), g.testFlaskNow(i).one[0]);
+            }
+            const auto k = g.guide.genes.find(g.testGeneKey(c.g.genesis.id, G->place));
+            const bool knew = k != g.guide.genes.end() && k->second.kind == kind;
+            shown += saw; learned += knew;
+            const std::string said = flaskFinding(g, i);
+            detail += fmt(" [%s, gene %d %s: %s, %s: %s]", c.key.substr(c.key.rfind('/') + 1).c_str(), G->place + 1, GENE_KIND_NAMES[kind], saw ? "shown" : "NOT SHOWN",
+                          knew ? "learned" : "NOT LEARNED", said.c_str());
+        };
+        auto table = [](int value) { return [value](const GeneCode& c, const MicrobeGene& G) { return runReading(c, *worldTable(c, G.kind), value, 2) + G.part.substr(2); }; };
+        auto heaviest = [](const GeneCode& c, const MicrobeGene& G) { return heavier(c, G.part, 99); };
+        auto best = [](Medium&) {};
+        auto grows = [](const Cult& x) { return growsIn(x, bestOf(x.k)); };
+        one(GN_GAS, [&](const Cult& x) { return grows(x) && !x.k.world.gives(); }, table(WG_METHANE), best,
+            [](const FlaskShow& S, const CultureOne&) { return S.bubbles > 0.03 && S.gas == WG_METHANE; }, 30);
+        one(GN_DYE, [&](const Cult& x) { return grows(x) && !x.k.world.dyes(); }, table(WD_RED), best,
+            [](const FlaskShow& S, const CultureOne&) { return S.dyed > 0.05 && S.dye == WD_RED; }, 30);
+        one(GN_LIFT, [&](const Cult& x) { return grows(x) && x.k.world.lift <= 0; }, heaviest, best,
+            [](const FlaskShow& S, const CultureOne&) { return S.scum > 0.05; }, 30);
+        one(GN_SLIME, [&](const Cult& x) { return grows(x) && x.k.world.slime <= 0; }, heaviest, best,
+            [](const FlaskShow& S, const CultureOne&) { return S.slime > 0.05; }, 30);
+        one(GN_SHELL, [&](const Cult& x) { return grows(x) && !x.k.world.shells(); }, table(SHL_CHALK), best,
+            [](const FlaskShow& S, const CultureOne&) { return S.sediment > 0.05 && S.shell == SHL_CHALK; }, 30);
+        one(GN_STOP, grows, [](const GeneCode&, const MicrobeGene&) { return std::string("-"); }, best,
+            [](const FlaskShow& S, const CultureOne& o) { return S.overgrown && o.stage == SG_OVERGROWN; }, 60);
+        one(GN_BIND, [&](const Cult& x) { return grows(x) && x.k.world.bind <= 0 && (x.k.s.plan == MP_SPHERE || x.k.s.plan == MP_ROD); }, heaviest, best,
+            [](const FlaskShow& S, const CultureOne&) { return S.clumps > 0.05; }, 30);
+        one(GN_FROST, [&](const Cult& x) { return x.k.chemistry == CH_WATER && x.k.world.frostC <= FROST_NONE + 1 && x.k.s.saltLo <= 1 && x.k.s.tMax > 0; },
+            heaviest, [](Medium& m) { m.tempC = -4; m.salt = 0; }, [](const FlaskShow& S, const CultureOne& o) { return S.frozen && o.stage == SG_FROZEN; }, 5);
+        one(GN_SHIELD, [&](const Cult& x) { return grows(x) && x.k.world.shield < UV_SHIELD && x.k.s.way != LW_LIGHT; }, heaviest, [](Medium& m) { m.light = CL_UV; },
+            [](const FlaskShow&, const CultureOne& o) { return o.stage == SG_GROWING || o.stage == SG_CROWD || o.stage == SG_COLONY; }, 30);
+        check("world: each world gene the lab shows, changed once in a line alone, shows in its flask and is learned against its parent (J-01)",
+              shown == cases && learned == cases && cases == 9, fmt("%d of %d shown, %d learned:%s", shown, cases, learned, detail.c_str()));
+        remove(GUIDE);
+    }
+    {   // J-01: POISON and CARRIER, a line with another of its world in its flask
+        TestGame g;
+        labGame(g);
+        std::string detail;
+        bool poisons = false, passes = false;
+        Cult a, b;
+        auto pairs = [&](const Cult& x, const Cult& y) {
+            const Medium m = bestOf(x.k);
+            int lead = -1;
+            return growsIn(x, m) && growsIn(y, m) && !x.k.world.poisons() && !y.k.world.poisons() && x.k.world.carrier <= 0 && y.k.world.carrier <= 0 &&
+                   pairOf(x.k, y.k, lead) == PA_COMPETE && x.k.s.genesis == y.k.s.genesis;
+        };
+        if (findPair(g, pairs, a, b)) {
+            readIt(g, a);
+            const GeneCode c = geneCodeOf(a.g.genesis);
+            const MicrobeGene* P = geneOfKind(a.g, GN_POISON);
+            const MicrobeGene* C = geneOfKind(a.g, GN_CARRIER);
+            lineOf(g, a, 1, fmt("%d=%s", P->place + 1, (runReading(c, c.poison, PZ_NERVE, 2) + heavier(c, P->part.substr(2), 99)).c_str()));
+            lineOf(g, a, 2, fmt("%d=%s", C->place + 1, heavier(c, C->part, 99).c_str()));
+            for (int n = 1; n <= 2; n++) {
+                FlaskSpecies line = a.w; line.strain = line.strainIn = n;
+                putIn(g, n - 1, line, bestOf(a.k));
+                addIn(g, n - 1, b.w);
+            }
+            bool killed = false, passed = false;
+            for (int t = 0; t < 40; t++) {
+                g.testLabSkip(60);
+                killed = killed || (g.testFlaskShow(0).poisoned == 1 && g.testFlaskNow(0).one[1].stage == SG_POISONED);
+                passed = passed || g.testFlaskShow(1).passedTo == 1;
+            }
+            const auto kp = g.guide.genes.find(g.testGeneKey(a.g.genesis.id, P->place)), kc = g.guide.genes.find(g.testGeneKey(a.g.genesis.id, C->place));
+            poisons = killed && kp != g.guide.genes.end() && kp->second.kind == GN_POISON && g.testLab().flasks[0].run.pair == PA_POISON;
+            passes = passed && kc != g.guide.genes.end() && kc->second.kind == GN_CARRIER;
+            detail = fmt("%s with %s: its NERVE poison %s, %s (%s); its genes %s, %s (%s)", a.key.substr(a.key.rfind('/') + 1).c_str(), b.key.substr(b.key.rfind('/') + 1).c_str(),
+                         killed ? "kills the other" : "KILLS NOTHING", poisons ? "learned" : "NOT LEARNED", flaskFinding(g, 0).c_str(), passed ? "pass to the other" : "PASS NOWHERE",
+                         passes ? "learned" : "NOT LEARNED", flaskFinding(g, 1).c_str());
+        } else detail = "no pair found";
+        check("world: POISON kills the other in its flask, CARRIER passes its genes to it; each learned against its parent (J-01)", poisons && passes, detail);
+        remove(GUIDE);
+    }
+    {   // J-01: the editor's two pages: the arrows walk the four columns across both, Page Down and Page Up turn; a line with a world gene written,
+        // its look in its flask, the editor on its world page over a save and a load
+        const std::string SAVE = "shots/tests/unit_genes_save_1.txt";
+        TestGame g; Input in;
+        labGame(g);
+        GeneWorld W[6];
+        geneWorlds(W);
+        bool walked = false, kept = false;
+        std::string detail = "no world";
+        if (W[0].body >= 0) {
+            FlaskSpecies X; X.sx = W[0].sys.star.sx; X.sy = W[0].sys.star.sy; X.sz = W[0].sys.star.sz; X.body = W[0].body;
+            CultureKind k0; Morph f0; MicrobeGenes g0;
+            for (const Microbe& m : lifeOf(W[0].sys)->bodies[W[0].body].species) {
+                if (m.state != SS_LIVING) continue;
+                X.species = m.index;
+                if (g.testFlaskKind(X, k0, f0, &g0) && !k0.world.dyes() && growthIn(k0, bestOf(k0)).fit == GF_GROWS) break;
+            }
+            const std::string key = Guide::bodyKey(X.sx, X.sy, X.sz, X.body) + "/M" + std::to_string(X.species);
+            g.guide.microbes[key].seen |= SEEN_FORM | SEEN_KIN;
+            g.testEditorPut(X, bestOf(k0), true);
+            EditorState& E = g.testEditor();
+            g.openScreen(GameState::EDITOR);
+            E.sel = 0;
+            std::vector<int> at;
+            for (int k : {KEY_PAGE_DOWN, KEY_RIGHT, KEY_RIGHT, KEY_LEFT, KEY_PAGE_UP, KEY_DOWN, KEY_PAGE_DOWN}) { pressKey(g, in, k); at.push_back(E.sel); }
+            walked = at == std::vector<int>{18, 25, 0, 25, 9, 10, 26};   // its world page, its right column, round to the cell's first, back, the cell's page, down, turned
+            const GeneCode c = geneCodeOf(g0.genesis);
+            const MicrobeGene* D = geneOfKind(g0, GN_DYE);
+            g.testEditorSet(D->place, false, runReading(c, c.dye, WD_VIOLET, 2) + D->part.substr(2));
+            g.testEditorWrite();
+            g.testLabSkip(EDIT_S + 1);   // E1 in a flask
+            g.testLabSkip(30 * 60);
+            E.sel = D->place;
+            g.save(SAVE);
+            const FlaskShow S = g.testFlaskShow(0);
+            TestGame h;
+            h.savePrefix = g.savePrefix; h.settingsPath = g.settingsPath; h.guidePath = GUIDE; h.keysPath = g.keysPath;
+            h.newGame(); h.guide.load(GUIDE); h.load(SAVE);
+            const FlaskShow T = h.testFlaskShow(0);
+            const EditorState& F = h.testEditor();
+            kept = S.dyed > 0.05 && S.dye == WD_VIOLET && T.dye == S.dye && std::fabs(T.dyed - S.dyed) < 1e-9 && F.on && F.sel == D->place &&
+                   geneEditsText(F.edits) == geneEditsText(E.edits) && h.testLab().flasks[0].culture.kind[0].world.dye == WD_VIOLET;
+            detail = fmt("walked %d %d %d %d %d %d %d; gene %d (DYE) VIOLET written: its flask %s %.2f, after a load %s %.2f; the editor on gene %d after it",
+                         at[0] + 1, at[1] + 1, at[2] + 1, at[3] + 1, at[4] + 1, at[5] + 1, at[6] + 1, D->place + 1, WORLD_DYE_NAMES[S.dye], S.dyed, WORLD_DYE_NAMES[T.dye], T.dyed,
+                         F.sel + 1);
+        }
+        check("world: the editor's two pages walked and turned; a world gene written, its flask's look and the editor over a save and a load (J-01)", walked && kept, detail);
         remove(GUIDE); remove(SAVE.c_str());
     }
 }

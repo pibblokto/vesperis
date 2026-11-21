@@ -13,7 +13,7 @@ constexpr int to(GameState s) { return (int)s; }   // a way back to a screen of 
 constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
     // the state, its name, traits and controller's context; its update, its picture, an overlay's covers, an away, its controller's page;
     // U-05: its enter (`openScreen`'s) and its way back (`closeScreen`'s); a screen with lines of its own in the save, its `save`,
-    // `load` and `reset` after them (Z-05: the incubator's, the lab's flasks and jars; Z-06: the sequencer's)
+    // `load` and `reset` after them (Z-05: the incubator's, the lab's flasks; Z-06: the sequencer's)
     {S::TITLE, "TITLE", ST_STOWS | ST_TAKES_SYNTH | ST_BASE, PCX_TITLE,
      &G::updateTitle, &G::renderTitle, nullptr, nullptr, &G::titlePad, nullptr, BACK_NONE},
     {S::SPACE, "SPACE", ST_SIMULATES | ST_IN_PLAY | ST_MOUSE | ST_PHOTO | ST_BASE | ST_CLOCK, PCX_SHIP,
@@ -90,6 +90,8 @@ constexpr Game::StateRow Game::STATE_ROWS[STATE_COUNT] = {
      &G::updateWall, &G::renderWall, nullptr, nullptr, &G::wallPad, &G::wallEnter, to(S::SPACE)},
     {S::EDITOR, "EDITOR", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_SHIP_MOVES, PCX_SCREEN,   // Y-02: a screen over the room; its lines its own
      &G::updateEditor, &G::renderEditor, nullptr, nullptr, &G::editorPad, &G::editorEnter, to(S::SPACE), &G::editorSave, &G::editorLoad, &G::editorReset},
+    {S::SEEDING, "SEEDING", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_TAKES_SYNTH | ST_SHIP_MOVES, PCX_SCREEN,   // J-03: the drone bay's page (S), back to it
+     &G::updateSeedPage, &G::renderSeedPage, nullptr, nullptr, &G::seedPagePad, &G::seedPageEnter, to(S::DRONES)},
 };
 
 namespace {

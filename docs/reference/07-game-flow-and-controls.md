@@ -32,12 +32,13 @@ SPACE -> PLAYER (R-431: the ship's player at its deck in the library: its worlds
 SPACE -> WALL (R-428: the quarters' wall at it: its twelve frames, a frame's photographs; Esc back to the frames, then to SPACE)
 SPACE -> INSTRUMENTS (C-11: the instruments' case in the library (I-02), or the flight computer's devices page: the instruments taken from the ruins, played there; C-18: it opens on its worlds, a folder each people of each, Enter opens one, Esc back to the worlds, Esc again returns to SPACE)
 SPACE -> DRONES (C-18: the drone bay's screen, from its rack in the hangar (I-02) or the flight computer's devices page; Enter sends the drones and returns to SPACE, Esc or E returns to SPACE)
+DRONES -> SEEDING (J-03: S, the seed page; Enter sends drone 1 and Esc returns to DRONES)
 SPACE/SURFACE/LANDING_MAP -> ALMANAC (W-01: Ctrl+T; DATA -> ALMANAC with T; the flight computer's devices page); Esc returns where it came from, Enter starts a run to the row and returns to the scene
 SPACE -> PROBE (X-01: C parked at a giant launches a probe and shows its camera; C, E at the landing screen or the cage watch a probe that falls; Esc, E or C go back to the cabin, the probe falling on; at its end Enter or Esc let it go)
 GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's screen; Esc or Enter back to the gallery, whose Esc returns to SPACE, a storm named (`N`) or not (B-429); on the ground the gallery says the recordings play on the ship)
 MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's commands' general page too) -> SPACE or SURFACE playing on its own (Enter); Esc back; any key, click, mouse motion or button gives the controls back (R-420: but `M`, a controller's `SELECT`, starts and stops its tape)
 SPACE -> MICROSCOPE (Z-04: E at the laboratory's microscope; its first page its lists (R-432: Tab between the vials, a folder a world, and the cultures, R-433: the flasks, UNSORTED and the explorer's folders), Enter opens a folder and puts its row on the stage (the slide's page; a flask's a drop of its culture, a kept culture's a drop of it growing), Esc from the slide back to its folder, from a folder to the folders, Esc or E from the folders (E from anywhere) back to SPACE; N names the species under the crosshair through TEXT_ENTRY, which returns to it; R-433: on the cultures N makes a folder and R renames one, through TEXT_ENTRY too)
-SPACE -> INCUBATOR (Z-05: E at the laboratory's incubator, a screen over the room; its flasks, Tab its jars; Enter opens its chooser (R-432: its folders, Enter one and Enter its row; Esc back a level and to the flasks), Esc or E back to SPACE; N names a flask's strain through TEXT_ENTRY, which returns to it)
+SPACE -> INCUBATOR (Z-05: E at the laboratory's incubator, a screen over the room; its flasks; Enter opens its chooser (R-432: its folders, Enter one and Enter its row; Esc back a level and to the flasks), Esc or E back to SPACE; N names a flask's strain through TEXT_ENTRY, which returns to it)
 SPACE -> SEQUENCER (Z-06: E at the laboratory's sequencer, a screen over the room; Enter opens its chooser (Esc back), Tab the tree, Esc back to SPACE) -> TREE (Tab: back to the sequencer by Esc)
 SPACE -> TREE (Z-06: E at the tree of kin's screen; Tab the sequencer, Esc back to its opener: SPACE, or the sequencer it was opened from)
 GUIDE -> CATALOGUE (Z-07: the guide's THE CATALOGUE, in space or on the ground; Enter a species' sheet (Esc back to the list), Tab by world or by kin, N names a species through TEXT_ENTRY, which returns to it; Esc back to the scene); GUIDE -> STATS, L its LIFE page
@@ -59,7 +60,7 @@ screen, and at the title or over it the place the title was opened from (the sta
 game's space), which Enter resumes: a save's `surface`, site and `phase` lines and a photo's caption read it. Only SPACE,
 SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's
 camera; Z-04: the microscope, its slide on a clock of its own; Z-05: the incubator; Z-06: the sequencer and the tree). The lab's clock (Z-05,
-the flasks' and the jars'; Z-06: the sequencer's reading) runs as the drones' bay's: real seconds in every state that advances game time,
+the flasks'; Z-06: the sequencer's reading) runs as the drones' bay's: real seconds in every state that advances game time,
 none in the menus.
 
 ## The frame (`Game::frame`, game.cpp)
@@ -522,10 +523,10 @@ panes in an arc across the bow, the flight desk facing it, the console arc of th
 screens to starboard, the GOES console in its alcove to port), **the hall** in the middle (12 x 12 m, two decks high: the spiral
 stair from the hangar through its floor's well up through the oculus to the dome, the garden's four beds in its corners; every room
 of the main deck opens onto it by an arch), **the library** to port (the decoder's desk, the instruments' case, the shards' shelves,
-the player's deck, a sofa by its long window), **the laboratory** to starboard (its benches, the jars' shelves, the cold store's
+the player's deck, a sofa by its long window), **the laboratory** to starboard (its benches, the cold store's
 door by the arch (Z-04: its eight lamps lit by how full it is; R-432: by doublings, the first by a vial, the eighth by 128), the microscope on the stern bench
 with its camera's screen, its long window; Z-05: the incubator past it on the stern bench, its glass door on twelve flasks, its screen
-beside it, and the jars on their shelf; Z-06: the sequencer on the bow bench under the jars' shelf, its screen beside it, and the tree of
+beside it; Z-06: the sequencer on the bow bench, its screen beside it, and the tree of
 kin's screen on the port wall to the bow of the arch, a tree of what was read glowing on it), **the quarters** aft (the bunk, the desk, the
 photographs, the window astern), and
 below, **the hangar** (16 x 14 m: the capsule in its cradle over the floor's hatch, the drone rack against the port wall by its
@@ -572,11 +573,9 @@ it), `W` as its world, `F` a fresh broth, Enter the chooser (R-432: its
 folders first, a world's, the flasks', the collection's; a species seen in a vial, a row a species and its state, a flask's culture, or
 R-433's kept culture in the medium it grew in; on a culture a second; R-441: Tab between THE VIALS and THE CULTURES, opening on the one last
 shown), Backspace (or Delete) empties it, `N` names its organism (R-442: of two, or a strain, the one chosen first), `K` keeps a copy in a
-folder (R-440: of two either alone or both), Tab the jars (Enter a
-world's jar from a vial of wet silt, a mat or soil; Backspace empties one; R-439: its bands numbered and named as they come in), Ctrl+S
-saves. The controller: A puts in, B back, X as its
-world, Y a fresh broth, the bumpers lower and raise, SELECT the jars. Its flasks glow in the room by their cultures and lights, the jars
-on their shelf by their bands. Z-06: the sequencer (17, `SEQUENCER - E TO READ A GENOME`; magenta, its home key 47), a screen over the room
+folder (R-440: of two either alone or both), Ctrl+S saves. The controller: A puts in, B back, X as its world, Y a fresh broth, the
+bumpers lower and raise. Its flasks glow in the room by their cultures and lights. Z-06: the sequencer (17, `SEQUENCER - E TO READ A
+GENOME`; magenta, its home key 47), a screen over the room
 (`SEQUENCER`, `13-life.md`): Enter the chooser (a species seen in a vial or growing in a flask) and Enter again reads it, 90 seconds on the
 lab's clock (its letters as they are read, a chromatogram over them, its helix turning its own way; its screen in the room pulses while it
 reads), its result once read (its letters, its hand, its nearest kin read and their common ancestor, a made one's watermark); Backspace
@@ -990,7 +989,7 @@ lab <clock>                         (Z-05, the incubator's row's own lines after
 flask <i> <n> <told> <medium> <asWorld>   (a flask with a culture: its species' count, the moments said (1 woken, 2 its glow; R-433: 4 and 8 its species kept); a medium is <cell> <tempC> <light> <energy> <salt>)
 flaskwho <i> <k> <sx> <sy> <sz> <body> <species> <strain> <strainIn>   (each of its species: its world, its index there, its strain now and as put in)
 flaskev <i> <kind> <t> <medium> <who> <what> <value>   (its events in order: 0 started, 1 the medium, 2 a fresh broth, 3 a second added, 4 a strain)
-jar <sx> <sy> <sz> <body> <niche> <meanC> <salt> <flags> <oldRock> <place> <t0> <name>   (a jar on the shelf: its vial's place, when it was made)
+jar ...                             (older saves only: skipped when loaded, since R-447 took the jars out)
 keptfolder <id> <name>              (R-433: a folder of the culture collection, the explorer's)
 kept <folder> <sx> <sy> <sz> <body> <species> <strain> <medium> <asWorld> <t>   (R-433: a kept culture: its folder (0 UNSORTED), its world's species and strain, the medium it grew in and its world's, when kept)
 seq <sx> <sy> <sz> <body> <species> <t0> <told>   (Z-06, the sequencer's row's line: what is on it, when its reading began on the lab's clock, whether it was told)
@@ -1017,7 +1016,22 @@ the status over the footer: `THE DRONES ARE CHARGING - READY IN 3:40`, `THE DRON
 `DRONES BACK IN 1:52 - 5 FOUND` (and `, 2 ABOARD`) at the probe's line; at the end `THE DRONES ARE BACK WITH 14 FINDS` then their
 kinds, each on the decoder at once (an open decoder lists them as they dock); leaving the parking calls them back
 (`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), then five
-minutes charging from their return, on real time.
+minutes charging from their return, on real time. The footer: `ENTER SENDS DRONES  S SEEDS  UP/DOWN FINDS  ESC BACK`.
+
+The seed page (`SEEDING`, J-03, `game/seed_trip.cpp`, `13-life.md`'s seeded worlds): `S` on the drone bay, over any landable world
+but home (refused in the status: `HOME STAYS AS IT IS`, `NO GROUND DOWN THERE`, `NOT IN ORBIT - APPROACH A WORLD FIRST`, the drones
+away or charging, `THREE LINES LIVE THERE - IT TAKES NO MORE`). It shows `SEED <WORLD>`, the world's map with the ground under the ship
+(a dot), the places of its lines (green where one lives) and the cursor (a blinking cross), `CULTURE  A FLAGELLATE, FLASK 1, FULL` (`C`
+the next flask that shows FULL; `NO FLASK SHOWS FULL` in red), `PLACE  12 N 72 E, REGOLITH` (the arrows move it two degrees, ten with
+Shift), `LINES  1 OF 3 LIVE THERE, 2 SENT` on a seeded world; footer `C CULTURE  ARROWS PLACE  ENTER SEND  ESC BACK`. `ENTER` sends
+drone 1 alone (`DRONE AWAY - E AT DRONE BAY TO FOLLOW`) and goes back to the bay, whose list then shows the culture, its place and
+`ON ITS WAY DOWN`, `LET GO, WATCHED`, then `REPORT:` and the verdict; drone 1's line says `WATCHING IT` while it is there. The culture
+is let go as the drone arrives (SEEDED in the log); its report at the dock is the status `UNKNOWN: CULTURE GROWS` (or `CULTURE DIED,
+TOO COLD` and the other reasons) and a DRONES line in the log; called back before it arrived, `CALLED BACK BEFORE IT LET THE CULTURE
+GO`. The bay charges five minutes after, as after any trip. J-04: on a seeded world whose air a line moved, the data sheet's `AIR` line
+says how (`THICKER, 14 C WARMER THAN IT WAS`) and the HUD's TEMP and ATM on the ground read the world as it is now. J-05: the `MADE`
+line names its waters', ground's and plants' looks too (`MILK SEAS, CRUSTS, RED SNOW, BLIGHT`), wrapped at 38 letters, and the landing
+map's cursor reads a made cover (`CRUST +418M`).
 
 The instruments' case (`INSTRUMENTS`, C-11, `game/instruments_screen.cpp`): a cabinet on the library's stern wall (I-02; `facing` 10, `INSTRUMENT CASE - E TO PLAY`, lime, its three shelves brighter with what it holds), also the flight computer's devices page (`THE INSTRUMENTS`, the count beside it). C-18: it opens on its worlds, a folder each (`UNKNOWN (+189 +0 +45 / 2)`, `1 INSTRUMENT`; the world under the ship first; `UP`/`DOWN`, `ENTER` opens one, `ESC` closes the case), a world of two peoples a folder each people, named on its line as the decoder's rows name them (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`; the head `12 IN THE CASE FROM 2 WORLDS`; the open folder's `UNKNOWN - THE VASANTHUL`). A folder's instruments in a column, the one under the cursor drawn large from its parts as it lies, seen from above, with a ruler of its size (C-17, `game/instrument_draw.cpp`), `A NECKED GOURD` (its make's name; R-414: its name alone, C-11's `OF THE <PEOPLE>` and C-17's `FROM <world> (<sector> / <body>)` gone, the open folder's title naming the world and its people on a world of one too, `UNKNOWN - THE JENGNE`), its scale's line (the register's word at its right), and under it ten bars, one a key, as high as each degree's pitch over the register's first note. `1` to `9` and `0` play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is down; `LEFT`/`RIGHT` move the register a period down or up (`LOWER`/`HIGHER`); `UP`/`DOWN` take another of the folder's; `ESC` back to the worlds. A drum machine's keys are its pads. The machine that played the wax cylinders (C-11's gramophone; C-17: a talking machine, a cylinder box or a listening box, where the people made one) plays its cylinder instead: `ENTER` winds it (a piece of its people's age through its horn, `TURNING 0:12 OF 0:44`), again stops it. The ship's player plays on under an instrument (one may play along); only the machine holds it.
 

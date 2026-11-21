@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-50 groups, 498 checks in their order; a group's heading gives its file, its function, the render scale it
+52 groups, 515 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -595,7 +595,7 @@ starts at and its count.
 - lab: Backspace on the list empties a vial, a bloom kept in a vial's line (Z-04)
 - lab: the vials by world past the cold store's old 64 places, the choosers by world a row a species (R-432)
 - lab: a culture's state closed-form from its events (Z-05)
-- lab: the lab's save round-trip (Z-05)
+- lab: the lab's save round-trip, an older save's jar line and guide's jarband line dropped (Z-05, R-447)
 - lab: the culture collection: kept as grown, in a folder, on the stage, into a flask, chosen, saved (R-433)
 - lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
 - lab: two in a flask, the four ways (Z-05)
@@ -616,16 +616,15 @@ starts at and its count.
 - experiments: the incubator's warmth typed: set as one change, refused past its cell's range, kept by Esc, below zero (R-435)
 - experiments: a culture grown on its partner kept with it: staged and put in together, saved, the pair kept once; alone on the stage its cells live (B-441)
 
-## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 6
+## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 5
 
 - incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)
 - incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)
 - incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)
-- incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too, the jars' one list (R-441)
+- incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too (R-441)
 - incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
-- incubator: the jars made clear: bands in their places, none over another, an eater that needs air at the air's edge; kept on the sheets; a jar's settling said once (R-439)
 
-## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 22
+## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 25
 
 - genes: the tree by world and by folder: its pages, a world's species and its lines, Backspace and A, a folder's tree (Y-01)
 - genes: a living world of each alphabet and hand (Y-02)
@@ -636,6 +635,9 @@ starts at and its count.
 - genes: how it lives and its plan's family never move; its values within their limits (Y-02)
 - genes: a gene moved in takes its donor's letters and value, over its own or into a gap; its way and family fixed (Y-03)
 - genes: the own switches (a glow's WHEN CROWDED, a rest's WHEN STARVING, the rest ALWAYS) give every species' curve as before (Y-04)
+- genes: the cell's genes (places 1 to 18, the old tables, every edit of them) as before the world genes (J-01)
+- genes: every species carries the fourteen world genes at 19 to 32, read from what it is (J-01)
+- genes: a world product not its own (a gas, a dye, a slime, a shell, a poison) costs its line, its own nothing (J-01)
 - genes: a line written on the editor into a flask, read as a strain is: its culture, its drop, the sequencer, the collection, its twig (Y-02)
 - genes: W asks for the new strain's folder, then its name, the parent's to start (R-445)
 - genes: what a gene does learned: one change seen, candidates from two, a vital death, nothing seen, a strain read (Y-02)
@@ -649,6 +651,27 @@ starts at and its count.
 - genes: a switch's condition in the culture's segments: the light, the warmth against its best, starving, its crowd's share (Y-04)
 - genes: a gene off costs nothing: a gene not its own switched off pays nothing, NEVER nowhere (Y-04)
 - genes: S sets a gene's switch on the editor, kept over a save; a switched line's drop as its flask has it (Y-04)
+
+## world (`unit_lab_genes.cpp`, `unitLabWorld`, 1x): 3
+
+- world: each world gene the lab shows, changed once in a line alone, shows in its flask and is learned against its parent (J-01)
+- world: POISON kills the other in its flask, CARRIER passes its genes to it; each learned against its parent (J-01)
+- world: the editor's two pages walked and turned; a world gene written, its flask's look and the editor over a save and a load (J-01)
+
+## seeding (`unit_seeding.cpp`, `unitSeeding`, 1x): 12
+
+- seeding: a desert world
+- seeding: the layer, any order
+- seeding: a map with and without
+- seeding: the world as generated
+- seeding: the guide's lines
+- seeding: the clock
+- seeding: the verdict as a flask's
+- seeding: the drift
+- seeding: the trip
+- seeding: refused at home
+- seeding: a loan, an unseeded world
+- seeding: samples
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

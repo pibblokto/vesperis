@@ -87,7 +87,29 @@ const BodyGen& SpaceRenderer::genFor(const Body& b) {
     auto it = gens.find(b.seed);
     if (it != gens.end()) return it->second;
     auto st = seasons.find(b.seed);   // a world whose season was never set: its mean
-    return gens.emplace(b.seed, BodyGen::make(b, st != seasons.end() ? st->second.season : 0.0)).first->second;
+    BodyGen& g = gens.emplace(b.seed, BodyGen::make(b, st != seasons.end() ? st->second.season : 0.0)).first->second;
+    const auto mk = made.find(b.seed);
+    if (mk != made.end()) g.made = mk->second;   // J-02: what a seeding made of it
+    return g;
+}
+
+void SpaceRenderer::setMade(uint64_t seed, const MadeWorld& m) {
+    const auto it = made.find(seed);
+    if ((it == made.end() ? 0 : it->second.key) == m.key) return;
+    if (m.on()) made[seed] = m;
+    else made.erase(it);
+    gens.erase(seed);   // made again on request with the layer (its map and plates key on it)
+}
+
+const MadeWorld& SpaceRenderer::madeOf(uint64_t seed) const {
+    static const MadeWorld none;
+    const auto it = made.find(seed);
+    return it == made.end() ? none : it->second;
+}
+
+void SpaceRenderer::clearMade() {
+    for (const auto& kv : made) gens.erase(kv.first);
+    made.clear();
 }
 
 void SpaceRenderer::frontCoarse(FrontMap& fm) {   // W-03: the blocks that hold a band, each nonzero texel marking its block and its neighbours'
@@ -147,6 +169,7 @@ void SpaceRenderer::startMap(const Body& b, int bucket) {
     joinMap(b.seed);
     m->generating = true;
     m->seasonBucket = bucket;
+    m->madeKey = madeOf(b.seed).key;   // J-02
     BodyGen g = genFor(b);
     mapStats.generated++;
     std::atomic<long>* micros = &genMicros;
@@ -165,7 +188,7 @@ const PlanetMap* SpaceRenderer::mapIfReady(const Body& b) {
     if (it == maps.end()) { startMap(b, bucket); return nullptr; }
     PlanetMap* m = it->second.get();
     if (m->generating) return nullptr;
-    if (!m->valid || m->seasonBucket != bucket) { startMap(b, bucket); return nullptr; }
+    if (!m->valid || m->seasonBucket != bucket || m->madeKey != madeOf(b.seed).key) { startMap(b, bucket); return nullptr; }   // J-02: and the made layer's
     joinMap(b.seed);
     mapStats.hits++;
     return m;
@@ -228,7 +251,7 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         const BodyGen* g = genOf(bi);
         if (!g) { setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {63, RGB(0.7f, 0.7f, 0.7f)}}); return; }
         const Body& b = sys->bodies[bi];
-        RGB c = g->matColor[familyRep(b.type, FAM_ROCK)] * lightOf();
+        RGB c = madeMatColour(*g, familyRep(b.type, FAM_ROCK)) * lightOf();   // (J-05: rusted by a made oxygen)
         if (isLavaWorld(b.type) || (g->dark && g->hasTrait(TR_EMBERS))) {   // a drifter's ember fields glow in the lava's stops
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {30, c * 0.8f}, {46, RGB(0.55f, 0.28f, 0.18f)}, {52, RGB(0.9f, 0.3f, 0.05f)}, {58, RGB(1, 0.6f, 0.1f)}, {63, RGB(1, 0.95f, 0.6f)}});
         } else if (kindHas(b.type, KT_GLOWS)) {   // its own dull red glow, hotter toward the bright end
@@ -256,7 +279,7 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     }
     auto waterRamp = [&](int bank, int bi) {
         const BodyGen* g = genOf(bi);
-        RGB oc = (g ? g->matColor[familyRep(g->type, FAM_WATER)] : RGB(0.10f, 0.28f, 0.62f)) * lightOf();   // the family's own (the glass world's glass)
+        RGB oc = (g ? madeMatColour(*g, familyRep(g->type, FAM_WATER)) : RGB(0.10f, 0.28f, 0.62f)) * lightOf();   // the family's own (the glass world's glass; J-05: a sulphide's)
         if (g && g->hasTrait(TR_LIGHTS_IN_WATER)) {   // a dark ocean's own light in the upper stops (its water never lit higher)
             const RGB L = g->waterTintColour;
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.35f}, {54, L * 0.75f}, {63, lerp(L, white, 0.35f)}});
@@ -270,7 +293,7 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         // stays its own: the cabin holds the other free banks)
         const BodyGen* g = genOf(bodyA);
         if (g && (g->hasTrait(TR_BLOOMS) || g->hasTrait(TR_REEFS) || g->hasTrait(TR_PINK_LAKES))) {
-            const RGB oc = (g->hasTrait(TR_BLOOMS) ? lerp(g->matColor[MAT_WATER], g->lifeTintColour, 0.75f) : (g->hasTrait(TR_REEFS) ? g->lifeTintColour : g->waterTintColour)) * lightOf();
+            const RGB oc = (g->hasTrait(TR_BLOOMS) ? lerp(g->matColor[MAT_WATER], g->lifeTintColour, 0.75f) : (g->hasTrait(TR_REEFS) ? madeLifeTint(*g) : g->waterTintColour)) * lightOf();   // (J-05: reefs bleached)
             setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {47, oc}, {56, lerp(oc, white, 0.5f)}, {63, white}});
         }
     }
@@ -283,9 +306,71 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         const int* banks = which == 0 ? famBankA : famBankB;
         RGB sk; bool hasSky = g && skyLightOf(*g, lightOf(), sk);
         for (int fam = FAM_FOREST; fam < FAM_COUNT; fam++) {
-            RGB c = g ? g->matColor[familyRep(g->type, fam)] : RGB(0.6f, 0.6f, 0.6f);
+            RGB c = g ? madeMatColour(*g, familyRep(g->type, fam)) : RGB(0.6f, 0.6f, 0.6f);   // (J-04: plants a made heat dried)
             materialRamp(fb.pal, banks[fam], c * lightOf(), hasSky ? &sk : nullptr);
         }
+    }
+    for (int which = 0; which < 2; which++) {   // J-02: a made world's tint over its land, the first disc's in bank 25, the second's in 26
+        const BodyGen* g = genOf(which == 0 ? bodyA : bodyB);
+        const bool clouds = g && (g->made.cloudTintK > 0 || g->made.cloudGlow > 0);   // J-04: its made clouds in the bank's upper stops too
+        const int mb = which == 0 ? 25 : 26;
+        const int cls = g ? madeGlobeClass(g->made) : -1;
+        if (g && !g->made.tinted && !clouds && cls >= 0) {   // J-05: its land's, plants' or snow's look (a glowing forest's light in the upper stops)
+            const MadeLook& ml = *g->made.lookOf(cls);
+            const RGB oc = (ml.tinted ? ml.tint : madeMatColour(*g, familyRep(g->type, FAM_FOREST))) * lightOf();
+            if (cls == MC_PLANTS && g->made.plantGlow > 0) {
+                const RGB L = g->made.plantGlowTint;
+                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, oc}, {46, L * 0.3f}, {54, L * 0.7f}, {63, lerp(L, white, 0.35f)}});
+            } else { RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk); materialRamp(fb.pal, mb, oc, hasSky ? &sk : nullptr); }
+            continue;
+        }
+        if (!g || (!g->made.tinted && !clouds)) continue;
+        const RGB cc = (g->made.cloudTintK > 0 ? lerp(white, g->made.cloudTint, (float)clampd(0.75 * g->made.cloudTintK, 0, 1)) : white) * lightOf();
+        const bool glows = g->made.glow > 0 || g->made.cloudGlow > 0;
+        const RGB L = g->made.cloudGlow > 0 ? g->made.cloudGlowTint : g->made.glowTint;
+        if (g->made.tinted && g->made.tintOn == MADE_ON_WATER) {   // J-03: over its waters, in a water's ramp; a glowing line's light in its upper stops (the night side's)
+            const RGB oc = g->made.tint * lightOf();
+            if (g->made.cloudGlow > 0)   // (the clouds white by day over their faint light at night)
+                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, lerp(L, cc, 0.5f)}, {63, lerp(cc, white, 0.3f)}});
+            else if (glows) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.35f}, {54, L * 0.75f}, {63, lerp(L, white, 0.35f)}});
+            else if (clouds) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, lerp(oc, cc, 0.65f)}, {50, cc}, {63, lerp(cc, white, 0.35f)}});   // (the waters under 36)
+            else setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {47, oc}, {56, lerp(oc, white, 0.5f)}, {63, white}});
+            continue;
+        }
+        if (!g->made.tinted) {   // J-04: its clouds alone (a spores' world with no dye): their colour, a glow's light in the upper stops
+            if (glows) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, cc * 0.25f}, {34, cc * 0.6f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, lerp(L, cc, 0.5f)}, {63, lerp(cc, white, 0.3f)}});
+            else materialRamp(fb.pal, mb, cc, nullptr);
+            continue;
+        }
+        RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk);
+        materialRamp(fb.pal, mb, g->made.tint * lightOf(), hasSky ? &sk : nullptr);
+    }
+    // J-04: a made air seen from space: a veil over the disc's banks toward its colour (a haze's, a sulphur air's yellow, a thick air's white,
+    // an ozone's blue or a thin one's violet), each stop's luminance kept, by how much of it there is
+    static const int veilA[] = {2, 6, 11, 13, 14, 15, 25, 31}, veilB[] = {3, 7, 16, 17, 18, 19, 26};
+    for (int which = 0; which < 2; which++) {
+        const BodyGen* g = genOf(which == 0 ? bodyA : bodyB);
+        if (!g || !g->made.aired()) continue;
+        const MadeWorld& m = g->made;
+        RGB vc(0, 0, 0); double w = 0;
+        auto add = [&](const RGB& c, double k) { if (k > 0) { vc = vc + c * (float)k; w += k; } };
+        add(m.hazeTint, 0.65 * m.haze); add(RGB(0.86f, 0.76f, 0.32f), 0.35 * m.sulphur); add(white, 0.3 * m.thick);
+        add(RGB(0.30f, 0.46f, 0.92f), m.ozone > 0 ? 0.1 : 0.0); add(RGB(0.42f, 0.30f, 0.80f), m.ozone < 0 ? 0.12 : 0.0);
+        if (w <= 0) continue;
+        vc = vc * (float)(1 / w);
+        const float f = (float)std::min(0.75, w);
+        const float vy = std::max(0.05f, 0.2126f * vc.r + 0.7152f * vc.g + 0.0722f * vc.b);
+        const int* banks = which == 0 ? veilA : veilB;
+        const int nb = which == 0 ? (int)(sizeof(veilA) / sizeof(int)) : (int)(sizeof(veilB) / sizeof(int));
+        for (int k = 0; k < nb; k++)
+            for (int sh = 1; sh < 64; sh++) {
+                uint8_t* px = &fb.pal[(banks[k] * 64 + sh) * 3];
+                const float y = (0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2]) / 255.0f;
+                for (int ch = 0; ch < 3; ch++) {
+                    const float t = (ch == 0 ? vc.r : (ch == 1 ? vc.g : vc.b)) / vy * y;
+                    px[ch] = (uint8_t)clampi((int)std::lround(px[ch] * (1 - f) + 255.0f * std::min(1.0f, t) * f), 0, 255);
+                }
+            }
     }
     if (fade < 1) scalePalette(fb.pal, fade);
 }

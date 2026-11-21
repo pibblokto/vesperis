@@ -3,6 +3,7 @@
 #pragma once
 #include "core/types.h"
 #include "peoples/drones.h"
+#include "life/cultures.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -61,8 +62,21 @@ struct DroneBay {
     // the parked world's items (`droneWorldOf`, read on the thread below)
     DroneWorld world; bool worldValid = false; uint64_t worldStar = 0; int worldBody = -1;
     // the screen: the world's map (its key), the finds list's scroll
-    std::vector<uint32_t> map; uint64_t mapSeed = 0; int mapW = 0, mapH = 0;
+    std::vector<uint32_t> map; uint64_t mapSeed = 0, mapMade = 0; int mapW = 0, mapH = 0;   // (J-02: the made layer it was built with)
     int listTop = 0;
+    // J-03 (R-448): a seed trip (S, the seed page: game/seed_trip.cpp): drone 1 alone takes a flask's culture to a place, lets it go (its
+    // `seeded` line in the guide), watches two minutes and climbs; its report is the verdict. Saved (`bayseed`): the line (its key, its edits'
+    // copy), its flask's medium, the place and what lies there, whether it was let go
+    bool seedTrip = false;
+    std::string seedLine, seedEdits, seedName, seedPlace;
+    Medium seedMedium;
+    double seedLat = 0, seedLon = 0;
+    bool seedLet = false;
+    int seedFate = -1;                             // its verdict as it was let go (life/seeding.h's `SeedFate`; -1 not yet)
+    // the seed page: the flask chosen (its index; -1 none shows FULL), the place under its cursor (radians) and what lies there
+    int pageFlask = -1;
+    double pageLat = 0, pageLon = 0;
+    std::string pagePlace;
 };
 
 // a find's guide key ("<body>/S<index>", "<body>/I<id>")

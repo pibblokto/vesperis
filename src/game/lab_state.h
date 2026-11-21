@@ -2,12 +2,11 @@
 // (the cold store's vials and the flasks, or the slide on its stage), the vial or the flask there and what it is made of (its worlds' systems
 // drawn once, their biotas and forms, its sample or its culture's drop and its mount: made again whenever it is put on the stage), what was
 // done to the slide and its clock, the view (its way of seeing, magnification, place, focus, the electron's turn and tilt, a copy tracked), the
-// sheet shown. Nothing of it is saved: what was seen of a species is the guide's (`microbe` lines). Z-05: the incubator's flasks and the jars'
-// shelf, on the lab's clock (the drones' kind: real seconds while the game simulates), and the incubator's screen; their save lines
+// sheet shown. Nothing of it is saved: what was seen of a species is the guide's (`microbe` lines). Z-05: the incubator's flasks, on the
+// lab's clock (the drones' kind: real seconds while the game simulates), and the incubator's screen; their save lines
 #pragma once
 #include "life/slides.h"
 #include "life/cultures.h"
-#include "life/jars.h"
 #include "life/sequences.h"
 #include "life/genes.h"
 #include "ship_plan.h"
@@ -130,7 +129,7 @@ struct MicroscopeState {
 constexpr uint32_t SCOPE_LOOKED = 1u << 31;   // R-437: a kind's told bits once it was first in view (its state as found, not said)
 
 // Z-05: the incubator (game/incubator.cpp, incubator_draw.cpp): twelve flasks, each a medium and a culture of one or two species put in it on the
-// lab's clock; the jars' shelf, a world's silt in a column a world
+// lab's clock
 // a flask's species: its world (a vial's star sector and body), its index in that world's list, its strain (0 the wild one: the guide's `strain`
 // lines number the rest)
 struct FlaskSpecies {
@@ -171,29 +170,28 @@ struct Flask {
     MicrobeGenes genes[2], parentGenes[2];
     std::vector<int> switchOnly[2];
 };
-// a world in a jar (Winogradsky's column): the vial's world and place it was made from, its line, when it was made
-struct Jar {
-    int64_t sx = 0, sy = 0, sz = 0;
-    int body = -1;
-    Microhabitat hab;
-    std::string name;
-    double t0 = 0;
-    // made again (not saved): its sample's bands, each band's species' plan (R-439: its words); whether its settling was told (at a load, by its
-    // age then)
-    bool made = false;
-    JarRecipe recipe;
-    std::vector<int> plans;
-    bool told = false;
+// J-01: what a flask shows of its world genes now (its screen's lines, its glass in the room, what an edited line is learned by), each look's
+// strength 0 to 1 and the species that makes it (0, 1; -1 none): bubbles of a growing culture's gas, its water dyed (the dye stays after its
+// cells die), a scum of floating cells, its slime, a sediment of its shells, its cells in clumps, overgrown (packed with cells; tissue where
+// they bind), frozen by a culture's ice, the other poisoned, genes passed to the other
+struct FlaskShow {
+    int gas = WG_NONE, gasWho = -1; double bubbles = 0;
+    int dye = WD_NONE, dyeWho = -1; double dyed = 0;
+    double scum = 0; int scumWho = -1;
+    double slime = 0; int slimeWho = -1;
+    int shell = SHL_NONE, shellWho = -1; double sediment = 0;
+    double clumps = 0; int clumpWho = -1;
+    bool overgrown = false, tissue = false; int overWho = -1;
+    bool frozen = false; int iceWho = -1;
+    int poisoned = -1, passedTo = -1;
 };
-// the incubator's screen: its page (the flasks, the jars), the flask chosen and the medium's field, the chooser of what goes in (a vial's species
-// seen, a flask's culture) and its rows
-struct IncubatorChoice { int vial = -1, species = -1, flask = -1, who = -1; std::string line; int kept = -1; };   // R-433: or a kept culture
+// the incubator's screen: the flask chosen and the medium's field, the chooser of what goes in (a vial's species seen, a flask's culture) and its
+// rows
+struct IncubatorChoice { int vial = -1, species = -1, flask = -1, who = -1; std::string line; int kept = -1; std::string lineKey; };   // R-433: or a kept culture; J-03: or a vial's seeded line (its key)
 enum IncubatorPick { PICK_NONE = 0, PICK_NAME, PICK_KEEP };
 struct IncubatorState {
-    int page = 0;                 // 0 the flasks, 1 the jars
     int sel = 0, field = 1;       // the flask, the medium's field (0 the cell .. 4 the salt)
-    int jar = 0;
-    bool choosing = false;        // what goes in the flask (or the jar), chosen from the rows
+    bool choosing = false;        // what goes in the flask, chosen from the rows
     int choiceSel = 0, choiceTop = 0;
     std::vector<IncubatorChoice> choices;
     ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
@@ -208,7 +206,7 @@ struct IncubatorState {
 // Z-06: the sequencer (game/sequencer.cpp): a species seen in a vial or a flask's read in SEQUENCE_S on the lab's clock (saved: what is on it,
 // when its reading began, whether its result was told), its screen's chooser; made again from those: its lineage, its genome's length, its
 // name and world, a made species' watermark (its letters drawn as they are read), the result's lines
-struct SequencerChoice { FlaskSpecies who; std::string line; };
+struct SequencerChoice { FlaskSpecies who; std::string line; std::string wild; };   // J-03: a vial's seeded line, its genes changed in the wild ("23, 29")
 struct SequencerState {
     bool on = false;
     FlaskSpecies who;
@@ -225,6 +223,7 @@ struct SequencerState {
     std::vector<std::string> result;
     ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
     int lastTab = 0;              // R-441: its tab last shown
+    std::string wild;             // J-03: a seeded line from a vial: its genes changed in the wild ("" none; saved, `seqwild`)
 };
 // the tree of kin's screen (game/tree_screen.cpp): every species sequenced and the ship's own, a leaf each in the tree's order (home's genesis
 // first, then by genesis, deep branch, a kin cell's boxes, the system's line, the world, its comb), the common ancestor of each with the one
@@ -316,7 +315,6 @@ enum EditorChoosing { EC_CULTURE = 0, EC_KIN, EC_MOVE };
 struct LabState {
     double clock = 0;             // the lab's clock (s): real seconds while the game simulates, saved
     Flask flasks[INCUBATOR_FLASKS];
-    std::vector<Jar> jars;
     SequencerState seq;           // Z-06
     EditorState edit;             // Y-02
     std::vector<KeptCulture> kept;          // R-433

@@ -45,23 +45,9 @@ const Biota& SurfaceView::biota() const {
 }
 
 // the site's own formula (`computeEnvironment`) with the year's season at its mean and the day's swing averaged out, at the place's height
-// and latitude: a locked world's sun where it stands over the place (its substellar point's dot), an airless world's day and night halves
+// and latitude (J-03: galaxy's `placeMeanC`, which a seeding's place reads too; the site's air is its generator's)
 double SurfaceView::placeMeanC(double x, double z, double h) const {
-    const Body& b = site.sys->bodies[site.body];
-    const KindDef& K = KINDS[b.type];
-    const Vec3 u = site.unitAt(x, z);
-    const double absLat = std::fabs(std::asin(clampd(u.z, -1, 1))) / DEG;
-    if (site.sys->sunless()) return b.tempK - 273.15 - (site.atmosphere ? 6.5 * h / 1000.0 : 0.0);
-    const double sinAlt = site.gen.locked ? dot(u, site.gen.lockedDir) : 0.0;
-    double base = b.tempK - 273.15;
-    if (livingGround(b.type)) base = climateTempC(site.gen, absLat, h, 0, sinAlt) - 3 + K.daySwing * sinAlt;
-    else if (site.atmosphere && K.reachClimate && site.gen.locked) base = K.tempOffset + K.tempSwing * (sinAlt - std::cos(site.gen.seaReachDeg * DEG));
-    else if (site.atmosphere) base = base * 0.75 + K.tempOffset + K.tempSwing * sinAlt - 0.4 * absLat;
-    else base = base * 1.3 - 60 + (site.gen.locked ? (sinAlt > 0 ? 110 * sinAlt : -70) : 35 * std::cos(absLat * DEG) - 35) - 0.5 * absLat;
-    if (!livingGround(b.type)) base -= 6.5 * (h / 1000.0);
-    base += K.tempAdd;
-    if (K.nightSideC > -1e8 && site.gen.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);
-    return std::max(base, -270.0);
+    return ::placeMeanC(site.gen, site.sys->bodies[site.body].tempK, site.sys->sunless(), site.unitAt(x, z), h);
 }
 
 SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls) {

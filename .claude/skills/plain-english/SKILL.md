@@ -29,7 +29,7 @@ THE, etc. ... It's related to everything." That covers the game, the docs, the c
 | ITS SWITCH: IN THE DARK (WAS WHEN CROWDED) | SWITCH: IN THE DARK (WAS WHEN CROWDED) |
 | IT DIES THERE - ITS PARENT LIVES | DIES HERE, PARENT LIVES |
 | ITS CELLS ARE STILL - ITS PARENT'S MOVE | CELLS DON'T MOVE, PARENT'S DO |
-| THE JARS - TAB THE FLASKS | JARS   TAB FLASKS |
+| THE GENE EDITOR | GENE EDITOR |
 | BACK TO THE LABORATORY | BACK |
 | a law ending where its crowd crosses its quorum's share | growth changes when the population passes the quorum (3% of the maximum) |
 | what is seen of a species the guide's (`microbe` lines) | The guide saves what the player has seen of each species (`microbe` lines). |
@@ -41,13 +41,13 @@ THE, etc. ... It's related to everything." That covers the game, the docs, the c
 - Titles and labels without "THE" or "ITS": "GENE EDITOR", "SWITCH: ALWAYS", "PARENT: GROWS -22 TO 0 C".
 - Key hints are the key and a verb: "W WRITE  S SWITCH  ESC BACK".
 - A message says what happened, then what to do: "NO EMPTY FLASK - EMPTY ONE IN THE INCUBATOR".
-- Help text uses short sentences and says what to do first: "ENTER PUTS WET SILT FROM A VIAL IN A JAR."
+- Help text uses short sentences and says what to do first: "ENTER PUTS IN A SPECIES", "PUT A CULTURE IN FIRST - ENTER".
 
 ## Words
 
 - **species**: a kind of microbe on a world. **strain**: a species changed in the lab; S1, S2 arise in a flask, E1, E2 come from
   the gene editor. **culture**: what grows in a flask. **collection**: the frozen cultures, kept in **folders**.
-- **vial**: a sample from the ground. **jar**: wet silt standing in a column, where the species settle into **bands**.
+- **vial**: a sample from the ground.
 - **kin**: related species. **gene**, **switch** (when a gene works). **crowd**: the most cells a flask holds.
 
 ## Reports and messages to the user

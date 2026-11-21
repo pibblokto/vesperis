@@ -184,7 +184,7 @@ bool Game::microscopeStageKept(int k) {
         if (!kind.switches.empty()) {   // Y-04: a switched line as a young culture of it is (lit or not, the cold, a tenth of its crowd)
             uint32_t st = (c.medium.light != CL_DARK ? CST_LIGHT : 0u) | (c.medium.tempC < kind.s.tOpt ? CST_COLD : 0u);
             if (kind.quorum <= 0.1) st |= CST_CROWDED;
-            if (g.fit != GF_GROWS && g.fit != GF_COLD) st |= CST_STARVING;
+            if (g.fit != GF_GROWS && g.fit != GF_COLD && g.fit != GF_FROZEN) st |= CST_STARVING;   // (J-01: frozen, it waits)
             switchedLine(kind, form, genes, st);
         }
         Microbe m = kind.s; m.index = (int)i; m.state = SS_LIVING;
@@ -252,7 +252,7 @@ void Game::keptDiscard(int k) {
     if (scope.kept == k) scope.kept = -1; else if (scope.kept > k) scope.kept--;
 }
 
-// the save's lines (the lab's, after the jars): `keptfolder <id> <name>`, then `kept <folder> <sector> <body> <species> <strain> <medium>
+// the save's lines (the lab's, after the flasks): `keptfolder <id> <name>`, then `kept <folder> <sector> <body> <species> <strain> <medium>
 // <AS ITS WORLD> <t>` (a medium its cell, warmth, light, energy and salt)
 void Game::keptSave(std::ostream& f) const {
     for (const CultureFolder& d : lab.folders) f << "keptfolder " << d.id << " " << d.name << "\n";

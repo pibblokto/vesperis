@@ -46,6 +46,8 @@ Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-
 I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03 done 2026-11-16, I-04,
 Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
 Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
+Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
+fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-05 2026-11-21.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -315,7 +317,7 @@ first (the look judged on plates before any screen), Z-03 to Z-07 after the I se
 | Z-02 | What it looks like: the form genome, six ways of seeing, the life cycle's animations; plates to judge | XL | 1.5.0, done 2026-11-16 |
 | Z-03 | The search: microhabitats, the kit, the activity, the lamp's ultraviolet, the signs, the capsule's scoop | XL | 1.5.0, done 2026-11-17 |
 | Z-04 | The microscope: a camera you enter, six ways of seeing, zoom, tracking, light and field; names and sheets | XL | 1.5.0, done 2026-11-17 |
-| Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars | XL | 1.5.0, done 2026-11-17 |
+| Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars (taken out by R-447) | XL | 1.5.0, done 2026-11-17 |
 | Z-06 | The genome and the tree: the sequencer, kin across worlds and stars, the geneses, the made organisms | L | 1.5.0, done 2026-11-17 |
 | Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | 1.5.0, done 2026-11-17 |
 
@@ -343,6 +345,28 @@ the tree of kin by world and by folder. A species' genes are read from what it i
 | Y-02 | The gene editor: a species' own genes, cut and changed by hand, written into a flask, learned as seen (R-443) | XL | 1.5.0, done 2026-11-20 |
 | Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, what a gene needs (R-443) | L | 1.5.0, done 2026-11-20 |
 | Y-04 | The switches: when a gene is on, in the culture's segments and the drop; the close (R-443) | L | 1.5.0, done 2026-11-20 |
+
+## J: seeded worlds (`IDEAS-seeded-worlds.md`) — generation 18 from J-06
+
+Planned 2026-11-20 for 1.5.0 (R-448), after Y-04 and R-447, on the user's request talked through first: a gene-edited culture sent down
+to a world changes it, more often for the worse; fourteen world genes; made traits; die-offs, remains and changed animals; worlds
+overgrown with flesh, fungus or other tissue, ruins included; and the animals drawn again with far more variety. A world nobody seeds
+stays as generated.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| J-01 | World genes: fourteen new genes on every species, seen in the lab; the editor's second page | XL | 1.5.0, done 2026-11-20 |
+| J-02 | The world now: a seeded world's layer over the world as generated; nothing drawn changes | L | 1.5.0, done 2026-11-20 |
+| J-03 | Sending: the drones' seed trip, whether it takes, the spread, the record; the waters' colours | XL | 1.5.0, done 2026-11-21 |
+| J-04 | Air and sky: the made climate, haze, ozone, clouds, rain | L | 1.5.0, done 2026-11-21 |
+| J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | 1.5.0, done 2026-11-21 |
+| J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | 1.5.0 |
+| J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | 1.5.0 |
+| J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | 1.5.0 |
+| J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | 1.5.0 |
+| J-10 | Ruins overgrown, and the sounds of an overgrown world | L | 1.5.0 |
+| J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | 1.5.0 |
+| J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | 1.5.0 |
 
 ## Suggested order for 1.2.0
 

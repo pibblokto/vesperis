@@ -1,6 +1,7 @@
 # R-439: the jars made clear
 
-status: done 2026-11-19 (1.5.0, before its release; one of four requests for the incubator and the collection, R-439 to R-442)
+status: done 2026-11-19 (1.5.0, before its release; one of four requests for the incubator and the collection, R-439 to R-442);
+the jars taken out by R-447 (2026-11-20)
 milestone: 1.5.0
 
 ## Request

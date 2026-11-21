@@ -128,7 +128,7 @@ void Game::renderSectorMap() {
         });
         // the same colouring as the landing map (material ramps, exposure rule, hillshade from the north-west), so
         // the map you land by and the map you walk by agree
-        MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
+        MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
         mapRampsFor(body, ramps, lf, atmo);
         auto hAt = [&](int x, int y) { x = clampi(x, 0, sectorImgW - 1); y = clampi(y, 0, sectorImgH - 1); return (double)hs[y * sectorImgW + x]; };
         double sum2 = 0; int cnt = 0;
@@ -143,7 +143,7 @@ void Game::renderSectorMap() {
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
                 if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // a tidal flat its wet sand
-                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1);
+                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1, v.mtint / 255.0);
             }
         if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // the tide lines, the high water's pale along the flat's landward edge, the low water's dark
             const double S = surf.site.seaLevel;

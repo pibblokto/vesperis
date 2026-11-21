@@ -181,7 +181,7 @@ void unitLab(const Check& check) {
                 }
             }
             wantI = (int)byState.size(); wantS = (int)bySpecies.size();
-            rowsI = (int)g.testIncubatorChoices(0).size(); foldersI = (int)g.testIncub().pages.folders.size();
+            rowsI = (int)g.testIncubatorChoices().size(); foldersI = (int)g.testIncub().pages.folders.size();
             rowsS = (int)g.testSequencerChoices().size(); foldersS = (int)g.testLab().seq.pages.folders.size();
         }
         check("lab: the vials by world past the cold store's old 64 places, the choosers by world a row a species (R-432)",
@@ -257,16 +257,18 @@ void unitLab(const Check& check) {
               ok ? fmt("%d events (%d strains) by skips and by steps %s; at 40 min %d species (%s): stepped %s, laid out again %s", events, strains, sameEvents ? "the same" : "DIFFERENT",
                        n, stages.c_str(), sameState ? "the same" : "DIFFERENT", sameLaid ? "the same" : "DIFFERENT")
                  : why);
-        // the lab's save round-trip: the culture's flask and a jar of the vial (its silt or not: a jar's line is its place's) saved, loaded into a
-        // fresh game, saved again: the same lines, the same state
-        bool round = false, sameNow = false;
+        // the lab's save round-trip: the culture's flask saved, loaded into a fresh game, saved again: the same lines, the same state. R-447: the
+        // jar line an older save has after its flasks, and an older guide's jarband line, load and are dropped
+        bool round = false, sameNow = false, guideRound = false;
         int lines = 0;
         if (ok) {
-            a.testLab().jars.push_back(Jar());
-            Jar& J = a.testLab().jars.back();
-            const Vial& v = a.testColdStore()[0];
-            J.sx = v.sx; J.sy = v.sy; J.sz = v.sz; J.body = v.body; J.hab = v.hab; J.name = "WET SILT"; J.t0 = 600;
             a.save("shots/tests/unit_lab_cultures.txt");
+            {
+                const Vial& v = a.testColdStore()[0];
+                std::ofstream f("shots/tests/unit_lab_cultures.txt", std::ios::app);
+                f << "jar " << v.sx << " " << v.sy << " " << v.sz << " " << v.body << " " << v.hab.niche << " " << v.hab.meanC << " " << v.hab.salt << " 0 0 "
+                  << v.hab.place << " 600 WET SILT\n";
+            }
             std::string s1; a.testLabSave(s1);
             TestGame c; c.savePrefix = "shots/tests/unit_lab_save"; c.settingsPath = "shots/tests/test_settings.txt"; c.guidePath = "shots/tests/unit_lab_guide.txt";
             c.keysPath = "shots/tests/test_keys.txt";
@@ -279,10 +281,20 @@ void unitLab(const Check& check) {
             sameNow = x.n == y.n && x.n == 2 && x.one[0].cells == y.one[0].cells && x.one[1].cells == y.one[1].cells && x.one[0].stage == y.one[0].stage &&
                       x.one[1].stage == y.one[1].stage;
             remove("shots/tests/unit_lab_cultures.txt");
+            const std::string gp = "shots/tests/unit_lab_oldguide.txt";
+            auto text = [](const std::string& path) { std::ifstream f(path); std::stringstream ss; ss << f.rdbuf(); return ss.str(); };
+            a.guide.save(gp);
+            const std::string g1 = text(gp);
+            const std::string key = a.guide.microbes.empty() ? std::string("0,0,0/0/M0") : a.guide.microbes.begin()->first;
+            { std::ofstream f(gp, std::ios::app); f << "jarband " << key << " 0\n"; }
+            Guide old;
+            guideRound = old.load(gp) && old.save(gp) && text(gp) == g1 && !a.guide.microbes.empty();
+            remove(gp.c_str());
         }
-        check("lab: the lab's save round-trip (Z-05)", ok && round && sameNow,
-              fmt("%d lines (the clock, a flask with its species and events, a jar): loaded and saved again %s; the culture at its clock %s", lines, round ? "the same" : "DIFFERENT",
-                  sameNow ? "the same" : "DIFFERENT"));
+        check("lab: the lab's save round-trip, an older save's jar line and guide's jarband line dropped (Z-05, R-447)", ok && round && sameNow && guideRound,
+              fmt("%d lines (the clock, a flask with its species and events): loaded with a jar line after them and saved again %s; the culture at its "
+                  "clock %s; a guide with a jarband line loaded and saved again %s", lines, round ? "the same, the jar gone" : "DIFFERENT",
+                  sameNow ? "the same" : "DIFFERENT", guideRound ? "the same, the line gone" : "DIFFERENT"));
         // R-433: the culture collection. Every species and strain the culture grew kept as it grew (each once), kept after its flask is emptied; a
         // folder made and the first moved into it (removed only once empty); the first on the stage, into another flask in the medium it grew in;
         // with the cold store and the flasks empty, the choosers' rows the collection's alone; its lines through the save
@@ -310,7 +322,7 @@ void unitLab(const Check& check) {
             a.testColdStore().clear();
             for (int i = 0; i < INCUBATOR_FLASKS; i++) a.testFlaskEmpty(i);
             a.testIncub().sel = 5;
-            const std::vector<IncubatorChoice> IC = a.testIncubatorChoices(0);
+            const std::vector<IncubatorChoice> IC = a.testIncubatorChoices();
             rowsI = (int)IC.size();
             chooseOk = rowsI == kept;
             for (const IncubatorChoice& c : IC) chooseOk = chooseOk && c.kept >= 0;

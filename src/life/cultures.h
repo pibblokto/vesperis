@@ -10,7 +10,8 @@
 // edge gives a strain, one value moved (Lenski and Travisano 1994). What a flask holds at a time is closed-form in its clock from its events:
 // nothing is integrated a frame at a time (`runCulture` lays its laws out once, `cultureAt` reads them). Y-04: a line's genes switched to a
 // condition: each stretch's laws by its state (the light, the cold against its best, starving, its crowd's quorum share), a law ending where
-// its crowd crosses that share
+// its crowd crosses that share. J-01: a line's world genes (`CultureWorld`): its crowd moved or never stopped (STOP), its flask frozen by its
+// ice (FROST), its shield under the ultraviolet light, its poison against the other in its flask
 #include "life/biota.h"
 #include "life/samples.h"
 #include <cstdint>
@@ -24,8 +25,9 @@ int chemistryCell(int chemistry);   // the cell a chemistry's life grows in (non
 // a species' rate against its three temperatures, 0 to 1 (Rosso et al. 1993); R-438: the slide's pace reads it too
 double cardinalRate(double T, double lo, double opt, double hi);
 void cellRange(int cell, double& loC, double& hiC);
-enum CultureLight { CL_DARK = 0, CL_WHITE, CL_RED, CL_BLUE, CL_COUNT };
-extern const char* const CULTURE_LIGHT_NAMES[CL_COUNT];   // "DARK", "WHITE", "RED", "BLUE"
+// J-01: and the ultraviolet lamp (a shield's test: little of it feeds a pigment, and it kills a cell with none)
+enum CultureLight { CL_DARK = 0, CL_WHITE, CL_RED, CL_BLUE, CL_UV, CL_COUNT };
+extern const char* const CULTURE_LIGHT_NAMES[CL_COUNT];   // "DARK", "WHITE", "RED", "BLUE", "UV"
 int lightOfStar(int starClass);     // the light a world's sun gives (a red dwarf's and a giant's red, the hot stars' blue, the rest white)
 // the energy a medium gives: the substrates' (`Substrate`'s numbers: a chemical way burns its own) and the broth (the dead way's, a grazer's slow)
 enum CultureEnergy { CE_NONE = SU_NONE, CE_HYDROGEN = SU_HYDROGEN, CE_SULPHIDE = SU_SULPHIDE, CE_IRON = SU_IRON, CE_METHANE = SU_METHANE,
@@ -52,16 +54,71 @@ extern const char* const GENE_SWITCH_KEYS[GW_COUNT];    // "ALWAYS", "NEVER", "L
 enum CultureState : uint32_t { CST_LIGHT = 1, CST_COLD = 2, CST_CROWDED = 4, CST_STARVING = 8 };
 bool switchOn(int sw, uint32_t state);
 // what a gene off loses in its culture, as one cut (`applyEdits`): its life (a vital gene), its warmth's range (round its best), its salt (fresh
-// water), its pigment, its food, its rest at its end (`bits`: its cycle's), its glow; a motion, a sense, a size or a shape its drop's alone
-enum CultureWork { CX_NONE = 0, CX_LIFE, CX_WARMTH, CX_SALT, CX_PIGMENT, CX_FOOD, CX_REST, CX_GLOW };
+// water), its pigment, its food, its rest at its end (`bits`: its cycle's), its glow; a motion, a sense, a size or a shape its drop's alone;
+// J-01: a world gene its work (`CultureWorld`: its gas, dye, lift, frost, slime, shell, its stop (it never stops), its binding, its rot, poison,
+// carrying, host, its life dried, its shield)
+enum CultureWork { CX_NONE = 0, CX_LIFE, CX_WARMTH, CX_SALT, CX_PIGMENT, CX_FOOD, CX_REST, CX_GLOW,
+                   CX_GAS, CX_DYE, CX_LIFT, CX_FROST, CX_SLIME, CX_SHELL, CX_STOP, CX_BIND, CX_ROT, CX_POISON, CX_CARRIER, CX_HOST, CX_DRY, CX_SHIELD };
 // a line's gene switched to a condition: its place, its switch, what it loses off, its price (its part of the line's burden: not paid off)
 struct CultureSwitch { int place = 0, when = GW_ALWAYS, work = CX_NONE; double price = 0; uint32_t bits = 0; };
+
+// J-01: what a line's world genes make and do (life/genes.h, places 19 to 32; IDEAS-seeded-worlds.md section 4), a wild species' read from what
+// it is: the gas it gives off (Thauer et al. 2008's methanogens; an oxygen-maker's in its light) and how much, the dye its cells leak (red snow's
+// astaxanthin: Remias et al. 2005), its lift (gas vesicles: Walsby 1994), the warmth its ice forms at (an ice-nucleating protein: Lindow et al.
+// 1982; none, the flask's water stays liquid below its freezing), its slime, its shell's mineral or sediment and how much, its crowd moved
+// (decades from its species'; `overgrows`: it never stops), its cells bound after dividing, what it rots and how fast, its poison (a toxin, its
+// target an animal's: a microbe it kills in a flask) and its strength, how readily its genes pass to others (Griffith 1928), the host it lives
+// in and how deep, how long it lives dried out (anhydrobiosis: Billi and Potts 2002), the ultraviolet it takes. Amounts 0 to 1 (nothing below a
+// quarter of its gene's weight); `FROST_NONE` no ice
+enum WorldGas { WG_NONE = 0, WG_CO2, WG_METHANE, WG_OXYGEN, WG_H2S, WG_DMS, WG_N2O, WG_AMMONIA, WG_HYDROGEN, WG_COUNT };
+extern const char* const WORLD_GAS_NAMES[WG_COUNT];     // "NO GAS", "CO2", "METHANE", "OXYGEN", "HYDROGEN SULPHIDE", ..., "HYDROGEN"
+enum WorldDye { WD_NONE = 0, WD_RED, WD_CRIMSON, WD_ORANGE, WD_YELLOW, WD_VIOLET, WD_BLUE, WD_BLACK, WD_FLUORESCENT, WD_COUNT };
+extern const char* const WORLD_DYE_NAMES[WD_COUNT];     // "NO DYE", "RED", "CRIMSON", "ORANGE", "YELLOW", "VIOLET", "BLUE", "BLACK", "FLUORESCENT"
+enum WorldShell { SHL_NONE = 0, SHL_CHALK, SHL_GLASS, SHL_RUST, SHL_SULPHUR, SHL_COUNT };
+extern const char* const WORLD_SHELL_NAMES[SHL_COUNT];  // "NONE", "CHALK", "GLASS", "RUST", "SULPHUR"
+enum WorldRot { ROT_NONE = 0, ROT_WOOD, ROT_FLESH, ROT_SHELL, ROT_STONE, ROT_COUNT };
+extern const char* const WORLD_ROT_NAMES[ROT_COUNT];    // "NOTHING", "WOOD", "FLESH", "SHELL", "STONE"
+enum WorldPoison { PZ_NONE = 0, PZ_NERVE, PZ_BLOOD, PZ_GUT, PZ_COUNT };
+extern const char* const WORLD_POISON_NAMES[PZ_COUNT];  // "NONE", "NERVE", "BLOOD", "GUT"
+enum WorldHost { HO_NONE = 0, HO_PLANTS, HO_ANIMALS, HO_BOTH, HO_COUNT };
+extern const char* const WORLD_HOST_NAMES[HO_COUNT];    // "NONE", "PLANTS", "ANIMALS", "PLANTS AND ANIMALS"
+constexpr double FROST_NONE = -99;
+struct CultureWorld {
+    int gas = WG_NONE; double gasRate = 0;
+    int dye = WD_NONE; double dyeRate = 0;
+    double lift = 0;
+    double frostC = FROST_NONE;
+    double slime = 0;
+    int shell = SHL_NONE; double shellRate = 0;
+    double stopShift = 0; bool overgrows = false;
+    double bind = 0;
+    int rot = ROT_NONE; double rotRate = 0;
+    int poison = PZ_NONE; double poisonRate = 0;
+    double carrier = 0;
+    int host = HO_NONE; double hostRate = 0;
+    double dry = 0, shield = 0;
+    bool gives() const { return gas != WG_NONE && gasRate > 0; }
+    bool dyes() const { return dye != WD_NONE && dyeRate > 0; }
+    bool shells() const { return shell != SHL_NONE && shellRate > 0; }
+    bool poisons() const { return poison != PZ_NONE && poisonRate > 0; }
+    bool rots() const { return rot != ROT_NONE && rotRate > 0; }
+    bool hosted() const { return host != HO_NONE && hostRate > 0; }
+};
+constexpr double OVERGROWN_DECADES = 2;   // J-01: a line that never stops, its crowd past its food's
+constexpr double UV_SHIELD = 0.35;         // the shield a cell needs to grow under the ultraviolet light
+double freezingC(int salt);                // where a flask's water freezes: fresh 0 C, the sea's -2, brine -20
+// a flask frozen: water's cell, colder than its salt's freezing, at or under the ice's warmth of the culture that forms it (none: liquid)
+bool flaskIce(const Medium& m, double frostC);
+// the looks' colours: a dye's in water, a shell's sediment (chalk, glass, rust, sulphur), a culture grown into tissue, a flask's ice
+RGB dyeColour(int dye);
+RGB shellColour(int shell);
+constexpr RGB TISSUE_COLOUR(0.72f, 0.28f, 0.32f), ICE_COLOUR(0.82f, 0.9f, 1.0f);
 
 // what a culture reads of a species: its values (a strain's moves applied), its world's chemistry, its handedness against home's, its body
 // across (who eats whom), whether it went in as spores or cysts; Y-02: an edited line's (life/genes.h): whether it lives (a vital gene changed:
 // it does not), the share of its crowd its glow begins at; Y-03: the share of its growth its genes cost it (`geneBurden`: genes not its own, a
 // motion or a glow past its species' own), its best rate's; Y-04: its genes switched to a condition (none: its kind in every state), its glow
-// lit by its switch (any cells, while on) rather than at its crowd's share
+// lit by its switch (any cells, while on) rather than at its crowd's share; J-01: what its world genes make and do
 struct CultureKind {
     Microbe s;
     int chemistry = CH_WATER;
@@ -73,6 +130,7 @@ struct CultureKind {
     double burden = 0;
     std::vector<CultureSwitch> switches;
     bool glowAny = false;
+    CultureWorld world;
 };
 // Y-04: a work lost (a gene cut, or off by its switch); a kind in a state: its switched genes off there lose their work and their price
 void cultureWorkOff(CultureKind& k, int work, uint32_t bits = 0);
@@ -85,8 +143,9 @@ CultureKind cultureKindOf(const Biota& B, int species, double bodyUm);
 Medium mediumOfPlace(const Biota& B, int bodyType, int starClass, const Microhabitat& h, double readingC);
 
 // how a species does in a medium: grows; too cold (it waits); too hot, the wrong salt or the wrong solvent (it dies, or sporulates); no energy it
-// burns, no light for a light-feeder (it starves); Y-02: a line whose vital gene was changed (it lyses at once, anywhere)
-enum GrowthFit { GF_GROWS = 0, GF_COLD, GF_HOT, GF_SALT, GF_SOLVENT, GF_HUNGRY, GF_DARK, GF_UNVIABLE, GF_COUNT };
+// burns, no light for a light-feeder (it starves); Y-02: a line whose vital gene was changed (it lyses at once, anywhere); J-01: its flask
+// frozen (it waits in the ice), the ultraviolet light without a shield (it dies)
+enum GrowthFit { GF_GROWS = 0, GF_COLD, GF_HOT, GF_SALT, GF_SOLVENT, GF_HUNGRY, GF_DARK, GF_UNVIABLE, GF_FROZEN, GF_BURNT, GF_COUNT };
 extern const char* const GROWTH_FIT_NAMES[GF_COUNT];
 // the edge of its range a growing culture is held at (a strain comes of it): its warmth's either side, its salt, a light its pigment takes poorly
 enum CultureEdge { EG_NONE = 0, EG_HOT, EG_COLD, EG_SALT, EG_LIGHT, EG_COUNT };
@@ -118,13 +177,14 @@ struct FlaskCulture {
 };
 
 // the stages a culture is in, each species its own (IDEAS 1.8): spores asleep, waking, its lag, growing, in colonies, at its crowd, starving,
-// too cold to grow, gathering, fruiting, sporulating, encysting, dying, dead; cycling with a predator or its prey; outgrown by another
+// too cold to grow, gathering, fruiting, sporulating, encysting, dying, dead; cycling with a predator or its prey; outgrown by another; J-01:
+// overgrown (past its crowd, never stopping), frozen in its flask's ice, poisoned by the other
 enum CultureStage { SG_EMPTY = 0, SG_ASLEEP, SG_WAKING, SG_LAG, SG_GROWING, SG_COLONY, SG_CROWD, SG_HUNGRY, SG_WAITING, SG_GATHERING, SG_FRUITING,
-                    SG_SPORULATING, SG_ENCYSTING, SG_DYING, SG_DEAD, SG_CYCLING, SG_OUTGROWN, SG_COUNT };
+                    SG_SPORULATING, SG_ENCYSTING, SG_DYING, SG_DEAD, SG_CYCLING, SG_OUTGROWN, SG_OVERGROWN, SG_FROZEN, SG_POISONED, SG_COUNT };
 extern const char* const CULTURE_STAGE_NAMES[SG_COUNT];
 uint32_t stageCycleBit(int stage);   // the LifeCycle bit a stage shows of its species (0 none)
-// two in a flask: one wins, they cycle, they feed each other, mirrored they ignore each other
-enum CulturePair { PA_NONE = 0, PA_COMPETE, PA_CYCLE, PA_FEED, PA_IGNORE, PA_COUNT };
+// two in a flask: one wins, they cycle, they feed each other, mirrored they ignore each other; J-01: one poisons the other
+enum CulturePair { PA_NONE = 0, PA_COMPETE, PA_CYCLE, PA_FEED, PA_IGNORE, PA_POISON, PA_COUNT };
 extern const char* const CULTURE_PAIR_NAMES[PA_COUNT];
 // how two would meet in a flask: the relation, the eater or the feeder (0 the first, 1 the second; -1 neither)
 int pairOf(const CultureKind& a, const CultureKind& b, int& lead);
@@ -150,7 +210,7 @@ struct CultureRun {
     int n = 0;                         // species in it (at the run's end)
     double tAdd = -1;                  // when the second came
     int pair = PA_NONE, lead = -1;     // their relation; the winner, the predator or the feeder
-    double exT = -1, exRate = 0;       // COMPETE: when the winner took half its crowd, the loser's fall after it
+    double exT = -1, exRate = 0;       // COMPETE: when the winner took half its crowd, the loser's fall after it (J-01: POISON, a hundredth)
     double cycleT = -1, period = 0;    // CYCLE: when it began, its turn (s)
     std::vector<CultureSeg> seg[2];
     double wokeT[2] = {-1, -1};        // when its spores first woke (a species put in as spores)

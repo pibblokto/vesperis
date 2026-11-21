@@ -16,7 +16,7 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`), `bestiary` (`Bestiary::make`), `buggy` (`updateBuggy`,
   `cameraFeed`), `drone` (`deployDrone`), `vehicle_shape.h` (R-427: the buggy's and the drone's stations, wheels, pods and skids, from
   which the ship's maintenance room builds its models), `forms_draw` (a settlement's forms), `textures` (`buildMesoTile`)
-- `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC`. Films under the lamp's ultraviolet: `filmNicheOf`,
+- `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC` (J-03: galaxy's, which a seeding's place reads too). Films under the lamp's ultraviolet: `filmNicheOf`,
   `prepareFilmGlow`, `drawFilmGlow`. R-434: the activity vision, `prepareSight` and `drawSight`)
 
 ## Rules and traps

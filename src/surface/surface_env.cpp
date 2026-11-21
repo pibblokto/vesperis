@@ -40,6 +40,8 @@ void SurfaceView::computeEnvironment(double t) {
         env.skyBrightness = std::max(env.skyBrightness, day2);
         sinAlt = env.sun.dirLocal.y;
     }
+    if (site.gen.made.haze > 0) env.sun.lightFactor *= 1 - 0.4 * site.gen.made.haze;   // J-04: a haze dims the light, a thin ozone lets a harsher one through
+    if (site.gen.made.ozone < 0) { env.sun.lightFactor *= 1.08; env.lightColor = lerp(env.lightColor, RGB(1, 1, 1), 0.3f); }
     // TR_GREAT_TIDES: the sea's level now (the bulges of the world's moons and sun at the explorer's place: the whole site's, the tide a
     // few kilometres across being one)
     site.tideM = site.gen.tideRangeM > 0 && site.hasWater ? tideOffsetM(*site.sys, site.body, site.unitAt(player.x, player.z), t, site.gen.tideRangeM) : 0.0;
@@ -84,6 +86,10 @@ void SurfaceView::computeEnvironment(double t) {
     }
     env.frontCloud = fw.cloud; env.frontRain = fw.precip; env.frontCold = fw.cold; env.frontAhead = fw.nearest >= 0 ? fw.nearestAhead : 1e18;
     cloud = std::max(cloud, fw.cloud);
+    const MadeWorld& made = site.gen.made;   // J-04: a seeded world's made air
+    // an endless rain: its ice nuclei rain from every cloud, heavier and lighter by the hour (snow where it is cold)
+    const double endless = site.atmosphere && made.rainMore > 0 ? made.rainMore * (0.6 + 0.4 * (0.5 + 0.5 * gnoise2(t / 900.0, 4.1, site.gen.seed + 29))) : 0.0;
+    if (endless > 0) cloud = std::max(cloud, 0.55 + 0.45 * endless);
     env.cloudCover = cloud;
     double cloudP = env.cloudPattern;   // the pattern's cloud rains by its own rule; a front's band rains from its line, not from its first cloud
     const KindDef& K = KINDS[b.type];   // the kind's weather, temperature and pressure are its row's
@@ -91,10 +97,12 @@ void SurfaceView::computeEnvironment(double t) {
     if (K.rain == RAIN_CLOUDS) env.rain = cloudP > K.rainThr ? clampd((cloudP - K.rainThr) / K.rainSpan, 0, 1) : 0;   // the acid rains often
     if (K.rain == RAIN_DRIZZLE) { double dz = gnoise2(t / 1800.0, 2.3, site.gen.seed + 27); env.rain = clampd((dz - 0.45) / 0.3, 0, 0.5); }   // a methane drizzle now and then
     if (K.tags & KT_FRONT_RAIN) env.rain = std::max(env.rain, fw.precip);   // the front's rain
+    if (endless > 0 && !(K.tags & KT_WATER_WEATHER)) env.rain = std::max(env.rain, endless);
     // the same clouds snow when it is cold; thin air raises dust storms; fog banks drift by
     env.snow = 0; env.dust = 0; env.fogBank = 0; env.hail = 0;
     if (K.tags & KT_WATER_WEATHER) {
-        double precip = std::max(cloudP > 0.62 ? clampd((cloudP - 0.62) / 0.3, 0, 1) : 0.0, fw.precip);
+        double precip = std::max({cloudP > 0.62 ? clampd((cloudP - 0.62) / 0.3, 0, 1) : 0.0, fw.precip, endless});
+        if (endless > 0 && env.temperatureC >= -1) env.rain = std::max(env.rain, endless);
         if (precip > 0) {
             if (env.temperatureC < -1) { env.snow = precip; env.rain = 0; }
             else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
@@ -121,6 +129,12 @@ void SurfaceView::computeEnvironment(double t) {
             const double depth = (60 + 110 * hash01(mix64(site.gen.seed ^ 0xF06A5EAULL))) * (0.6 + 0.4 * hash01(hash2i((int64_t)day, 7, site.gen.seed ^ 0xF06DULL)));
             env.fogSea = fs; env.fogSeaTop = fogFloorM + depth * fs;
         }
+    }
+    // J-04: a fog lying on the seas all day, from the sea's level to a few tens of metres over it (dimethyl sulphide's smoke; a runaway's steam
+    // thicker); thinned by rain
+    if (site.atmosphere && site.hasWater && made.seaSmoke > 0) {
+        const double top = site.tideM + (made.runaway > 0 ? 70.0 : 22.0 + 18.0 * hash01(mix64(site.gen.seed ^ 0x5EA5A0ULL)));
+        env.fogSea = std::max(env.fogSea, made.seaSmoke * (1 - 0.6 * env.rain)); env.fogSeaTop = std::max(env.fogSeaTop, top);
     }
     env.aurora = 0; env.auroraStorm = 0;
     env.flare = starFlare(site.sys->star, t);   // a red dwarf's flare opens the exposure (setupPalette) and is a storm of its own (auroralStorm)
@@ -166,9 +180,9 @@ void SurfaceView::computeEnvironment(double t) {
         double sub = site.gen.locked ? dot(site.unitAt(player.x, player.z), site.gen.lockedDir) : 0.0;
         base = climateTempC(site.gen, std::fabs(env.latDeg), player.y, winter, sub) - 3 + K.daySwing * sinAlt;   // the kind's swing (a steppe's wide)
     } else if (site.atmosphere && K.reachClimate && site.gen.locked) {   // the fixed sun's height decides it, the sea freezing at the edge of its reach (the eyeball's pupil)
-        base = K.tempOffset + K.tempSwing * (sinAlt - std::cos(site.gen.seaReachDeg * DEG));
+        base = site.gen.airWarmthC() + K.tempSwing * (sinAlt - std::cos(site.gen.seaReachDeg * DEG));
     } else if (site.atmosphere) {
-        double offset = K.tempOffset, swing = K.tempSwing;   // each air has its greenhouse and its day-night swing
+        double offset = site.gen.airWarmthC(), swing = K.tempSwing;   // each air has its greenhouse (J-02: through the generator) and its day-night swing
         base = base * 0.75 + offset;
         base += swing * sinAlt - 0.4 * std::fabs(env.latDeg);
     } else {
@@ -181,14 +195,16 @@ void SurfaceView::computeEnvironment(double t) {
     // in the dark the ground is as warm as the world's own heat keeps it (`Body::tempK`: a drifter's by its kind, a moon's own and a
     // brown dwarf's glow on it), no day to swing it; an air cools with height over it
     if (site.sys->sunless()) base = b.tempK - 273.15 - (site.atmosphere ? 6.5 * player.y / 1000.0 : 0.0);
+    if (site.atmosphere) base += site.gen.made.warmC;   // J-04: a seeded world's made climate
     env.temperatureC = std::max(base - fw.cold, -270.0);   // the cold behind a front
     env.pressureAtm = K.pressureSpan > 0 ? K.pressureLo + K.pressureSpan * hash01(site.gen.seed) : 0;
     if (airFrozen(b)) env.pressureAtm *= 1e-6;   // the vapour over its snow, a trace
-    env.pressureAtm *= std::exp(-player.y / 8000.0);
+    env.pressureAtm *= std::exp(-player.y / 8000.0) * site.gen.made.pressureK;
     SurfaceLook L = lookFor(site.gen, site.sys->star);
     // a front's squall closes the view further
     env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);
     if (K.lowFogM > -1e8) env.fogDistance *= clampd((player.y - K.lowFogM) / K.lowFogSpan, 0.03, 1.0);   // walking down into the steam world's lowlands, the fog closes
+    if (made.haze > 0 || made.thick > 0) env.fogDistance *= (1 - 0.55 * made.haze) * (1 - 0.3 * made.thick);   // J-04: a haze, a thick air
     // inside a fog sea the fog closes as in the steam world's lowlands (by the eye: `render` once the eye is placed)
     // a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);
     // the dust of the coma hangs over the ground

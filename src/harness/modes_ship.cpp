@@ -357,7 +357,7 @@ int lifeMode(int argc, char** argv) {
         printf("  %-20s %s\n", what, d.differ ? diffLine(d, FBW, FBH).c_str() : "THE SAME");
         if (!d.differ) fails++;
     };
-    printf("ship life: %dx, the photographs on the quarters' wall, the garden, the shelves, the case, the deck, the microscope, the cold store, the incubator, the jars, "
+    printf("ship life: %dx, the photographs on the quarters' wall, the garden, the shelves, the case, the deck, the microscope, the cold store, the incubator, "
            "the core, the capsule's drop\n", scale);
     // twelve photographs, the oldest first
     const char* const PHOTOS[12] = {"THE FRONT WINDOW", "THE HALL'S MIDDLE", "THE LEFT WINDOW", "OVER THE ROOFS", "THE BRIDGE'S MIDDLE", "THE LIBRARY'S MIDDLE",
@@ -422,7 +422,7 @@ int lifeMode(int argc, char** argv) {
     differ("the cold store filled", storeEmpty, storeFull);
     game.testColdStore().clear();
     // Z-05: the incubator empty, then its twelve flasks of a living world's species in their best media (white, red and blue light, a crowd's
-    // own light in the dark) fifteen minutes on, and by night; the jars' shelf with four worlds' jars settled; the stern bench whole
+    // own light in the dark) fifteen minutes on, and by night; the stern bench whole
     game.testCabinView("THE INCUBATOR");
     std::vector<uint32_t> incEmpty, incFull;
     shot("incubator_empty", &incEmpty);
@@ -433,8 +433,20 @@ int lifeMode(int argc, char** argv) {
     pressKey(game, gi, KEY_U); settle(3);
     shot("incubator_night");
     pressKey(game, gi, KEY_U); settle(3);
-    game.testCabinView("THE JARS");
-    shot("jars", nullptr, fmt("%zu jars", game.testLab().jars.size()));
+    {   // J-01: the world genes' looks on its shelves (bubbles, a dye, a scum, a sediment, tissue, ice, the ultraviolet light), the lab, the
+        // guide and the status line as they were after
+        const LabState keptLab = game.testLab();
+        const Guide keptGuide = game.guide;
+        const auto keptLine = game.testStatusKept();
+        std::vector<std::string> names;
+        std::vector<uint32_t> incWorld;
+        const int looks = labWorldLooks(game, names);
+        shot("incubator_world", &incWorld, fmt("%d flasks of the world genes' looks", looks));
+        differ("the incubator's world looks", incFull, incWorld);
+        game.testLab() = keptLab;
+        game.guide = keptGuide;
+        game.testStatusPut(keptLine);   // (the status line as it was: the flasks' keeping said nothing after)
+    }
     game.testCabinView("THE STERN BENCH");
     shot("lab_bench");
     // Z-06: the sequencer on the bow bench idle, then reading (its screen pulsing); the tree of kin's screen on the port wall (the status

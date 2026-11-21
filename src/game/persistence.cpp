@@ -166,6 +166,12 @@ bool Game::save(const std::string& path) {
         f << "bay " << bay.clock << " " << (bay.out ? 1 : 0) << " " << (bay.planned ? 1 : 0) << " " << (bay.recalled ? 1 : 0) << " " << bay.starSeed << " " << bay.body << " " << bay.seed << " "
           << bay.subLat << " " << bay.subLon << " " << (bay.worldKey.empty() ? "-" : bay.worldKey) << " " << bay.worldName << "\n";
         f << "bayback " << bay.back << "\n";   // the user's five minutes of charging run from the trip's end
+        if (bay.seedTrip) {   // J-03: a seed trip's culture and place (its `seeded` line is the guide's once let go)
+            const Medium& m = bay.seedMedium;
+            f << "bayseed " << (bay.seedLet ? 1 : 0) << " " << bay.seedFate << " " << bay.seedLat << " " << bay.seedLon << " " << m.cell << " " << m.tempC << " " << m.light << " "
+              << m.energy << " " << m.salt << " " << bay.seedLine << " " << (bay.seedEdits.empty() ? "-" : bay.seedEdits) << "\n";
+            f << "bayseedname " << bay.seedName << "\n" << "bayseedplace " << bay.seedPlace << "\n";
+        }
         for (int k = 0; k < DRONE_COUNT; k++) {
             const DroneRun& R = bay.run[k];
             f << "bayrun " << k << " " << R.out << " " << R.down << " " << R.up << " " << R.dock << " " << (R.docked ? 1 : 0) << " " << R.wanted << "\n";
@@ -259,6 +265,14 @@ bool Game::load(const std::string& path) {
             if (is.fail()) { nbay = DroneBay(); continue; }
             nbay.out = out != 0; nbay.planned = planned != 0; nbay.recalled = recalled != 0; nbay.worldKey = wk == "-" ? std::string() : wk;
             std::getline(is, nbay.worldName); if (!nbay.worldName.empty() && nbay.worldName[0] == ' ') nbay.worldName.erase(0, 1);
+        } else if (key == "bayseed") {   // J-03
+            int let = 0; std::string ed;
+            is >> let >> nbay.seedFate >> nbay.seedLat >> nbay.seedLon >> nbay.seedMedium.cell >> nbay.seedMedium.tempC >> nbay.seedMedium.light >> nbay.seedMedium.energy >>
+                    nbay.seedMedium.salt >> nbay.seedLine >> ed;
+            if (!is.fail()) { nbay.seedTrip = true; nbay.seedLet = let != 0; nbay.seedEdits = ed == "-" ? std::string() : ed; }
+        } else if (key == "bayseedname" || key == "bayseedplace") {
+            std::string v; std::getline(is, v); if (!v.empty() && v[0] == ' ') v.erase(0, 1);
+            (key == "bayseedname" ? nbay.seedName : nbay.seedPlace) = v;
         } else if (key == "bayback") {   // (a save of the first trips has none: their end read from the docks)
             double v = 0; is >> v; if (!is.fail()) { nbay.back = v; nbayBack = true; }
         } else if (key == "bayrun") {
@@ -284,6 +298,10 @@ bool Game::load(const std::string& path) {
             if (np.timeTrack.size() % 2) np.timeTrack.clear();
         } else if (key == "vial") {   // Z-03
             loadVial(line);
+        } else if (key == "vialclock") {   // J-03: the last vial's guide clock at its take
+            int where = -1; double c = -1; is >> where >> c;
+            std::vector<Vial>& to = where == 0 ? kit : coldStore;
+            if (!is.fail() && (where == 0 || where == 1) && !to.empty()) to.back().clock = c;
         } else {   // U-05: a line of a screen's own (its row's `load`)
             for (const StateRow& r : STATE_ROWS) if (r.load && (this->*r.load)(line)) break;
         }
@@ -321,6 +339,7 @@ bool Game::load(const std::string& path) {
     surf.valid = false;
     lastSecX = lastSecY = -1; landZoom = 0; sectorImgEpoch = -1;
     if (onSurface && siteBody >= 0 && siteBody < (int)sys.bodies.size()) {
+        surf.site.made = madeNow(siteBody);   // J-02
         surf.init(&sys, siteBody, slat, slon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
         surf.player.x = px; surf.player.z = pz; surf.player.yaw = pyaw; surf.player.pitch = ppitch;
@@ -373,7 +392,8 @@ bool Game::load(const std::string& path) {
         if (!nbayBack && !nbay.out) for (const DroneRun& R : nbay.run) nbay.back = std::max(nbay.back, std::min(R.dock, nbay.clock));   // a save before the charge ran from the return
         bay = nbay;
         if (bay.out && !bay.planned) for (DroneRun& R : bay.run) R.docked = false;
-        if (bay.out && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() && worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body])))
+        if (bay.out && !bay.seedTrip && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() &&
+            worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body])))
             droneWorldAsk(bay.body);
     }
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;

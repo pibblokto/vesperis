@@ -1,7 +1,8 @@
 // Z-05: the incubator's screen (incubator.cpp; lab_state.h), over the room: the twelve flasks (each its species, its row in its stage's colour),
 // the chosen one's curve on a log scale (its cells a millilitre on the lab's clock since it was started, a pair's two, its spores dotted), its
 // species, its stage and its pace, its pair's turn as the curves show it, its medium (the field chosen lit), what it has come to (woken, a strain,
-// its glow); the jars' page (each its world, the chosen one's column as it stands); the chooser of what goes in
+// its glow); the chooser of what goes in. J-01: what its world genes show (bubbles, its water dyed, a scum, slime, a sediment, clumps, overgrown,
+// frozen, genes passed), in words and in a picture of the flask under the list
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -16,11 +17,29 @@ uint32_t stageColour(int st) {
         case SG_LAG: case SG_GROWING: case SG_COLONY: case SG_CYCLING: return HUD_GREEN;
         case SG_CROWD: case SG_HUNGRY: case SG_WAITING: case SG_GATHERING: case SG_FRUITING: return HUD_AMBER;
         case SG_ASLEEP: case SG_WAKING: return HUD_CYAN;
-        case SG_SPORULATING: case SG_ENCYSTING: case SG_DYING: case SG_DEAD: case SG_OUTGROWN: return HUD_RED;
+        case SG_SPORULATING: case SG_ENCYSTING: case SG_DYING: case SG_DEAD: case SG_OUTGROWN: case SG_POISONED: return HUD_RED;
+        case SG_OVERGROWN: return HUD_AMBER;   // J-01
+        case SG_FROZEN: return HUD_CYAN;
         default: return HUD_DIM;
     }
 }
 std::string minutes(double s) { return s < 60 ? fmt("%.0f S", std::max(0.0, s)) : fmt("%.0f MIN", s / 60); }
+RGB mixC(const RGB& a, const RGB& b, double t) { return RGB((float)(a.r + (b.r - a.r) * t), (float)(a.g + (b.g - a.g) * t), (float)(a.b + (b.b - a.b) * t)); }
+uint32_t rgbMix(const RGB& a, const RGB& b, double t, float k = 1) { return rgbOf(mixC(a, b, t), k); }
+// J-01: what a flask's world genes show, in words (packed into lines as they fit)
+std::vector<std::string> showWords(const FlaskShow& S, const std::string* label) {
+    std::vector<std::string> w;
+    if (S.overgrown) w.push_back(S.tissue ? "OVERGROWN: TISSUE FILLS IT" : "OVERGROWN: PACKED WITH CELLS");
+    if (S.frozen) w.push_back("FROZEN SOLID");
+    if (S.bubbles > 0.03) w.push_back(std::string("BUBBLES: ") + WORLD_GAS_NAMES[S.gas]);
+    if (S.dyed > 0.05) w.push_back(std::string("WATER DYED ") + WORLD_DYE_NAMES[S.dye]);
+    if (S.scum > 0.05) w.push_back("SCUM ON TOP");
+    if (S.slime > 0.05) w.push_back("THICK WITH SLIME");
+    if (S.sediment > 0.05) w.push_back(std::string(WORLD_SHELL_NAMES[S.shell]) + " SEDIMENT");
+    if (S.clumps > 0.05) w.push_back("CELLS IN CLUMPS");
+    if (S.passedTo >= 0) w.push_back("GENES PASS TO " + label[S.passedTo]);
+    return w;
+}
 // a line that fits the width, else the shorter one, else none (never cut)
 const std::string& fitted(const std::string& a, const std::string& b, int width) {
     static const std::string none;
@@ -33,9 +52,7 @@ const std::string& fitted(const std::string& a, const std::string& b, int width)
 void Game::renderIncubator() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 218);
     drawText(canvas, 6, 4, "INCUBATOR", incColour());
-    const char* page = incub.page == 1 ? "JARS   TAB FLASKS" : "FLASKS   TAB JARS";
-    drawText(canvas, UW - 6 - textWidth(page), 4, page, HUD_DIM);
-    if (incub.page == 1) renderIncubatorJars(); else renderIncubatorFlasks();
+    renderIncubatorFlasks();
     if (incub.choosing) renderIncubatorChooser();
     if (incub.pick) renderIncubatorPick();   // R-440, R-442: what K keeps or N names
     renderKeepPick(incColour());             // R-440: the folder a copy goes in
@@ -67,7 +84,8 @@ void Game::renderIncubatorFlasks() {
         if (F.n == 0 || !F.made) { drawText(canvas, lx + 24, y, "-", HUD_DIM); continue; }
         const CultureNow now = flaskNow(i);
         const std::string both = F.n > 1 ? F.label[0] + " + " + F.label[1] : F.label[0], first = F.n > 1 ? F.label[0] + " +" : F.label[0];
-        const std::string& name = fitted(both, first, listW - 26);   // B-442: a second never hidden (its first and a plus)
+        std::string name = fitted(both, first, listW - 26);   // B-442: a second never hidden (its first and a plus)
+        if (name.empty()) name = fitText(first, listW - 26);   // (J-01: a long name cut, not left out: E10 and on)
         drawText(canvas, lx + 24, y, name.c_str(), sel ? HUD_WHITE : stageColour(now.one[0].stage));
     }
     // the chosen flask: its curve, its lines
@@ -114,8 +132,11 @@ void Game::renderIncubatorFlasks() {
             const Growth g = growthIn(F.culture.kind[k], F.medium);
             const double mu = F.culture.kind[k].switches.empty() ? g.mu : o.mu;   // Y-04: a switched line's as its state has it
             if ((o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_LAG) && mu > 0) st += ", DOUBLING IN " + minutes(std::log(2.0) / mu);
-            else if (o.fit != GF_GROWS && o.stage != SG_WAITING && o.stage != SG_DEAD && o.stage != SG_EMPTY) st += std::string(" - ") + GROWTH_FIT_NAMES[o.fit];   // why: the medium
-            drawText(canvas, cx0, y, fitted(F.label[k] + ": " + st, st, cw).c_str(), cols[k]);
+            else if (o.fit != GF_GROWS && o.stage != SG_WAITING && o.stage != SG_DEAD && o.stage != SG_EMPTY && o.stage != SG_FROZEN)
+                st += std::string(" - ") + GROWTH_FIT_NAMES[o.fit];   // why: the medium
+            std::string line = fitted(F.label[k] + ": " + st, st, cw);
+            if (line.empty()) line = fitText(st, cw);   // (J-01: a stage with its doubling too long cut, not left out)
+            drawText(canvas, cx0, y, line.c_str(), cols[k]);
             y += 9;
         }
         if (F.n == 2 && lab.clock - F.run.tAdd > 300) {   // the pair as its curves show it
@@ -140,6 +161,16 @@ void Game::renderIncubatorFlasks() {
             const bool cells = (now.one[0].glowing && F.culture.kind[0].glowAny) || (now.one[1].glowing && F.culture.kind[1].glowAny);
             drawText(canvas, cx0, y, cells ? "GLOWING: SWITCHED ON" : "GLOWING: CROWDED", HUD_CYAN); y += 9;
         }
+        // J-01: its world genes' looks, packed into lines
+        std::string line;
+        for (const std::string& w : showWords(flaskShow(incub.sel), F.label)) {
+            const std::string next = line.empty() ? w : line + ", " + w;
+            if (textWidth(next.c_str()) <= cw) { line = next; continue; }
+            if (!line.empty() && y < UH - 30) { drawText(canvas, cx0, y, line.c_str(), HUD_WHITE); y += 9; }
+            line = w;
+        }
+        if (!line.empty() && y < UH - 30) drawText(canvas, cx0, y, fitted(line, "", cw).c_str(), HUD_WHITE);
+        renderFlaskPicture(incub.sel, 20, 124);
     }
     // the medium, its fields (the one chosen lit)
     {
@@ -163,91 +194,70 @@ void Game::renderIncubatorFlasks() {
     drawTextCentered(canvas, UW / 2, UH - 12, keys.c_str(), incub.typing ? HUD_AMBER : HUD_DIM);
 }
 
-void Game::renderIncubatorJars() {
-    const int lx = 6, ly = 16, rowH = 10;
-    for (int j = 0; j < JAR_PLACES; j++) {
-        const int y = ly + j * rowH;
-        const bool sel = j == incub.jar;
-        if (sel) drawText(canvas, lx, y, ">", incColour());
-        drawText(canvas, lx + 8, y, fmt("%d", j + 1).c_str(), sel ? HUD_WHITE : HUD_DIM);
-        if (j >= (int)lab.jars.size()) { drawText(canvas, lx + 24, y, "-", HUD_DIM); continue; }
-        const Jar& J = lab.jars[j];
-        const std::string w = upper(nameOfKey(Guide::bodyKey(J.sx, J.sy, J.sz, J.body)));
-        const std::string& name = fitted(J.name + " (" + w + ")", J.name, 200);
-        drawText(canvas, lx + 24, y, name.c_str(), sel ? HUD_WHITE : HUD_GREEN);
+// J-01: the chosen flask as it looks under the list: its glass, its liquid (its culture's tone as cloudy as its crowd, its dye, ice, tissue to the
+// neck), its scum, its sediment and clumps, its bubbles rising, its lamp's light about it (the ultraviolet's violet)
+void Game::renderFlaskPicture(int i, int x0, int y0) {
+    const Flask& F = lab.flasks[clampi(i, 0, INCUBATOR_FLASKS - 1)];
+    const int W = 30, H = 38, cx = x0 + W / 2, neck = 5, neckH = 9, base = y0 + H;
+    if (F.medium.light != CL_DARK) {   // its lamp's light about it
+        const RGB lamp = F.medium.light == CL_UV ? RGB(0.55f, 0.3f, 1.0f) : (F.medium.light == CL_RED ? RGB(1.0f, 0.3f, 0.2f) :
+                         (F.medium.light == CL_BLUE ? RGB(0.35f, 0.5f, 1.0f) : RGB(1.0f, 0.95f, 0.8f)));
+        blendRectRGB(canvas, x0 - 6, y0 - 2, x0 + W + 6, base + 2, rgbOf(lamp, 0.5f), 40);
     }
-    // the chosen jar, as it stands: its water over its silt, its bands coming in
-    const int x0 = UW - 70, y0 = 20, w = 40, h = 150, gy = ly + JAR_PLACES * rowH + 4, gw = x0 - 18 - lx;
-    drawRectRGB(canvas, x0 - 2, y0 - 2, x0 + w + 1, y0 + h + 1, rgb(90, 100, 104));
-    if (incub.jar >= (int)lab.jars.size()) {
-        drawTextCentered(canvas, x0 + w / 2, y0 + h / 2 - 4, "EMPTY", HUD_DIM);
-        // R-439: what a jar is for
-        const std::vector<std::string> what = wrapText("ENTER PUTS WET SILT FROM A VIAL IN A JAR. OVER 20 MINUTES THE MICROBES SETTLE INTO COLOURED BANDS, "
-                                                       "ONE SPECIES PER BAND. THE LIST HERE THEN SAYS WHAT EACH SPECIES LIVES ON AND WHETHER IT NEEDS AIR. "
-                                                       "THEIR SHEETS KEEP THIS.", gw / 6);
-        for (size_t i = 0; i < what.size() && gy + (int)i * 9 < UH - 40; i++) drawText(canvas, lx, gy + (int)i * 9, what[i].c_str(), HUD_DIM);
-        drawText(canvas, 6, UH - 30, "ENTER: NEW JAR FROM WET SILT, MAT OR SOIL", HUD_DIM);
-    } else {
-        Jar& J = lab.jars[incub.jar];
-        if (!J.made) jarMake(incub.jar);
-        const double age = lab.clock - J.t0;
-        const JarNow now = jarAt(J.recipe, age);
-        const int waterH = (int)std::lround(h * J.recipe.waterShare);
-        for (int y = 0; y < h; y++) {
-            RGB c;
-            if (y < waterH) c = lerp(J.recipe.water * 0.85f, J.recipe.silt * 0.8f, (float)(0.85 * now.cloud));   // the water, murky while the silt is in it
-            else {
-                const double d = (y - waterH + 0.5) / (h - waterH);
-                c = J.recipe.silt;
-                for (size_t b = 0; b < J.recipe.bands.size(); b++) {
-                    const JarBand& B = J.recipe.bands[b];
-                    if (d >= B.top && d < B.bottom) c = lerp(c, B.col, (float)now.strength[b]);
-                }
-                c = lerp(c, J.recipe.silt, (float)(0.5 * now.cloud));
-            }
-            for (int x = 0; x < w; x++) {   // a column lit from within: brighter left of its middle, its edges dark
-                const double u = (x + 0.5) / w - 0.42;
-                fillRectRGB(canvas, x0 + x, y0 + y, x0 + x, y0 + y, rgbOf(c, (float)(0.62 + 0.5 * std::cos(std::min(1.0, std::fabs(u) * 1.9) * PI * 0.5))));
-            }
-        }
-        fillRectRGB(canvas, x0 + 5, y0 + 3, x0 + 6, y0 + h - 4, rgb(150, 160, 160));   // the glass's highlight
-        // R-439: each band come in marked beside the glass (its number, a bracket in its colour, a faint one's too) and named under the list: who it
-        // is (where seen) and how it lives, top to bottom
-        int in = 0, listed = 0;
-        const int rows = (UH - 34 - (gy + 10)) / 9;
-        for (size_t b = 0; b < J.recipe.bands.size() && b < now.strength.size(); b++) {
-            if (now.strength[b] < 0.5) continue;
-            in++;
-            const JarBand& B = J.recipe.bands[b];
-            const int ya = y0 + waterH + (int)std::lround(B.top * (h - waterH)), yb = std::max(ya, y0 + waterH + (int)std::lround(B.bottom * (h - waterH)) - 1);
-            const float lift = std::max(1.0f, 0.55f / std::max(0.05f, std::max(B.col.r, std::max(B.col.g, B.col.b))));   // a dark band's mark bright enough to see
-            fillRectRGB(canvas, x0 - 6, ya, x0 - 5, yb, rgbOf(B.col, lift));
-            drawText(canvas, x0 - 14, (ya + yb) / 2 - 3, fmt("%d", (int)b + 1).c_str(), HUD_WHITE);
-            if (listed >= rows) continue;
-            const int y = gy + 10 + listed * 9;
-            if (listed == rows - 1 && in < (int)J.recipe.bands.size()) {   // the last row the rest
-                int rest = 0;
-                for (size_t c = b; c < J.recipe.bands.size() && c < now.strength.size(); c++) rest += now.strength[c] >= 0.5;
-                if (rest > 1) { drawText(canvas, lx, y, fmt("AND %d MORE BANDS", rest).c_str(), HUD_DIM); listed++; continue; }
-            }
-            drawText(canvas, lx, y, fmt("%d", (int)b + 1).c_str(), rgbOf(B.col, std::max(lift, 1.2f)));   // its number in its colour
-            drawText(canvas, lx + 12, y, fitText(jarBandWords(J, (int)b), gw - 12).c_str(), HUD_GREEN);
-            listed++;
-        }
-        const char* head = J.recipe.bands.empty() ? (age >= JAR_SETTLED_S ? "NO SPECIES HERE FORMS A BAND" : "BANDS APPEAR AS THE SILT SETTLES")
-                         : (in == 0 ? "BANDS APPEAR AS THE SILT SETTLES" : "BANDS - WHAT EACH SPECIES LIVES ON:");
-        drawText(canvas, lx, gy, head, HUD_DIM);
-        const std::string st = age >= JAR_SETTLED_S ? "SETTLED" : fmt("SETTLING: %d OF 20 MIN", (int)(age / 60));
-        drawText(canvas, 6, UH - 30, fitted(J.name + " - " + st, st, x0 - 14).c_str(), HUD_GREEN);
+    const FlaskShow S = flaskShow(i);
+    const CultureNow now = flaskNow(i);
+    double best = 0; int pg = 0;
+    for (int k = 0; k < now.n; k++) if (now.one[k].cells > best) { best = now.one[k].cells; pg = F.culture.kind[k].s.pigment; }
+    const double cloud = clampd((std::log10(std::max(1.0, best)) - 3) / 6, 0, 1);
+    const RGB broth(0.86f, 0.8f, 0.62f), water(0.18f, 0.2f, 0.24f);
+    RGB tone = pg > 0 ? pigmentColour(pg) : broth;
+    const int top = S.overgrown ? y0 + 2 : y0 + neckH + 8;   // its liquid's top (overgrown: up its neck)
+    auto halfAt = [&](int y) { return y < y0 + neckH ? neck : neck + (W / 2 - neck) * (y - y0 - neckH) / std::max(1, H - neckH); };
+    for (int y = top; y < base; y++) {
+        const int h = halfAt(y);
+        uint32_t c;
+        if (S.frozen) c = rgbMix(water, ICE_COLOUR, 0.85, 0.9f);
+        else if (S.overgrown) c = S.tissue ? rgbMix(TISSUE_COLOUR, RGB(0.95f, 0.6f, 0.6f), 0.25 * std::sin(y * 1.7 + x0) + 0.25)
+                                           : rgbMix(water, tone, 0.95, 0.85f);
+        else if (S.dyed > 0.05) c = rgbMix(mixC(water, tone, 0.6 * cloud), dyeColour(S.dye), std::min(1.0, 0.3 + S.dyed));
+        else c = rgbMix(water, tone, 0.15 + 0.7 * cloud);
+        fillRectRGB(canvas, cx - h + 1, y, cx + h - 1, y, c);
+        if (S.slime > 0.05 && !S.overgrown && ((y + (int)(realTime * 3)) % 7 == 0)) fillRectRGB(canvas, cx - h / 2, y, cx + h / 3, y, rgbMix(water, tone, 0.9, 1.1f));
     }
-    drawTextCentered(canvas, UW / 2, UH - 12, "ENTER NEW JAR  BKSP EMPTY JAR", HUD_DIM);
+    if (S.scum > 0.05 && !S.overgrown && !S.frozen) {   // a band of floating cells on top
+        const int h = halfAt(top);
+        fillRectRGB(canvas, cx - h + 1, top, cx + h - 1, top + 1 + (int)(2 * S.scum), rgbMix(tone, RGB(0.95f, 0.95f, 0.85f), 0.3, 1.1f));
+    }
+    if (S.sediment > 0.05) {   // its shells settled
+        const int n = 1 + (int)std::lround(3 * S.sediment), h = halfAt(base - 1);
+        fillRectRGB(canvas, cx - h + 1, base - n, cx + h - 1, base - 1, rgbOf(shellColour(S.shell)));
+    }
+    if (S.clumps > 0.05 && !S.frozen) for (int k = 0; k < 6; k++) {   // clumps settling
+        const int h = halfAt(base - 3), x = cx - h + 2 + (int)((k * 37 + 11) % std::max(1, 2 * h - 4)), y = base - 3 - (k % 3) * 3 - (int)(4 * S.clumps);
+        fillRectRGB(canvas, x, y, x + 1, y + 1, rgbMix(tone, RGB(0.1f, 0.1f, 0.1f), 0.4));
+    }
+    if (S.bubbles > 0.03 && !S.frozen) {   // bubbles rising from the bottom, more of them the more it gives off
+        const int n = 2 + (int)std::lround(8 * S.bubbles);
+        for (int k = 0; k < n; k++) {
+            const double ph = std::fmod(realTime * (0.5 + 0.13 * (k % 4)) + k * 0.37, 1.0);
+            const int y = base - 2 - (int)(ph * (base - 2 - top)), h = halfAt(y);
+            const int x = cx - h + 2 + (int)((k * 53 + 7) % std::max(1, 2 * h - 4));
+            fillRectRGB(canvas, x, y, x, y, rgb(230, 240, 255));
+        }
+    }
+    // its glass
+    const uint32_t glass = rgb(120, 140, 150);
+    for (int y = y0; y < base; y++) { const int h = halfAt(y); fillRectRGB(canvas, cx - h, y, cx - h, y, glass); fillRectRGB(canvas, cx + h, y, cx + h, y, glass); }
+    drawLineRGB(canvas, cx - W / 2, base, cx + W / 2, base, glass);
+    drawLineRGB(canvas, cx - neck - 1, y0, cx + neck + 1, y0, glass);
+    drawText(canvas, x0 + W + 8, y0 + H / 2 - 3, fmt("FLASK %d", i + 1).c_str(), HUD_DIM);
 }
 
 // the chooser (R-432: its folders, a world's, the flasks', the collection's; then the open one's rows)
 void Game::renderIncubatorChooser() {
     const int x0 = 20, y0 = 30, x1 = UW - 20, y1 = UH - 26;
     drawPanel(canvas, x0, y0, x1, y1, rgb(0, 0, 0), 235, incColour());
-    const std::string what = incub.page == 1 ? "NEW JAR FROM" : fmt("INTO FLASK %d", incub.sel + 1);
+    const std::string what = fmt("INTO FLASK %d", incub.sel + 1);
     const ChooserPage& P = incub.pages;
     const std::string head = P.open && P.folder < (int)P.folders.size() ? what + ": " + P.folders[P.folder].name : what + ":";
     drawText(canvas, x0 + 8, y0 + 6, fitText(head, x1 - x0 - 16).c_str(), incColour());

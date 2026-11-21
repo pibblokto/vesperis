@@ -8,7 +8,10 @@
 // (`flaskLearn`), its drop's shape, size, colour, motion and answers (`scopeLearn`, `scopeAnswerLearn`), a vital gene's death; and as a strain
 // is read on the sequencer (`strainReadLearn`). Of a line's changed genes, those that could show it (not known to do another thing; NOTHING
 // SEEN in a drop not one a drop shows): one is learned, several are said as candidates. Y-04: S switches the gene chosen (`editorSwitch`); a
-// switched line is learned from as its flask's state has it (`flaskLineIn`), a gene switched alone and on there as its parent's
+// switched line is learned from as its flask's state has it (`flaskLineIn`), a gene switched alone and on there as its parent's. J-01: the map on
+// two pages, the cell's genes (1 to 18) and the world's (19 to 32): the arrows walk its four columns across both, Page Up and Page Down turn;
+// a world gene learned from its flask's looks (bubbles, dye, scum, slime, sediment, clumps, overgrowth, ice, the ultraviolet light, a poison or
+// genes passed in a mixed flask) and its drop's (gas vesicles, a slime coat, cells bound)
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -26,7 +29,12 @@ uint32_t editText() {   // its colour a quarter toward white: its words on the d
     const RGB& c = Game::cabinDevices().row[FACE_EDITOR].col;
     return rgb((int)(255 * (c.r * 0.75 + 0.25)), (int)(255 * (c.g * 0.75 + 0.25)), (int)(255 * (c.b * 0.75 + 0.25)));
 }
-constexpr int MAP_ROWS = GENE_PLACES / 2;   // the map's two columns
+constexpr int MAP_ROWS = CELL_GENE_PLACES / 2;   // the map's two columns (J-01: of the cell's page; the world's has seven rows)
+constexpr int WORLD_ROWS = WORLD_GENES / 2;
+// J-01: the page a place is on, its first place, its rows and its count
+int genePage(int place) { return place < CELL_GENE_PLACES ? 0 : 1; }
+int pageFirst(int page) { return page == 0 ? 0 : CELL_GENE_PLACES; }
+int pageRows(int page) { return page == 0 ? MAP_ROWS : WORLD_ROWS; }
 // "3", "3 OR 7", "3, 7 OR 9"
 std::string placesWords(const std::vector<int>& p, const char* last) {
     std::string s;
@@ -173,6 +181,17 @@ void Game::flaskLearn(int i) {
         CultureKind L, P; Morph lf, pf;
         flaskLineIn(i, k, st, L, lf); flaskLineIn(i, k, st, P, pf, true);
         if (L.dead && !P.dead) { geneSeen(i, k, GN_VITAL, "DIES HERE, PARENT LIVES", GENE_SEEN_DEATH, st); continue; }
+        auto seenW = [&](int kind, const std::string& what) { geneSeen(i, k, kind, what, GENE_SEEN_EDIT, st); };
+        if (F.n == 2 && lab.clock - t0 >= 5) {   // J-01: with another in its flask, its poison and its genes passed against its parent's
+            const int other = 1 - k;
+            const FlaskShow S = flaskShow(i);
+            int lead = -1;
+            const bool parentKills = pairOf(P, F.culture.kind[other], lead) == PA_POISON && lead == 0;
+            if (S.poisoned == other && !parentKills) seenW(GN_POISON, "KILLS THE OTHER, PARENT WOULD NOT");
+            else if (parentKills && F.run.pair != PA_POISON && lab.clock - F.run.tAdd > 300 && now.one[other].cells > 0)
+                seenW(GN_POISON, "THE OTHER LIVES, PARENT WOULD KILL IT");
+            if (S.passedTo == other && P.world.carrier <= 0) seenW(GN_CARRIER, "GENES PASS TO THE OTHER, PARENT'S DO NOT");
+        }
         if (F.n != 1 || lab.clock - t0 < 5) continue;   // its own fit alone, its curve begun
         if (o.stage == SG_DEAD || o.stage == SG_EMPTY || o.stage == SG_ASLEEP) continue;
         const Medium& m = F.medium;
@@ -196,6 +215,39 @@ void Game::flaskLearn(int i) {
         if (o.glowing && P.s.glows && L.glowAny && !P.glowAny && o.cells < P.quorum * std::pow(10.0, gp.crowdLog))   // Y-04: lit by its switch
             seen(GN_GLOW, "GLOWS EARLY, PARENT DOES NOT");
         if (!o.glowing && P.s.glows && !L.s.glows && o.stage == SG_CROWD) seen(GN_GLOW, "NO GLOW WHEN FULL, PARENT GLOWS");
+        // J-01: its world genes' looks against its parent's: its gas while it grows, its dye, its lift, its slime, its sediment, its clumps once it
+        // has grown; its stop at its crowd; its ice in a cold flask; its shield under the ultraviolet light
+        const CultureWorld &lw = L.world, &pw = P.world;
+        const bool active = o.stage == SG_GROWING || o.stage == SG_COLONY || o.stage == SG_OVERGROWN;
+        const double grownN = o.cells + o.ghosts + o.spores;
+        if (active && o.cells >= 1e4) {
+            if (lw.gives() && (!pw.gives() || pw.gas != lw.gas))
+                seen(GN_GAS, pw.gives() ? fmt("GIVES OFF %s, PARENT %s", WORLD_GAS_NAMES[lw.gas], WORLD_GAS_NAMES[pw.gas]) : fmt("GIVES OFF %s, PARENT DOES NOT", WORLD_GAS_NAMES[lw.gas]));
+            else if (!lw.gives() && pw.gives()) seen(GN_GAS, fmt("NO BUBBLES, PARENT GIVES OFF %s", WORLD_GAS_NAMES[pw.gas]));
+            else if (lw.gives() && pw.gives() && ratio(lw.gasRate, pw.gasRate) > 1.8) seen(GN_GAS, fmt("%s BUBBLES THAN PARENT", lw.gasRate > pw.gasRate ? "MORE" : "FEWER"));
+        }
+        if (grownN >= 1e6) {
+            if (lw.dyes() && (!pw.dyes() || pw.dye != lw.dye))
+                seen(GN_DYE, pw.dyes() ? fmt("WATER TURNS %s, PARENT'S %s", WORLD_DYE_NAMES[lw.dye], WORLD_DYE_NAMES[pw.dye]) : fmt("WATER TURNS %s, PARENT'S STAYS CLEAR", WORLD_DYE_NAMES[lw.dye]));
+            else if (!lw.dyes() && pw.dyes()) seen(GN_DYE, fmt("WATER STAYS CLEAR, PARENT'S TURNS %s", WORLD_DYE_NAMES[pw.dye]));
+            if (lw.shells() != pw.shells() || (lw.shells() && lw.shell != pw.shell))
+                seen(GN_SHELL, lw.shells() ? fmt("%s SEDIMENT, PARENT %s", WORLD_SHELL_NAMES[lw.shell], pw.shells() ? WORLD_SHELL_NAMES[pw.shell] : "NONE")
+                                           : fmt("NO SEDIMENT, PARENT %s", WORLD_SHELL_NAMES[pw.shell]));
+        }
+        if (o.cells >= 1e5 && o.stage != SG_FROZEN) {
+            if ((lw.lift > 0) != (pw.lift > 0)) seen(GN_LIFT, lw.lift > 0 ? "CELLS FLOAT UP, PARENT'S SINK" : "CELLS SINK, PARENT'S FLOAT");
+            if ((lw.slime > 0) != (pw.slime > 0) || std::fabs(lw.slime - pw.slime) > 0.4)
+                seen(GN_SLIME, lw.slime > pw.slime ? "THICK WITH SLIME, PARENT'S THIN" : "THIN, PARENT'S THICK WITH SLIME");
+            if (!lw.overgrows && (lw.bind > 0) != (pw.bind > 0)) seen(GN_BIND, lw.bind > 0 ? "CELLS CLUMP AND SETTLE, PARENT'S DO NOT" : "CELLS STAY APART, PARENT'S CLUMP");
+        }
+        if (o.stage == SG_OVERGROWN && !pw.overgrows) seen(GN_STOP, lw.bind > 0 ? "TISSUE FILLS THE FLASK, PARENT STOPS WHEN FULL" : "NEVER STOPS GROWING, PARENT DOES");
+        if (o.stage == SG_CROWD && pw.overgrows) seen(GN_STOP, "STOPS WHEN FULL, PARENT NEVER DOES");
+        if (o.stage == SG_CROWD && !pw.overgrows && std::fabs(lw.stopShift - pw.stopShift) >= 0.3)
+            seen(GN_STOP, fmt("STOPS AT A %s CROWD THAN PARENT", lw.stopShift > pw.stopShift ? "LARGER" : "SMALLER"));
+        if (o.stage == SG_FROZEN && !flaskIce(m, pw.frostC)) seen(GN_FROST, fmt("FREEZES AT %.0f C, PARENT'S STAYS LIQUID", m.tempC));
+        if (o.stage != SG_FROZEN && !flaskIce(m, lw.frostC) && flaskIce(m, pw.frostC)) seen(GN_FROST, fmt("STAYS LIQUID AT %.0f C, PARENT'S FREEZES", m.tempC));
+        if (m.light == CL_UV && lg && gp.fit == GF_BURNT) seen(GN_SHIELD, "GROWS UNDER UV, PARENT DIES");
+        if (m.light == CL_UV && gl.fit == GF_BURNT && pg) seen(GN_SHIELD, "DIES UNDER UV, PARENT GROWS");
         // Y-03: a food or a pigment known, moved into one that lives another way: what it needs, once it grows
         for (size_t j = 0; j < F.changed[k].size() && j < F.changedKind[k].size() && lg; j++) {
             const int p = F.changed[k][j], kind = F.changedKind[k][j];
@@ -263,6 +315,17 @@ void Game::scopeLearn() {
                                : fmt("MOVES %s THAN PARENT", L.speed > P.speed ? "FASTER" : "SLOWER"))));
         }
         if (L.taxis != P.taxis || LK.s.flees != PK.s.flees) differs = true;   // a sense: its answers show it
+        // J-01: the world genes a drop shows: its gas vesicles, its slime's coat, its cells bound
+        if (std::fabs(L.gas - P.gas) > 0.2) { differs = true; seen(GN_LIFT, L.gas > P.gas ? "CELLS FULL OF GAS VESICLES, PARENT'S NOT" : "NO GAS VESICLES, PARENT'S FULL"); }
+        if (std::fabs(L.capsule - P.capsule) > 0.25) {
+            differs = true;
+            seen(GN_SLIME, L.capsule > P.capsule ? "CELLS IN A THICK SLIME COAT, PARENT'S BARE" : "CELLS BARE, PARENT'S IN SLIME");
+        }
+        if (L.arrangement != P.arrangement) {
+            differs = true;
+            seen(GN_BIND, L.arrangement == AR_SINGLE ? std::string("CELLS APART, PARENT'S BOUND")
+                                                     : std::string("CELLS BOUND IN ") + ARRANGEMENT_NAMES[L.arrangement] + ", PARENT'S APART");
+        }
         if (differs || (F.geneTold[k] & (1u << GN_QUIET)) || !(cultureStagesBy(F.run, k, lab.clock) & LC_GROWING)) continue;
         F.geneTold[k] |= 1u << GN_QUIET;   // grown and looked at, nothing different: NOTHING SEEN
         std::vector<int> fresh;
@@ -722,11 +785,17 @@ void Game::updateEditor(const Input& in, double dt, double realDt) {
     };
     if (!E.on) { if (enterKey(in)) choose(false); return; }
     if (in.wasPressed(KEY_TAB)) { choose(false); return; }
-    int col = E.sel / MAP_ROWS, row = E.sel % MAP_ROWS;
-    if (in.wasPressed(KEY_UP)) row = (row + MAP_ROWS - 1) % MAP_ROWS;
-    if (in.wasPressed(KEY_DOWN)) row = (row + 1) % MAP_ROWS;
-    if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_RIGHT)) col = 1 - col;
-    E.sel = col * MAP_ROWS + row;
+    {   // J-01: the four columns of its two pages
+        const int page = genePage(E.sel), rows = pageRows(page);
+        int col = 2 * page + (E.sel - pageFirst(page)) / rows, row = (E.sel - pageFirst(page)) % rows;
+        if (in.wasPressed(KEY_UP)) row = (row + rows - 1) % rows;
+        if (in.wasPressed(KEY_DOWN)) row = (row + 1) % rows;
+        if (in.wasPressed(KEY_LEFT)) col = (col + 3) % 4;
+        if (in.wasPressed(KEY_RIGHT)) col = (col + 1) % 4;
+        if (in.wasPressed(KEY_PAGE_DOWN) || in.wasPressed(KEY_PAGE_UP)) col = (col + 2) % 4;
+        const int np = col / 2;
+        E.sel = pageFirst(np) + (col % 2) * pageRows(np) + std::min(row, pageRows(np) - 1);
+    }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // the gene named (its genesis's: every kin's)
         textGeneKey = "G" + geneKey(E.genesis.id, E.sel);
         const std::string named = nameOfKey(textGeneKey);
@@ -766,6 +835,8 @@ void Game::renderEditor() {
     EditorState& E = lab.edit;
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 218);
     drawText(canvas, 6, 4, "GENE EDITOR", editText());
+    const int page = genePage(E.sel);   // J-01: its page
+    if (E.on) drawText(canvas, 6 + textWidth("GENE EDITOR  "), 4, page == 0 ? "CELL GENES 1/2" : "WORLD GENES 2/2", HUD_DIM);
     const auto selEdit = std::find_if(E.edits.begin(), E.edits.end(), [&](const GeneEdit& e) { return e.place == E.sel; });
     const bool put = selEdit != E.edits.end() && !selEdit->cut && selEdit->how != GX_HAND;   // Y-03: the gene chosen moved in or copied
     if (!E.on) {
@@ -780,9 +851,9 @@ void Game::renderEditor() {
         // the map: two columns of nine places, each its number, its words, its mark (= changed, - cut out, + moved in, * a copy; a gap's dash);
         // Y-03: with a kin beside it, how many of their working parts' letters differ there, + where its kin has one and it has none; Y-04: ~ a
         // switch set, after the mark (B-445 drew the tilde)
-        const int my = 33, rh = 8, cw = (UW - 12) / 2;
-        for (int p = 0; p < GENE_PLACES; p++) {
-            const int x = 6 + (p / MAP_ROWS) * cw, y = my + (p % MAP_ROWS) * rh;
+        const int my = 33, rh = 8, cw = (UW - 12) / 2, first = pageFirst(page), rows = pageRows(page);
+        for (int p = first; p < first + 2 * rows; p++) {
+            const int x = 6 + ((p - first) / rows) * cw, y = my + ((p - first) % rows) * rh;
             const MicrobeGene* H = E.editedGenes.at(p);
             const auto ed = std::find_if(E.edits.begin(), E.edits.end(), [&](const GeneEdit& e) { return e.place == p; });
             if (p == E.sel) fillRectRGB(canvas, x - 2, y - 1, x + cw - 6, y + 6, editColour(0.35f));
@@ -898,7 +969,7 @@ void Game::renderEditor() {
         drawTextCentered(canvas, UW / 2, UH - 12, "N NAME GENE  WRITING GOES ON IF YOU LEAVE", HUD_DIM);
     } else if (E.on) {
         drawTextCentered(canvas, UW / 2, UH - 21, "ENTER LETTERS  S SWITCH  C CUT  D COPY  BKSP UNDO", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 12, "N NAME  K KIN  M MOVE KIN'S GENE IN  W WRITE", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 12, page == 0 ? "N NAME  K KIN  M MOVE IN  W WRITE  PGDN PAGE" : "N NAME  K KIN  M MOVE IN  W WRITE  PGUP PAGE", HUD_DIM);
     }
     if (E.choosing) {   // the chooser over it: the cultures' folders, then the open one's rows
         const int rowsN = 14, x0 = 20, y0 = 30;
@@ -927,9 +998,11 @@ void Game::editorPad(PadMenu& m) const {
     m.item("LETTERS", KEY_ENTER); m.item("CUT OUT", KEY_C); m.item("RESET TO PARENT'S", KEY_BACKSPACE); m.item("NAME GENE", KEY_N);
     m.item("COMPARE WITH KIN", KEY_K); m.item("MOVE KIN'S GENE IN", KEY_M); m.item("COPY GENE", KEY_D);   // Y-03
     m.item("SWITCH", KEY_S);   // Y-04
+    if (E.sel < CELL_GENE_PLACES) m.item("WORLD GENES", KEY_PAGE_DOWN); else m.item("CELL GENES", KEY_PAGE_UP);   // J-01: its other page
     m.item("WRITE STRAIN", KEY_W); m.item("ANOTHER CULTURE", KEY_TAB); m.item("BACK", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "LETTERS"); m.button(PR_B, KEY_ESCAPE, "BACK"); m.button(PR_X, KEY_C, "CUT"); m.button(PR_Y, KEY_W, "WRITE");
     m.button(PR_SELECT, KEY_TAB, "CULTURE");
+    m.button(PR_LB, KEY_PAGE_UP, "PAGE"); m.button(PR_RB, KEY_PAGE_DOWN, "PAGE");
 }
 
 // ---- the save's lines: what is on it, its edits, its writing ------------------------------------------------------------------------------

@@ -333,7 +333,7 @@ struct GroundCtx {
             if (K.landMoist >= 0) lc.moist = K.landMoist + 0.5 * fbm3(p / (R * 0.22), g.sF, 3) + g.moistureBias;
             {
                 const double tK = g.tempBias / 0.3 + 288.0 - K.greenhouseK, latDeg = std::fabs(std::asin(clampd(unit.z, -1, 1))) / DEG;   // the equilibrium (`make`'s bias undone)
-                lc.T = (K.atmosphere ? (tK - 273.15) * 0.75 + K.tempOffset - 0.4 * latDeg : (tK - 273.15) * 1.3 - 60.0 - 0.5 * latDeg) - 6.5 * std::max(0.0, lc.hS) / 1000.0 + K.tempAdd;
+                lc.T = (K.atmosphere ? (tK - 273.15) * 0.75 + g.airWarmthC() - 0.4 * latDeg : (tK - 273.15) * 1.3 - 60.0 - 0.5 * latDeg) - 6.5 * std::max(0.0, lc.hS) / 1000.0 + K.tempAdd;
             }
             if (hS0) *hS0 = lc.hS;
             hSmooth = lc.hS; slopeM = rf.slopeM; reliefDone = true;

@@ -420,7 +420,7 @@ them. Its room; its kind (`FX_*`: a box, a screen, a tube, a ring, the cage, the
 and shades (`FINISHES`: a home of 11-20, the frame deals the bank), `open` where the walk passes it (low, flat, overhead): every other
 fixture's footprint is a collider (`ShipCollider`), so keep it off the rooms' ways (the unit's `ship` group walks them). A screen goes on a
 box's face (`screenOn`) or lies on a desk (`screenTop`), in its device's bank as dealt. A thing the frame fills (I-04's prints, the
-garden, Z-05's flasks and jars, Z-06's tree wall) is a fixture with a `marker` of a `ShipPieceKind` appended, drawn by its case in
+garden, Z-05's flasks, Z-06's tree wall) is a fixture with a `marker` of a `ShipPieceKind` appended, drawn by its case in
 `game/cabin_life.cpp`; its own tones are homes past the banks (32-47, `ShipBanks`), asked only for what is drawn in front of the eye and
 after the screens near them (rules-life-cultures.md). A place the explorer looks from is a view (`shipViews`: `THE <WHAT>`, the harness's
 `testCabinView`). Then `unit ship`, `ship rooms`, `ship light` (its finishes lit) and `ship life` (a filled piece).
@@ -431,7 +431,7 @@ A cabin device ("Add a cabin device": its facing, its row with a colour 0.3 from
 fixtures) whose use is a screen ("Add a screen"): a camera you enter (the microscope: its slide whole in the framebuffer, every bank its
 own, no space view, no cabin) or, as the incubator, the sequencer and the tree, a screen over the room (`ST_SIMULATES | ST_OVERLAY |
 ST_STOWS | ST_SHIP_MOVES`, back to SPACE). Then, as the lab's three do:
-1. **What it holds** is the save's, through its row's `save`, `load` and `reset` (U-05; the `flask`, `jar`, `seq` lines): the least that
+1. **What it holds** is the save's, through its row's `save`, `load` and `reset` (U-05; the `flask`, `seq` lines): the least that
    makes it again (its species by key, its events, when it began), never what is made from them (`flaskMake`, `sequencerMake`).
 2. **What runs on** runs on the lab's clock (`lab.clock`, the drones' kind: real seconds while the game simulates, `updateLab`), closed
    form in it, so the same skipped (`testLabSkip`), stepped and loaded again; what it comes to is told as the clock reaches it, the

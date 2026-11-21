@@ -2,7 +2,7 @@
 
 Rules for reading microbe genomes aboard and for the record of what was found (1.5.0, R-425: Z-06, Z-07; B-443; R-444: Y-01), one line
 per rule with its log entries (`log/`); a replaced rule moves to `superseded.md`. Search and microscope: `rules-life-lab.md`;
-incubator, jars and collection: `rules-life-cultures.md`; where life is: `rules-life.md`.
+incubator and collection: `rules-life-cultures.md`; where life is: `rules-life.md`.
 
 ## The sequencer and the tree
 - The sequencer, a screen over the room (`SEQUENCER`, E at the bow bench), reads a species seen in a vial or grown in a flask, not a fossil or protocell [Z-06]
