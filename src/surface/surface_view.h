@@ -13,6 +13,7 @@
 #include "space/space_view.h"
 #include "textures.h"
 #include "bestiary.h"
+#include "animal_mesh.h"
 #include "galaxy/landmarks.h"
 #include "peoples/ruins.h"
 #include "peoples/records.h"   // the records (peoples/shards.h with them)
@@ -391,6 +392,17 @@ private:
     int sightCx0 = 0, sightCz0 = 0;
     float sightTop[SIGHT_GRID * SIGHT_GRID];
     bool sightFrame = false;
+    // J-06: the animals drawn: each species' rig (built at the landing from the bestiary, in its order), the world's two hide banks
+    // (`setupPalette`), this frame's animals to pose (its rig, its pose's inputs, its detail, its pixels a metre, its fog), each posed on the
+    // pool into a shape list of its own and the lists filled in bands in their order
+    std::vector<AnimalRig> rigs;
+    int hideBanks[2] = {3, 0};
+    struct LifeJob { int rig = 0; AnimalPoseIn in; int detail = 0; double pxPerM = 1, fog = 0; };
+    std::vector<LifeJob> lifeJobs;
+    std::vector<ShapeList> lifeLists;
+    // the harness's specimens (`bestiary plates`): a species each where it is put, standing (0), aloft (1) or afloat (2); the game puts none
+    struct Specimen { int species = 0; Vec3 at; double heading = 0; int how = 0; double flap = 0.3; };
+    std::vector<Specimen> specimens;
 
 public:
     // ---- the landing, the frame and the camera; the terrain's streaming, the scanner's thread (surface_view.cpp)
@@ -720,6 +732,11 @@ public:
     double testCanopyCoverage(double radiusM);      // share of forest-biome ground within the radius under a canopy
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
     std::string testHerdStates() const;            // "GRAZING 3 FLEEING 2 (calls 1)"
+    // J-06: one species put alone where it is wanted, standing (0), aloft (1) or afloat (2) (`bestiary plates`); the world's hide banks
+    void testSpecimen(int species, const Vec3& at, double heading, int how, double flap) { specimens.assign(1, Specimen{species, at, heading, how, flap}); }
+    void testSpecimenAdd(int species, const Vec3& at, double heading, int how, double flap) { specimens.push_back(Specimen{species, at, heading, how, flap}); }
+    void testNoSpecimens() { specimens.clear(); }
+    int testHideBank(int k) const { return hideBanks[k & 1]; }
     int testAheadCells() const { return aheadStat; }
     int testMadeBank(int cls) const { return cls >= 0 && cls < MC_COUNT ? madeBanks[cls] : -1; }   // J-05: a made look's bank (-1 none)
     double findOpenRun(double& x, double& z, double& heading);   // open ground within 800 m of the explorer and its longest clear run (metres)

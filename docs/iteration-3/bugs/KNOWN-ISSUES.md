@@ -171,6 +171,8 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-462 | S4 | life | A line's air answers to its waters and land alone: a host of plants or a wood rotter living in the forests gives its gas as if it lived in its waters only (`seedHabitatOf`). Found in J-05. | open, found 2026-11-21 |
 | KI-463 | S4 | surface | A crust's three forms (polygons, ripples, rosettes) are kept but drawn with the one crust texture; LUSH deepens the plants' colours but grows no more trees. Found in J-05. | open, found 2026-11-21 |
 | KI-464 | S4 | surface | The made looks take the four lent banks (28 to 25): where the traits or a second people hold them, a look past the free ones is drawn in its family's bank. Found in J-05. | open, found 2026-11-21 |
+| KI-465 | S4 | surface | On a world of a people with a second sun, the two hides share one bank (13) or fall back on the forest's and the rock's: 3 of the 64 plate worlds, their marks then darker shades of the hide. Found in J-06. | open, found 2026-11-21 |
+| KI-466 | S4 | game | The data sheet's LIFE line lists every species by name and plan in three lines at most: with up to ten a world now, the last are cut. J-07 rewrites the line by what was seen. Found in J-06. | open, found 2026-11-21 |
 
 ## The long rows, continued
 

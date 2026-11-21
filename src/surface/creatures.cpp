@@ -8,6 +8,7 @@
 #include "core/noise.h"
 #include "core/clock.h"
 #include "core/rng.h"
+#include "core/parallel.h"
 #include <cmath>
 #include <algorithm>
 #include <chrono>
@@ -69,7 +70,7 @@ void SurfaceView::planLife(const SurfaceSite& s, const Bestiary& B, uint64_t see
             c.x = cx + r.sym(spread); c.z = cz + r.sym(spread);
             c.heading = r.range(0, TAU); c.speed = 0;
             c.timer = r.range(1, 6); c.size = sp.size * (0.85 + 0.3 * r.uni()); c.seed = r.next();
-            c.kind = sp.plan == PLAN_HEXAPOD ? 1 : 0;
+            c.kind = sp.plan == PLAN_HEXAPOD || sp.plan == PLAN_CRAWLER || sp.plan == PLAN_OCTOPOD ? 1 : 0;
             c.state = CS_IDLE;
             TerrainVertex tv = s.sampleAt(c.x, c.z, 16);
             if (tv.material == MAT_WATER || (tv.water > -1e8f && tv.h < tv.water + 0.5)) { c.x = cx; c.z = cz; }
@@ -81,6 +82,8 @@ void SurfaceView::planLife(const SurfaceSite& s, const Bestiary& B, uint64_t see
 void SurfaceView::spawnLife(double lat, double lon) {
     const Body& b = site.sys->bodies[site.body];
     bestiary = Bestiary::make(b, site.gen);
+    rigs.clear();
+    for (const Species& sp : bestiary.species) rigs.push_back(rigOf(sp.body));   // J-06: built once a species
     uint64_t seed = site.gen.seed ^ (uint64_t)(lat * 1e6) ^ ((uint64_t)(lon * 1e6) << 20);
     planLife(site, bestiary, seed, critters, flocks, herds);
     seenSpecies.clear(); sightings.clear(); pendingCalls.clear();
@@ -176,7 +179,7 @@ void SurfaceView::updateHabitat() {
                 c.x = hd.cx + r.sym(spread); c.z = hd.cz + r.sym(spread);
                 c.heading = r.range(0, TAU); c.speed = 0;
                 c.timer = r.range(1, 6); c.size = sp.size * (0.85 + 0.3 * r.uni()); c.seed = r.next();
-                c.kind = sp.plan == PLAN_HEXAPOD ? 1 : 0;
+                c.kind = sp.plan == PLAN_HEXAPOD || sp.plan == PLAN_CRAWLER || sp.plan == PLAN_OCTOPOD ? 1 : 0;
                 c.state = CS_IDLE;
                 TerrainVertex tv = site.sampleAt(c.x, c.z, 16);
                 if (tv.material == MAT_WATER || (tv.water > -1e8f && tv.h < tv.water + 0.5)) { c.x = hd.cx; c.z = hd.cz; }
@@ -205,6 +208,7 @@ void SurfaceView::updateLife(double dt, double t) {
     for (Flock& f : flocks) {
         const Species* sp = f.species >= 0 && f.species < (int)bestiary.species.size() ? &bestiary.species[f.species] : nullptr;
         bool wantsRest = sp && ((sp->activity == ACT_DAY && sky < 0.3) || (sp->activity == ACT_DUSK && sky > 0.6));
+        if (sp && sp->plan == PLAN_FLOATER) { f.alt += (f.cruiseAlt - f.alt) * (1 - std::exp(-dt * 0.2)); continue; }   // J-06: a floater drifts on, day and night
         f.restTimer -= dt;
         if (f.landed > 0) {
             f.landed -= dt;
@@ -346,18 +350,45 @@ void SurfaceView::updateLife(double dt, double t) {
 
 void SurfaceView::drawLife(Framebuffer& fb, double t) {
     double t0 = nowMs();
-    if (flocks.empty() && critters.empty()) { lastLifeMs[1] = 0; return; }
+    if (flocks.empty() && critters.empty() && specimens.empty()) { lastLifeMs[1] = 0; return; }
     const Vec3& sd = env.sun.dirLocal;
-    double sunUp = smoothstep(-0.03, 0.06, sd.y);
-    double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
-    double lf = env.sun.lightFactor;
+    const double sunUp = smoothstep(-0.03, 0.06, sd.y);
+    const double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
+    const double lf = env.sun.lightFactor;
     auto vert = [&](const Vec3& p, double shade) { RVert q; Vec3 v = toView(p.x, p.y, p.z); q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade; return q; };
     auto fogOf = [&](double dist) { return 1 - std::exp(-dist / env.fogDistance); };
-    // ---- flyers: silhouettes with flapping or gliding wings, perched with folded wings
+    auto speciesAt = [&](int i) { return i >= 0 && i < (int)bestiary.species.size() && i < (int)rigs.size() ? &bestiary.species[i] : nullptr; };
+    lifeJobs.clear();
+    // J-06: an animal to pose: its ground (3 by 3 heights round it, read here on the main thread: a miss fills the cache), its detail
+    auto job = [&](int spi, const Vec3& at, double heading, double scale, double dist, bool ground) -> LifeJob& {
+        const Species& sp = bestiary.species[spi];
+        const AnimalRig& R = rigs[spi];
+        LifeJob J;
+        J.rig = spi;
+        J.in.at = at; J.in.heading = heading; J.in.scale = scale; J.in.t = t;
+        J.pxPerM = proj.f / std::max(dist, 0.5);
+        J.detail = animalDetail(sp.size * scale * J.pxPerM, FB_SCALE);
+        J.fog = fogOf(dist);
+        if (ground) {
+            double spread = 0, reach = 0;
+            for (int p = 0; p < std::min(sp.body.pairs, 6); p++) { spread = std::max(spread, R.legSpread[p]); reach = std::max(reach, R.legReach[p]); }
+            J.in.gx = std::max(0.3, (0.5 * sp.body.length + 0.7 * reach + 0.3 * sp.body.neck) * scale);
+            J.in.gz = std::max(0.2, (0.5 * sp.body.width + spread + 0.1) * scale);
+            const double hx = std::sin(heading), hz = std::cos(heading);
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++) {
+                    const double fx = (i - 1) * J.in.gx, sx = (j - 1) * J.in.gz;
+                    J.in.ground[i][j] = site.groundHeight(at.x + hx * fx - hz * sx, at.z + hz * fx + hx * sx);
+                }
+        }
+        lifeJobs.push_back(J);
+        return lifeJobs.back();
+    };
+    // ---- flyers: bodies near, a point and two strokes farther, perched with folded wings
     for (const Flock& f : flocks) {
-        const Species* sp = f.species >= 0 && f.species < (int)bestiary.species.size() ? &bestiary.species[f.species] : nullptr;
+        const Species* sp = speciesAt(f.species);
         double bsize = sp ? sp->size : 0.5;
-        int bank = sp ? sp->bank : 1;
+        int bank = sp ? hideBanks[sp->body.bank & 1] : 1;
         double a = f.phase + t * f.speed;
         double fcx = f.cx + std::cos(a) * f.radius, fcz = f.cz + std::sin(a) * f.radius;
         double ground = site.groundHeight(fcx, fcz);
@@ -366,27 +397,43 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         if (dist > 900) continue;
         Rng r(f.seed);
         bool down = f.landed > 0 && f.alt < 3;
+        const double course = std::atan2(-std::sin(a) * (f.speed >= 0 ? 1 : -1), std::cos(a) * (f.speed >= 0 ? 1 : -1));
         for (int i = 0; i < f.n; i++) {
             double ox = r.sym(18), oz = r.sym(18), oy = r.sym(6);
             double ph = r.range(0, TAU), wf = 6 + 4 * r.uni();
             double bx, by, bz;
             if (down && f.perched) { double pa = ph, pr = f.perchR * 0.8 * (0.3 + 0.7 * r.uni()); bx = f.perchX + std::cos(pa) * pr; bz = f.perchZ + std::sin(pa) * pr; by = f.perchY + r.sym(0.4); }
             else { bx = fcx + ox + 3 * std::sin(t * 0.7 + ph); bz = fcz + oz + 3 * std::cos(t * 0.5 + ph); by = base + oy + 1.5 * std::sin(t * 0.9 + ph); }
+            const double md = std::sqrt((bx - camPos.x) * (bx - camPos.x) + (bz - camPos.z) * (bz - camPos.z) + (by - camPos.y) * (by - camPos.y));
+            const bool glide = !down && std::sin(t * 0.35 + ph) > 0.45;   // long glides between flapping
+            if (sp && md < 160 && bsize * proj.f / std::max(md, 0.5) >= 3.0) {
+                const bool landed = down && sp->plan != PLAN_FLOATER;
+                LifeJob& J = job(f.species, Vec3(bx, by, bz), landed ? ph : course + 0.3 * std::sin(t * 0.4 + ph), 1.0, md, landed);
+                J.in.aloft = !landed;
+                J.in.folded = landed;
+                J.in.flap = sp->plan == PLAN_FLOATER ? 0 : (sp->plan == PLAN_GLIDER || glide ? 0.12 : std::sin(t * wf + ph));
+                J.in.gait = sp->gait; J.in.seed = f.seed + i;
+                if (landed) {   // perched on its branch or the ground: standing on it
+                    const double gy = by - rigs[f.species].spineY;
+                    for (auto& row : J.in.ground) for (double& g : row) g = gy;
+                    J.in.at.y = gy;
+                }
+                continue;
+            }
             Vec3 v = toView(bx, by, bz);
             if (v.z < 1) continue;
             double shade = 4 + 6 * env.skyBrightness;
             RVert p; p.x = v.x; p.y = v.y; p.z = v.z; p.shade = shade;
             int size = dist < 150 ? 2 : 1;
-            rasterPoint3(fb, p, bank == 1 ? 1 : bank, proj, true, size);
-            if (dist < 250) {
-                bool glide = !down && std::sin(t * 0.35 + ph) > 0.45;   // long glides between flapping
+            rasterPoint3(fb, p, bank, proj, true, size);
+            if (dist < 250 && !(sp && sp->plan == PLAN_FLOATER)) {
                 double flap = down ? 0.1 : (glide ? 0.2 : std::sin(t * wf + ph));
-                double span = 1.8 * bsize * (down ? 0.35 : 1.0) * (dist < 80 ? 1.0 : 0.6);
+                double span = 0.5 * (sp ? sp->body.span : 1.8 * bsize) * (down ? 0.35 : 1.0) * (dist < 80 ? 1.0 : 0.6);
                 Vec3 l = toView(bx - span, by + 0.4 * flap * span, bz), rgt = toView(bx + span, by + 0.4 * flap * span, bz);
                 RVert a1 = p, a2 = p;
                 a1.x = l.x; a1.y = l.y; a1.z = l.z; a2.x = rgt.x; a2.y = rgt.y; a2.z = rgt.z;
-                rasterLine3(fb, a1, p, bank == 1 ? 1 : bank, proj, true, 1);
-                rasterLine3(fb, p, a2, bank == 1 ? 1 : bank, proj, true, 1);
+                rasterLine3(fb, a1, p, bank, proj, true, 1);
+                rasterLine3(fb, p, a2, bank, proj, true, 1);
             }
         }
     }
@@ -408,15 +455,16 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
             }
         }
     }
-    // ---- swimmers: fins, a back arc, the odd breach, in deep water within 250 m
-    if (site.hasWater && kindHas(site.gen.type, KT_FAUNA)) {
-        const Species* sw = bestiary.firstSwimmer() >= 0 ? &bestiary.species[bestiary.firstSwimmer()] : nullptr;
-        double ssz = sw ? sw->size : 1.5;
+    // ---- swimmers: the world's several species, each spot one of them: a body near, breaking the surface; fins and a back farther
+    if (site.hasWater && kindHas(site.gen.type, KT_FAUNA) && bestiary.swimmerCount > 0) {
         int ccx = (int)std::floor(camPos.x / 100), ccz = (int)std::floor(camPos.z / 100);
         for (int dz = -2; dz <= 2; dz++)
             for (int dx = -2; dx <= 2; dx++) {
                 uint64_t hs = hash2i(ccx + dx, ccz + dz, site.gen.seed ^ 0xF1A);
                 if (hash01(hs) > 0.35) continue;
+                const int spi = bestiary.firstSwimmer() + (int)(hash01(mix64(hs + 6)) * bestiary.swimmerCount) % bestiary.swimmerCount;
+                const Species* sw = speciesAt(spi);
+                const double ssz = sw ? sw->size : 1.5;
                 double cx = (ccx + dx) * 100.0 + 20 + hash01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + hash01(mix64(hs + 2)) * 60;
                 double a = t * (0.03 + 0.03 * hash01(mix64(hs + 3))) + hash01(mix64(hs + 4)) * TAU;
                 double sx = cx + std::cos(a) * 25, sz = cz + std::sin(a) * 25;
@@ -427,15 +475,21 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 double dist = std::sqrt((sx - camPos.x) * (sx - camPos.x) + (sz - camPos.z) * (sz - camPos.z));
                 if (dist > 250 || ssz / dist * proj.f < 1.0) continue;
                 double hx = -std::sin(a), hz = std::cos(a);   // tangent of the circle
+                const double breach = surf > 0.97 ? 1.0 : 0.0;
+                if (sw && dist < 120 && ssz * proj.f / dist >= 4.0) {   // the body itself, its back at the surface (under it the water hides it)
+                    const double depth = sw->body.depth * (0.35 + 0.5 * (1 - surf)) - breach * sw->body.depth * 1.6;
+                    LifeJob& J = job(spi, Vec3(sx, wl - depth, sz), std::atan2(hx, hz), 1.0, dist, false);
+                    J.in.afloat = true; J.in.gait = GAIT_SWIM; J.in.seed = hs;
+                    continue;
+                }
                 double fh = (0.25 + 0.45 * (surf - 0.2)) * ssz * 0.6;
                 double shade = 8 + 55 * fogOf(dist);
-                RasterParams rp; rp.bank = 3;
+                RasterParams rp; rp.bank = sw ? hideBanks[sw->body.bank & 1] : 3;
                 RVert p[3] = {vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade), vert(Vec3(sx, wl + fh, sz), shade),
                         vert(Vec3(sx + hx * 0.4 * ssz, wl + 0.02, sz + hz * 0.4 * ssz), shade)};
                 if (p[0].z < NEAR_Z || p[1].z < NEAR_Z || p[2].z < NEAR_Z) continue;
                 rasterPolygon(fb, p, 3, rp, proj);
                 // the back: a low arc behind the fin; a breach lifts it high for a moment
-                double breach = surf > 0.97 ? 1.0 : 0.0;
                 double bh = (0.12 + 0.6 * breach) * ssz;
                 RVert q[4] = {vert(Vec3(sx - hx * 1.6 * ssz, wl + 0.02, sz - hz * 1.6 * ssz), shade), vert(Vec3(sx - hx * 1.0 * ssz, wl + bh, sz - hz * 1.0 * ssz), shade + 6),
                               vert(Vec3(sx - hx * 0.45 * ssz, wl + bh * 0.8, sz - hz * 0.45 * ssz), shade + 6), vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade)};
@@ -443,9 +497,9 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 if (ok) rasterPolygon(fb, q, 4, rp, proj);
             }
     }
-    // ---- land creatures: articulated bodies
+    // ---- land animals: each posed from its species' rig on the ground under it, its shadow first
     for (const Critter& c : critters) {
-        const Species* spp = c.species >= 0 && c.species < (int)bestiary.species.size() ? &bestiary.species[c.species] : nullptr;
+        const Species* spp = speciesAt(c.species);
         if (!spp) continue;
         const Species& sp = *spp;
         double dist = std::sqrt((c.x - camPos.x) * (c.x - camPos.x) + (c.z - camPos.z) * (c.z - camPos.z));
@@ -453,164 +507,63 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         double sz = c.size, k = c.size / std::max(sp.size, 0.05);   // this animal's scale of its species
         if (sz / dist * proj.f < 1.0) continue;
         double gy = site.groundHeight(c.x, c.z);
-        double hx = std::sin(c.heading), hz = std::cos(c.heading);
-        Vec3 fwd(hx, 0, hz), side(-hz, 0, hx), up(0, 1, 0);
-        double bodyLen = sp.bodyLen * k, legLen = sp.legLen * k, neckLen = sp.neckLen * k, headLen = sp.headLen * k, tailLen = sp.tailLen * k;
-        double wid = sz * (sp.plan == PLAN_HEXAPOD ? 0.55 : 0.45), bodyH = sz * (sp.plan == PLAN_HEXAPOD ? 0.3 : 0.5);
-        bool moving = c.speed > 0.05 && c.lift < 0.5;
-        double ph = c.gaitPhase;
-        double bob = moving ? 0.04 * sz * std::sin(ph * TAU * 2) : 0;
-        double hop = (sp.gait == GAIT_HOP && moving) ? 0.5 * legLen * std::max(0.0, std::sin(ph * TAU)) : 0;
-        double standH = legLen * (1 - 0.72 * c.lift) + hop + bob;
-        Vec3 c0(c.x, gy + standH, c.z);
-        int bank = sp.bank;
-        double fog = fogOf(dist);
-        auto shadeOf2 = [&](const Vec3& n, double mul) {
-            double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp * lf;
-            if (nLamps) light += (1 - ambient) * lampAt(c0, &n);   // the explorer's lamp
-            double s = 44 * std::pow(light, 0.7) * sp.tone * mul;
-            return s + (63 - s) * fog;
-        };
-        auto quad = [&](const Vec3& a, const Vec3& b, const Vec3& cc, const Vec3& d, const Vec3& n, double mul) {
-            RVert q[4] = {vert(a, shadeOf2(n, mul)), vert(b, shadeOf2(n, mul)), vert(cc, shadeOf2(n, mul)), vert(d, shadeOf2(n, mul))};
-            for (RVert& v : q) if (v.z < NEAR_Z) return;
-            RasterParams rp; rp.bank = bank;
-            rasterPolygon(fb, q, 4, rp, proj);
-        };
-        auto seg = [&](const Vec3& a, const Vec3& b, double sh, int bk, int th) {
-            RVert va = vert(a, sh), vb = vert(b, sh);
-            if (va.z < NEAR_Z || vb.z < NEAR_Z) return;
-            rasterLine3(fb, va, vb, bk, proj, true, th);
-        };
-        // a box segment (top and two sides) along the body axis
-        auto box = [&](const Vec3& centre, double len, double w, double h, double mul) {
-            Vec3 corners[8];
-            for (int i = 0; i < 8; i++) corners[i] = centre + fwd * ((i & 1) ? len * 0.5 : -len * 0.5) + side * ((i & 2) ? w * 0.5 : -w * 0.5) + up * ((i & 4) ? h * 0.5 : -h * 0.5);
-            double topMul = sp.pattern == 3 ? 0.85 * mul : mul, sideMul = sp.pattern == 3 ? 1.1 * mul : mul;
-            quad(corners[4], corners[5], corners[7], corners[6], up, topMul);
-            quad(corners[0], corners[1], corners[5], corners[4], -side, sideMul);
-            quad(corners[2], corners[3], corners[7], corners[6], side, sideMul);
-        };
-        drawBlobShadow(fb, c.x, c.z, 0.5 * bodyLen, sz);
-        bool full = dist < 60, mid = dist < 150;
-        int th = dist < 25 ? 2 : 1;
-        // the trunk: three segments, striped when patterned
-        for (int i = 0; i < 3; i++) {
-            double mul = sp.pattern == 1 ? (i == 1 ? 0.78 : 1.08) : 1.0;
-            double w = wid * (i == 1 ? 1.0 : 0.85), h = bodyH * (i == 1 ? 1.0 : 0.85);
-            box(c0 + fwd * (bodyLen * (i - 1) / 3.0), bodyLen / 3.0 + 0.02, w, h, mul);
-        }
-        if (full && sp.pattern == 2) {   // spots on the flanks
-            for (int i = 0; i < 8; i++) {
-                uint64_t hs = mix64(c.seed + 300 + i);
-                Vec3 p = c0 + fwd * ((hash01(hs) - 0.5) * bodyLen * 0.9) + side * ((i & 1 ? 1 : -1) * wid * 0.52) + up * ((hash01(mix64(hs + 1)) - 0.5) * bodyH * 0.7);
-                RVert q = vert(p, shadeOf2(i & 1 ? side : -side, 0.55));
-                if (q.z >= NEAR_Z) rasterPoint3(fb, q, bank, proj, true, 1);
-            }
-        }
-        // the neck and head: pitched by the plan, lowered to the ground when grazing or drinking
-        double neckUp = sp.plan == PLAN_LONGNECK
-                ? 55 * DEG
-                : (sp.plan == PLAN_BIPED ? 60 * DEG : (sp.plan == PLAN_HOPPER ? 45 * DEG : (sp.plan == PLAN_GIANT ? 35 * DEG : (sp.plan == PLAN_HEXAPOD ? 0 : 22 * DEG))));
-        double np = neckUp - c.headPitch * (neckUp + 42 * DEG);
-        Vec3 neckDir = fwd * std::cos(np) + up * std::sin(np);
-        Vec3 neck0 = c0 + fwd * (bodyLen * 0.5) + up * (bodyH * 0.3);
-        Vec3 neck1 = neck0 + neckDir * neckLen;
-        if (c.headPitch > 0.5 && neck1.y < gy + 0.05) neck1.y = gy + 0.05;
-        {
-            double nw = wid * 0.45, nh = bodyH * 0.45;
-            Vec3 nside = side * (nw * 0.5), nup = normalize(cross(neckDir, side)) * (nh * 0.5);
-            if (nup.y < 0) nup = -nup;
-            quad(neck0 - nside + nup, neck0 + nside + nup, neck1 + nside + nup, neck1 - nside + nup, up, 1.0);
-            quad(neck0 - nside - nup, neck0 - nside + nup, neck1 - nside + nup, neck1 - nside - nup, -side, 1.0);
-            quad(neck0 + nside - nup, neck0 + nside + nup, neck1 + nside + nup, neck1 + nside - nup, side, 1.0);
-        }
-        Vec3 headDir = normalize(neckDir * 0.6 + fwd * 0.5 - up * 0.25);
-        Vec3 head0 = neck1, head1 = neck1 + headDir * headLen;
-        {
-            double hw = wid * 0.42, hh = bodyH * 0.42;
-            Vec3 hside = side * (hw * 0.5), hup = normalize(cross(headDir, side)) * (hh * 0.5);
-            if (hup.y < 0) hup = -hup;
-            quad(head0 - hside + hup, head0 + hside + hup, head1 + hside + hup * 0.6, head1 - hside + hup * 0.6, up, 1.0);
-            quad(head0 - hside - hup, head0 - hside + hup, head1 - hside + hup * 0.6, head1 - hside - hup * 0.6, -side, 0.95);
-            quad(head0 + hside - hup, head0 + hside + hup, head1 + hside + hup * 0.6, head1 + hside - hup * 0.6, side, 0.95);
-            if (full && dist < 30) {   // eyes
-                for (int e = -1; e <= 1; e += 2) {
-                    RVert q = vert(head0 + headDir * (headLen * 0.55) + side * (e * hw * 0.55) + hup * 0.5, 58);
-                    if (q.z >= NEAR_Z) rasterPoint3(fb, q, 8, proj, true, 1);
-                }
-            }
-            if (mid) {   // crests: horns, ears, a crest along the neck, antlers
-                double dark = shadeOf2(up, 0.5);
-                switch (sp.crest) {
-                    case 1:
-                        for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.9) + up * (sz * 0.3) + headDir * (sz * 0.15), dark, bank, th);
-                        break;
-                    case 2: for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.8) + up * (sz * 0.18), dark, bank, 1); break;
-                    case 3: seg(neck0 + up * (bodyH * 0.35), neck1 + up * (bodyH * 0.35), dark, bank, th); break;
-                    case 4:
-                        for (int e = -1; e <= 1; e += 2) {
-                            Vec3 a0 = head0 + hup + side * (e * hw * 0.4), a1 = a0 + up * (sz * 0.35) + side * (e * sz * 0.2);
-                            seg(a0, a1, dark, bank, 1);
-                            seg(a0 + (a1 - a0) * 0.5, a0 + (a1 - a0) * 0.5 + up * (sz * 0.2) - side * (e * sz * 0.08), dark, bank, 1);
-                        }
-                        break;
-                    default: break;
-                }
-            }
-        }
-        // the tail
-        {
-            double wag = std::sin(t * 3 + c.seed % 7) * (moving ? 0.35 : 0.12);
-            Vec3 t0 = c0 - fwd * (bodyLen * 0.5) + up * (bodyH * 0.2);
-            Vec3 t1 = t0 - fwd * (tailLen * 0.55) + side * (wag * tailLen * 0.4) + up * (sp.plan == PLAN_HOPPER ? -tailLen * 0.1 : tailLen * 0.15);
-            Vec3 t2 = t1 - fwd * (tailLen * 0.45) + side * (wag * tailLen * 0.6) - up * (tailLen * 0.35);
-            double ts = shadeOf2(up, 0.8);
-            seg(t0, t1, ts, bank, th); seg(t1, t2, ts, bank, 1);
-        }
-        // the legs: gait cycles per plan, feet on the terrain
-        int nlegs = sp.plan == PLAN_HEXAPOD ? 6 : ((sp.plan == PLAN_BIPED || sp.plan == PLAN_HOPPER) ? 2 : 4);
-        double stride = legLen * (c.state == CS_FLEE ? 1.1 : 0.6);
-        double legShade = shadeOf2(side, 0.7);
-        for (int L = 0; L < nlegs; L++) {
-            double fx, sx, off;
-            if (nlegs == 6) { fx = bodyLen * (0.38 - 0.38 * (L / 2)); sx = (L & 1) ? 1 : -1; off = ((L / 2) & 1) ? ((L & 1) ? 0.5 : 0.0) : ((L & 1) ? 0.0 : 0.5); }
-            else if (nlegs == 2) { fx = -bodyLen * 0.1; sx = (L & 1) ? 1 : -1; off = sp.gait == GAIT_HOP ? 0.0 : (L & 1) * 0.5;
-            } else {
-                fx = (L & 1) ? bodyLen * 0.38 : -bodyLen * 0.38;
-                sx = (L & 2) ? 1 : -1;
-                off = sp.runGait == GAIT_GALLOP && c.state == CS_FLEE ? ((L & 1) ? 0.0 + 0.1 * ((L & 2) ? 1 : 0) : 0.5 + 0.1 * ((L & 2) ? 1 : 0)) : (((L & 1) ^ ((L & 2) >> 1)) ? 0.0 : 0.5);
-            }
-            Vec3 hip = c0 + fwd * fx + side * (sx * wid * 0.45) - up * (bodyH * 0.4);
-            Vec3 knee, foot;
-            if (c.lift > 0.5) {   // folded under the body
-                knee = hip + fwd * (legLen * 0.3) - up * (legLen * 0.2);
-                foot = knee + fwd * (legLen * 0.35);
-            } else {
-                double swing = moving ? std::sin((ph + off) * TAU) : 0, liftA = moving ? std::max(0.0, std::cos((ph + off) * TAU)) : 0;
-                if (sp.gait == GAIT_HOP && moving) { swing = -0.3 + 0.6 * std::max(0.0, std::sin(ph * TAU)); liftA = 0; }
-                double fy = site.groundHeight(hip.x + hx * swing * stride, hip.z + hz * swing * stride);
-                foot = Vec3(hip.x + hx * swing * stride, fy + liftA * 0.25 * legLen, hip.z + hz * swing * stride);
-                knee = (hip + foot) * 0.5 + fwd * ((sp.plan == PLAN_HEXAPOD ? -0.15 : 0.18) * legLen + liftA * 0.2 * legLen) + side * (sx * (sp.plan == PLAN_HEXAPOD ? 0.35 : 0.05) * legLen);
-            }
-            if (full || mid) { seg(hip, knee, legShade, bank, th); seg(knee, foot, legShade, bank, th); }
-            else seg(hip, foot, legShade, bank, 1);
-        }
-        if (sp.plan == PLAN_BIPED && mid) {   // arms swinging against the legs
-            for (int e = -1; e <= 1; e += 2) {
-                double swing = moving ? std::sin((ph + (e > 0 ? 0.5 : 0.0)) * TAU) : 0.1;
-                Vec3 sh = c0 + fwd * (bodyLen * 0.35) + side * (e * wid * 0.5) + up * (bodyH * 0.3);
-                seg(sh, sh + fwd * (swing * legLen * 0.3) - up * (legLen * 0.35), legShade, bank, 1);
-            }
-        }
+        drawBlobShadow(fb, c.x, c.z, 0.5 * sp.bodyLen * k, sz);
+        LifeJob& J = job(c.species, Vec3(c.x, gy, c.z), c.heading, k, dist, true);
+        J.in.phase = c.gaitPhase;
+        J.in.moving = c.speed > 0.05 && c.lift < 0.5;
+        J.in.running = c.state == CS_FLEE;
+        J.in.gait = J.in.running ? sp.runGait : sp.gait;
+        J.in.lift = c.lift; J.in.headPitch = c.headPitch; J.in.seed = c.seed;
         // tracks in sand and snow behind it
         if (dist < 80 && !c.tracks.empty()) {
+            const double fog = fogOf(dist);
             for (const Critter::Track& tr : c.tracks) {
                 RVert q = vert(Vec3(tr.x, site.groundHeight(tr.x, tr.z) + 0.03, tr.z), 10 + 40 * fog);
                 if (q.z >= NEAR_Z) rasterPoint3(fb, q, 0, proj, true, 1);
             }
         }
     }
+    for (const Specimen& s : specimens) {   // the harness's
+        const Species* sp = speciesAt(s.species);
+        if (!sp) continue;
+        const double dist = length(s.at - camPos);
+        Vec3 at = s.at;
+        if (s.how == 0) { at.y = site.groundHeight(at.x, at.z); drawBlobShadow(fb, at.x, at.z, 0.5 * sp->bodyLen, sp->size); }
+        LifeJob& J = job(s.species, at, s.heading, 1.0, dist, s.how == 0);
+        J.in.aloft = s.how == 1; J.in.afloat = s.how == 2; J.in.flap = s.flap; J.in.gait = sp->gait; J.in.seed = (uint64_t)s.species + 1;
+    }
+    // ---- J-06: the animals posed and their shapes made on the pool, a list each; then filled in bands, in their order
+    const int nj = (int)lifeJobs.size();
+    if ((int)lifeLists.size() < nj) lifeLists.resize(nj);
+    struct LifeView final : AnimalView {
+        const SurfaceView* sv = nullptr;
+        Vec3 sun; double ambient = 0, sunUp = 0, lf = 0;
+        Vec3 view(const Vec3& p) const override { return sv->toView(p.x, p.y, p.z); }
+        double light(const Vec3& p, const Vec3& n) const override {
+            double l = ambient + (1 - ambient) * std::max(0.0, dot(n, sun)) * sunUp * lf;
+            if (sv->nLamps) l += (1 - ambient) * sv->lampAt(p, &n);   // the explorer's lamp
+            return 52 * std::pow(std::max(0.0, l), 0.65);   // a sunlit flank at its hide's colour (the ramp's 47) where its tone is 0.9
+        }
+    };
+    parallelFor(nj, 1, [&](int jb, int je) {
+        for (int j = jb; j < je; j++) {
+            const LifeJob& J = lifeJobs[j];
+            ShapeList& L = lifeLists[j];
+            L.begin(proj);
+            AnimalPose P;
+            poseAnimal(rigs[J.rig], J.in, P);
+            LifeView V;
+            V.sv = this; V.sun = sd; V.ambient = ambient; V.sunUp = sunUp; V.lf = lf;
+            V.fog = J.fog; V.eye = camPos; V.hide[0] = hideBanks[0]; V.hide[1] = hideBanks[1];
+            V.pxPerM = J.pxPerM; V.fbScale = FB_SCALE;
+            emitAnimal(rigs[J.rig], P, V, J.detail, L);
+        }
+    });
+    if (nj) parallelFor(FBH, 32, [&](int yb, int ye) {
+        setRasterBand(yb, ye);
+        for (int j = 0; j < nj; j++) lifeLists[j].fill(fb);
+        setRasterBand(0, 1 << 30);
+    });
     lastLifeMs[1] = nowMs() - t0;
 }
 

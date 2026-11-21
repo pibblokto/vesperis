@@ -1,6 +1,7 @@
 // The surface's play: the capsule's descent and ascent (DESCENT, ASCENT) and the ground (SURFACE): walking, the vehicles,
 // the scanner, the ground's sounds
 #include "game.h"
+#include <cstring>
 #include "peoples/plan.h"
 #include "ui.h"
 #include "core/rng.h"
@@ -235,9 +236,10 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     for (const std::string& sg : surf.sightings) {
         size_t p1 = sg.find('|'), p2 = sg.find('|', p1 + 1);
         std::string name = sg.substr(0, p1), plan = sg.substr(p1 + 1, p2 - p1 - 1), dist = sg.substr(p2 + 1);
-        logEvent("SIGHTING", fmt("%s, A %s, %s M AWAY ON %s", upper(name).c_str(), plan.c_str(), dist.c_str(), upper(bodyNameOf(surf.site.body)).c_str()));
+        const char* an = !plan.empty() && std::strchr("AEIOU", plan[0]) ? "AN" : "A";   // AN OCTOPOD
+        logEvent("SIGHTING", fmt("%s, %s %s, %s M AWAY ON %s", upper(name).c_str(), an, plan.c_str(), dist.c_str(), upper(bodyNameOf(surf.site.body)).c_str()));
         guide.creaturesSeen++;
-        status(fmt("A %s: %s", plan.c_str(), upper(name).c_str()), 4);
+        status(fmt("%s %s: %s", an, plan.c_str(), upper(name).c_str()), 4);
     }
     surf.sightings.clear();
     if (in.wasPressed(KEY_M) && !in.ctrl()) {

@@ -1408,19 +1408,27 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                         sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
                     }
                 }
-                if (wantMat == SCENE_CREATURES) {   // one creature of each land species 5 m ahead, side on, standing still
+                if (wantMat == SCENE_CREATURES) {   // one of each land species side by side, three quarters on, standing still (J-06: the row framed)
                     if (sv.critters.empty()) continue;
                     std::vector<Critter> keep;
-                    for (int spi = 0; spi < sv.bestiary.landCount; spi++) {
+                    const int n = sv.bestiary.landCount;
+                    auto widthOf = [&](const Species& sp) { return sp.body.length + 0.6 * (sp.body.neck + sp.body.tailLen + sp.body.headLen) + 0.5 * sp.size + 0.8; };
+                    double row = 0, tall = 0;
+                    for (int spi = 0; spi < n; spi++) { const Species& sp = sv.bestiary.species[spi]; row += widthOf(sp); tall = std::max(tall, sp.size + sp.body.neck); }
+                    const double D = std::max({5.0, row / (2 * 0.7 * 0.85), tall / (2 * 0.44 * 0.75)});
+                    double x = -0.5 * row;
+                    for (int spi = 0; spi < n; spi++) {
+                        const Species& sp = sv.bestiary.species[spi];
                         Critter c; c.species = spi; c.herd = 0; c.seed = 1234 + spi; c.state = CS_IDLE; c.timer = 1e9;
-                        c.size = sv.bestiary.species[spi].size;
-                        c.x = sv.player.x + (spi - (sv.bestiary.landCount - 1) * 0.5) * (2.5 + c.size * 2.5);
-                        c.z = sv.player.z + 5 + c.size * 2.5;
-                        c.heading = PI / 2;
+                        c.size = sp.size;
+                        c.x = sv.player.x + x + 0.5 * widthOf(sp);
+                        c.z = sv.player.z + D;
+                        c.heading = PI / 2 - 0.4;
+                        x += widthOf(sp);
                         keep.push_back(c);
                     }
                     sv.critters = keep;
-                    sv.player.yaw = 0; sv.player.pitch = -0.08;
+                    sv.player.yaw = 0; sv.player.pitch = -std::atan2(std::max(0.0, 1.6 - 0.45 * tall), D);
                     for (const Critter& c : sv.critters)
                         printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.species[c.species].name.c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
                                 sv.site.groundHeight(c.x, c.z));

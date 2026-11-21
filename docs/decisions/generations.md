@@ -7,6 +7,7 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 
 | Gen | Date | By | What changed | Its entry |
 | --- | --- | --- | --- | --- |
+| 18 | 2026-11-21 | J-06 | the animals: each species from its own seed, a body of parts in sixteen plans, its world's style and two hide colours | [J-06](log/7-1.5.0.md) |
 | 17 | 2026-11-16 | Z-01, Z-03 | the biota: every landable world's stage of life, chemistry, genesis and species; red snow, the springs' bands | [Z-01](log/7-1.5.0.md), [Z-03](log/7-1.5.0.md) |
 | 16 | 2026-10-21 | P-01..P-07, Q-01, Q-02 | 1.4.0's made kinds of world (P) and the six trait slots (Q) | [P-01](log/6-1.4.0.md) and after |
 | 15 | 2026-10-18 | B-428 | a solid world's moons spread out (the first at 5-40 radii) | [B-428](log/5-1.3.2.md) |
@@ -24,6 +25,16 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 | 3 | 2026-09-26 | M5 | astronomy: companion stars, substellar objects, comets, Kepler orbits, double planets | [the table](log/0-1.0.0.md) |
 | 2 | 2026-09-26 | M9 | plates, rivers, biomes, seasons, four new types | [the table](log/0-1.0.0.md) |
 | 1 | before 2026-09-26 | iteration 1 | the first worlds | |
+
+## 18
+
+J-06 the animals (R-448): every world's bestiary is drawn again (`Bestiary::make`, `surface/bestiary.h`). Each species comes from its
+own seed (its world's, whether it lives on land, in the air or in the water, and its place among those), so a new value moves no other
+species. A species is a body of parts (`surface/animal_body.h`): a trunk in segments, 0 to 6 pairs of legs, a neck and a head, a tail
+and a back, wings, a hide and a coat, in sixteen plans. A world's animals share a style and two hide colours, and no two of a world look
+alike. A world has 3 to 5 species on land (2 to 4 before), 1 or 2 in the air (a floater in a thick air) and 2 to 4 in the water (1). No
+star, system, body, map or ground moves: the herds' habitat cells and their spots stay where they were (the unit's `animals` group).
+What moves is the animals drawn, their names and their calls.
 
 ## 17
 

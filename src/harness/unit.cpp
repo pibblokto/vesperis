@@ -145,6 +145,7 @@ const UnitGroup UNIT_GROUPS[] = {
     {"genes", "unit_lab_genes.cpp", 1, 2, unitLabGenes},   // the Y series: Y-01's trees
     {"world", "unit_lab_genes.cpp", 1, 2, unitLabWorld},   // J-01: the world genes in the lab
     {"seeding", "unit_seeding.cpp", 1, 2, unitSeeding},    // J-02: the seeded worlds' layer, its record and its clock
+    {"animals", "unit_animals.cpp", 1, 2, unitAnimals},    // J-06: the animals' bodies, their poses and the herds' cells
     {"files", "unit.cpp", 1, 2, unitFiles},   // B-440: last, after every group's games
 };
 

@@ -333,9 +333,13 @@ render at that resolution scale (tests default to 1x for speed; the game default
   gear every 10 s and fails under 2 km or 100 km/h (2026-09-26: 2,152 m, 107 km/h; 2026-09-27 with the 180 km/h top speed of
   O1-05: 2,817 m, 169 km/h; the seat frames carry the nose camera's look since N4-06) (output: `shots/drive_seat.png`,
   `drive_chase.png`, `drive_night.png`, `drive_night_chase.png`, `drive_air.png` when it jumps)
-* `bestiary`: N3-01: prints the bestiary of the first six living worlds near the start (species, plan, size, gaits, bank, tone,
-  pattern, crest, habitat, diet, activity, temperament, call, herd size) and fails when a second generation differs (output:
-  stdout, exit code)
+* `bestiary`: N3-01: prints the bestiary of the first six living worlds near the start (species, plan, size, gaits, habitat, diet,
+  activity, temperament, call, herd size; J-06: the body's parts in a line) and fails when a second generation differs (output: stdout,
+  exit code). `bestiary plates [n]` (`modes_bestiary.cpp`, J-06): the first n worlds (64) with animals, each species framed alone on its
+  own ground at 2x and three quarters on (a flyer and a land world's swimmer held up as a specimen, a sea world's swimmer in its sea),
+  four to a row with its plan, size and hide under it (`shots/tests/plates/plate_NN.png`); a herd of the world's biggest herds 7 to 15 m
+  off, or a school of its first swimmer at the surface (`herd_NN.png`); every world's species small, a row a world (`plates.png`); the
+  pairs of a world alike counted. `VESPERIS_PLATE_FULL=1` also writes each cell at 2x (`cell_NN_i.png`)
 * `encounters [N]`: N3-04: N (300) random felisian land sites near the start through `SurfaceSite::init` and
   `SurfaceView::planLife`; prints the share with a herd within 200 m overall and per biome (2026-09-26: tropical 86%, temperate
   100%, grassland 80%, savanna 75%, taiga 56%, desert 50%, tundra 30%, alpine 15%, ice 0%; 11% overall because most random sites

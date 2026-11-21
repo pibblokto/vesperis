@@ -11,6 +11,8 @@ before changing anything there.
 - `rules-surface.md`: the planet function, materials and landforms, traits, water and drainage, sights, the activity vision,
   weather.
 - `rules-surface-site.md`: the site's caches and threads, the rings, what stands and walks, vehicles, life.
+- `rules-surface-animals.md`: the animals (1.5.0, J-06 on): the bestiary and each species' own seed, bodies of parts in sixteen plans, a
+  world's style and hides, drawing on the pool.
 - `rules-life.md`: microbes (1.5.0): where life is, species, geneses and kin, carried spores, the cache; forms and the slide;
   genomes and the tree, the made species.
 - `rules-life-lab.md`: the search (samples, the kit, the ultraviolet, the signs) and the microscope (lists by world and folder,

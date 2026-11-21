@@ -268,6 +268,26 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             static const RGB J[3] = {RGB(0.62f, 0.32f, 0.22f), RGB(0.70f, 0.52f, 0.28f), RGB(0.54f, 0.42f, 0.52f)};
             matRamp(26, J[(int)(hash01(mix64(site.gen.seed ^ 0x9E7AULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
+        // J-06: the animals' two hide banks, each its world's colour (`Bestiary::style`): banks the world leaves free (the first people's 24 and 20
+        // where no people built, 13 with no glowing body in the sky, 12 with no second sun), else lent ones no trait holds; the forest's and the
+        // rock's where none is free
+        hideBanks[0] = 3; hideBanks[1] = 0;
+        if (kindHas(site.gen.type, KT_FAUNA)) {
+            bool glowing = false;
+            for (int bi = 0; bi < (int)site.sys->bodies.size(); bi++) if (bi != site.body && kindHas(site.sys->bodies[bi].type, KT_GLOWS)) glowing = true;
+            int cand[10], nc = 0;
+            if (peoplesOf(site.gen) == 0 && !worldHadCivilisation(site.gen) && !formsStaged) { cand[nc++] = 24; cand[nc++] = 20; }
+            if (!glowing) cand[nc++] = 13;
+            if (site.sys->companion < 0 && !site.sys->sunless()) cand[nc++] = 12;
+            if (peoples < 2 && !formsStaged)
+                for (int lb : {28, 27, 26, 25})
+                    if (lb != tintBankW && lb != tintBankL && lb != tintBankSprings && lb != tintBankStrata && lb != tintBankSnow && lb != tintBankMade &&
+                        !(lb == 26 && site.gen.hasTrait(TR_PETRIFIED)))
+                        cand[nc++] = lb;
+            const RGB lt = lerp(site.sys->star.color, white, 0.5f);
+            for (int h = 0; h < 2 && h < nc; h++) { hideBanks[h] = cand[h]; matRamp(cand[h], bestiary.style.colour[h] * lt); }
+            if (nc == 1) hideBanks[1] = hideBanks[0];
+        }
         // J-05: the land's, the plants' and the snow's made looks, each in a lent bank the traits and the waters' tint leave free (28, 27, 26,
         // 25 in turn); a glowing forest's leaves carry its light at night (the luminous flora's ramp, in its colour)
         for (int& mb : madeBanks) mb = -1;
@@ -279,7 +299,8 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             static const int LENT[4] = {28, 27, 26, 25};
             auto taken = [&](int bk) {
                 return bk == tintBankMade || bk == tintBankSnow || bk == tintBankStrata || bk == tintBankL || bk == tintBankW || bk == tintBankSprings ||
-                       (bk == 26 && site.gen.hasTrait(TR_PETRIFIED)) || bk == madeBanks[MC_LAND] || bk == madeBanks[MC_PLANTS] || bk == madeBanks[MC_SNOW];
+                       (bk == 26 && site.gen.hasTrait(TR_PETRIFIED)) || bk == madeBanks[MC_LAND] || bk == madeBanks[MC_PLANTS] || bk == madeBanks[MC_SNOW] ||
+                       bk == hideBanks[0] || bk == hideBanks[1];
             };
             const RGB lt = lerp(site.sys->star.color, white, 0.5f);
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {

@@ -288,11 +288,18 @@ Contents:
 - A read on the pool must touch no lazy cache: `readSample`'s ruins' walls fill the ruins' cells as they are asked for, so the activity
   vision leaves them to the main thread after (`wallsDone`, the vial's own read unchanged: 194 places the same, 5 walls). A read is
   about 20 us: 384 a frame cost a millisecond at 1x, and the reach's 5,284 metres fill in 14 frames (R-434).
+- `groundHeight` is such a cache: `TerrainCache::at` fills a missing vertex. An animal posed on the pool reads the ground from 3 by 3
+  heights the main thread read for it first (J-06).
+- A specimen frame for judging a body needs flat open ground and the capsule moved away: the first plates showed cliffs, a camera
+  under the ground and the capsule's dome over the animals (J-06).
 
 ## Generation: the worlds
 
 - Wide or many planet samples (plates over 200 km, site searches, globe scans) run under `DrainageOff`, or each builds a drainage
   tile. A drainage "lake cell" includes playas and frozen basins: test the water at 64 m before calling it a lake.
+- `DrainageOff` is the calling thread's alone. A landing's frame fills the rings' misses on the pool, whose threads sample with the
+  drainage, so a harness frame under it drew rivers in some cells and not others, by timing: 21 of 64 plates moved between two runs.
+  A frame switches the drainage off for every thread (`setDrainageEnabled(false)`, the scenes' `DrainOff`) (J-06).
 - The generation moves no star: companions and comets read the drawn moon orbits. The worlds' dead stars are white dwarfs,
   pulsars and neutron stars.
 - Picks stay bounded: `Rng::pick` falls to the last entry on rounding, and pseudo-entries (`STAR_ROGUE`) stay out of every pick

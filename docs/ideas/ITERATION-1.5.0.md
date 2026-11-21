@@ -58,7 +58,7 @@ with a culture, left out at first (the worlds stayed as generated), came in with
 | 18 | The seeded worlds | J-03 | Sending: the drones' seed trip, whether it takes, the spread, the record; the waters' colours | XL | done 2026-11-21 |
 | 19 | The seeded worlds | J-04 | Air and sky: the made climate, haze, ozone, clouds, rain | L | done 2026-11-21 |
 | 20 | The seeded worlds | J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | done 2026-11-21 |
-| 21 | The animals | J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | planned |
+| 21 | The animals | J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | done 2026-11-21 |
 | 22 | The animals | J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | planned |
 | 23 | The animals | J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | planned |
 | 24 | The overgrowth | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | planned |

@@ -402,6 +402,7 @@ void renderSurface(int onlyType);
 void runConsistency();
 int runDrive();
 int runBestiary();
+int runBestiaryPlates(int worlds);   // modes_bestiary.cpp (J-06)
 void runEncounters(int wanted);
 void renderLandingMaps();
 int runStability(const char* want, double walk);
@@ -476,6 +477,7 @@ void unitLife(const Check& check);
 // ---- modes_seed.cpp (J-02: the seeded worlds, `seed test`; J-03: `seed worlds`, `seed sea`); unit_seeding.cpp: the unit's `seeding` group
 int runSeed(int argc, char** argv);
 void unitSeeding(const Check& check);
+void unitAnimals(const Check& check);
 // J-03: a line of a world's species as the game reads one (its form, its genes, its world genes; its edits applied, their price), keyed as the
 // guide keys it; and a seeding of it at a place (its record's fields), worked out (`seedingRun`)
 SeedLine seedLineFor(const StarSystem& sys, int body, int species, const std::vector<GeneEdit>& edits);

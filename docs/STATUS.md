@@ -13,7 +13,7 @@ log entry (`docs/decisions/log/`), B file or R file.
 
 ## Done in 1.5.0
 
-Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-05 done (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
+Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-06 done (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
 
 - **Microbes (Z-01 to Z-07, R-425):** life on every landable world (`src/life/`, `docs/reference/13-life.md`), with `GEN_VERSION` 17;
   each species' form and its slide in six ways of seeing; the search on the ground (O takes a sample); the microscope, the incubator,
@@ -41,31 +41,38 @@ Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-05 done (below). Lo
   steam, then dry to their beds). A line with LIFT carries its glow, dye, ice or spores up: glowing clouds at night, red clouds and
   blood rain with puddles, endless rain, spore clouds. On a living world the ice caps, the snow line and the plants follow the warmth;
   the HUD's TEMP and ATM and the data sheet's AIR line read it.
-- **Latest (2026-11-21): J-05, water, ground and plants** (R-448's fifth milestone). What a line makes of the waters, land, snow and
+- **J-05, water, ground and plants** (2026-11-21, R-448's fifth milestone). What a line makes of the waters, land, snow and
   plants it lives in, each with a colour of its own: soup, jelly, milk and rust waters, foam on the shores; mats and stromatolites on
   its shores, crusts, chalk, glass sands, sulphur crusts, rust, slime and pitted stone on its land; coloured snow and dark ice; a host
   of plants' glowing forests, new leaves, frost burn and galls; a wood rotter's blight and fallen forests. From the air: purple or
   black seas, sour seas with bleached reefs, rusted ground, lush or bleached plants, boiling seas. The landing map, the globe and the
   ground show them. A world nobody seeded is drawn as before, bit for bit.
+- **Latest (2026-11-21): J-06, animal bodies** (generation 18). Every world's animals are drawn again: each species from its own seed,
+  a body of parts in sixteen plans (quadrupeds, long-necked browsers, hexapods, octopods, striders, hoppers, giants, serpents,
+  many-legged crawlers, slugs, burrowers, climbers, gliders, flyers, floaters and swimmers shaped as fish, eels, rays or long necks). A
+  world's animals share a style and two hide colours of their own, and no two of a world look alike. Flyers have bodies near, several
+  swimmers break the surface, floaters drift in a thick air. Saves and guides of generation 17 load with WORLDS REGENERATED (GEN 17, NOW
+  18). The plates for your verdict: `shots/tests/plates/` (`bestiary plates`).
 
 ## Planned (2026-11-20)
 
-- **R-448, seeded worlds:** the J series, J-06 to J-12 left (`ITERATION-1.5.0.md`, Phase 6; `IDEAS-seeded-worlds.md`). A gene-edited
+- **R-448, seeded worlds:** the J series, J-07 to J-12 left (`ITERATION-1.5.0.md`, Phase 6; `IDEAS-seeded-worlds.md`). A gene-edited
   culture sent down by a drone changes a world, more often for the worse: made traits, die-offs with remains, changed animals, worlds
-  overgrown with flesh, fungus or other tissue, ruins included; and the animals drawn again (generation 18 from J-06).
+  overgrown with flesh, fungus or other tissue, ruins included; the animals' ways and their record (J-07).
 
 ## Committed
 
 Commits on `release/v1.5.0`, each on the user's word, none pushed: 0c90433 (Z, I, B-434 to B-438), 455c7ad (B-439), 82592c5 (B-440,
 R-427 to R-434), d12a9ea (R-435 to R-442, B-441, B-442), 20b236e (B-443, Y-01, Y-02), c9e98be (Y-03, Y-04, R-445, R-446, B-444 to
-B-446). Not committed: R-447, the R-448 plan (`IDEAS-seeded-worlds.md`, Phase 6, R-448's file), J-01, J-02, J-03, J-04 and J-05.
+B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05). Not committed: J-06.
 
 ## Next
 
-- **J-06, animal bodies** (generation 18: each species' body from its own seed, its plates judged first), on the user's "proceed".
+- **Your verdict on J-06's plates** (`shots/tests/plates/`), then **J-07, animal ways and the record** (gaits for every body, grazers,
+  hunters, flocks, swimmers in the shallows; each species seen kept in the guide and named by the explorer) on the user's "proceed".
 - The 1.5.0 release after J-12, on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need
   Docker, asked first).
-- **Proof base:** `build/prove/j05` (39 items: J-05 added `seed_looks`).
+- **Proof base:** `build/prove/j06` (40 items: J-06 added `bestiary`).
 
 ## Playing the lab
 
@@ -87,6 +94,12 @@ sulphur), SLIME, BIND, STOP cut, DRY, ROT (wood, stone), and HOST set to plants 
 second page has SEEDED, MADE and AIR. `seed worlds`, `seed sea`, `seed climate`, `seed traits` and `seed looks` show the verdicts, the
 seas, the climates, every made air and every made water, ground and plant in `shots/tests/`.
 
+## Seeing the animals
+
+Land on a world with plants: herds graze in the open, flyers circle overhead and perch in trees at dusk, swimmers break the surface of
+seas and deep lakes, and floaters drift in a thick air. X marks the creatures nearby. `bestiary plates` draws 64 worlds' animals one by
+one and a herd each into `shots/tests/plates/` (`plate_NN.png`, `herd_NN.png`, all of them small in `plates.png`).
+
 ## Playing the ship
 
 Shift runs, Page Up takes the lift, U dims the lights, Y makes the hull glass. E works the bunk, the desk, the music player's deck, the
@@ -96,6 +109,7 @@ and `life kit` draw them.
 
 ## Open with the user
 
+- **J-06's plates:** your verdict on the bodies, the plans, the colours and the herds before J-07 (the plan's "plates judged first").
 - **R-448's calls:** the plan's defaults hold (the drones send a culture, about two hours a world, the animals in the middle, home
   never seeded, the explorer names the animals) until the user says otherwise.
 - **Docs still in the old style:** the reference notes (`docs/reference/`, 1.4 MB) and the code comments, until each is next edited.
@@ -103,9 +117,9 @@ and `life kit` draw them.
 - Known issues (`docs/iteration-3/bugs/KNOWN-ISSUES.md`): KI-424, KI-425, KI-428 to KI-431, KI-435 to KI-438, KI-440, KI-444,
   KI-446, KI-448 to KI-450, KI-453 (the data sheet calls a second sun's planet a moon), KI-454 (a heard sound's status line can run
   off the screen), KI-455 (twelve different world looks dim the last flasks on the shelves), J-04's KI-456 to KI-459 (only a living
-  world's ice, snow and plants move, and only it runs away; samples read the old warmth; a dyed rain without a bank) and J-05's KI-460
+  world's ice, snow and plants move, and only it runs away; samples read the old warmth; a dyed rain without a bank), J-05's KI-460
   to KI-464 (one colour a class; the globe shows one class; a line's air ignores its plants; a crust's forms in one texture; four lent
-  banks).
+  banks) and J-06's KI-465 and KI-466 (one hide bank on a crowded world; the LIFE line cut).
 - Offered by B-430: the tables' dump as a harness mode for the container; parallel.h's misleading indentation (38 of the Linux builds'
   46 warnings). Offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant.
 - Our Docker images `vesperis-build:arm64` and `:amd64` were removed on the user's word. The old proof kits (`build/p00` to
@@ -113,11 +127,11 @@ and `life kit` draw them.
 
 ## Disk
 
-About 95 GB free (2026-11-21). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
-j03, j04 and j05, the compares' outputs against r434 to j04, and their logs: about 38 GB. A snapshot and a compare's outputs are about
-1.3 GB each.
+About 89 GB free (2026-11-21). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
+j03, j04, j05 and j06, the compares' outputs against r434 to j05, and their logs: about 41 GB. A snapshot and a compare's outputs are
+about 1.4 GB each.
 
 ## Next free ids
 
-Bugs B-447, requests R-449, known issues KI-465. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
+Bugs B-447, requests R-449, known issues KI-467. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
 Y and J).

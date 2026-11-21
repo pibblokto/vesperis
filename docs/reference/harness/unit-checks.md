@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-52 groups, 515 checks in their order; a group's heading gives its file, its function, the render scale it
+53 groups, 520 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -672,6 +672,14 @@ starts at and its count.
 - seeding: refused at home
 - seeding: a loan, an unseeded world
 - seeding: samples
+
+## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 5
+
+- animals: the bestiary a pure function
+- animals: no two of a world alike
+- animals: every plan's poses within bounds
+- animals: the herds' cells
+- animals: an older save's notice
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

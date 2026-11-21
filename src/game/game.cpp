@@ -127,9 +127,10 @@ std::string Game::cometMotionString(int bi) const {
     return fmt("%.0f KM/S, PERIAPSIS IN %s", spd, hours((TAU - M) / TAU * P).c_str());
 }
 
-// N3: "QUADRUPED", "BROWSER", ...
+// N3: "QUADRUPED", "BROWSER", ... (J-06: sixteen)
 const char* Game::shortPlan(int plan) {
-    static const char* const names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "CRAWLER", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER"};
+    static const char* const names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "HEXAPOD", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER", "OCTOPOD", "SERPENT",
+                                                  "CRAWLER", "SLUG", "BURROWER", "CLIMBER", "GLIDER", "FLOATER"};
     return plan >= 0 && plan < PLAN_COUNT ? names[plan] : "?";
 }
 

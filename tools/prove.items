@@ -21,6 +21,7 @@ seed | $V seed test | shots/tests/seed_test_*.png=15 shots/tests/seed_*.txt=2 | 
 seed_worlds | $V seed worlds; $V seed sea | shots/tests/seed_sea_*.png=10 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
 seed_air | $V seed climate; $V seed traits | shots/tests/made_*.png=54 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
 seed_looks | $V seed looks | shots/tests/look_*.png=168 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
+bestiary | $V bestiary; $V bestiary plates 64 | shots/tests/plates/plate_*.png=64 shots/tests/plates/herd_*.png=64 shots/tests/plates/plates.png=1 | twice
 regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 screens | $V screens | shots/tests/screens/*.png=96 | 
