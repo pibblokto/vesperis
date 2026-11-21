@@ -20,6 +20,9 @@ static const CmpScene CMP_SCENES[] = {
     {"felisian_herd_near", PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, SCENE_HERD_NEAR},
     {"felisian_herd_far", PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, SCENE_HERD_FAR},
     {"creatures_lineup", PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, SCENE_CREATURES},
+    {"creatures_hunt", PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, SCENE_HUNT},          // J-07: a pack (or one) chasing its quarry's herd
+    {"creatures_flock", PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, SCENE_FLOCK},        // J-07: a flock passing over
+    {"creatures_swimmers", PT_FELISIAN, 12, 35 * DEG, 0.0, 0.0, SCENE_SWIMMERS},  // J-07: a swimmer breaking the surface off a beach
     {"buggy_seat", PT_FELISIAN, 12, 40 * DEG, 0.6, 0.0, SCENE_BUGGY_SEAT},
     {"buggy_parked", PT_FELISIAN, 12, 40 * DEG, 0.6, 0.0, SCENE_BUGGY_PARKED},
     {"felisian_shore", PT_FELISIAN, 12, 30 * DEG, 0.0, 0.0, MAT_SAND},

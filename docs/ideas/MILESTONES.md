@@ -47,7 +47,7 @@ I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z
 Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
 Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
 Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
-fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-06 2026-11-21.
+fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-07 2026-11-21.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -361,7 +361,7 @@ stays as generated.
 | J-04 | Air and sky: the made climate, haze, ozone, clouds, rain | L | 1.5.0, done 2026-11-21 |
 | J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | 1.5.0, done 2026-11-21 |
 | J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | 1.5.0, done 2026-11-21 |
-| J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | 1.5.0 |
+| J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | 1.5.0, done 2026-11-21 |
 | J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | 1.5.0 |
 | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | 1.5.0 |
 | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | 1.5.0 |

@@ -1,5 +1,4 @@
 #include "bestiary.h"
-#include "galaxy/starfield.h"
 #include "core/rng.h"
 #include <cmath>
 
@@ -7,6 +6,9 @@ const char* const ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
 const char* const TEMPERAMENT_NAMES[3] = {"SHY", "CURIOUS", "INDIFFERENT"};
 const char* const GAIT_NAMES[GAIT_COUNT] = {"WALK", "TROT", "GALLOP", "HOP", "CRAWL", "STRIDE", "WAVE OF LEGS", "SLITHER", "BOUND", "FLAP", "GLIDE",
                                             "SWIM", "DRIFT"};
+const char* const ANIMAL_WAY_NAMES[WAY_COUNT] = {"GRAZER", "BROWSER", "HUNTER", "SCAVENGER", "BURROWER", "CLIMBER", "FLOCK", "SWARM", "SOARER",
+                                                 "SHOAL", "SHALLOWS", "LEAPER", "DRIFTER"};
+const char* const SOCIAL_NAMES[SOCIAL_COUNT] = {"IN HERDS", "ALONE", "TERRITORIAL"};
 
 namespace {
 // J-06: the land plans and their weights by the kind's style of animal (P-02's three): the felisian's, the cold's (big grazers, a giant
@@ -36,6 +38,57 @@ double sizeOf(int plan, Rng& e) {
         case PLAN_FLOATER: return e.range(1.0, 6.0);
         default: return e.range(0.3, 6.0);   // a swimmer
     }
+}
+// J-07: how a species lives, by its plan and its body (a swimmer's form, a flyer's wings and size); the walkers that may hunt by weights
+int wayOf(const Species& s, Rng& e) {
+    switch (s.plan) {
+        case PLAN_LONGNECK: return WAY_BROWSER;
+        case PLAN_GIANT: return e.chance(0.6) ? WAY_BROWSER : WAY_GRAZER;
+        case PLAN_BURROWER: return WAY_BURROWER;
+        case PLAN_CLIMBER: return WAY_CLIMBER;
+        case PLAN_SLUG: return WAY_GRAZER;
+        case PLAN_SERPENT: return WAY_HUNTER;
+        case PLAN_GLIDER: return WAY_FLOCK;
+        case PLAN_FLOATER: return WAY_DRIFTER;
+        case PLAN_FLYER:
+            if (s.body.wings == WINGS_INSECT && s.size < 0.35) return WAY_SWARM;
+            return e.chance(s.size > 0.8 ? 0.6 : 0.12) ? WAY_SOARER : WAY_FLOCK;
+        case PLAN_SWIMMER:
+            switch (s.body.variant) {
+                case SWIM_EEL: return WAY_SHALLOWS;
+                case SWIM_RAY: return e.chance(0.7) ? WAY_SHALLOWS : WAY_SHOAL;
+                case SWIM_LONGNECK: return e.chance(0.5) ? WAY_SHALLOWS : WAY_SHOAL;
+                default: return e.chance(0.45) ? WAY_LEAPER : WAY_SHOAL;
+            }
+        default: break;
+    }
+    // grazing, hunting, scavenging, browsing (or climbing: an octopod's)
+    static const double W[5][4] = {{60, 22, 10, 8}, {45, 25, 30, 0}, {80, 10, 10, 0}, {35, 45, 20, 0}, {0, 50, 30, 20}};
+    const int row = s.plan == PLAN_HEXAPOD || s.plan == PLAN_CRAWLER ? 1 : (s.plan == PLAN_HOPPER ? 2 : (s.plan == PLAN_BIPED ? 3 : (s.plan == PLAN_OCTOPOD ? 4 : 0)));
+    double w[4] = {W[row][0], W[row][1], W[row][2], W[row][3]};
+    if (s.plan == PLAN_CRAWLER) { w[0] = 40; w[1] = 0; w[2] = 60; }   // a crawler grazes or scavenges
+    const int k = e.pick(w, 4);
+    return k == 0 ? WAY_GRAZER : (k == 1 ? WAY_HUNTER : (k == 2 ? WAY_SCAVENGER : (s.plan == PLAN_OCTOPOD ? WAY_CLIMBER : WAY_BROWSER)));
+}
+// J-07: how many live together, and the herds' sizes that follow: a lone one, a pair holding its ground, a pack of hunters, a soarer's few, a
+// swarm's many
+int socialOf(Species& s, Rng& e) {
+    int social = SOCIAL_HERD;
+    const bool land = !planFlies(s.plan) && !planSwims(s.plan);
+    if (land) {
+        const double roll = e.uni();
+        if (s.plan == PLAN_SERPENT) social = SOCIAL_SOLITARY;
+        else if (s.way == WAY_HUNTER || s.way == WAY_SCAVENGER) social = roll < 0.5 ? SOCIAL_SOLITARY : SOCIAL_HERD;
+        else if (roll < 0.12 && s.plan != PLAN_GIANT && s.plan != PLAN_SLUG && s.plan != PLAN_CRAWLER) social = SOCIAL_TERRITORIAL;
+        else if (roll < 0.2) social = SOCIAL_SOLITARY;
+    }
+    if (social == SOCIAL_SOLITARY) s.herdMin = s.herdMax = 1;
+    else if (social == SOCIAL_TERRITORIAL) { s.herdMin = 1; s.herdMax = 2; }
+    else if (s.way == WAY_HUNTER) { s.herdMin = 2; s.herdMax = 4; }   // a pack
+    else if (s.way == WAY_SCAVENGER) { s.herdMin = 2; s.herdMax = 3; }
+    else if (s.way == WAY_SOARER) { s.herdMin = 1; s.herdMax = 3; }
+    else if (s.way == WAY_SWARM) { s.herdMin = 20; s.herdMax = 40; }
+    return social;
 }
 }
 
@@ -92,7 +145,6 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
         s.size = sizeOf(plan, e);
         ecology(s, e);
         s.activity = cat == 0 && i == nocturnal ? ACT_NIGHT : (e.chance(0.15) ? ACT_DUSK : ACT_DAY);
-        s.name = generateName(s.seed, cat == 2 ? 1 : (e.chance(0.5) ? 0 : 2));
         // the body: drawn again while it looks like one of its world's kept before it, else the draw farthest from them
         double bestD = -1;
         for (int nudge = 0; nudge < 24; nudge++) {
@@ -104,6 +156,8 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
         }
         s.bodyLen = s.body.length;
         s.legLen = s.body.pairs ? std::max(0.05, s.size - 0.8 * s.body.depth) : std::max(0.1, 0.25 * s.body.length);
+        s.way = wayOf(s, e);   // J-07: after every draw before it (the body's are its own stream's)
+        s.social = socialOf(s, e);
         B.species.push_back(s);
     };
     for (int i = 0; i < nLand; i++) {
@@ -116,6 +170,20 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
         add(0, i, plan, e);
     }
     B.landCount = nLand;
+    // J-07: a hunter's prey, the land species nearest its size among those that neither hunt, crawl as slugs nor walk as giants, at most
+    // twice its size; a hunter with none scavenges
+    for (int i = 0; i < nLand; i++) {
+        Species& h = B.species[i];
+        if (h.way != WAY_HUNTER) continue;
+        double best = 1e9;
+        for (int j = 0; j < nLand; j++) {
+            const Species& p = B.species[j];
+            if (j == i || p.way == WAY_HUNTER || p.plan == PLAN_SLUG || p.plan == PLAN_GIANT || p.size > 2.0 * h.size || p.size < 0.08 * h.size) continue;
+            const double d = std::fabs(std::log(p.size / h.size));
+            if (d < best) { best = d; h.prey = j; }
+        }
+        if (h.prey < 0) { h.way = WAY_SCAVENGER; if (h.social == SOCIAL_HERD) { h.herdMin = 2; h.herdMax = 3; } }
+    }
     for (int i = 0; i < nFly; i++) {
         Rng e(mix64(speciesSeed(b.seed, 1, i) ^ 0xEC0ULL));
         const double roll = e.uni();
@@ -131,6 +199,20 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
     return B;
 }
 
+double speciesStride(const Species& sp, double k, double speed, double g) {
+    if (sp.body.pairs == 0) return (sp.plan == PLAN_SERPENT ? 0.67 : 0.3) * sp.body.length * k;
+    const double h = std::max(0.03, sp.legLen * k), fr = speed * speed / (std::max(g, 0.5) * h);
+    return clampd(2.3 * h * std::pow(std::max(fr, 1e-4), 0.3), 0.35 * h, 4.5 * h) * (sp.gait == GAIT_HOP ? 1.4 : 1.0);
+}
+
+int speciesGait(const Species& sp, double k, double speed, double g, bool running) {
+    if (sp.gait == sp.runGait) return sp.gait;
+    const double h = std::max(0.03, sp.legLen * k), fr = speed * speed / (std::max(g, 0.5) * h);
+    if (running || fr > 2.5) return sp.runGait;
+    if (fr > 0.4 && sp.body.pairs == 2 && sp.runGait != GAIT_TROT) return GAIT_TROT;
+    return sp.gait;
+}
+
 int Bestiary::pickLand(uint64_t h, int biome) const {
     if (!landCount) return -1;
     int fit[8]; int n = 0;
@@ -138,4 +220,54 @@ int Bestiary::pickLand(uint64_t h, int biome) const {
     if (n == 0) for (int i = 0; i < landCount; i++) if (species[i].habitat == 0 && n < 8) fit[n++] = i;
     if (n == 0) for (int i = 0; i < landCount; i++) if (n < 8) fit[n++] = i;
     return fit[(int)(unitFromHash(h) * n) % n];
+}
+
+namespace {
+// a species' kind in a word or two (a swimmer's by its form)
+std::string kindWords(const Species& s) {
+    static const char* const KIND[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "HEXAPOD", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER", "OCTOPOD",
+                                                 "SERPENT", "CRAWLER", "SLUG", "BURROWER", "CLIMBER", "GLIDER", "FLOATER"};
+    if (s.plan == PLAN_SWIMMER) return s.body.variant == SWIM_LONGNECK ? "LONG-NECKED SWIMMER" : SWIM_NAMES[clampi(s.body.variant, 0, SWIM_COUNT - 1)];
+    return KIND[clampi(s.plan, 0, PLAN_COUNT - 1)];
+}
+// what tells a species from others of its kind, in the order the eye takes it: its coat, its head's ornament, its back, its hide, its tail,
+// its eyes; "" where the part says nothing (no ornament)
+std::string lookWord(const AnimalBody& a, int part) {
+    static const char* const COAT[COAT_COUNT] = {"PLAIN", "STRIPED", "SPOTTED", "ROSETTED", "BANDED", "SADDLED", "EYE-SPOTTED", "PALE-BELLIED",
+                                                 "MOTTLED", "BACK-STRIPED"};
+    static const char* const ORN[ORN_COUNT] = {"", "BIG-JAWED", "TUSKED", "HORNED", "CURVE-HORNED", "SPIRAL-HORNED", "ANTLERED", "NOSE-HORNED",
+                                               "LONG-EARED", "FRILLED", "FEELERED"};
+    static const char* const BACK[DORSAL_COUNT] = {"", "PLATED", "SPINED", "SAIL-BACKED", "SHELLED", "HUMPED", "FINNED"};
+    static const char* const HIDE[HIDE_COUNT] = {"FURRED", "SCALED", "ARMOURED", "BARE", "WARTY", "QUILLED", "SHAGGY"};
+    static const char* const TAIL[TAIL_COUNT] = {"TAILLESS", "WHIP-TAILED", "THICK-TAILED", "CLUB-TAILED", "FAN-TAILED", "FIN-TAILED", "STINGING",
+                                                 "CURL-TAILED"};
+    static const char* const EYES[9] = {"EYELESS", "ONE-EYED", "", "THREE-EYED", "FOUR-EYED", "FIVE-EYED", "SIX-EYED", "SEVEN-EYED", "EIGHT-EYED"};
+    switch (part) {
+        case 0: return COAT[clampi(a.coat, 0, COAT_COUNT - 1)];
+        case 1: return ORN[clampi(a.ornament, 0, ORN_COUNT - 1)];
+        case 2: return BACK[clampi(a.dorsal, 0, DORSAL_COUNT - 1)];
+        case 3: return HIDE[clampi(a.hide, 0, HIDE_COUNT - 1)];
+        case 4: return TAIL[clampi(a.tail, 0, TAIL_COUNT - 1)];
+        default: return EYES[clampi(a.eyes, 0, 8)];
+    }
+}
+}
+
+std::string Bestiary::words(int i) const {
+    if (i < 0 || i >= (int)species.size()) return "ANIMAL";
+    const Species& s = species[i];
+    const std::string kind = kindWords(s);
+    std::vector<int> others;
+    for (int j = 0; j < (int)species.size(); j++) if (j != i && kindWords(species[j]) == kind) others.push_back(j);
+    if (others.empty()) return kind;
+    for (int part = 0; part < 6; part++) {   // the first part whose word is its own among them
+        const std::string w = lookWord(s.body, part);
+        if (w.empty()) continue;
+        bool own = true;
+        for (int j : others) if (lookWord(species[j].body, part) == w) { own = false; break; }
+        if (own) return w + " " + kind;
+    }
+    int smaller = 0;   // alike in all of those: by size among them
+    for (int j : others) smaller += species[j].size < s.size;
+    return std::string(smaller == 0 ? "SMALL " : (smaller == (int)others.size() ? "LARGE " : "MIDDLING ")) + kind;
 }

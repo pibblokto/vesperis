@@ -101,6 +101,10 @@ bool Guide::load(const std::string& path) {
             if (!is.fail()) genes[k] = g;
         }
         else if (key == "watermark") { std::string k; is >> k; if (!is.fail()) watermarks.insert(k); }   // Z-06: a made species sequenced
+        else if (key == "animal") {   // J-07: <key> <doing> <nearest> <most>
+            std::string k; AnimalRecord a; is >> k >> a.doing >> a.nearest >> a.most;
+            if (!is.fail()) animals[k] = a;
+        }
         else if (key == "treeoff") { std::string k; is >> k; if (!is.fail()) treeOff.insert(k); }   // Y-01: a lab's line off its world's tree
         else if (key == "probe") {
             ProbeRecord r; int lentFlag = 0; std::string storm;
@@ -220,6 +224,10 @@ bool Guide::save(const std::string& path) const {
     for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << " " << kv.second.how << "\n";   // Y-02
     for (auto& k : treeOff) f << "treeoff " << k << "\n";   // Y-01
     for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
+    if (!animals.empty()) {   // J-07: the keys' scheme, then each species seen
+        f << "animals 1\n";
+        for (auto& [k, a] : animals) f << "animal " << k << " " << a.doing << " " << a.nearest << " " << a.most << "\n";
+    }
     if (!seeded.empty()) {   // J-02: the clock and the worlds seeded, once there is one
         f << "clock " << clock << "\n";
         for (const SeedRecord& r : seeded) f << seededLine(r) << "\n";

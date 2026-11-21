@@ -327,10 +327,13 @@ int runBestiary() {
             printf("%s (%s): %d land, %d flyers, %d swimmers\n", b.name.c_str(), KINDS[b.type].name, B.landCount, B.flyerCount, B.swimmerCount);
             for (size_t i = 0; i < B.species.size(); i++) {
                 const Species& sp = B.species[i];
-                printf("  %-12s %-20s %4.1f m  gait %s/%s  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n    %s\n", sp.name.c_str(), PLAN_NAMES[sp.plan],
-                        sp.size, GAIT_NAMES[sp.gait], GAIT_NAMES[sp.runGait], sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity],
-                        TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax, animalWords(sp.body).c_str());
-                if (sp.name != B2.species[i].name || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan || animalDistance(sp.body, B2.species[i].body) != 0) fails++;
+                printf("  %-22s %-20s %4.1f m  gait %s/%s  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d  %s %s%s\n    %s\n", B.words((int)i).c_str(),
+                        PLAN_NAMES[sp.plan], sp.size, GAIT_NAMES[sp.gait], GAIT_NAMES[sp.runGait], sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity],
+                        TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax, ANIMAL_WAY_NAMES[sp.way], SOCIAL_NAMES[sp.social],
+                        sp.prey >= 0 ? (" of " + B.words(sp.prey)).c_str() : "", animalWords(sp.body).c_str());
+                if (B.words((int)i) != B2.words((int)i) || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan || sp.way != B2.species[i].way ||
+                    sp.prey != B2.species[i].prey || animalDistance(sp.body, B2.species[i].body) != 0)
+                    fails++;
             }
             if (B.species.empty()) fails++;
             shown++;

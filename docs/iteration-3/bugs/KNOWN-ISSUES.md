@@ -172,7 +172,10 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-463 | S4 | surface | A crust's three forms (polygons, ripples, rosettes) are kept but drawn with the one crust texture; LUSH deepens the plants' colours but grows no more trees. Found in J-05. | open, found 2026-11-21 |
 | KI-464 | S4 | surface | The made looks take the four lent banks (28 to 25): where the traits or a second people hold them, a look past the free ones is drawn in its family's bank. Found in J-05. | open, found 2026-11-21 |
 | KI-465 | S4 | surface | On a world of a people with a second sun, the two hides share one bank (13) or fall back on the forest's and the rock's: 3 of the 64 plate worlds, their marks then darker shades of the hide. Found in J-06. | open, found 2026-11-21 |
-| KI-466 | S4 | game | The data sheet's LIFE line lists every species by name and plan in three lines at most: with up to ten a world now, the last are cut. J-07 rewrites the line by what was seen. Found in J-06. | open, found 2026-11-21 |
+| KI-466 | S4 | game | The data sheet's LIFE line lists every species by name and plan in three lines at most: with up to ten a world now, the last are cut. Found in J-06. | resolved 2026-11-21 (J-07: the species seen, the rest counted) |
+| KI-467 | S4 | surface | A swimmer of the shallows shows only where one of its cell's eight places finds water 0.3 to 1.5 m deep: many shores have none (`bestiary ways` found its first on the eleventh world). Found in J-07. | open, found 2026-11-21 |
+| KI-468 | S4 | surface | No hunt ends in a kill (the quarry swerves at the last moment) and a scavenger only trails the hunters: J-08's remains give both their end. Found in J-07. | open, by design till J-08 |
+| KI-469 | S4 | surface | A climber clings to a flat plane touching its trunk: on a thin trunk a wide climber's side feet stand off the bark, and two of a herd can share a side. Found in J-07. | open, found 2026-11-21 |
 
 ## The long rows, continued
 

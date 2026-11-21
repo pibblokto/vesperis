@@ -35,7 +35,7 @@ Written by `vesperis_test help md` from `src/harness/main.cpp`'s `MODES`: edit t
 | `spot` | `<sx> <sy> <sz> <body> <latDeg> <lonDeg> <t> <swim\|ascent\|stand\|dump> [pitchDeg] [yawDeg] [alt]` | B-322: a frame at an exact place, from a save's lines | modes_surface.cpp |
 | `consistency` |  | N0-02: for every landable type the landing map, the globe and the ground at one point | modes_surface.cpp |
 | `drive` |  | N4-02: the buggy driven on open ground, frames from the seat | modes_surface.cpp |
-| `bestiary` | `[plates [n]]` | N3-01: the first living worlds' bestiaries, made twice; J-06 `plates`: n worlds' (64) species alone, a herd each | modes_bestiary.cpp |
+| `bestiary` | `[plates [n] \| ways]` | N3-01: the first living worlds' bestiaries, made twice; J-06 `plates`: n worlds' (64) species alone, a herd each; J-07 `ways`: each way played and drawn, every plan's gaits | modes_bestiary.cpp |
 | `encounters` | `[n]` | N3-04: the share of n random felisian sites with a herd within 200 m, by biome | modes_surface.cpp |
 | `landmaps` |  | the landing map of a body of each landable type, its darkest shadow | modes_surface.cpp |
 | `stability` | `[scene] [metres per frame] [scale] \| flight [scale] \| skyline [scale]` | B-309: what moves in a scene's frames; G-07: the band in the flights; A-02: the city's skyline | modes_surface.cpp |

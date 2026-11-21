@@ -400,7 +400,12 @@ void Game::renderLandingMap() {
     if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // the species most likely met here
         Bestiary B = Bestiary::make(b, spaceR.genFor(b));
         int spi = B.pickLand(hash2i((int64_t)(landLat * 100), (int64_t)(landLon * 100), b.seed), tvp.biome);
-        if (spi >= 0 && tvp.biome != BIO_ICE && tvp.biome != BIO_OCEAN) l3 += fmt("  LIFE: %s", trunc(upper(B.species[spi].name), 10).c_str());
+        if (spi >= 0 && tvp.biome != BIO_ICE && tvp.biome != BIO_OCEAN) {   // J-07: by the explorer's name or its words once seen, else a herd
+            const std::string key = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, landBody) + "/A" + std::to_string(spi);
+            const auto named = guide.names.count(key) ? guide.names.find(key) : guide.inbox.find(key);
+            const std::string w = named != guide.inbox.end() && named != guide.names.end() ? upper(named->second) : (guide.animals.count(key) ? B.words(spi) : "A HERD");
+            l3 += fmt("  LIFE: %s", trunc(w, 14).c_str());
+        }
     }
     drawText(canvas, 8, ry + 16, l3.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     double lockRatio = std::fabs(1.0 - b.rotPeriod / b.orbitPeriod);

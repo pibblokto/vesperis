@@ -1,6 +1,7 @@
 // J-06 (R-448): the unit's `animals` group: the bestiary a pure function (serially, reversed and on the pool), under 1.5% of 1,000 species
 // alike another of their world, every plan's poses within bounds (and its shapes made at each detail), the herds' habitat cells as generation
-// 17 placed them (which 512 m cells round a landing hold a herd, and where its spot is), and an older save's notice
+// 17 placed them (which 512 m cells round a landing hold a herd, and where its spot is), and an older save's notice. J-07: every plan's gaits
+// within bounds and its feet put down; the record of what was seen, a name given with N, the guide's bytes, a loan's names
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "surface/surface_view.h"
@@ -46,13 +47,15 @@ uint64_t herdCellsDigest(int& worlds, int& sites, int& cells) {
     return h;
 }
 
-// a bestiary's every drawn value hashed (the names, the plans and sizes, the ecology, every part)
+// a bestiary's every drawn value hashed (the words, the ways, the plans and sizes, the ecology, every part)
 uint64_t bestiaryDigest(const Bestiary& B) {
     uint64_t h = 0xBE57ULL;
     auto d = [&](double v) { h = hashCombine(h, (uint64_t)std::llround(v * 1e6)); };
     auto i = [&](int64_t v) { h = hashCombine(h, (uint64_t)v); };
-    for (const Species& s : B.species) {
-        for (char c : s.name) i(c);
+    for (int k = 0; k < (int)B.species.size(); k++) {
+        const Species& s = B.species[k];
+        for (char c : B.words(k)) i(c);
+        i(s.way); i(s.social); i(s.prey);   // J-07
         i(s.plan); d(s.size); d(s.walkSpeed); d(s.runSpeed); i(s.gait); i(s.runGait); i(s.habitat); i(s.diet); i(s.activity); i(s.temperament); i(s.call);
         d(s.callPitch); i(s.herdMin); i(s.herdMax); i((int64_t)s.seed);
         const AnimalBody& a = s.body;
@@ -177,6 +180,122 @@ void unitAnimals(const Check& check) {
         int plansPosed = 0; for (int p = 0; p < PLAN_COUNT; p++) plansPosed += seen[p] > 0;
         check("animals: every plan's poses within bounds", outside == 0 && unfinite == 0 && empty == 0 && plansPosed == PLAN_COUNT,
               fmt("%d poses of %d plans: %d outside%s; their shapes at three details: %d not finite, %d empty", poses, plansPosed, outside, bad.c_str(), unfinite, empty));
+    }
+
+    {   // J-07: every plan's gaits within bounds, its feet where they were put: each land species walking and running at its speeds through
+        // its cycle (its gait and stride by `speciesGait` and `speciesStride`), stalking low, browsing, half under the ground and on a trunk,
+        // every point near it and none under its ground (but a burrower's going under and a climber's on its trunk); a foot on the ground moves
+        // under 3% of a stride while the body goes a fiftieth of a cycle
+        int poses = 0, outside = 0, stance = 0, slips = 0, plans = 0, seen[PLAN_COUNT] = {0}, gaitsUsed = 0;
+        bool gaitSeen[GAIT_COUNT] = {};
+        double worst = 0;
+        std::string bad;
+        for (const auto& w : worlds) {
+            const Bestiary B = Bestiary::make(w.first, w.second);
+            for (const Species& sp : B.species) {
+                if (seen[sp.plan] >= 4 || planFlies(sp.plan) || planSwims(sp.plan)) continue;
+                if (!seen[sp.plan]++) plans++;
+                const AnimalRig R = rigOf(sp.body);
+                const AnimalBody& a = sp.body;
+                const double reach = a.size + a.length + a.neck + a.tailLen + a.span + a.leg + a.headLen + a.ornamentLen;
+                for (int run = 0; run < 2; run++) {
+                    const double speed = run ? sp.runSpeed : sp.walkSpeed;
+                    const int gait = speciesGait(sp, 1, speed, 9.81, run);
+                    const double stride = speciesStride(sp, 1, speed, 9.81);
+                    gaitSeen[gait] = true;
+                    for (int q = 0; q < 24; q++) {
+                        AnimalPoseIn in;
+                        in.heading = 0; in.scale = 1; in.t = 0.37 * q; in.seed = sp.seed;
+                        in.gx = 0.5 * a.length + a.leg + a.neck; in.gz = a.width + a.leg;
+                        in.moving = true; in.running = run; in.gait = gait; in.stride = stride;
+                        const int what = q % 6;   // stepping, stalking, browsing, half under, on a trunk, stepping again
+                        in.crouch = what == 1 ? 1 : 0; in.reach = what == 2 ? 1 : 0; in.sink = what == 3 ? 0.5 : 0;
+                        in.climbing = what == 4; in.wall = Vec3(1, 0, 0);
+                        AnimalPose P[2];
+                        for (int k = 0; k < 2; k++) {
+                            in.phase = q / 24.0 + k * 0.02;
+                            in.at = Vec3(0, 0, in.phase * stride);   // the body gone its share of its strides (heading 0 is +z)
+                            poseAnimal(R, in, P[k]);
+                            poses++;
+                            const double floorY = in.sink > 0 || in.climbing ? -1e9 : -0.03 * a.size - 0.02;
+                            if (!poseWithin(P[k], in.at, 1.5 * reach, floorY)) {
+                                outside++;
+                                if (bad.size() < 200) bad += fmt(" %s(%s q%d)", PLAN_NAMES[sp.plan], GAIT_NAMES[gait], q);
+                            }
+                        }
+                        if (what != 0 && what != 5) continue;
+                        for (int l = 0; l < P[0].legs; l++) {   // a foot on the ground in both stays where it was put
+                            const Vec3 f0 = P[0].leg[l][P[0].joints - 1], f1 = P[1].leg[l][P[1].joints - 1];
+                            const double onGround = 0.2 * P[0].legR + 1e-3;
+                            if (f0.y > onGround || f1.y > onGround) continue;
+                            stance++;
+                            const double moved = std::hypot(f1.x - f0.x, f1.z - f0.z);
+                            worst = std::max(worst, moved / stride);
+                            if (moved > 0.03 * stride + 1e-3) slips++;
+                        }
+                    }
+                }
+            }
+        }
+        for (bool g : gaitSeen) gaitsUsed += g;
+        check("animals: the gaits within bounds, the feet put down", outside == 0 && slips == 0 && plans == 12 && stance > 1000,
+              fmt("%d poses of %d land plans in %d gaits: %d outside%s; %d feet on the ground over a fiftieth of a cycle, %d slipped (the most %.1f%% of a stride, "
+                  "under 3%%)", poses, plans, gaitsUsed, outside, bad.c_str(), stance, slips, 100 * worst));
+    }
+    {   // J-07: the record: a landing walked up to a herd sees its species (the guide's `animal` lines), N with the crosshair on one names it; the
+        // guide saved, loaded and saved again is the same bytes; a friend's export lent (a loan): its names in the inbox, the explorer's own
+        // name winning
+        const std::string pre = "shots/tests/unit_animals";
+        TestGame game;
+        game.savePrefix = pre + "_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = pre + "_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        StarSystem fs; int fb = -1;
+        int records = 0, named = 0, same = 0, lent = 0, own = 0;
+        std::string said, key;
+        if (firstBodyOfType(PT_FELISIAN, fs, fb)) {
+            game.testParkAt(fs.star, fb);
+            game.testLandSite();
+            pressKey(game, in, KEY_ENTER); runFrames(game, in, 8.5);
+            if (game.testGotoHerd(16)) {
+                runFrames(game, in, 1.0);
+                records = (int)game.guide.animals.size();
+                // the crosshair on the nearest: the explorer turned to it until the view's middle rests on it
+                const SurfaceView& sv = game.testSurface();
+                for (int k = 0; k < 40 && sv.lifeTarget.species < 0; k++) {
+                    double best = 1e9, yaw = 0, pitch = 0;
+                    for (const Critter& c : sv.critters) {
+                        const double dx = c.x - sv.player.x, dz = c.z - sv.player.z, d = std::hypot(dx, dz);
+                        if (d < best) { best = d; yaw = std::atan2(dx, dz); pitch = std::atan2(0.5 * c.size - sv.player.eyeHeight, d); }   // (the ground taken as level)
+                    }
+                    game.testSurfaceFace(yaw, pitch);
+                    runFrames(game, in, 0.05);
+                }
+                if (sv.lifeTarget.species >= 0) {
+                    key = Guide::bodyKey(fs.star.sx, fs.star.sy, fs.star.sz, fb) + "/A" + std::to_string(sv.lifeTarget.species);
+                    pressKey(game, in, KEY_N); runFrames(game, in, 0.1);
+                    game.testTypeText("TESTBEAST"); pressKey(game, in, KEY_ENTER); runFrames(game, in, 0.1);
+                    said = game.testStatus();
+                    named = game.guide.names.count(key) && game.guide.names[key] == "TESTBEAST";
+                }
+            }
+            game.guide.save(pre + "_a.txt");
+            Guide g2;
+            g2.load(pre + "_a.txt");
+            g2.save(pre + "_b.txt");
+            same = fileText(pre + "_a.txt") == fileText(pre + "_b.txt") && g2.animals.size() == game.guide.animals.size() && !g2.animals.empty();
+            Guide friendOf;   // the borrower: the record's names lent; then a name of its own, which wins
+            lent = friendOf.importInbox(pre + "_a.txt") >= 0 && !key.empty() && friendOf.inbox.count(key) && friendOf.inbox[key] == "TESTBEAST";
+            friendOf.names[key] = "MINE";
+            friendOf.save(pre + "_c.txt");
+            Guide again; again.load(pre + "_c.txt");
+            own = again.names[key] == "MINE" && again.inbox[key] == "TESTBEAST";
+            for (const char* f : {"_a.txt", "_b.txt", "_c.txt", "_guide.txt", "_save_auto.txt"}) remove((pre + f).c_str());
+        }
+        check("animals: the record and its names", records > 0 && named && same && lent && own,
+              fmt("%d species seen walking up to a herd; N named one TESTBEAST (%s, '%s'); the guide saved again %s; a friend's lent the name %s, its own %s", records,
+                  named ? "kept" : "NOT KEPT", said.c_str(), same ? "the same bytes" : "DIFFERENT", lent ? "in the inbox" : "NOT", own ? "wins" : "DOES NOT WIN"));
     }
 
     {   // the herds' cells as generation 17 had them: the bestiary drawn again moves no herd's cell or spot

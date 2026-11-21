@@ -26,7 +26,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   `labFlaskFull`), `modes_seed_air` (J-04: `seed climate`, each gas on twenty worlds, and `seed traits`, each made air's trait from
   orbit and on the ground; `seedGeneEdits`, `seedNativeLine`, `seedAirCases`), `modes_seed_looks` (J-05: `seed looks`, each made
   water's, ground's and plants' trait from orbit and on the ground, `look_*.png`; its sites by the drawn ground's water and the drainage),
-  `modes_bestiary` (J-06: `bestiary plates`, 64 worlds' species framed alone and a herd or a school each, `plates/`).
+  `modes_bestiary` (J-06: `bestiary plates`, 64 worlds' species framed alone and a herd or a school each, `plates/`; J-07: `bestiary
+  ways`, each way played and drawn and every plan's gaits, `ways/`; `setupWaysScene`, the hunt's, the flock's and the swimmers' scenes).
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`, `civ_peoples`,
   `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
 - `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`. Groups are in `unit_basics`, `unit_kinds`, `unit_drifters`, `unit_life`,
@@ -42,7 +43,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   flask's, the drift, the trip, home refused, an unseeded world, samples; J-04: the air by its world, after the looks, the made
   climate's reads, a runaway's seas; J-05: the looks by their world, where they lie, the made ground drawn, the words), `unit_animals`
   (the group `animals`, J-06: the bestiary pure, no two of a world alike, every plan's poses, the herds' cells as generation 17's, an older
-  save's notice; `VESPERIS_PLAYER_DIR` loads copies of the player's guide and save too). The last
+  save's notice; `VESPERIS_PLAYER_DIR` loads copies of the player's guide and save too; J-07: the gaits within bounds and the feet put
+  down, the record and its names: a herd seen, N's name, the guide's bytes, a loan's names). The last
   group, `files` (B-440: the player's files left as the unit found them), is in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 

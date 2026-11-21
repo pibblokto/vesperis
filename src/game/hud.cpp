@@ -321,6 +321,7 @@ void Game::renderSurfaceHUD() {
         else if (surf.nearShard.index >= 0) use = std::string(RECORD_MEDIUM_HUD[clampi(surf.nearShard.medium, 0, RM_COUNT - 1)]) + " - E";   // C-03; T-04: the object ("A CODEX - E")
         if (!use.empty()) act.push_back({use, HUD_AMBER});
         if (surf.nearGrave.k >= 0) act.push_back({fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()), HUD_AMBER});   // the stone's name and years
+        if (surf.lifeTarget.species >= 0) act.push_back({trunc(upper(animalNameOf(surf.lifeTarget.species)), 30) + " - N", HUD_AMBER});   // J-07: N names it
         for (size_t i = 0; i < act.size(); i++) drawTextShadow(canvas, UW - 8 - textWidth(act[i].first.c_str()), UH - 32 - 8 * (int)i, act[i].first.c_str(), act[i].second, HUD_SHADOW);
         // stamina bar and pulse (hidden while driving or flying)
         int bx = UW - 68, by = UH - 24;
@@ -385,8 +386,8 @@ void Game::renderSurfaceHUD() {
             if (lx < 4 || ly < 30 || lx > UW - 4 || ly > UH - 50) continue;
             drawRectRGB(canvas, lx - 4, ly - 4, lx + 4, ly + 4, HUD_CYAN);
             double d = std::sqrt((c.x - pl.x) * (c.x - pl.x) + (c.z - pl.z) * (c.z - pl.z));
-            const Species* sp = c.species >= 0 && c.species < (int)surf.bestiary.species.size() ? &surf.bestiary.species[c.species] : nullptr;
-            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", sp ? trunc(upper(sp->name), 10).c_str() : "CREATURE", CRITTER_STATE_NAMES[clampi(c.state, 0, 7)], d).c_str(), HUD_CYAN);
+            const bool known = c.species >= 0 && c.species < (int)surf.bestiary.species.size();   // J-07: its name, else its words
+            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", known ? trunc(upper(animalNameOf(c.species)), 14).c_str() : "CREATURE", DOING_NAMES[clampi(c.state, 0, CS_STATES - 1)], d).c_str(), HUD_CYAN);
         }
         for (const Flock& f : surf.flocks) {
             double a = f.phase + t * f.speed;
@@ -396,8 +397,8 @@ void Game::renderSurfaceHUD() {
             int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
             if (lx < 4 || ly < 30 || lx > UW - 4 || ly > UH - 50) continue;
             drawRectRGB(canvas, lx - 5, ly - 5, lx + 5, ly + 5, HUD_CYAN);
-            const Species* sp = f.species >= 0 && f.species < (int)surf.bestiary.species.size() ? &surf.bestiary.species[f.species] : nullptr;
-            drawText(canvas, lx + 7, ly - 3, fmt("%d %s%s", f.n, sp ? trunc(upper(sp->name), 10).c_str() : "FLYERS", f.landed > 0 ? (f.perched ? " (PERCHED)" : " (RESTING)") : "").c_str(), HUD_CYAN);
+            const bool known = f.species >= 0 && f.species < (int)surf.bestiary.species.size();
+            drawText(canvas, lx + 7, ly - 3, fmt("%d %s%s", f.n, known ? trunc(upper(animalNameOf(f.species)), 14).c_str() : "FLYERS", f.landed > 0 ? (f.perched ? " (PERCHED)" : " (RESTING)") : "").c_str(), HUD_CYAN);
         }
     }
     if (surf.hasWaypoint) {

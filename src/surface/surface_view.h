@@ -198,8 +198,10 @@ public:
     std::vector<Herd> herds;
     Bestiary bestiary;
     double habitatT = -1e9;
-    std::set<int> seenSpecies;                     // species sighted within 60 m this landing
-    std::vector<std::string> sightings;            // "name|plan|distance" entries for the guide (consumed by the game)
+    std::set<int> seenSpecies;                     // species sighted this landing (J-07: drawn whole, in view and near)
+    // J-07: the first sightings of the landing, for the guide (consumed by the game): the species, what it was doing, how far
+    struct Sighting { int species = -1, doing = 0; double dist = 0; };
+    std::vector<Sighting> sightings;
     struct CallCue { int kind; double pitch; };
     std::vector<CallCue> pendingCalls;             // creature calls for the synth (consumed by the game)
     int callsFired = 0;
@@ -397,12 +399,21 @@ private:
     // pool into a shape list of its own and the lists filled in bands in their order
     std::vector<AnimalRig> rigs;
     int hideBanks[2] = {3, 0};
-    struct LifeJob { int rig = 0; AnimalPoseIn in; int detail = 0; double pxPerM = 1, fog = 0; };
+    struct LifeJob { int rig = 0; AnimalPoseIn in; int detail = 0; double pxPerM = 1, fog = 0; int doing = -1; double dist = 0; bool eyeshine = false; };   // J-07: what it does (-1 the harness's)
     std::vector<LifeJob> lifeJobs;
     std::vector<ShapeList> lifeLists;
     // the harness's specimens (`bestiary plates`): a species each where it is put, standing (0), aloft (1) or afloat (2); the game puts none
-    struct Specimen { int species = 0; Vec3 at; double heading = 0; int how = 0; double flap = 0.3; };
+    struct Specimen { int species = 0; Vec3 at; double heading = 0; int how = 0; double flap = 0.3; int gait = -1; double phase = 0, stride = 0; bool running = false; };   // J-07: a gait (-1 still) at a phase
     std::vector<Specimen> specimens;
+public:
+    // J-07: what the landing saw of each species (its doings' bits, the nearest it came, the most in view at once; `fresh` since the game last
+    // read it), and the animal the crosshair rests on this frame (its species, -1 none; how far)
+    struct SeenAnimal { uint32_t doing = 0; double nearest = 1e9; int most = 0; bool fresh = false; };
+    std::vector<SeenAnimal> lifeSeen;
+    struct LifeTarget { int species = -1; double dist = 0; };
+    LifeTarget lifeTarget;
+    struct LifeDrawn { int species = -1, doing = 0; double dist = 0, sx = 0, sy = 0, r = 0; };   // this frame's animals drawn whole (the record's, the target's)
+    std::vector<LifeDrawn> lifeDrawn;
 
 public:
     // ---- the landing, the frame and the camera; the terrain's streaming, the scanner's thread (surface_view.cpp)
@@ -684,6 +695,15 @@ public:
 private:
     void drawLife(Framebuffer& fb, double t);
     void updateLife(double dt, double t);
+    bool treeNear(double x, double z, double radius, TreeInst& out, bool any = false);   // J-07: the nearest live tree within `radius` (`any`: dead too)
+public:
+    // J-07: the swimmers at the surface or leaping within two 100 m cells of a point at a time (drawLife's; the harness frames them): the
+    // species, the spot's seed, where, the water's level, the heading (and its vector), how far up (`surf` -1..1), a leap's share (under 1)
+    struct SwimmerAt { int species = -1; uint64_t seed = 0; double x = 0, z = 0, water = 0, heading = 0, hx = 0, hz = 1, surf = 0, leap = 9; };
+    void swimmersNear(double px, double pz, double t, std::vector<SwimmerAt>& out);
+    bool testTreeNear(double x, double z, double radius, TreeInst& out, bool any = false) { return treeNear(x, z, radius, out, any); }
+private:
+    void lifeSaw(const std::vector<LifeDrawn>& drawn);                  // J-07: the record of what was drawn, the first sightings, the target
 
 public:
     // ---- the buggy (buggy.cpp)
@@ -736,6 +756,11 @@ public:
     void testSpecimen(int species, const Vec3& at, double heading, int how, double flap) { specimens.assign(1, Specimen{species, at, heading, how, flap}); }
     void testSpecimenAdd(int species, const Vec3& at, double heading, int how, double flap) { specimens.push_back(Specimen{species, at, heading, how, flap}); }
     void testNoSpecimens() { specimens.clear(); }
+    // J-07: the one put last stepping in a gait at a phase of its cycle (`bestiary ways`' gaits)
+    void testSpecimenStep(int gait, double phase, double stride, bool running) {
+        if (specimens.empty()) return;
+        Specimen& s = specimens.back(); s.gait = gait; s.phase = phase; s.stride = stride; s.running = running;
+    }
     int testHideBank(int k) const { return hideBanks[k & 1]; }
     int testAheadCells() const { return aheadStat; }
     int testMadeBank(int cls) const { return cls >= 0 && cls < MC_COUNT ? madeBanks[cls] : -1; }   // J-05: a made look's bank (-1 none)

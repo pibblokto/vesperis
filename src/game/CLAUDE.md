@@ -15,8 +15,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   flasks, the lab clock). Shared helpers of split subsystems: `autoexplore_internal`, `probe_internal`, `radar_internal`,
   `audio_internal`
 - Flight and scenes: `autopilot` (SPACE), `scene_draw`, `hud`, `surface_play` (the capsule, the ground; R-434: Shift+O for the activity
-  vision, `VISION_ACTIVITY`), `sector_map`, `search` (Z-03: the kit's vials, the scoop, the cold store (any number since R-432), their
-  save lines)
+  vision, `VISION_ACTIVITY`; J-07: the animals' record, `animalsSeen`, `animalKey`, `animalNameOf`, and N naming the one aimed at),
+  `sector_map`, `search` (Z-03: the kit's vials, the scoop, the cold store (any number since R-432), their save lines)
 - The laboratory (Z-04): `microscope` is the state `MICROSCOPE`: the vial list, a vial on the stage, the view, the four things done to a
   slide, tracking, what is seen (`microscopeSee`: the guide saves it as `microbe` lines), the sheet's lines, its pad. `microscope_draw`
   draws the slide in the framebuffer, its HUD, the list and the sheet. `cabin_life`'s `drawStore` lights the cold store's door. Z-05:

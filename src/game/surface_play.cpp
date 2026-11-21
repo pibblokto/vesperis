@@ -224,6 +224,12 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         } else takeSample();   // Z-03: a vial of the ground at the crosshair
     }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
+        if (surf.lifeTarget.species >= 0) {   // J-07: the animal the crosshair rests on, named
+            textAnimalKey = animalKey(surf.lifeTarget.species);
+            const auto it = guide.names.find(textAnimalKey);
+            beginTextEntry("NAME THE ANIMAL", TEXT_ANIMAL, it != guide.names.end() ? it->second : "");
+            return;
+        }
         returnState = GameState::SURFACE;
         openScreen(GameState::SECTOR_MAP);
         return;
@@ -232,16 +238,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         surf.highlightUntil = realTime + 4.0;
         status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3);
     }
-    // first sightings go to the log and the statistics
-    for (const std::string& sg : surf.sightings) {
-        size_t p1 = sg.find('|'), p2 = sg.find('|', p1 + 1);
-        std::string name = sg.substr(0, p1), plan = sg.substr(p1 + 1, p2 - p1 - 1), dist = sg.substr(p2 + 1);
-        const char* an = !plan.empty() && std::strchr("AEIOU", plan[0]) ? "AN" : "A";   // AN OCTOPOD
-        logEvent("SIGHTING", fmt("%s, %s %s, %s M AWAY ON %s", upper(name).c_str(), an, plan.c_str(), dist.c_str(), upper(bodyNameOf(surf.site.body)).c_str()));
-        guide.creaturesSeen++;
-        status(fmt("%s %s: %s", an, plan.c_str(), upper(name).c_str()), 4);
-    }
-    surf.sightings.clear();
+    animalsSeen();   // first sightings go to the log and the statistics; J-07: what the landing saw of each species to the guide
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
         if (surf.hasWaypoint) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3); }
         else if (surf.lastRange > 8) {   // the waypoint goes to the spot under the crosshair, however far
@@ -354,7 +351,7 @@ void Game::surfacePad(PadMenu& m) const {
         m.item("UNFOLD A DRONE", KEY_F);
     }
     m.item("CALL CAPSULE", KEY_K);
-    m.item("SECTOR MAP", KEY_N);
+    m.item(surf.lifeTarget.species >= 0 ? "NAME THE ANIMAL" : "SECTOR MAP", KEY_N);   // J-07: N names the animal the crosshair rests on
     scannerPad(m);
     m.item("MARK AT CROSSHAIR", KEY_L);
     m.item(surf.hasWaypoint ? "CLEAR WAYPOINT" : "WAYPOINT AT CROSSHAIR", KEY_M);
@@ -368,5 +365,52 @@ void Game::surfacePad(PadMenu& m) const {
         m.item("CREATURES NEARBY", KEY_X);
         const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));
         m.item(next ? fmt("AUTOWALK %d", next) : "STOP AUTOWALK", KEY_0 + next);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// J-07: the animals' record
+// ---------------------------------------------------------------------------
+
+std::string Game::animalKey(int species) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/A" + std::to_string(species); }
+
+bool Game::animalNamed(int species) const { const std::string k = animalKey(species); return guide.names.count(k) || guide.inbox.count(k); }
+
+// the explorer's name, else a friend's, else its words ("STRIPED HOPPER")
+std::string Game::animalNameOf(int species) const {
+    const std::string k = animalKey(species);
+    auto it = guide.names.find(k);
+    if (it != guide.names.end()) return it->second;
+    it = guide.inbox.find(k);
+    if (it != guide.inbox.end()) return it->second;
+    return surf.bestiary.words(species);
+}
+
+// a species first seen this landing: logged (SIGHTING) and counted when it is new to the guide, said on the status either way; what each
+// species was seen doing, the nearest and the most at once kept in its record
+void Game::animalsSeen() {
+    for (const SurfaceView::Sighting& sg : surf.sightings) {
+        if (sg.species < 0 || sg.species >= (int)surf.bestiary.species.size()) continue;
+        const std::string key = animalKey(sg.species), words = surf.bestiary.words(sg.species);
+        const std::string a = (std::strchr("AEIOU", words[0]) ? "AN " : "A ") + words;   // AN OCTOPOD
+        const std::string named = animalNamed(sg.species) ? animalNameOf(sg.species) : "";
+        const char* doing = DOING_NAMES[clampi(sg.doing, 0, DO_COUNT - 1)];
+        if (!guide.animals.count(key)) {
+            logEvent("SIGHTING", fmt("%s%s%s, %s, %.0f M AWAY ON %s", named.c_str(), named.empty() ? "" : ", ", a.c_str(), doing, sg.dist, upper(bodyNameOf(surf.site.body)).c_str()));
+            guide.creaturesSeen++;
+            status(fmt("NEW SPECIES: %s", named.empty() ? a.c_str() : upper(named).c_str()), 4);
+            guide.animals[key];
+        } else status(named.empty() ? a : upper(named), 3);
+    }
+    surf.sightings.clear();
+    for (size_t i = 0; i < surf.lifeSeen.size(); i++) {
+        SurfaceView::SeenAnimal& s = surf.lifeSeen[i];
+        if (!s.fresh) continue;
+        s.fresh = false;
+        AnimalRecord& r = guide.animals[animalKey((int)i)];
+        const int near = (int)std::lround(std::min(s.nearest, 1e6));
+        r.nearest = r.most == 0 ? near : std::min(r.nearest, near);
+        r.doing |= s.doing;
+        r.most = std::max(r.most, s.most);
     }
 }

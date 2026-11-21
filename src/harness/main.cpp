@@ -79,8 +79,12 @@ static const Mode MODES[] = {
                     return 0;
                 }},
         {"drive", "surface", "", "N4-02: the buggy driven on open ground, frames from the seat", "modes_surface.cpp", [](int argc, char** argv) -> int { return runDrive(); }},
-        {"bestiary", "surface", "[plates [n]]", "N3-01: the first living worlds' bestiaries, made twice; J-06 `plates`: n worlds' (64) species alone, a herd each",
-         "modes_bestiary.cpp", [](int argc, char** argv) -> int { return argc > 2 && std::string(argv[2]) == "plates" ? runBestiaryPlates(argc > 3 ? std::atoi(argv[3]) : 64) : runBestiary(); }},
+        {"bestiary", "surface", "[plates [n] | ways]",
+         "N3-01: the first living worlds' bestiaries, made twice; J-06 `plates`: n worlds' (64) species alone, a herd each; J-07 `ways`: each way played and drawn, every plan's gaits",
+         "modes_bestiary.cpp", [](int argc, char** argv) -> int {
+             if (argc > 2 && std::string(argv[2]) == "ways") return runBestiaryWays();   // J-07: each way played and drawn, every plan's gaits
+             return argc > 2 && std::string(argv[2]) == "plates" ? runBestiaryPlates(argc > 3 ? std::atoi(argv[3]) : 64) : runBestiary();
+         }},
         {"encounters", "surface", "[n]", "N3-04: the share of n random felisian sites with a herd within 200 m, by biome", "modes_surface.cpp",
                 [](int argc, char** argv) -> int {
                     runEncounters(argc > 2 ? atoi(argv[2]) : 300);

@@ -1323,6 +1323,10 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (!f.redSnow()) continue;
                 } else if (wantMat == SCENE_MATS) {
                     if (!f.mats()) continue;
+                } else if (wantMat == SCENE_HUNT || wantMat == SCENE_FLOCK) {   // J-07: open grass for the chase, the flock over it
+                    if (!f.herdOrBuggy()) continue;
+                } else if (wantMat == SCENE_SWIMMERS) {   // J-07: a beach over the sea
+                    if (!f.sand()) continue;
                 } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE &&
                         wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD &&
                         wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
@@ -1430,8 +1434,11 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     sv.critters = keep;
                     sv.player.yaw = 0; sv.player.pitch = -std::atan2(std::max(0.0, 1.6 - 0.45 * tall), D);
                     for (const Critter& c : sv.critters)
-                        printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.species[c.species].name.c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
+                        printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.words(c.species).c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
                                 sv.site.groundHeight(c.x, c.z));
+                }
+                if (wantMat == SCENE_HUNT || wantMat == SCENE_FLOCK || wantMat == SCENE_SWIMMERS) {   // J-07: the ways' scenes, staged and played
+                    if (!setupWaysScene(sv, wantMat, t)) continue;
                 }
                 if (wantMat == SCENE_HERD || wantMat == SCENE_HERD_NEAR || wantMat == SCENE_HERD_FAR) {
                     // stand 18 m (M4-05), 6 m or 60 m (N3) south of the first herd, facing it
@@ -1441,7 +1448,8 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (sv.site.sampleAt(sv.player.x, sv.player.z + d, 16).material == MAT_FOREST) continue;   // the herd must stand in the open
                     int n = 0; for (const Critter& c : sv.critters) if (c.herd == 0) n++;
                     const Species& sp = sv.bestiary.species[sv.critters[0].species];
-                    printf("herd of %d %s (%s, %.1f m, %s, %s) at %.0f m\n", n, sp.name.c_str(), PLAN_NAMES[sp.plan], sp.size, ACTIVITY_NAMES[sp.activity], TEMPERAMENT_NAMES[sp.temperament], d);
+                    printf("herd of %d %s (%s, %.1f m, %s, %s) at %.0f m\n", n, sv.bestiary.words(sv.critters[0].species).c_str(), PLAN_NAMES[sp.plan], sp.size, ACTIVITY_NAMES[sp.activity],
+                           TEMPERAMENT_NAMES[sp.temperament], d);
                 }
                 if (lookAtWater) {
                     // face the direction with the most water within 150 m

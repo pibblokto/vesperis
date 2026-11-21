@@ -200,6 +200,10 @@ Contents:
   made and destroyed, broke its heap within frames (KI-450: Y-02's step, put last, crashed the flow at its end five runs in five).
 - A field that means "by its rule" until set (`Microbe::flees` -1, the niche's flight) turns 0 or 1 at the first edit near it: a check
   compares what it does (`fleesLight`), not the field (Y-03's copy of a sense read as a change till then).
+- A stage of animals turns the habitat cells off (`habitatT` far ahead): their herds come in with the first update, and `critters.back()`
+  is then one of theirs, not the one put down; find a put animal again by its seed (J-07's first trail was 404 m off its hunter).
+- A staged camera wants a clear line to what it frames: on a forest world the hunt was lost among trunks, on a hill the camera looked
+  into the ground. Leave a world with a tree near the stage, and try camera places round it till the ground stays under the line (J-07).
 
 ## Pixels and the look
 
@@ -292,6 +296,9 @@ Contents:
   heights the main thread read for it first (J-06).
 - A specimen frame for judging a body needs flat open ground and the capsule moved away: the first plates showed cliffs, a camera
   under the ground and the capsule's dome over the animals (J-06).
+- A foot stays put only with the stride the phase was counted by (`AnimalPoseIn::stride`) and a stance its leg can reach: a gallop's
+  long stride keeps the foot down a shorter share of the cycle, and a hop's arc must come while its feet are up (J-07: the unit's slips
+  were a hopper's feet sliding forward on the ground).
 
 ## Generation: the worlds
 

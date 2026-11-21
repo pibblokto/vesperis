@@ -398,8 +398,9 @@ animals. The world's own stream sets only the counts: 3 to 5 species on land whe
 water (3 or 4 on a world without land animals), and half the time one land species that is active at night. Each species then comes from
 its own seed (the world's, whether it lives on land, in the air or in the water, and its place among them), so a new value moves no other
 species. One stream of that seed draws the ecology: the plan, the size (a hand to a house), speeds, gaits, herd sizes, the habitat (a biome
-or any), the diet, the activity, the temperament (shy, curious or indifferent; giants are indifferent), the call and the name
-(`generateName`). Land plans are weighted by the kind's fauna style: quadruped, long-necked browser, hexapod, hopper, biped strider, giant
+or any), the diet, the activity, the temperament (shy, curious or indifferent; giants are indifferent) and the call; J-07 draws the way
+and how many live together after the body (below). A species has no generated name: the explorer names it (`Bestiary::words` gives an
+unnamed one's words). Land plans are weighted by the kind's fauna style: quadruped, long-necked browser, hexapod, hopper, biped strider, giant
 walker (one a world at most), octopod, serpent, many-legged crawler, slug, burrower, climber. In the air: a flyer, a glider where there are
 trees, a floater (a gas bag with hanging strands) in an air of 1.3 atmospheres or more. In the water: a swimmer shaped as a fish, an eel, a
 ray or a long neck. Another stream draws the body (`bodyOf`): a trunk of 1 to 12 segments with a girth along it, 0 to 6 pairs of legs (2
@@ -413,9 +414,36 @@ joints, feet, hide, coat, head, ornament, tail, the two colours), kept where it 
 it is alike one kept before it (`animalDistance` under `ANIMAL_ALIKE`, 2.5, measured as the microbes' forms are). `pickLand(h, biome)`
 prefers species of that habitat, then unrestricted ones.
 
+**Ways** (J-07, `Species::way`, `social`, `prey`). A long-necked browser browses; a giant browses or grazes; a burrower burrows; a climber
+climbs; a slug grazes; a serpent hunts; a glider flies in a flock; a floater drifts. A quadruped, a hexapod, a hopper, a strider or an
+octopod grazes, hunts, scavenges or browses (an octopod climbs instead) by its plan's weights; a crawler grazes or scavenges. A flyer
+with insect wings under 0.35 m swarms; a bigger one soars (60% over 0.8 m, 12% under), else it flies in a flock. A swimmer's form sets
+its water: eels and most rays in the shallows, long necks in the shallows or a shoal, fish in a shoal or leaping. On land a species
+lives in herds, alone (20%; every serpent; half the hunters and scavengers) or territorial (12%: one or two holding a ground; never a
+giant, slug or crawler). A hunter's prey is the land species nearest its size that does not hunt, crawl as a slug or walk as a giant, at
+most twice its size; a hunter with none scavenges. The herds follow: one alone, one or two territorial, packs of 2-4, scavengers 2-3,
+soarers 1-3, swarms 20-40. `Bestiary::words(i)`: the species' kind ("QUADRUPED", a swimmer's "EEL") with the first word of its look
+(coat, ornament, back, hide, tail, eyes; else its size) that none of its world's others of that kind share: "STRIPED QUADRUPED".
+
 **Spawning** (`planLife`, deterministic from the site seed; `spawnLife` at `init`): 1-3 flocks of a flyer species (none on ice); a herd with the biome's encounter chance (tropical, temperate, grassland, savanna, wetland 0.85; taiga 0.55; desert, tundra 0.35; alpine 0.15; ice and open sea 0), then a second at 50% and a third at 30%, each centred on land within 180 m with `herdMin..herdMax` animals spread over `4 + 2 n` m, sizes 0.85-1.15 of the species. **B-316 (2026-09-28): habitat cells.** Beyond the landing's herds (`Herd::origin`), 512 m squares of the body's latitude and longitude (`lifeCellAt`, like the ruins' cells, so a re-anchor changes nothing) each hold a herd or not by hash (`planCellHerd`: one of six hashed spots on dry land, the biome's chance there: grassland and savanna 0.55, temperate, tropical and wetland 0.4, taiga 0.3, desert and tundra 0.18, alpine 0.1, else none; the species by `pickLand`, the size by the species). `updateHabitat` (from `updateLife`, every half second) spawns the herds whose spot lies within 900 m of the explorer or the buggy and forgets those beyond 1300 m (their animals go with them; a herd you return to starts afresh, KI-317); `SurfaceView::herds` lists every herd and `Critter::herd` indexes it; a herd stays within 300 m of its spot (400 m of the origin before). The grassland herd site holds 2 landing herds and 7 habitat herds, 49 animals; `encounters` prints the habitat herds within 900 m per site (0.7 over random sites, most of which are ice).
 
-**Behaviour** (`updateLife`, `CritterState`): idle, walking, grazing, drinking, resting, alert, fleeing, curious. Decisions when the timer runs out: rest (20-40 s, lying) at midday (local time 0.46-0.54) or when the sky is dark for day species, by day for night species, in full day or deep night for dusk species; in the afternoon (0.55-0.78) grass and water eaters walk to the nearest water within 150 m and drink within 5 m; else graze 40%, walk 35% (followers keep 3-12 m from their herd's leader, the first animal of the herd, and take its heading with noise; the herd centre pulls back beyond 60 m), idle 25%; the leader calls now and then. Threat: the explorer within 25 m (15 m for curious species, never for indifferent ones), the buggy moving over 3 m/s within 60 m: alert for 0.8-1.6 s (frozen, head up, a call at most every 6 s), then flight (run speed away for 5-8 s, the herd mates within 40 m startled too) or, for curious species, an approach to 10 m facing the explorer. Movement keeps off water and slopes over about 0.3 m per step, adds stride cycles (`gaitPhase`, stride 0.75 or 1.3 leg lengths), drops a track every 0.7 m on sand and snow (16 kept), and feeds `hoofLevel` within 20 m. Flocks: circling, gliding, landing to rest every minute or two; at dusk (day species) or in full day (dusk species) they land until the light changes, perching in the tallest tree within two cells of their circle (`forTrees`) or on the ground.
+**Behaviour** (`updateLife`, `CritterState`): idle, walking, grazing, drinking, resting, alert, fleeing, curious; J-07's browsing,
+stalking, chasing, trailing, under the ground, climbing, displaying and charging (below). Decisions when the timer runs out: rest (20-40 s, lying) at midday (local time 0.46-0.54) or when the sky is dark for day species, by day for night species, in full day or deep night for dusk species; in the afternoon (0.55-0.78) grass and water eaters walk to the nearest water within 150 m and drink within 5 m; else graze 40%, walk 35% (followers keep 3-12 m from their herd's leader, the first animal of the herd, and take its heading with noise; the herd centre pulls back beyond 60 m), idle 25%; the leader calls now and then. Threat: the explorer within 25 m (15 m for curious species, never for indifferent ones), the buggy moving over 3 m/s within 60 m: alert for 0.8-1.6 s (frozen, head up, a call at most every 6 s), then flight (run speed away for 5-8 s, the herd mates within 40 m startled too) or, for curious species, an approach to 10 m facing the explorer. Movement keeps off water and slopes over about 0.3 m per step, adds stride cycles (`gaitPhase`, stride 0.75 or 1.3 leg lengths), drops a track every 0.7 m on sand and snow (16 kept), and feeds `hoofLevel` within 20 m. Flocks: circling, gliding, landing to rest every minute or two; at dusk (day species) or in full day (dusk species) they land until the light changes, perching in the tallest tree within two cells of their circle (`forTrees`) or on the ground.
+
+**The ways at work** (J-07). A browser walks to the nearest live tree within 30 m (`treeNear`) and raises its neck into it for 10-18 s. A
+hunter whose herd's leader is hungry (its `hungerT` run out) stalks the nearest of its prey within 150 m, low and slow (0.6 of its walk
+plus 0.1 of its run), and chases from about two and a half seconds' run away (9 to 30 m), or as soon as its quarry runs; its pack
+follows the leader. The chase lasts 6-9 s at its run speed, aimed where the quarry is going; within a body's length the quarry swerves
+(no kill until J-08's remains), then the hunter rests 12-22 s and is not hungry for 70-130 s. A quarry flees a hunter of its kind
+chasing within 40 m or stalking within 12 m, its herd mates within 40 m running the same way. A scavenger keeps 25-60 m from the
+nearest hunter within 300 m, nose to the ground. A burrower goes under at a threat (anyone within 18 m) or to rest: it sinks in 1.2 s,
+stays under 12-40 s (longer while the explorer is near) and comes up where it went down. A climber runs to the nearest trunk within 25
+m and climbs it, each a side and a height of its own, holding on while the explorer is near and coming down 8 s after; it rests in trees
+too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up, calling; within 14 m it
+charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night walkers are the
+species active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a few metres
+across, settling at rest; a soarer circles 70-150 m up and drifts over the nearest hunter within 600 m; a floater goes with the wind at
+most of its speed and comes in again 600 m upwind once it is 700 m off.
 
 **Drawing** (`drawLife`, `surface/animal_mesh`; to `250 + 120 size` m, 600 at most). Each species' rig is built at the landing (`rigOf`:
 the rings along the trunk, a leg's bones, the hips' heights). Each frame the main thread lists the animals to draw, reads the ground
@@ -424,16 +452,37 @@ shape list of its own (`emitAnimal`), and the lists are filled in bands in their
 eel's waved, a slug's rippled), the neck lowered to graze, the head, the tail's curve and wag, each leg's joints by a two-bone reach with
 the foot on the ground at its gait's place in the cycle (a walk's sequence, a trot's pairs, a gallop, a bound, a hop, an insect's
 tripods, a wave from back to front), folded legs lying down, the arms, the wings and a floater's strands; no joint, tail or wing goes
-under the ground. How much is drawn depends on the animal's height in pixels: under about 7 at 1x a few lines, under 24 a coarse mesh,
+under the ground. J-07: the gait by speed (`speciesGait`: the walk, a four-legged runner's trot past a Froude number of 0.4, the run's gait
+past 2.5 or in flight) and the metres a cycle (`speciesStride`: 2.3 hip heights times the Froude number's 0.3th power, Alexander's; a
+serpent's a wave, a body length over 1.5). A foot stays where it was put for its gait's share of the cycle (`gaitDuty`: a walk 0.65, a
+trot 0.5, a gallop 0.36, a wave of legs 0.7; less where the stride outreaches the leg) while the body goes over it, then swings forward
+lifted. A gallop or a bound arches the back and stretches it once a cycle, the head nods to a walk, a hop's arc comes while its feet are
+up, the serpent's waves run back as fast as it goes (they stay where they lie) and a swimmer's run back by the clock. A browser's neck
+reaches up (`reach`), a stalker goes low (`crouch`), a burrower sinks (`sink`), a climber is posed on level ground and turned onto its
+trunk (`climbing`, `turnPose`), a leaper is tilted along its arc (`tilt`). How much is drawn depends on the animal's height in pixels: under about 7 at 1x a few lines, under 24 a coarse mesh,
 else the whole (an 8-sided trunk rounded at its ends, tapered legs, the beak or trunk, eyes, horns, spots, warts, quills, hair). Hides
 take the world's two hide banks (`setupPalette`: 24 and 20 where no people built, 13 with no glowing body in the sky, 12 with no second
 sun, then a lent bank no trait holds; the forest's 3 and the rock's 0 where none is free); horns, tusks, claws and beaks the bone bank 29,
 hooves and mandibles the dark 30, eyes and insect wings the snow's 8. Flyers within 160 m that show 3 pixels get a body (flapping,
-gliding or folded when perched); farther they are a point and two strokes. Floaters drift on day and night. Swimmers within 120 m show
-their body breaking the surface, and the water hides the rest; farther, a fin and a back. Cost: a herd of nine at 18 m, 0.2 ms at 1x
-(`bench`).
+gliding or folded when perched); farther they are a point and two strokes (a swarm's members dart about their places, and a soarer
+mostly glides). Floaters drift on day and night. Swimmers (`swimmersNear`, J-07: also where no herd or flock is near) within 120 m show
+their body breaking the surface, and the water hides the rest; farther, a fin and a back. A shoal's spot holds three in line, a
+shallows species circles the first of eight places of its cell 0.3-1.5 m deep, and a leaper jumps an arc out of the water every 7-13 s
+with a splash where it leaves and where it comes down. A burrower's hole is a dark disc while it is under. Cost: the bench's herd (J-07:
+a pack of four hunters at 18 m) 0.08 ms at 1x, its update 0.01 (`bench`).
 
-**Cues and the guide.** `pendingCalls` (kind, pitch) and `hoofLevel` are consumed by `Game::updateSurface` into `AudioState::call`, `callPitch`, `hoofs`; `insects` is set there at dusk within 30 m of water above 5 C. `sightings` (a species first within 60 m this landing) become `SIGHTING` log entries, a status line and `Guide::creaturesSeen`.
+**Cues and the guide.** `pendingCalls` (kind, pitch) and `hoofLevel` are consumed by `Game::updateSurface` into `AudioState::call`, `callPitch`, `hoofs`; `insects` is set there at dusk within 30 m of water above 5 C.
+
+**The record** (J-07). What `drawLife` draws whole (a coarse mesh or more) on the screen within 60 m (100 m in the air) is seen
+(`lifeSaw`): each species' doings (`AnimalDoing`: its state, or flying, perched, swarming, soaring, drifting, swimming, leaping), the
+nearest it came and the most at once (`lifeSeen`); a species' first of the landing is a sighting. The game (`Game::animalsSeen`) keeps
+them in the guide's `animal` lines, keyed `<body key>/A<index>`; a species new to the guide is logged (SIGHTING), counted
+(`creaturesSeen`) and said ("NEW SPECIES: A STRIPED HOPPER"), one seen before is said by its name or its words. The animal nearest the
+middle of the screen within its size (12 pixels at least) and 40 m (50 on the water, 80 in the air) is the crosshair's (`lifeTarget`):
+the HUD says it ("A STRIPED HOPPER - N") and N names it (`TEXT_ANIMAL`, the guide's `names`); without one N opens the map as before. A
+name travels in a friend's export as every name does (the inbox's, the explorer's own winning). The data sheet's LIFE line lists the
+species seen there, named ones as "NAME (WORDS)", counting the ones it has no room for; X's labels and the landing map's LIFE (once seen;
+"A HERD" before) use the same words.
 
 ## Sky additions (N5, 2026-09-26)
 

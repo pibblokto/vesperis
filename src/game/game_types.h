@@ -170,7 +170,8 @@ constexpr int VISION_MODES = 6, VISION_ACTIVITY = 5;
 enum TextKind { TEXT_NONE = 0, TEXT_STAR, TEXT_WORLD, TEXT_NOTE, TEXT_FIND_STAR, TEXT_SECTOR, TEXT_MARK, TEXT_PIECE, TEXT_SKY_STAR, TEXT_STORM, TEXT_PLACE,
                 TEXT_SPECIES, TEXT_STRAIN, TEXT_FOLDER,   // R-433: a folder of the culture collection
                 TEXT_GENE,                                // Y-02: a gene of a genesis (the editor's N)
-                TEXT_LINE };                              // R-445: the name of a line the gene editor writes
+                TEXT_LINE,                                // R-445: the name of a line the gene editor writes
+                TEXT_ANIMAL };                            // J-07: an animal species (N with the crosshair on one)
 
 // M2: the explorer inside the Stardrifter: in a room of the plan (I-01, `ship_plan.h`), where they stand in it and look; I-02: on the
 // stair, the angle walked round it (its height goes by it)

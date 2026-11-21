@@ -34,7 +34,8 @@ species. A species is a body of parts (`surface/animal_body.h`): a trunk in segm
 and a back, wings, a hide and a coat, in sixteen plans. A world's animals share a style and two hide colours, and no two of a world look
 alike. A world has 3 to 5 species on land (2 to 4 before), 1 or 2 in the air (a floater in a thick air) and 2 to 4 in the water (1). No
 star, system, body, map or ground moves: the herds' habitat cells and their spots stay where they were (the unit's `animals` group).
-What moves is the animals drawn, their names and their calls.
+What moves is the animals drawn, their names and their calls. J-07 (still 18): each species' way and how many live together, drawn
+after every draw before them (the herds' sizes follow: a lone one, a pack); the generated names gone (the explorer names them).
 
 ## 17
 

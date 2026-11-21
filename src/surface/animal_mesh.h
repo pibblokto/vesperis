@@ -39,6 +39,15 @@ struct AnimalPoseIn {
     double flap = 0;               // the wings' angle share -1..1
     bool folded = false;           // perched: the wings along the body
     bool afloat = false;           // a swimmer
+    // J-07: the step and the ways' postures
+    double stride = 0;             // metres the body goes in a cycle of its gait (0: a stride by its legs); a stance foot stays where it is put
+    double reach = 0;              // a browser's neck up into the trees 0..1
+    double crouch = 0;             // a hunter stalking: low, its head forward 0..1
+    double sink = 0;               // a burrower going under the ground 0..1 (1 out of sight)
+    bool climbing = false;         // on a trunk: posed as on level ground, then turned so its belly faces the trunk and its head is up;
+    Vec3 wall;                     // `at` the trunk's surface under its feet, `wall` the trunk's level normal there
+    double tiltMax = 0.35;         // the most the trunk tilts with the ground under it (radians: a climber's on a cliff more)
+    double tilt = 0;               // the trunk tilted nose up besides (radians: a leaper's along its arc)
 };
 
 // the pose: every point drawn, local metres
@@ -65,6 +74,8 @@ struct AnimalPose {
     double scale = 1;
 };
 void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& out);
+// J-07: the share of its cycle a gait keeps a foot on the ground (a walk most of it, a gallop least)
+double gaitDuty(int gait, bool running);
 // every point of a pose within `box` metres of `middle`, none under `floorY`, none a NaN (the unit's bounds)
 bool poseWithin(const AnimalPose& P, const Vec3& middle, double box, double floorY);
 
@@ -78,6 +89,7 @@ struct AnimalView {
     int bone = 29, dark = 30, glint = 8;
     double pxPerM = 1;             // framebuffer pixels a metre where the animal stands
     double fbScale = 1;            // framebuffer pixels a 1x pixel (a line's thickness)
+    bool eyeshine = false;         // J-07: a night walker's eyes in the dark, bright and big
 protected:
     ~AnimalView() = default;
 };

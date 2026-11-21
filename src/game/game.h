@@ -1011,4 +1011,12 @@ protected:
     std::string seedLineWords(const std::string& lineKey);   // a line in the lab's words (its name, else its look and its number)
     std::string madeWords(int body);             // what a world's seedings made of it so far, in the data sheet's words ("RED SEAS"; "" nothing)
     void madeLanding(int body);                  // the LANDING log on a seeded world: what it shows that the last landing did not
+    // ---- J-07: the animals' record (surface_play.cpp): a species' key in the guide ("<body key>/A<index>", the world landed on), its name (the
+    // explorer's, a friend's, else its words: `Bestiary::words`), what the landing saw of each species put in the guide (the first sightings
+    // logged), the animal a text entry of TEXT_ANIMAL names
+    std::string animalKey(int species) const;
+    std::string animalNameOf(int species) const;
+    bool animalNamed(int species) const;
+    void animalsSeen();
+    std::string textAnimalKey;
 };

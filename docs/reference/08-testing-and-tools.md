@@ -59,7 +59,11 @@ render at that resolution scale (tests default to 1x for speed; the game default
   `felisian_forest` (a deep forest: veg over 0.75; prints the tree tiers, the flora point count and the canopy coverage of the
   forest ground within 200 m, failing under 60%); N3 moves `felisian_herd` to open grassland (18 m south of herd 0) and adds
   `felisian_herd_near` (6 m), `felisian_herd_far` (60 m) and `creatures_lineup` (one animal of each land species 5 m ahead, side
-  on), printing the herd's states, calls and the life update/draw milliseconds; N4 adds `buggy_seat` (in the driver's seat,
+  on), printing the herd's states, calls and the life update/draw milliseconds; J-07 adds `creatures_hunt` (on open grass with no tree
+  within 30 m: five of a hunter's prey 30 m ahead, the hunters 35 m west sent stalking, played a second into the chase and seen from its
+  side over clear ground), `creatures_flock` (a flock of the world's flyers sent 30 m over, the camera looking up at it) and
+  `creatures_swimmers` (off a beach, the first swimmer at the surface or in a leap within 120 m in the next five minutes, seen from its
+  side): `setupWaysScene` stages them with the free camera and the explorer 400 m off, and `t` moves on to the moment; N4 adds `buggy_seat` (in the driver's seat,
   steering 12 deg; since N4-06 the nose camera's picture through `cameraFeed`) and `buggy_parked` (from 5 m behind and beside it)
   on open grassland; N5 adds `tundra_lowsun` (a cold site with the sun at 5 deg: the pillar) and
   `biome_<tropical|savanna|desert|temperate|grassland|taiga|tundra|wetland>` (a land site of that biome, with the same print plus
@@ -339,7 +343,14 @@ render at that resolution scale (tests default to 1x for speed; the game default
   own ground at 2x and three quarters on (a flyer and a land world's swimmer held up as a specimen, a sea world's swimmer in its sea),
   four to a row with its plan, size and hide under it (`shots/tests/plates/plate_NN.png`); a herd of the world's biggest herds 7 to 15 m
   off, or a school of its first swimmer at the surface (`herd_NN.png`); every world's species small, a row a world (`plates.png`); the
-  pairs of a world alike counted. `VESPERIS_PLATE_FULL=1` also writes each cell at 2x (`cell_NN_i.png`)
+  pairs of a world alike counted. `VESPERIS_PLATE_FULL=1` also writes each cell at 2x (`cell_NN_i.png`). `bestiary ways` (J-07): each way
+  played where the scan's first world has it and a place for it (`waysSite`: open dry ground, a trunk within 30 m, deep water, a shore
+  walked to from the sea), the stage cleared of the habitat cells' herds (`habitatT`), its moment drawn at 2x (`shots/tests/ways/`):
+  `ways_grazer`, `browser` (sent to a tree, its neck up), `hunter` (stalking, then the chase; both herds in the frame), `scavenger`
+  (trailing a walking hunter), `burrower`, `climber` and `territorial` (the explorer walking up to them), `night` (by the lamp, the eyes
+  shining), `flock`, `swarm`, `soarer`, `drifter` (set over the place), `shoal`, `shallows` and `leaper` (the first of their spots at the
+  surface or in a leap, `swimmersNear`); then `gaits.png`, each land plan's walk and run at three moments of the cycle side on (a
+  legless one from above), its gaits and strides printed
 * `encounters [N]`: N3-04: N (300) random felisian land sites near the start through `SurfaceSite::init` and
   `SurfaceView::planLife`; prints the share with a herd within 200 m overall and per biome (2026-09-26: tropical 86%, temperate
   100%, grassland 80%, savanna 75%, taiga 56%, desert 50%, tundra 30%, alpine 15%, ice 0%; 11% overall because most random sites

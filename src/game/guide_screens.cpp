@@ -178,6 +178,13 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             logEvent("NOTE", fmt("NAMED A SPECIES %s", text.c_str()));
             break;
         }
+        case TEXT_ANIMAL: {   // J-07: the animal species the crosshair rested on
+            if (text.empty() || textAnimalKey.empty()) return;
+            guide.names[textAnimalKey] = text; guide.save(guidePath);
+            status(fmt("THE ANIMAL IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED AN ANIMAL %s", text.c_str()));
+            break;
+        }
         case TEXT_STRAIN: {   // Z-05: a strain in the incubator's flask
             if (text.empty() || textStrainKey.empty()) return;
             guide.names[textStrainKey] = text; guide.save(guidePath);

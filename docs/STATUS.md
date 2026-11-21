@@ -13,7 +13,7 @@ log entry (`docs/decisions/log/`), B file or R file.
 
 ## Done in 1.5.0
 
-Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-06 done (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
+Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-07 done (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
 
 - **Microbes (Z-01 to Z-07, R-425):** life on every landable world (`src/life/`, `docs/reference/13-life.md`), with `GEN_VERSION` 17;
   each species' form and its slide in six ways of seeing; the search on the ground (O takes a sample); the microscope, the incubator,
@@ -47,32 +47,40 @@ Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-06 done (below). Lo
   of plants' glowing forests, new leaves, frost burn and galls; a wood rotter's blight and fallen forests. From the air: purple or
   black seas, sour seas with bleached reefs, rusted ground, lush or bleached plants, boiling seas. The landing map, the globe and the
   ground show them. A world nobody seeded is drawn as before, bit for bit.
-- **Latest (2026-11-21): J-06, animal bodies** (generation 18). Every world's animals are drawn again: each species from its own seed,
-  a body of parts in sixteen plans (quadrupeds, long-necked browsers, hexapods, octopods, striders, hoppers, giants, serpents,
-  many-legged crawlers, slugs, burrowers, climbers, gliders, flyers, floaters and swimmers shaped as fish, eels, rays or long necks). A
-  world's animals share a style and two hide colours of their own, and no two of a world look alike. Flyers have bodies near, several
-  swimmers break the surface, floaters drift in a thick air. Saves and guides of generation 17 load with WORLDS REGENERATED (GEN 17, NOW
-  18). The plates for your verdict: `shots/tests/plates/` (`bestiary plates`).
+- **J-06, animal bodies** (2026-11-21, generation 18; the user on the plates: "Plates look great"). Every world's animals are drawn
+  again: each species from its own seed, a body of parts in sixteen plans (quadrupeds, long-necked browsers, hexapods, octopods,
+  striders, hoppers, giants, serpents, many-legged crawlers, slugs, burrowers, climbers, gliders, flyers, floaters and swimmers shaped as
+  fish, eels, rays or long necks). A world's animals share a style and two hide colours of their own, and no two of a world look alike.
+  Flyers have bodies near, several swimmers break the surface, floaters drift in a thick air. Saves and guides of generation 17 load
+  with WORLDS REGENERATED (GEN 17, NOW 18). The plates: `shots/tests/plates/` (`bestiary plates`).
+
+- **Latest (2026-11-21): J-07, animal ways and the record.** Each species has a way of living (it grazes, browses, hunts, scavenges,
+  burrows or climbs; flies in a flock, a swarm or high as a soarer; swims in a shoal, the shallows or leaps; a floater drifts) and lives
+  in herds, alone or on a ground of its own. Gaits follow speed and the feet stay planted. Browsers reach into trees, hunters stalk and
+  chase (no kill before J-08) and the quarry's herd stampedes, burrowers go under, climbers go up trunks, territorial ones charge, night
+  walkers' eyes shine. The generated names are gone: the guide keeps each species seen, an unnamed one goes by its words ("STRIPED
+  QUADRUPED"), N names the animal under the crosshair, and the data sheet's LIFE line lists what was seen. `bestiary ways` draws every
+  way into `shots/tests/ways/`.
 
 ## Planned (2026-11-20)
 
-- **R-448, seeded worlds:** the J series, J-07 to J-12 left (`ITERATION-1.5.0.md`, Phase 6; `IDEAS-seeded-worlds.md`). A gene-edited
-  culture sent down by a drone changes a world, more often for the worse: made traits, die-offs with remains, changed animals, worlds
-  overgrown with flesh, fungus or other tissue, ruins included; the animals' ways and their record (J-07).
+- **R-448, seeded worlds:** the J series, J-08 to J-12 left (`ITERATION-1.5.0.md`, Phase 6; `IDEAS-seeded-worlds.md`). A
+  gene-edited culture sent down by a drone changes a world, more often for the worse: made traits, die-offs with remains, changed
+  animals, worlds overgrown with flesh, fungus or other tissue, ruins included.
 
 ## Committed
 
 Commits on `release/v1.5.0`, each on the user's word, none pushed: 0c90433 (Z, I, B-434 to B-438), 455c7ad (B-439), 82592c5 (B-440,
 R-427 to R-434), d12a9ea (R-435 to R-442, B-441, B-442), 20b236e (B-443, Y-01, Y-02), c9e98be (Y-03, Y-04, R-445, R-446, B-444 to
-B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05). Not committed: J-06.
+B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05), 1b5ea42 (J-06). Not committed: J-07.
 
 ## Next
 
-- **Your verdict on J-06's plates** (`shots/tests/plates/`), then **J-07, animal ways and the record** (gaits for every body, grazers,
-  hunters, flocks, swimmers in the shallows; each species seen kept in the guide and named by the explorer) on the user's "proceed".
+- **J-08, the animals' fates** (die-offs and their remains, sickness, changed young, thriving and silence; the record's DYING, GONE and
+  CHANGED) on the user's "proceed".
 - The 1.5.0 release after J-12, on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need
   Docker, asked first).
-- **Proof base:** `build/prove/j06` (40 items: J-06 added `bestiary`).
+- **Proof base:** `build/prove/j07` (40 items; J-07's `bestiary` item runs `bestiary ways` too).
 
 ## Playing the lab
 
@@ -96,9 +104,11 @@ seas, the climates, every made air and every made water, ground and plant in `sh
 
 ## Seeing the animals
 
-Land on a world with plants: herds graze in the open, flyers circle overhead and perch in trees at dusk, swimmers break the surface of
-seas and deep lakes, and floaters drift in a thick air. X marks the creatures nearby. `bestiary plates` draws 64 worlds' animals one by
-one and a herd each into `shots/tests/plates/` (`plate_NN.png`, `herd_NN.png`, all of them small in `plates.png`).
+Land on a world with plants: herds graze in the open, hunters stalk them, flyers circle overhead and perch in trees at dusk, swimmers
+break the surface of seas and deep lakes, and floaters drift on the wind. X marks the creatures nearby. Put the crosshair on an animal
+within 40 m (its words show over the stamina, "A STRIPED HOPPER - N") and N names it; the data sheet's LIFE line lists what you saw.
+`bestiary ways` draws each way, and every land body's walk and run, into `shots/tests/ways/`. `bestiary plates` draws 64 worlds'
+animals one by one and a herd each into `shots/tests/plates/` (`plate_NN.png`, `herd_NN.png`, all of them small in `plates.png`).
 
 ## Playing the ship
 
@@ -109,7 +119,8 @@ and `life kit` draw them.
 
 ## Open with the user
 
-- **J-06's plates:** your verdict on the bodies, the plans, the colours and the herds before J-07 (the plan's "plates judged first").
+- **J-07's calls:** N names the animal the crosshair rests on and opens the map otherwise (Shift+N would keep N the map's alone); hunts
+  end without a kill until J-08's remains; swimmers of the shallows are rare (KI-467).
 - **R-448's calls:** the plan's defaults hold (the drones send a culture, about two hours a world, the animals in the middle, home
   never seeded, the explorer names the animals) until the user says otherwise.
 - **Docs still in the old style:** the reference notes (`docs/reference/`, 1.4 MB) and the code comments, until each is next edited.
@@ -119,7 +130,8 @@ and `life kit` draw them.
   off the screen), KI-455 (twelve different world looks dim the last flasks on the shelves), J-04's KI-456 to KI-459 (only a living
   world's ice, snow and plants move, and only it runs away; samples read the old warmth; a dyed rain without a bank), J-05's KI-460
   to KI-464 (one colour a class; the globe shows one class; a line's air ignores its plants; a crust's forms in one texture; four lent
-  banks) and J-06's KI-465 and KI-466 (one hide bank on a crowded world; the LIFE line cut).
+  banks), J-06's KI-465 (one hide bank on a crowded world) and J-07's KI-467 to KI-469 (the shallows' swimmers rare; no kill till
+  J-08; a climber's side feet off a thin trunk).
 - Offered by B-430: the tables' dump as a harness mode for the container; parallel.h's misleading indentation (38 of the Linux builds'
   46 warnings). Offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant.
 - Our Docker images `vesperis-build:arm64` and `:amd64` were removed on the user's word. The old proof kits (`build/p00` to
@@ -127,11 +139,11 @@ and `life kit` draw them.
 
 ## Disk
 
-About 89 GB free (2026-11-21). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
-j03, j04, j05 and j06, the compares' outputs against r434 to j05, and their logs: about 41 GB. A snapshot and a compare's outputs are
-about 1.4 GB each.
+About 86 GB free (2026-11-21). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
+j03, j04, j05, j06 and j07, the compares' outputs against r434 to j06, and their logs: about 44 GB. A snapshot and a compare's outputs
+are about 1.4 GB each.
 
 ## Next free ids
 
-Bugs B-447, requests R-449, known issues KI-467. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
+Bugs B-447, requests R-449, known issues KI-470. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
 Y and J).

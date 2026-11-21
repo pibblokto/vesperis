@@ -335,7 +335,8 @@ and lands, `W`/`S` thrust fore and aft to 320 km/h, `A`/`D` turn, the mouse pans
 one, `WAYPOINT SET 8.4 KM AWAY`, else where you stand; `M` again clears), `Ctrl` in the air thrusts down on light worlds (O4),
 `Q`/`E` board the capsule within 7 m (otherwise the status says how far it is and where), `Tab` the readings (R-414: the place,
 the sky, the air, the ground and the vehicle, below under HUD), `K` recalls the capsule next to you (always; the status names a
-buggy left over 50 m away, B-205), `N` sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
+buggy left over 50 m away, B-205), `N` names the animal the crosshair rests on (J-07: within 40 m, 50 on the water, 80 in the air;
+the HUD says it, `A STRIPED HOPPER - N`; a text entry, `NAME THE ANIMAL`, kept as a `name` line), else the sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
 km wide (`Game::sectorMaxLevel`: a level is offered while its half-width stays within 1.2 radii, so a comet has two and a planet
 six; the image is 100 x 80 samples of the planet function at 16 m to 16 km of detail, always centred on you, so walking never
 leaves it and the neighbouring sectors are simply there), coloured like the landing map (`mapRampsFor`), the sector grid on the
@@ -395,7 +396,8 @@ ultraviolet (Z-03: `ULTRAVIOLET ON`/`OFF`, `UV ON` in the readings; the living f
 `VIALS 3 OF 8 FILLED` in the readings; refused from a vehicle, `THE EIGHT VIALS ARE FULL - THE REST ABOARD`, `LOOK AT THE GROUND
 WITHIN 2 M TO TAKE A SAMPLE`, `THE GROUND IS MOLTEN HERE` (R-432: the cold store aboard takes any number); the descent through a venusian or an acid world's living clouds takes one by the capsule's scoop, `THE SCOOP: CLOUD DROPLETS AT
 53 KM, 35 C - STRONG` in the capsule's caption; the climb aboard puts them in the cold store, `3 SAMPLES TO THE COLD STORE`), `X` highlights
-nearby creatures and flocks for four seconds with the species name and its state (M4-05, N3-06), `I`/`F2` data sheet, `T` time
+nearby creatures and flocks for four seconds with the species' name (J-07: the explorer's, a friend's, else its words) and its state
+(M4-05, N3-06), `I`/`F2` data sheet, `T` time
 warp (refused when the clock setting is real time; it stops an almanac run), `Ctrl+T` the almanac (W-01, 2026-10-06: the section
 below; M5-06's 25 s time-lapse at x600 went with it, the almanac's free row runs for any span), `Ctrl+S`/`F5` save, `Ctrl+L`/`F9`
 load, `H`/`F1` help, `Esc` menu, `P`/`F12` screenshot, `Ctrl+K`/`F10` scanlines, `Ctrl+F`/`Alt+Enter`/`F11` fullscreen. Movement
@@ -474,10 +476,12 @@ capsule and the local time off the view. Their readings add the heading and the 
 (`AIRBORNE`, `SKIDDING`, `BRAKING`, `LIGHTS ON`) and the old road under its wheels, the drone's height over the ground and its
 climb (amber at the 400 m ceiling) and state (`LANDED`, `LIFTING`, `AT ITS CEILING`, `CLIMBING`, `DESCENDING`, `HOVERING`,
 `LIGHTS ON`). The chase view (`V` in a vehicle) shows the walker's HUD without the stamina. N3: the data sheet on the surface
-lists the world's bestiary (`LIFE`, sighted species starred), a first sighting writes a `SIGHTING` entry to the expedition log and
-a status line and counts in `CREATURES SIGHTED` on the statistics screen (`Guide::creaturesSeen`, `stat creatures` in the guide
-file); N4-05 adds `LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with
-`LIFE: <species>`, the land species most likely met in that biome. W-03: the sector map (`N`) draws the nearest front's rain line
+lists the species seen there (J-07: `LIFE`, the guide's record, named ones `NAME (WORDS)`, the rest by their words, `+3 MORE` where
+the rows run out; `NONE SEEN YET`), a species new to the guide writes a `SIGHTING` entry to the expedition log (its words, what it was
+doing, how far, the world) and `NEW SPECIES: A STRIPED HOPPER` on the status, and counts in `CREATURES SIGHTED` on the statistics
+screen (`Guide::creaturesSeen`, `stat creatures` in the guide file); one seen before is said on its first sight of the landing; N4-05
+adds `LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with `LIFE: <species>`,
+the land species most likely met in that biome (J-07: its name or words once seen, `A HERD` before). W-03: the sector map (`N`) draws the nearest front's rain line
 across it (cyan; amber for a dust front) with its band hatched behind the line, and the legend reads `RAIN FRONT` /
 `IN 2 H 05 MIN` (or `ENDS 1 H 05 MIN` under one); the readings' own (`WIND`, `RAIN`, `DUST`, `TEMP`) are where the front shows on
 the ground.
@@ -704,7 +708,9 @@ life its cultures' curves showed, `LifeCycle`'s bits, and its quickest doubling 
 strains a flask gave, `strain <body key>/M<index>/S<n> <parent> <move> <value>`; Z-06: the made species sequenced,
 `watermark <body key>/M<index>`, their watermarks the decoder's; Z-07: the years a woken spore slept, after the growth's numbers; the
 samples taken, `stat samples`, and the worlds they came from, `sampled <body key>`; a friend's sheets lent by their inbox file,
-`lentmicrobe` lines as the `microbe` ones, in cyan and in no count, the explorer's own sheet winning), the signals the radar
+`lentmicrobe` lines as the `microbe` ones, in cyan and in no count, the explorer's own sheet winning; J-07: the animal species seen,
+`animal <body key>/A<index> <doings> <nearest m> <most at once>` after an `animals 1` line, both once there is one, the index its
+world's bestiary's, the doings `AnimalDoing`'s bits, its name a `name` line), the signals the radar
 locked (`signal <key> <kind>`: a world's key or a pulsar's star key, C-07) and the recordings heard on it (`heard <body key>/S<index>`, C-07), the explorer's marks on the
 worlds (`mark <body key> <lat> <lon> <kind> <lent> <when> <name>`: radians, the kind a `LandmarkKind` or 8 for a place (T-03: 9 a
 work's; in memory `LM_WORK` is 8 and a place 9, `markKindToFile`), the name last and possibly empty, R-408), the probes' records

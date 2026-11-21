@@ -163,6 +163,9 @@ enum SceneCode : int {
     SCENE_SPRING_BANDS = -106,   // Z-03: a terraced hot spring's banded pools
     SCENE_RED_SNOW = -107,   // Z-03: red snow
     SCENE_MATS = -108,   // Z-03: a microbial mat on a wet flat
+    SCENE_HUNT = -109,   // J-07: a hunter's chase
+    SCENE_FLOCK = -110,   // J-07: a flock overhead
+    SCENE_SWIMMERS = -111,   // J-07: a swimmer at the surface off a shore
 };
 
 // M7-03 unit tests: frame maths, the sun against analytic cases, noise statistics, name lengths, the Kepler solver
@@ -403,6 +406,8 @@ void runConsistency();
 int runDrive();
 int runBestiary();
 int runBestiaryPlates(int worlds);   // modes_bestiary.cpp (J-06)
+int runBestiaryWays();               // modes_bestiary.cpp (J-07)
+bool setupWaysScene(SurfaceView& sv, int wantMat, double& t);   // J-07: the hunt's, the flock's and the swimmers' scenes staged (modes_bestiary.cpp)
 void runEncounters(int wanted);
 void renderLandingMaps();
 int runStability(const char* want, double walk);

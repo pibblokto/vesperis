@@ -165,10 +165,16 @@ struct Flock {
     int species = -1;                                     // the flyer species of the bestiary
     bool perched = false;                                 // resting in a tree
     double perchX = 0, perchZ = 0, perchY = 0, perchR = 2;
+    int wraps = 0;                                        // J-07: a floater's comings in again upwind
 };
-// N3 creature behaviour states
-enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT, CS_FLEE, CS_CURIOUS };
-extern const char* const CRITTER_STATE_NAMES[8];
+// N3 creature behaviour states. J-07: the ways' (a browser's neck up in a tree, a hunter stalking and chasing, a scavenger trailing a
+// hunter, a burrower under the ground, a climber up a trunk, one on its ground facing the explorer and charging)
+enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT, CS_FLEE, CS_CURIOUS, CS_BROWSE, CS_STALK, CS_CHASE, CS_TRAIL,
+                    CS_UNDER, CS_CLIMB, CS_DISPLAY, CS_CHARGE, CS_STATES };
+// J-07: what an animal is seen doing (the guide keeps a bit of each a species was seen doing): a land animal's state, then the air's and the
+// water's
+enum AnimalDoing { DO_FLYING = CS_STATES, DO_PERCHED, DO_SWARMING, DO_SOARING, DO_DRIFTING, DO_SWIMMING, DO_LEAPING, DO_COUNT };
+extern const char* const DOING_NAMES[DO_COUNT];
 struct Critter {
     double x = 0, z = 0, heading = 0, speed = 0, timer = 0, size = 1;
     uint64_t seed = 0;
@@ -183,6 +189,15 @@ struct Critter {
     double calledT = -100;    // time of the last call
     struct Track { float x, z; };
     std::vector<Track> tracks; int trackHead = 0; double trackAccum = 0;
+    // J-07: the step (its gait and the metres a cycle at its speed) and the ways' postures and places
+    int gait = 0; double stride = 1;
+    double sink = 0, reach = 0, crouch = 0;   // going under 0..1, a browser's neck up 0..1, a stalker low 0..1
+    double climbY = 0;                        // how high up its trunk
+    double treeX = 0, treeZ = 0, treeR = 0, treeTop = 0, treeGy = 0;   // the trunk it browses or climbs: its foot, radius, how high it goes, its ground
+    double homeX = 0, homeZ = 0;              // its burrow's mouth; a territorial's ground
+    uint64_t quarry = 0;                      // a hunter's quarry, a scavenger's hunter (their seeds); 0 none
+    double hungerT = 0;                       // till a hunter hunts again, a territorial charges again
+    double calmT = 0;                         // a climber's or a burrower's time since the explorer was near
 };
 // N2: one tree, placed by SurfaceView::forTrees (drawing, colliders, coverage and creatures read the same list)
 struct TreeInst {

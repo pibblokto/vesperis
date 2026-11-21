@@ -267,15 +267,25 @@ void Game::renderDataSheet() {
         if (up.size() > 2) sky += fmt(" +%d", (int)up.size() - 2);
         put(fmt("IN THE SKY  %s", sky.empty() ? "NOTHING ABOVE THE HORIZON" : sky.c_str()), HUD_AMBER);
         if (surf.env.hasSun2) put(fmt("SECOND SUN  %s AT %+.0f%c", upper(bodyNameOf(sys.companion)).c_str(), surf.env.sun2.altitude / DEG, CH_DEGREE), HUD_AMBER);
-        if (!surf.bestiary.species.empty()) {   // the world's bestiary, sighted species marked
-            std::string life;
+        if (!surf.bestiary.species.empty()) {   // J-07: the species the explorer saw here (the guide's record), named or by their words
+            std::vector<std::string> seen;
             for (int i = 0; i < (int)surf.bestiary.species.size(); i++) {
-                const Species& sp = surf.bestiary.species[i];
-                life += (life.empty() ? "" : ", ") + upper(sp.name) + (surf.seenSpecies.count(i) ? "*" : "") + " (" + shortPlan(sp.plan) + ")";
+                if (!guide.animals.count(animalKey(i))) continue;
+                const std::string w = surf.bestiary.words(i);
+                seen.push_back(animalNamed(i) ? upper(animalNameOf(i)) + " (" + w + ")" : w);
             }
-            std::vector<std::string> ws = wrapText("LIFE        " + life, 52);
-            // the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
-            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) put(ws[w], HUD_AMBER);
+            // the forecast takes the third life line's row (the sheet was already past the frame on a world of many species); what does not
+            // fit is counted (KI-466: the last were cut)
+            const size_t rows = forecastShown ? 2u : 3u;
+            std::vector<std::string> ws;
+            for (size_t shown = seen.size();; shown--) {
+                std::string life;
+                for (size_t k = 0; k < shown; k++) life += (k ? ", " : "") + seen[k];
+                if (shown < seen.size()) life += fmt("%s+%d MORE", shown ? ", " : "", (int)(seen.size() - shown));
+                ws = wrapText("LIFE        " + (seen.empty() ? std::string("NONE SEEN YET") : life), 52);
+                if (ws.size() <= rows || shown == 0) break;
+            }
+            for (size_t w = 0; w < ws.size() && w < rows; w++) put(ws[w], HUD_AMBER);
         }
     }
     section(false);

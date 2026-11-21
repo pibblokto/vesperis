@@ -121,6 +121,11 @@ struct SeedRecord {
 std::string seededLine(const SeedRecord& r);                 // its `seeded` line, without the newline
 bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after its key
 
+// J-07: what the explorer saw of an animal species, keyed `<body key>/A<index>` (its index its world's bestiary's, generation 18's): a bit for
+// each thing it was seen doing (surface_types.h's `AnimalDoing`), the nearest it came (metres) and the most seen at once. `animal` lines, after
+// the `animals 1` line that marks the keys' scheme (both only once there is one); its name the explorer's (`names`), which a loan carries
+struct AnimalRecord { uint32_t doing = 0; int nearest = 0, most = 0; };
+
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
     std::map<std::string, std::string> inbox;     // key -> name (from imported guides)
@@ -143,6 +148,7 @@ struct Guide {
     std::set<std::string> treeOff;                // Y-01: the lab's lines ("<body key>/M<index>/S<n>") taken off their world's tree (`treeoff` lines)
     std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a genesis was seen to do ("<genesis>/<number>": `gene` lines)
     std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
+    std::map<std::string, AnimalRecord> animals;  // J-07: "<body key>/A<index>" of every animal species seen (`animal` lines)
     // J-02: the worlds seeded (`seeded` lines) and the guide's clock, the seconds the game ran across its saves and expeditions on real time
     // (the warp never hurries it: `clock`), which the spreads read; both written once a world is seeded, so a guide without them is as before
     std::vector<SeedRecord> seeded;

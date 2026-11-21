@@ -41,13 +41,53 @@ double legOffset(int gait, int p, int n, int s) {
         case GAIT_TROT: return ((p + s) % 2) * 0.5;
         case GAIT_GALLOP: return p == 0 ? 0.5 + s * 0.1 : s * 0.1;
         case GAIT_BOUND: return p == 0 ? 0.5 : 0.0;
-        case GAIT_HOP: return 0;
+        case GAIT_HOP: return 0.5;   // J-07: both feet together, on the ground for the cycle's second half (the body's arc the first)
         case GAIT_STRIDE: return s * 0.5;
         case GAIT_CRAWL: return ((p + s) % 2) * 0.5;   // an insect's tripods
         case GAIT_WAVE: return (double)(n - 1 - p) / std::max(1, n) * 0.8 + s * 0.5;   // a wave from the back to the front
         default: return n > 2 ? (double)(n - 1 - p) / n * 0.8 + s * 0.5 : (p == 0 ? 0.25 : 0.0) + s * 0.5;   // a walk's lateral sequence
     }
 }
+
+// J-07: every point of a pose moved by `d`
+void shiftPose(AnimalPose& P, const Vec3& d) {
+    for (int i = 0; i < P.rings; i++) P.ringC[i] += d;
+    for (int j = 0; j <= P.neckN; j++) P.neckP[j] += d;
+    P.head0 += d;
+    for (int j = 0; j <= P.tailN; j++) P.tailP[j] += d;
+    for (int l = 0; l < P.legs; l++) for (int j = 0; j < RIG_JOINTS; j++) P.leg[l][j] += d;
+    if (P.arms) for (int a = 0; a < 2; a++) for (int j = 0; j < 3; j++) P.arm[a][j] += d;
+    for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) P.wing[w][j] += d;
+}
+// J-07: a pose made at the origin facing +z on level ground, turned so its up is `n` (a trunk's level normal) and its forward is up, then
+// put at `at`: its feet on the trunk, its belly to it
+void turnPose(AnimalPose& P, const Vec3& at, const Vec3& n) {
+    const Vec3 F(0, 1, 0), S = cross(F, n);
+    auto dir = [&](const Vec3& v) { return S * (-v.x) + n * v.y + F * v.z; };   // the pose's side (-x), up and forward to S, n and F
+    auto pt = [&](Vec3& p) { p = at + dir(p); };
+    auto vec = [&](Vec3& v) { v = dir(v); };
+    vec(P.fwd); vec(P.up); vec(P.side);
+    for (int i = 0; i < P.rings; i++) { pt(P.ringC[i]); vec(P.ringS[i]); vec(P.ringU[i]); vec(P.ringT[i]); }
+    for (int j = 0; j <= P.neckN; j++) pt(P.neckP[j]);
+    pt(P.head0); vec(P.headDir); vec(P.headUp); vec(P.headSide);
+    for (int j = 0; j <= P.tailN; j++) { pt(P.tailP[j]); vec(P.tailU[j]); }
+    for (int l = 0; l < P.legs; l++) for (int j = 0; j < RIG_JOINTS; j++) pt(P.leg[l][j]);
+    if (P.arms) for (int a = 0; a < 2; a++) for (int j = 0; j < 3; j++) pt(P.arm[a][j]);
+    for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) pt(P.wing[w][j]);
+}
+}
+
+double gaitDuty(int gait, bool running) {
+    switch (gait) {
+        case GAIT_TROT: return 0.5;
+        case GAIT_GALLOP: return 0.36;
+        case GAIT_BOUND: return 0.4;
+        case GAIT_HOP: return 0.5;
+        case GAIT_STRIDE: return running ? 0.38 : 0.6;
+        case GAIT_CRAWL: return 0.55;
+        case GAIT_WAVE: return 0.7;
+        default: return running ? 0.45 : 0.65;   // a walk
+    }
 }
 
 AnimalRig rigOf(const AnimalBody& b) {
@@ -119,6 +159,14 @@ AnimalRig rigOf(const AnimalBody& b) {
 }
 
 void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
+    if (in.climbing) {   // J-07: posed on level ground at the origin, then turned onto the trunk
+        AnimalPoseIn lv = in;
+        lv.climbing = false; lv.at = Vec3(0, 0, 0); lv.heading = 0; lv.aloft = lv.afloat = false; lv.sink = 0;
+        for (auto& row : lv.ground) for (double& g : row) g = 0;
+        poseAnimal(R, lv, P);
+        turnPose(P, in.at, in.wall);
+        return;
+    }
     const AnimalBody& b = R.b;
     const double k = in.scale;
     P.scale = k;
@@ -136,9 +184,18 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
     const bool onGround = !in.aloft && !in.afloat;
     const bool legless = b.pairs == 0;
     const double phase = in.phase, TAUp = TAU * phase;
-    // the trunk's tilt: its own (levelled lying down) and the ground's slope under it
-    double pitch = b.pitch * (1 - in.lift);
-    if (onGround && !legless) pitch += clampd(std::atan2(in.ground[2][1] - in.ground[0][1], 2 * in.gx), -0.35, 0.35);
+    const int pairs = std::min(b.pairs, 6);
+    // J-07: the metres the body goes in a cycle, and the bounding gaits, whose backs arch and stretch once a cycle
+    const double strideM = in.stride > 0 ? in.stride : (pairs ? R.legReach[0] : 0.25 * b.length) * k * (in.running ? 2.4 : 1.2);
+    // the share of the cycle a pair's foot is down: its gait's, less where its stride outreaches its leg (the foot down a shorter while)
+    auto dutyOf = [&](int p) {
+        const double L = R.legLen[p] * k, reachH = R.legReach[p] * k, ampMax = std::max(0.25 * L, std::sqrt(std::max(0.0, 0.96 * L * L - reachH * reachH)));
+        return std::max(0.15, std::min(gaitDuty(in.gait, in.running), 2 * ampMax / std::max(strideM, 1e-6)));
+    };
+    const bool bounding = in.moving && !legless && (in.gait == GAIT_GALLOP || in.gait == GAIT_BOUND);
+    // the trunk's tilt: its own (levelled lying down; a stalker's lowered to the front) and the ground's slope under it
+    double pitch = b.pitch * (1 - in.lift) - 0.06 * in.crouch + in.tilt;
+    if (onGround && !legless) pitch += clampd(std::atan2(in.ground[2][1] - in.ground[0][1], 2 * in.gx), -in.tiltMax, in.tiltMax);
     if (in.aloft && R.flies) pitch = -0.05 + 0.08 * in.flap;
     const Vec3 T0 = fwd * std::cos(pitch) + up * std::sin(pitch), U0 = up * std::cos(pitch) - fwd * std::sin(pitch);
     // the trunk's middle
@@ -146,18 +203,22 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
     double hop = 0;
     if (onGround) {
         const double reach0 = b.pairs ? R.legReach[0] : 0;
-        const double bob = in.moving ? 0.04 * b.size * k * std::sin(TAUp * 2) : 0;
-        hop = (in.gait == GAIT_HOP && in.moving) ? 0.5 * reach0 * k * std::max(0.0, std::sin(TAUp)) : 0;
+        const double bob = in.moving ? (bounding ? 0.06 : 0.04) * b.size * k * std::sin(bounding ? TAUp : TAUp * 2) : 0;
+        if (in.gait == GAIT_HOP && in.moving && pairs) {   // a hop's arc while its feet are up (its legs' cycle, a half out of step)
+            const double v = phase + 0.5, u = v - std::floor(v), d = dutyOf(0);
+            hop = u >= d ? 0.5 * reach0 * k * std::sin(PI * (u - d) / (1 - d)) : 0;
+        }
         double belly = 0;   // lying, the belly rests on the ground
         for (int i = 0; i < R.rings; i++) belly = std::max(belly, R.ringH[i] - R.ringLift[i]);
-        base.y = in.at.y + (legless ? 0 : std::max(R.spineY * (1 - 0.72 * in.lift), belly) * k) + bob + hop;
+        base.y = in.at.y + (legless ? 0 : std::max(R.spineY * (1 - 0.72 * in.lift - 0.32 * in.crouch), belly) * k) + bob + hop;
     }
     // the rings, a serpent's and a swimmer's waved sideways, a slug's rippled
     const int n = R.rings;
     P.rings = n;
-    double waveA = 0, waves = 1.5, wavePh = phase;
-    if (b.plan == PLAN_SERPENT) waveA = (in.moving ? 0.09 : 0.05) * b.length * k;
-    if (R.swims && (b.variant == SWIM_FISH || b.variant == SWIM_EEL)) { waveA = (b.variant == SWIM_EEL ? 0.08 : 0.07) * b.length * k; waves = b.variant == SWIM_EEL ? 1.6 : 0.8; wavePh = in.t * 1.2; }
+    // J-07: the waves run back along the body: a serpent's as fast as it goes (its curves stay where they lie), a swimmer's by the clock
+    double waveA = 0, waves = 1.5, wavePh = 0;
+    if (b.plan == PLAN_SERPENT) { waveA = (in.moving ? 0.09 : 0.05) * b.length * k; wavePh = -phase * strideM * waves / std::max(1e-6, b.length * k); }
+    if (R.swims && (b.variant == SWIM_FISH || b.variant == SWIM_EEL)) { waveA = (b.variant == SWIM_EEL ? 0.08 : 0.07) * b.length * k; waves = b.variant == SWIM_EEL ? 1.6 : 0.8; wavePh = -in.t * 1.2; }
     for (int i = 0; i < n; i++) {
         const double x = (double)i / (n - 1);
         double s = 0;
@@ -166,6 +227,7 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
             s = waveA * env * std::sin(TAU * (waves * x - wavePh));
         }
         Vec3 c = base + T0 * (R.ringF[i] * k) + side * s + U0 * (R.ringLift[i] * k);
+        if (bounding) c += up * (0.12 * b.depth * k * std::sin(TAUp + 0.8) * (1 - (2 * x - 1) * (2 * x - 1)));   // the back arched, then stretched
         if (onGround && legless) c.y = groundAt(c) + R.ringH[i] * k + (b.plan == PLAN_SLUG ? 0.12 * R.ringH[i] * k * std::sin(TAU * (3 * x - phase)) : 0);
         P.ringC[i] = c;
         P.ringW[i] = R.ringW[i] * k; P.ringH[i] = R.ringH[i] * k;
@@ -186,7 +248,8 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
     if (b.neck > 0.03 * b.size) {
         const int nn = b.neck > b.size ? 3 : 2;
         P.neckN = nn;
-        const double np = b.neckUp - in.headPitch * (b.neckUp + 0.73);
+        const double nod = in.moving && !in.running && !legless ? 0.07 * std::sin(TAUp * 2 + 0.6) : 0;   // J-07: nodding with the step
+        const double np = b.neckUp - in.headPitch * (b.neckUp + 0.73) - 0.45 * in.crouch + in.reach * (1.3 - b.neckUp) + nod;
         const double a0 = b.arched ? np + 0.35 * (1 - in.headPitch) : np, a1 = b.arched ? np - 0.35 : np;
         Vec3 p = cFront + tFront * (0.2 * hFront) + uFront * (0.25 * hFront);
         P.neckP[0] = p; P.neckR[0] = 0.5 * b.neckThick * k;
@@ -198,10 +261,10 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
             P.neckP[j] = p; P.neckR[j] = 0.5 * b.neckThick * k * (1 - 0.35 * j / nn);
         }
         P.head0 = p;
-        P.headDir = normalize(neckDir * 0.6 + flatFwd * 0.5 - up * (0.25 + 0.4 * in.headPitch));
+        P.headDir = normalize(neckDir * 0.6 + flatFwd * 0.5 - up * (0.25 + 0.4 * in.headPitch + 0.1 * in.crouch - 1.1 * in.reach));
     } else {
         P.head0 = cFront + tFront * (0.3 * hFront);
-        P.headDir = normalize(tFront - up * (0.12 + 0.5 * in.headPitch));
+        P.headDir = normalize(tFront - up * (0.12 + 0.5 * in.headPitch + 0.1 * in.crouch - 0.7 * in.reach));
     }
     if (R.swims && b.variant == SWIM_LONGNECK) P.headDir = normalize(neckDir * 0.3 + flatFwd * 0.7);
     {
@@ -252,7 +315,6 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
         if (b.tail == TAIL_CLUB) P.tailR[nt] = r0 * 1.8;
     }
     // the legs
-    const int pairs = std::min(b.pairs, 6);
     P.legs = 0; P.joints = R.bones + 1; P.legR = 0.5 * b.legThick * k;
     auto frameAt = [&](double f, Vec3& c, Vec3& s, Vec3& u, Vec3& t, double& w, double& h) {   // the trunk's frame at f along it (metres)
         const double x = clampd(f / (b.length * k) + 0.5, 0, 1) * (n - 1);
@@ -300,14 +362,17 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
                 foot = b.wings == WINGS_SKIN ? hip + S * (sg * L * 0.85) + T * ((p == 0 ? 0.35 : -0.35) * L) : hip - U * (L * 0.3) - T * (L * 0.6);
             } else if (in.afloat) {
                 foot = hip - U * (L * 0.5) - T * (L * 0.5);
-            } else {
-                const double off = legOffset(in.gait, p, pairs, s);
-                double swing = in.moving ? std::sin(TAU * (phase + off)) : 0, liftA = in.moving ? std::max(0.0, std::cos(TAU * (phase + off))) : 0;
-                if (in.gait == GAIT_HOP && in.moving) { swing = -0.3 + 0.6 * std::max(0.0, std::sin(TAUp)); liftA = 0; }
-                const double stride = R.legReach[p] * k * (in.running ? 1.1 : 0.6);
+            } else {   // J-07: a foot on the ground stays where it was put while the body goes over it, then swings forward lifted
+                double fx = 0, liftA = 0;
+                if (in.moving) {
+                    const double duty = dutyOf(p), amp = 0.5 * duty * strideM;
+                    const double v = phase + legOffset(in.gait, p, pairs, s), u = v - std::floor(v);
+                    if (u < duty) fx = amp * (1 - 2 * u / duty);
+                    else { const double q = (u - duty) / (1 - duty); fx = amp * (2 * smoothstep(0, 1, q) - 1); liftA = std::sin(PI * q); }
+                }
                 if (in.lift > 0.5) foot = hip + S * (sg * R.legSpread[p] * k * 0.7) - fwd * (L * 0.12);   // folded under it
-                else foot = hip + S * (sg * R.legSpread[p] * k) + fwd * (swing * stride);
-                foot.y = groundAt(foot) + liftA * 0.25 * R.legReach[p] * k;
+                else foot = hip + S * (sg * R.legSpread[p] * k) + fwd * fx;
+                foot.y = groundAt(foot) + (in.gait == GAIT_HOP ? liftA * 0.8 * hop : liftA * (in.running ? 0.3 : 0.22) * R.legReach[p] * k);   // a hopper's tucked
             }
             Vec3 bend = b.kneeBack ? -T : T;
             if (sprawl) bend = normalize(up * 0.85 + S * (sg * 0.5));
@@ -410,6 +475,13 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
         }
         if (onGround)   // perched: the wings' ends above the ground they stand on
             for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) P.wing[w][j].y = std::max(P.wing[w][j].y, groundAt(P.wing[w][j]) + 0.01);
+    }
+    if (in.sink > 0) {   // J-07: going under, every point lowered by the share of its height over the ground
+        double top = in.at.y;
+        for (int i = 0; i < n; i++) top = std::max(top, P.ringC[i].y + P.ringH[i]);
+        for (int j = 0; j <= P.neckN; j++) top = std::max(top, P.neckP[j].y + P.neckR[j]);
+        top = std::max(top, P.head0.y + P.headH);
+        shiftPose(P, Vec3(0, -std::min(1.0, in.sink) * (top - in.at.y + 0.05 * b.size * k), 0));
     }
 }
 
@@ -649,7 +721,8 @@ struct Emitter {
                         break;
                     }
                 }
-                point(p, V.glint, 50 + 8 * (1 - V.fog), sz);
+                if (V.eyeshine) point(p, V.glint, 62, sz + 1);   // J-07: a night walker's in the dark
+                else point(p, V.glint, 50 + 8 * (1 - V.fog), sz);
             }
         }
         ornament();

@@ -13,7 +13,8 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
 - `surface_terrain` (`vertexOf`, the material tiles, the rings, reflections, `heightNear`), `surface_sky` (the galaxy's band, `drawSky`,
   meteors, `drawVeil`), `surface_effects` (vents, geysers, spores, `drawWeather`)
 - `site` (`SurfaceSite`, `TerrainCache`: the sun, `groundHeight`, `sampleAt`, nearby roads and marks), `flora` (`forTrees`, `forLogs`,
-  `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`), `bestiary` (`Bestiary::make`; J-06: each species from its own seed),
+  `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`; J-07: the ways' states, `swimmersNear`, the record `lifeSaw`),
+  `bestiary` (`Bestiary::make`; J-06: each species from its own seed; J-07: its way, `words`, `speciesStride`, `speciesGait`),
   `animal_body` (J-06: a species' body of parts, the sixteen plans' recipes, a world's style, `animalDistance`), `animal_mesh` (J-06: the
   rig built once a species, `poseAnimal`, `emitAnimal` by detail), `buggy` (`updateBuggy`,
   `cameraFeed`), `drone` (`deployDrone`), `vehicle_shape.h` (R-427: the buggy's and the drone's stations, wheels, pods and skids, from
@@ -45,6 +46,8 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   vision's metres are local metres (cleared at `init` and `reanchor`, and read again past a quarter metre of tide).
 - The animals (J-06) are posed on the pool, each into a shape list of its own, and filled in bands in the jobs' order. A pose reads the
   ground only through the 3 by 3 heights the main thread read for it (`groundHeight` fills the cache on a miss).
+- J-07: what is seen is what `drawLife` drew whole (`lifeSaw`): a run that only updates sees nothing. A way's own state ends by its own
+  timer or event, never by the generic choice. Find an animal again by its seed: herds come and go and move the others.
 - A new vehicle: the cookbook's "Add a vehicle".
 
 More, with the numbers: `docs/reference/lessons.md`, "The surface".
