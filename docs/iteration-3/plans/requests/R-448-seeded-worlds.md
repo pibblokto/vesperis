@@ -1,6 +1,6 @@
 # R-448: seeded worlds
 
-status: planned 2026-11-20 (1.5.0: the J series, J-01 to J-12); J-01 and J-02 done 2026-11-20, J-03 to J-07 2026-11-21
+status: planned 2026-11-20 (1.5.0: the J series, J-01 to J-12); J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10 and J-11 2026-11-22
 milestone: J-01 to J-12
 
 ## Request

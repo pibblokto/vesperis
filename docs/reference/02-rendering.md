@@ -163,6 +163,18 @@ glow in its upper stops, the snow's). The maps keep a made ramp for every materi
 own). The world-wide colours (a sulphide's waters, a rusted ground, lush or bleached plants, bleached reefs) turn the world's own ramps
 through `madeMatColour` and `madeLifeTint`. The tide's flooded flats take their sea's made share, and a shore's sparkle the made bank.
 
+J-09, a seeded world's overgrowth: its cover (TISSUE, THREADS, HARD GROWTH) takes a lent bank on the ground before the classes' looks
+(`growthBank`, the first of 28, 27, 26, 25 that the traits, the hides and the fates' bank leave free; the rock's where none is), which
+its structures, the trees it wraps and the remains it takes in share: its colour through `matRamp`, a wet one's top stops whiter, and at
+night where it glows its upper stops (45 on) in its light, the near ring's veins and the structures' spots lifted into them. The globe
+gives the made bank (25 or 26) to the stain first (`madeGlobeGrowth`), its veins' light on the night side where it glows; the first
+disc's waters' made tint then takes bank 31 where no trait holds it (else the waters keep their own colour), and a made cloud's colour
+gives way. The maps draw the cover in its own colour (`madeMatColour` of the three materials is the overgrowth's). J-10: a ruin's forms
+take the same bank as their second (B-311's two-material path) under the cover's climb, a face wholly under it five shades darker; the
+growth bank is lent while the harness's staged settlements are the first people's (`placedCells`). J-11: a made hothouse's and a made
+snowball's sand and snow families take their dead kind's colours in every view (`madeMatColour`: the scorched felisian's sand and salt,
+the frozen felisian's dead soil and frost), their rock, water and plants the world's own; the ground's snow bank comes through it too.
+
 ## Draw order
 
 Space: clear (or fade the previous frame by 9 shades during Vimana flight, which makes streaks) -> galactic band (M1-09, the map

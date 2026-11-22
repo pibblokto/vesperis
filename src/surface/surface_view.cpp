@@ -155,6 +155,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     instrumentsFound.clear(); nearInstrument = NearInstrument();   // (likewise)
     hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // nothing of the last landing shows on this one's map
     quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);
+    ventSong = creakSong = hairSong = tearCue = 0;   // J-10
     tick("capsule+misc");
     joinScan(); echoes.clear(); scanned = false;   // the last site's echoes are gone; the scanner asks again
     tick("scan");
@@ -393,6 +394,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
     waterRecords();
+    const double px0 = player.x, pz0 = player.z;
     if (inBuggy) updateBuggy(dt, in, t);
     else if (inDrone) updateDrone(dt, in, t);
     else updateWalking(dt, in, t, controlsEnabled);
@@ -478,6 +480,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     quake *= std::exp(-dt / 4.0);
     if (quake < 0.01) quake = 0;
     updateGroundSongs(dt, t);
+    updateGrowthSongs(dt, px0, pz0);   // J-10
     // dust devils on a desert world (and in a thin-air dust storm): up to four within 500 m, born every 20-50 s, each
     // walking with the wind for two to five minutes
     if (((events & EV_DEVILS) || ((events & EV_STORM_DEVILS) && env.dust > 0.3)) && env.skyBrightness > 0.3) {

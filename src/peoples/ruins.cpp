@@ -521,8 +521,10 @@ bool ruinSiteOk(const BodyGen& gSeason, const RuinSpec& r) {
     return hmax - hmin < 0.5 * r.size;   // a grade of a quarter across the settlement at most
 }
 
-void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out) {
+void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out, std::vector<FormOpening>* openings) {
     out.clear();
+    if (openings) openings->clear();
+    if (lod != 0) openings = nullptr;
     // T-02: a building left before the end (a place left early) weathered from when it was left; one of another age (a work's piece built
     // its age's way: a modern quarry's trucks) in that age's way (B-414: a world's settlements and works are all its people's last age's)
     struct Way { int age; double before; Culture c; };
@@ -530,11 +532,11 @@ void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form
     for (size_t i = 0; i < r.buildings.size(); i++) {
         const Building& b = r.buildings[i];
         const int wa = b.age >= 0 ? b.age : c.age;
-        if (wa == c.age && b.before <= 0) { buildingForms(b, c, r.site, lod, out, (int)i); continue; }
+        if (wa == c.age && b.before <= 0) { buildingForms(b, c, r.site, lod, out, (int)i, openings); continue; }
         const Way* w = nullptr;
         for (const Way& x : ways) if (x.age == wa && x.before == b.before) w = &x;
         if (!w) { ways.push_back({wa, b.before, cultureAtAge(c, wa, b.before)}); w = &ways.back(); }
-        buildingForms(b, w->c, r.site, lod, out, (int)i);
+        buildingForms(b, w->c, r.site, lod, out, (int)i, openings);
     }
 }
 

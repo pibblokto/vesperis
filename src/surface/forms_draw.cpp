@@ -28,12 +28,14 @@ void SurfaceView::groupPieces(RuinCell& c) {
     }
 }
 
-void SurfaceView::testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3]) {
+void SurfaceView::testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3], const std::vector<FormOpening>* openings) {
     placedCells.emplace_back();
     RuinCell& c = placedCells.back();
     c.has = true; c.placed = true; c.spec = spec;
     for (int l = 0; l < 3; l++) c.elems[l] = pieces[l];
+    if (openings) c.openings = *openings;
     c.r.x = x; c.r.z = z; c.r.heading = spec.heading; c.r.size = spec.size; c.r.spec = &c.spec;
+    overgrowCell(c);   // J-10
     groupPieces(c);
 }
 
@@ -50,6 +52,38 @@ template <class F> void footPoints(const Form& e, double ex, double ez, F fn) {
         }
 }
 inline bool c01Form(const Form& e) { return e.kind <= FK_DOME && e.sub == 0 && e.tilt == 0; }
+// J-10: a membrane grown across an opening: a sheet bulging out or in at its middle (by its hash), smooth, seen from both sides, its foot at `foot`
+void membraneMesh(const Form& e, const Vec3& foot, FormMesh& out) {
+    out.clear();
+    constexpr int NA = 4, NY = 4;
+    const double ch = std::cos(e.heading), sh = std::sin(e.heading), hy = 0.5 * (e.y1 - e.y0), ym = 0.5 * (e.y0 + e.y1);
+    const double bulge = (e.seed & 1 ? 1 : -1) * std::min(0.25, 0.14 * std::min(e.hx, hy));
+    for (int j = 0; j <= NY; j++)
+        for (int i = 0; i <= NA; i++) {
+            const double a = e.hx * (2.0 * i / NA - 1), y = e.y0 + (e.y1 - e.y0) * j / NY, sa = a / e.hx, sy = (y - ym) / hy;
+            const double b = bulge * (1 - sa * sa) * (1 - sy * sy), da = -2 * bulge * sa / e.hx * (1 - sy * sy), dy = -2 * bulge * sy / hy * (1 - sa * sa);
+            FormMesh::V v;
+            v.p = Vec3(foot.x + ch * a + sh * b, foot.y + y, foot.z - sh * a + ch * b);
+            const Vec3 nl(-da, 1, -dy);   // (across, along, up) in its frame
+            v.n = normalize(Vec3(ch * nl.x + sh * nl.y, nl.z, -sh * nl.x + ch * nl.y));
+            out.v.push_back(v);
+        }
+    const int grid = (int)out.v.size();
+    for (int side = 0; side < 2; side++)   // each face lit as an outer one (a room's inside is lit dimmer)
+        for (int j = 0; j < NY; j++)
+            for (int i = 0; i < NA; i++) {
+                const int k = (int)out.v.size(), q0 = j * (NA + 1) + i;
+                const int c[4] = {q0, q0 + NA + 1, q0 + NA + 2, q0 + 1};
+                for (int m = 0; m < 4; m++) {
+                    FormMesh::V v = out.v[c[side ? 3 - m : m]];
+                    if (side) v.n = v.n * -1.0;
+                    out.v.push_back(v);
+                }
+                out.polys.push_back({k, 4, FormMesh::SMOOTH});
+            }
+    out.v.erase(out.v.begin(), out.v.begin() + grid);   // (the grid's own points: the faces have their copies)
+    for (FormMesh::Poly& P : out.polys) P.first -= grid;
+}
 // B-420: a ring standing on its rim touches the ground at one point, its middle: it stands there (on the highest ground of its square it floated
 // over a slope, the explorer walking under it)
 inline bool bigForm(const Form& e) { return !c01Form(e) && std::max(e.hx, e.hz) > 6 && e.kind != FK_CABLE && !(e.kind == FK_TORUS && e.tilt > 0.3); }
@@ -94,8 +128,10 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
         const std::vector<Form>& el = cell.elems[L];
         const int i0 = cell.groups[L][b], i1 = cell.groups[L][b + 1];
         if (i0 >= i1) continue;
+        const float climb = cell.climb.size() == (size_t)nb + 1 && lod < 3 ? cell.climb[b] : -1.f;   // J-10: an overgrowth's cover on it
         for (int i = i0; i < i1; i++) {
             const Form& e = el[i];
+            if (e.part == FORM_PART_GROWTH && growthBank < 0) continue;   // (no bank for it this frame)
             double ex = r.x + e.x, ez = r.z + e.z;
             double ddx = ex - camPos.x, ddz = ez - camPos.z, d = std::sqrt(ddx * ddx + ddz * ddz);
             const bool c01 = e.kind <= FK_DOME && e.sub == 0 && e.tilt == 0;
@@ -107,7 +143,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
             if (e.absolute) {   // heights over the reference level (a dam's wall, an aqueduct's arches): where they are, whatever the ground does
                 const double fog = 1 - std::exp(-d / env.fogDistance);
                 if (lod == 3 && fog > 0.985) continue;
-                formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people});
+                formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people, climb});
                 continue;
             }
             const bool big = bigForm(e);
@@ -116,7 +152,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 double skirt;
                 if (!pieceFootNear(e, ex, ez, gy, skirt)) continue;
                 const double fog = 1 - std::exp(-d / env.fogDistance);
-                formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people});
+                formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb});
                 continue;
             } else {   // the ring that draws the ground there, read once while that ring does
                 std::vector<FootCache>& fc = cell.foot[L];
@@ -147,7 +183,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // earth on the lowest (`pieceFootNear`)
                 if (lod > 0 && !c01) skirt += 0.004 * d;   // the far rings' ground is coarser than the 64 m samples
             }
-            formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people});
+            formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb});
         }
     }
 }
@@ -163,8 +199,8 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     // the raster parameters: [0] the drifts' sand; [1, 41) a people's slot with its windows (0 none, k the people's k-th); [41, 49)
     // a people's slot plain (the silhouettes: no grain far off, where it would only shimmer); [49] A-03's earth (a mound, a bank, a
     // spoil heap): the ground's own soil, the grass of a living world or a desert's sand
-    formRps.assign(58, RasterParams());
-    const bool frozen = KINDS[site.gen.type].cover == DC_FROZEN;   // a frozen world's drifts are snow, its earthworks under frost
+    formRps.assign(119, RasterParams());
+    const bool frozen = deadCoverOf(site.gen) == DC_FROZEN;   // a frozen world's drifts are snow, its earthworks under frost
     formRps[0].bank = frozen ? 8 : 9;
     formRps[49].bank = frozen ? 8 : (kindHas(site.gen.type, KT_FLORA) ? 10 : 9);
     formRps[50].bank = 2;    // a pool's water (the water's bank)
@@ -206,6 +242,29 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             }
             formRps[formPlainRp(p, s)].bank = FORM_BANKS[p][s];
         }
+    }
+    // J-10: a seeded overgrowth's cover in its bank and tile: [58, 116) each of the above with the cover in its second bank under an item's climb
+    // (its edge wobbled by the ground's edge noise, the windows gone under it); [116] the cover alone (a face wholly under the climb, a nodule);
+    // [117] a drape, cut out under its ragged foot; [118] a membrane, its veins broader
+    const MadeWorld& gm = site.gen.made;
+    const bool grown = growthBank >= 0 && gm.grown() && gm.growthLine >= 0 && gm.growthLine < MADE_LINES;
+    // the weight a metre up a face over the climb; the edge's wobble (weight units: metres); how much darker the cover on a ruin than on the ground (a
+    // building taken whole still stands out of it)
+    constexpr double GROWN_W = 1.0, GROWN_EDGE = 0.8, GROWN_DARK = 5.0;
+    if (grown) {
+        const GrainTexture* tile = mesoFor(gm.spread[gm.growthLine].growth.material);
+        for (int i = 0; i < 58; i++) {
+            RasterParams& o = formRps[58 + i];
+            o = formRps[i];
+            o.bank2 = growthBank; o.grain2b = tile; o.grain2Scale = 3.0; o.edge = &grainEdge; o.edgeScale = 1.3; o.edgeAmp = GROWN_EDGE; o.patternAbove = true;
+            o.shade2 = -GROWN_DARK;
+        }
+        RasterParams& all = formRps[116];
+        all.bank = growthBank; all.grain2 = tile; all.grain2Scale = 3.0;
+        RasterParams& drape = formRps[117];
+        drape = all; drape.cutout = true; drape.edge = &grainEdge; drape.edgeScale = 2.5; drape.edgeAmp = 0.45;
+        RasterParams& membrane = formRps[118];   // its veins broader
+        membrane = all; membrane.grain2Scale = 1.4;
     }
     const Vec3& sd = env.sun.dirLocal;
     const double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
@@ -287,8 +346,10 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     ch.silhouettes++;
                     continue;
                 }
-                formMesh(e, I.lod, I.foot, I.skirt, mesh, proj.f / FB_SCALE / std::max(1.0, I.d));
-                const int partRp = e.part == 7 ? 0
+                if (e.growth == FG_MEMBRANE) membraneMesh(e, I.foot, mesh);
+                else formMesh(e, I.lod, I.foot, I.skirt, mesh, proj.f / FB_SCALE / std::max(1.0, I.d));
+                const int partRp = e.part == FORM_PART_GROWTH ? (e.growth == FG_DRAPE ? 117 : (e.growth == FG_MEMBRANE ? 118 : 116))
+                                 : e.part == 7 ? 0
                                                : (e.part == 8 ? 49
                                                               : (e.part == 9 ? 50
                                                                              : (e.part == 10 ? 51
@@ -296,8 +357,13 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                                                                                                              : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL
                                                                                                                                ? 53 + e.part - FORM_PART_PALE
                                                                                                                                : -1)))));   // the ground's and the world's own banks; T-04 the records
-                const double tone = lit ? 0.0 : e.tone * (1 - I.fog);   // a house painted lighter or darker than its neighbours
+                // a house painted lighter or darker than its neighbours; J-10: a membrane across an opening darker (the room behind it)
+                const double tone = lit ? 0.0 : (e.growth == FG_MEMBRANE ? -6.0 : e.tone) * (1 - I.fog);
                 const int rpBase = partRp >= 0 ? partRp : formRpIndex(I.people, slot, 0), rpPat = partRp >= 0 ? partRp : formRpIndex(I.people, slot, e.pattern);
+                // J-10: the cover up to its climb over the ground at the foot (a work's wall at its own base), on the people's pieces, their earth and
+                // their drifts; a drape's weight down its length
+                const bool covered = grown && I.climb >= 0 && !lit && (partRp < 0 || partRp == 0 || partRp == 49);
+                const double coverBase = I.foot.y + (e.absolute ? e.y0 : 0.0) + I.climb;
                 for (const FormMesh::Poly& P : mesh.polys) {
                     const FormMesh::V* vs = &mesh.v[P.first];
                     Vec3 n = normalize(cross(vs[1].p - vs[0].p, vs[P.n - 1].p - vs[0].p));
@@ -316,8 +382,16 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                         if (P.flags & FormMesh::FACE_UV) { q[k].u = vs[k].u; q[k].v = vs[k].v; }
                         else { q[k].u = p.x + p.y * 0.5; q[k].v = p.z + p.y * 0.5; }
                     }
+                    int rp = (P.flags & FormMesh::PATTERN) ? rpPat : rpBase;
+                    if (covered) {   // wholly under its climb: the cover alone; its edge across the face: the second bank under it
+                        double wlo = 1e18, whi = -1e18;
+                        for (int k = 0; k < P.n; k++) { q[k].w = 0.5 + (vs[k].p.y - coverBase) * GROWN_W; wlo = std::min(wlo, q[k].w); whi = std::max(whi, q[k].w); }
+                        if (whi < 0.5 - GROWN_EDGE) { rp = 116; for (int k = 0; k < P.n; k++) q[k].shade -= GROWN_DARK; }
+                        else if (wlo < 0.5 + GROWN_EDGE) rp += 58;
+                    } else if (e.growth == FG_DRAPE)
+                        for (int k = 0; k < P.n; k++) q[k].w = (vs[k].p.y - I.foot.y - e.y0) / std::max(0.1, e.y1 - e.y0);
                     int y0, y1; rowsOf(q, P.n, y0, y1);
-                    ch.polys.push_back({(int)ch.v.size(), P.n, (P.flags & FormMesh::PATTERN) ? rpPat : rpBase, y0, y1});
+                    ch.polys.push_back({(int)ch.v.size(), P.n, rp, y0, y1});
                     for (int k = 0; k < P.n; k++) ch.v.push_back(q[k]);
                 }
                 if (!mesh.lines.empty()) {   // members and cables: lines a pixel or more thick; under a fifth of a pixel only the legs, chords and cables

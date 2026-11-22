@@ -3,7 +3,7 @@
 
 const char* const MATERIAL_NAMES[] = {"ROCK", "SAND", "GRASS", "FOREST", "SNOW", "WATER", "LAVA", "ICE", "CLOUD",
                                       "QUARTZ", "BASALT", "DUST", "GAS", "IRON", "SULPHUR", "GRAPHITE", "SALT", "GLASS", "MUD", "POTASH", "BRINE",
-                                      "MATS", "STROMATOLITE", "CRUST", "MOSS"};
+                                      "MATS", "STROMATOLITE", "CRUST", "MOSS", "TISSUE", "THREADS", "HARD GROWTH"};
 static_assert(sizeof(MATERIAL_NAMES) / sizeof(MATERIAL_NAMES[0]) == MAT_COUNT, "a name for every material");
 // R-307: one sky pair per kind with air (P-00: the row's: from its tint, a thin air's, or fixed), shared by the ground, the globe and the map.
 // J-04: a seeded world's made air over it: an ozone's deeper blue overhead or a thin one's violet, a thick air pale to the horizon, a haze's
@@ -150,9 +150,22 @@ static RGB madePlantColour(const MadeWorld& m, RGB c, const RGB& straw) {
     if (m.wilt > 0) c = lerp(c, straw, (float)(0.75 * m.wilt));
     return c;
 }
+// J-11: a made kind's dead cover in the dead kind's colours: its sand's and snow's families the scorched felisian's (sand, the old seas' salt) or
+// the frozen felisian's (the dead soil, the frost), its rock, waters and plants the world's own
+static bool deadCoverColour(int cover, int mat, RGB& c) {
+    const int fam = matFamily(mat);
+    if (cover == DC_NONE || (fam != FAM_SAND && fam != FAM_SNOW)) return false;
+    const KindDef& K = KINDS[cover == DC_SCORCHED ? PT_SCORCHED_FELISIAN : PT_FROZEN_FELISIAN];
+    for (int i = 0; i < K.nPalette; i++)
+        if (K.palette[i].mat == K.famRep[fam] && K.palette[i].mode == MM_CONST) { c = K.palette[i].c; return true; }
+    return false;
+}
 RGB madeMatColour(const BodyGen& g, int mat) {
     const RGB c = g.matColor[mat];
     const MadeWorld& m = g.made;
+    if (madeGrowthMaterial(mat) && m.growthLine >= 0 && m.growthLine < MADE_LINES) return m.spread[m.growthLine].growth.colour;   // J-09: the overgrowth's
+    RGB dead;
+    if (m.kind != MDK_NONE && deadCoverColour(m.deadCover(), mat, dead)) return dead;   // J-11
     if (mat == MAT_WATER && m.seaShade > 0) return lerp(c, m.seaShadeTint, (float)(0.8 * m.seaShade));   // J-05: every water turned by a sulphide
     if (m.rustGround > 0 && (mat == MAT_ROCK || mat == MAT_BASALT || mat == MAT_SAND || mat == MAT_DUST || mat == MAT_MUD))
         return lerp(c, RGB(0.62f, 0.30f, 0.16f), (float)(0.6 * m.rustGround));   // J-05: an oxygenless world's ground rusted by an oxygen
@@ -170,7 +183,7 @@ RGB madeLifeTint(const BodyGen& g) {
 }
 RGB madeColourAt(const BodyGen& g, int mat, double share) {
     const MadeWorld& m = g.made;
-    if (share > 0.5 && mat != MAT_LAVA) {
+    if (share > 0.5 && mat != MAT_LAVA && !madeGrowthMaterial(mat)) {   // (J-09: an overgrowth's cover its own colour)
         if (mat == MAT_WATER || (m.tinted && (m.tintOn & MADE_ON_LAND))) { if (m.tinted) return m.tint; }
         else if (const MadeLook* L = m.lookOf(madeClassOf(g, mat, false))) { if (L->tinted) return L->tint; }
     }
@@ -195,23 +208,33 @@ static bool madeLandOn(int on, int mat, int shoreSalt) {
     return true;   // bare ground: any land of the class
 }
 
+// J-09: an overgrowth's cover where it has crept past a half of its share (`madeGrowthAt`, its edge ragged): on the land its line lives on by its
+// warmth (never water, lava, snow or ice), a film's on the wet ground by its waters alone. The forest's density is kept under it, so its trees
+// stand wrapped in it; elsewhere the plants are gone under it
+static void madeGrowth(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
+    const MadeWorld& m = g.made;
+    if (s.material == MAT_LAVA || s.material == MAT_SNOW || s.material == MAT_ICE || madeWetAt(s)) return;
+    int line;
+    const double k = madeGrowthAt(m, unit, g.seed, line);
+    if (k < 0.5 || line < 0) return;
+    const MadeSpread& sp = m.spread[line];
+    const MadeGrowth& G = sp.growth;
+    if (G.type == OG_FILMS && madeShoreSalt(g, s) < 0) return;
+    if (sp.tLo > -1e8 || sp.tHi < 1e8) {
+        const double c = madeMeanAt(g, m, unit, s, false, 0);
+        if (c < sp.tLo || c > sp.tHi) return;
+    }
+    const bool forest = s.material == MAT_FOREST;
+    s.material = G.material;
+    s.albedo = clampd(0.25 + 0.6 * (0.2126 * G.colour.r + 0.7152 * G.colour.g + 0.0722 * G.colour.b), 0.05, 0.9);
+    s.scree = 0;
+    if (!forest) s.veg = 0;
+}
+
 static void madeGround(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
     if (s.material == MAT_LAVA) return;
-    const bool wet = madeWetAt(s);
+    const bool wet = madeWetAt(s);   // (J-11: a runaway's dried waters are a made hothouse's, its scorched cover laid by the living ground)
     const MadeWorld& m = g.made;
-    if (wet && m.dried()) {   // J-04: a runaway's waters gone to their old beds, as a scorched world's are: the deep basins' salt, the rest of the sea's
-        // floor dust, a river's bed sand, a lake's playa salt, a pool's clay; no line lives there now
-        if (s.waterKind == 0 && s.height < 0) {
-            const double depth = -s.height;
-            if (depth > 1500.0 + 600.0 * fbm3(unit * (g.R / 60.0), g.sG + 82, 2)) { s.material = MAT_SALT; s.albedo = 0.84; }
-            else { s.material = MAT_DUST; s.albedo = 0.42 + 0.08 * smoothstep(1500.0, 200.0, depth); }
-            s.oldSea = 1;
-        } else if (s.waterKind == 2 || s.waterKind == 4) { s.material = MAT_SALT; s.albedo = 0.8; }
-        else if (s.waterKind == 3) { s.material = MAT_MUD; s.albedo = 0.46; }
-        else { s.material = MAT_SAND; s.albedo = 0.56; }
-        s.water = -1e9; s.waterKind = 0; s.shore = 1e9; s.waterTint = 0; s.lifeTint = 0; s.biome = BIO_DESERT; s.veg = 0;
-        return;
-    }
     if (!wet || (m.tintOn & MADE_ON_WATER)) {   // (the cover never lies on water)
         const int salt = wet ? madeSaltAt(g, s) : 0;
         double k = 0, meanC = 0;
@@ -340,11 +363,12 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         // TR_EXOTIC_SEAS: the ground under the liquid's level is sea
         if (g.liquidLevel > -1e8 && s.height < g.liquidLevel && s.material != MAT_LAVA) { s.material = MAT_WATER; s.water = g.liquidLevel; s.albedo = 0.22; s.glow = 0; }
     }
-    if (g.tideRangeM > 0) tidalFlat(g, unit, detailM, s);
+    if (g.tideRangeM > 0 && !(g.made.on() && g.made.deadCover() != DC_NONE)) tidalFlat(g, unit, detailM, s);   // (J-11: no tide on a made kind's dry or frozen seas)
     qualityWater(g, unit, detailM, s);
     if (g.hasTrait(TR_SNOW_ALGAE)) snowAlgae(g, unit, detailM, s);
     if (g.dark) darkGround(c);
     if (g.made.on() && g.made.ground()) madeGround(g, unit, s);   // J-02: last of all
+    if (g.made.on() && g.made.grown()) madeGrowth(g, unit, s);    // J-09: an overgrowth's cover over the rest
     if (s.material != MAT_LAVA) s.albedo = clampd(s.albedo, 0.03, 1.0);
     return s;
 }

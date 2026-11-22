@@ -35,7 +35,12 @@ and a back, wings, a hide and a coat, in sixteen plans. A world's animals share 
 alike. A world has 3 to 5 species on land (2 to 4 before), 1 or 2 in the air (a floater in a thick air) and 2 to 4 in the water (1). No
 star, system, body, map or ground moves: the herds' habitat cells and their spots stay where they were (the unit's `animals` group).
 What moves is the animals drawn, their names and their calls. J-07 (still 18): each species' way and how many live together, drawn
-after every draw before them (the herds' sizes follow: a lone one, a pack); the generated names gone (the explorer names them).
+after every draw before them (the herds' sizes follow: a lone one, a pack); the generated names gone (the explorer names them). J-08
+(still 18): old bones by a herd's cell in eight on every world, and hunts that end in kills; the regress's 24 hashes unmoved. J-09
+(still 18): three ground materials appended (TISSUE, THREADS, HARD GROWTH: no map hash moves) for a seeded world's overgrowth; a world
+nobody seeded is drawn as before. J-10 (still 18): a seeded world's ruins overgrown and crumbled, and its sounds; a world nobody seeded
+draws its ruins and plays its sounds as before. J-11 (still 18): a seeded world's made kind (the data sheet's line, sentence and phrase; a
+made hothouse's or snowball's dead cover over its own ground); a world nobody seeded is drawn and named as before.
 
 ## 17
 

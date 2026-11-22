@@ -38,7 +38,7 @@ void renderMaps() {
                     static const uint32_t matCol[] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20),
                             rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42),
                             rgb(236, 233, 224), rgb(30, 42, 36), rgb(110, 92, 76), rgb(196, 118, 106), rgb(118, 152, 78), rgb(120, 58, 92), rgb(150, 140, 104), rgb(200, 118, 40),
-                            rgb(78, 104, 40)};   // mats, stromatolite, crust, moss
+                            rgb(78, 104, 40), rgb(158, 76, 82), rgb(220, 214, 200), rgb(210, 200, 178)};   // mats, stromatolite, crust, moss; J-09's tissue, threads, hard
                     static_assert(sizeof(matCol) / sizeof(matCol[0]) == MAT_COUNT, "a map colour for every material (P-00)");
                     uint32_t mc = matCol[m.material[i]];
                     img[PlanetMap::W * PlanetMap::H + i] = (xx < PlanetMap::W / 2) ? hc : mc;

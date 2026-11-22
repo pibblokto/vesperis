@@ -9,7 +9,7 @@
 #include "core/noise.h"
 #include "galaxy/planetmap.h"
 
-void buildMesoTile(GrainTexture& g, int material, uint64_t seed);
+void buildMesoTile(GrainTexture& g, int material, uint64_t seed, int variant = -1);   // J-09: `variant` given (an overgrowth's texture), else hashed
 // true for materials that have a meso tile at all
 bool materialHasMesoTile(int material);
 // the look of a material on this planet (0..2)

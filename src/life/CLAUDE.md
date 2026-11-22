@@ -40,7 +40,10 @@ since Z-03 the surface and the game do too.
   made air in the layer (`madeAirOf`: each gas's answer by its world, a runaway, what lift carries up), a line's habitat share and the
   world's mean (`SeedVerdict::share`, `worldC`), `madeAirWords` (the data sheet's AIR line), `MADE_AIR_NAMES`. J-05: what a line makes
   of the waters, land, snow and plants it lives in (`looksOf`, `LineLooks`), the air's world-wide looks in `madeAirOf`, the names
-  `MADE_SEA_NAMES`, `MADE_GROUND_NAMES`, `MADE_PLANT_NAMES`)
+  `MADE_SEA_NAMES`, `MADE_GROUND_NAMES`, `MADE_PLANT_NAMES`. J-08: the animals' fates, a line's (`lineFateOf`, in its spread) and the
+  air's (`madeFaunaOf`), `MADE_FAUNA_NAMES`, `MADE_DEATH_NAMES`. J-09: a line's overgrowth (`growthOf`: its type by its genes and way,
+  its looks, from its eighth step), `MADE_GROWTH_NAMES`, `madeGrowthCover`. J-11: the snowball's ice run beside the runaway's
+  (`stepsPast`), the made kind (`madeKindOf`, after the fauna), `madeHarms` and `madeLivable`, `SeedVerdict::growLand`)
 - `morph_draw.h` (the slide's public interface: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`,
   `seeingsFor`, `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands and waves in slide micrometres, and the slide's banks),
@@ -109,6 +112,8 @@ since Z-03 the surface and the game do too.
   J-03's key (the air's fields are hashed only when it has one); each look is 0 below its trait's share, so what is drawn is named.
   J-05: a layer without the waters', ground's or plants' looks keeps J-04's key; a class's look is the latest line's that makes one, its
   share the greatest of the lines that make one there; a trait named only where its look can show (plants on a world with plants).
+  J-08: a layer without the animals' fates keeps J-05's key; a fate keeps nothing under the share its trait is named at, and no
+  thriving is named where any die-off is.
 - J-03's verdict is a pure function of the world, the line and the place: its medium is `mediumOfPlace` and its growth `growthIn`, the
   incubator's own (the unit holds the verdict to a flask in that medium), and the natives are the place's sample, each taken as a
   flask takes it. The drift hashes the world's seed, the line's key and the place: it never draws on a world's stream, and it never

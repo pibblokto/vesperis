@@ -21,7 +21,8 @@ std::string describeBody(const Body& b, const BodyGen& g) {
     std::string s = std::string(sizeWord(b.radiusKm, b.type)) + " ";
     // P-00: the kind's phrases (KindDef::sentence) by its rule: one, a coin, or the body's own parameter
     const KindDef& K = KINDS[b.type];
-    switch (K.sentenceRule) {
+    if (g.made.on() && g.made.kind != MDK_NONE) s += madeKindPhrase(g.made);   // J-11: a made kind's phrase in its kind's place
+    else switch (K.sentenceRule) {
         case SR_COIN: s += r.chance(0.5) ? K.sentence[0] : K.sentence[1]; break;
         case SR_CRATERS: s += g.craterDensity > 0.55 ? K.sentence[0] : K.sentence[1]; break;
         case SR_DUNES: s += g.duneAmp > 12 ? K.sentence[0] : K.sentence[1]; break;
@@ -33,7 +34,8 @@ std::string describeBody(const Body& b, const BodyGen& g) {
     for (int k = 0; k < TRAIT_SLOTS; k++) if (g.traits[k]) s += TRAITS[g.traits[k]].phrase;   // (Q-01: the six slots)
     if (b.doublePlanet) s += b.parent >= 0 ? ", the smaller half of a double planet" : ", the larger half of a double planet";
     else if (b.parent >= 0) s += ", a moon";
-    if (b.locked && livingGround(b.type) && !kindHas(b.type, KT_FIXED_SUN)) s += ", ice on its night side and deserts under its sun";   // a fixed sun's kind says it its own way
+    if (b.locked && livingGround(b.type) && !kindHas(b.type, KT_FIXED_SUN) && !(g.made.on() && g.made.deadCover() != DC_NONE))
+        s += ", ice on its night side and deserts under its sun";   // a fixed sun's kind says it its own way (J-11: a made hothouse or snowball has neither)
     double gg = b.gravity / 9.8;
     if (gg < 0.25) s += ", where a jump takes you high";
     else if (gg > 1.8) s += ", heavy underfoot";

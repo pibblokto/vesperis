@@ -180,13 +180,29 @@ static const Mode MODES[] = {
                 "`lab_genes_switch.png` (a glow IN THE DARK by S, aglow in a dark flask; a rest IN THE LIGHT, resting lit, dying dark). J-01: the world "
                 "genes, forty species' world values, the editor's world page; `cultures`: `lab_cultures_world.png`",
                 "modes_lab.cpp", runLab},
-        {"seed", "life", "test | worlds | sea | climate | traits | looks", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
+        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
                 "layer's tint, with its cover, and as generated again (the first pictures pixel for pixel): `seed_test_<view>_<none|tint|cover>.png`. J-03 `worlds`: six lines "
                 "(wild, warm, cold, a dye, a methane-maker, STOP cut) let go on forty worlds: each verdict and why, the drift, the spread's steps and what each shows. `sea`: the "
                 "dye line in a sea off a coast, before and at its eighth step: `seed_sea_<map|zoom|globe|ground>_<before|after>.png`. J-04 `climate`: each gas on twenty worlds, "
                 "the mean warmth, pressure and air before and after (modes_seed_air.cpp). `traits`: each made air's trait from orbit and on the ground, before and after: "
                 "`made_<trait>_<orbit|ground>_<before|after>.png` (a runaway's `_dry` an hour on). J-05 `looks`: each made water's, ground's and plants' trait the same way, "
-                "`look_<trait>_<map|orbit|ground>_<before|after>.png` (modes_seed_looks.cpp)", "modes_seed.cpp", runSeed},
+                "`look_<trait>_<map|orbit|ground>_<before|after>.png` (modes_seed_looks.cpp). J-08 `fates`: each fate a line brings a world's animals, what each "
+                "species came to, each drawn on the ground (`fates/fate_<tag>.png`), the remains' five stages and kinds, each change on a young (`fates/change_<name>.png`, "
+                "`fates/changes.png`), a seeded world's herd over its steps (`fates/steps_NN.png`; modes_seed_fates.cpp). J-11 `kinds`: the made kind each of the forty worlds and "
+                "six lines ends as at its 64th step, whether it harmed, changed only the looks or made the world more livable, and the shares; then each made kind's "
+                "recipe on a world: the globe before and after, the data sheet and the ground (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`; modes_seed_kinds.cpp)",
+         "modes_seed.cpp", runSeed},
+        {"overgrowth", "life", "plates | world | ruins",
+         "J-09 `plates`: each overgrowth type and forty variants on a test ground (`overgrowth/type_<name>.png`, `overgrowth/variant_NN_<tag>.png`, the sheets "
+                "`types.png` and `variants.png`); `world`: a line that never stops and binds let go on a world, its overgrowth from orbit, on the landing map and on "
+                "the ground at four of its steps (`overgrowth/world_NN_<map|orbit|ground>.png`); J-10 `ruins`: the medieval test world's first city and its "
+                "capital overgrown at four steps (`overgrowth/ruins_<city|capital>_NN.png`), a doorway grown shut (`ruins_doorway.png`), the city crumbled by a "
+                "stone rotter and as generated (`ruins_crumbled.png`, `ruins_uncrumbled.png`)",
+         "modes_overgrowth.cpp", [](int argc, char** argv) -> int {
+             if (argc > 2 && std::string(argv[2]) == "world") return overgrowthWorld();
+             if (argc > 2 && std::string(argv[2]) == "ruins") return overgrowthRuins();
+             return overgrowthPlates();
+         }},
         {"signals", "radio", "[<sx> <sy> <sz>] [reach] [xG] | wav", "C-07: the far signals heard from a sector; their WAVs", "modes_signals.cpp", runSignals},
         {"voice", "radio", "<sx> <sz> <body> [index] [wav]", "C-05: a world's voice, a record spoken", "modes_signals.cpp", runVoice},
         {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake", "modes_signals.cpp", runSounds},
@@ -251,9 +267,11 @@ static const Mode MODES[] = {
         {"pngdiff", "proof", "<a.png> <b.png> [diff.png]", "F-01: two PNGs pixel for pixel", "modes_proof.cpp", runPngDiff},
         {"bothways", "proof", "<scene> [scale]", "F-01: a scene by the workers and by one thread", "modes_proof.cpp", runBothWays},
         {"suncone", "proof", "", "F-05: the sun's cone test swept to the frame's corner", "modes_proof.cpp", [](int argc, char** argv) -> int { return runSunCone(); }},
-        {"bench", "bench", "[check [slack]] | forest | noise", "the frame's costs; `check` against the 46 budgets", "modes_bench.cpp",
+        {"bench", "bench", "[check [slack]] | forest | noise | overgrowth", "the frame's costs; `check` against the budgets; J-09 `overgrowth`: the "
+                "overgrown forest's and ground's views beside the plain ones", "modes_bench.cpp",
                 [](int argc, char** argv) -> int {
                     if (argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();
+                    if (argc > 2 && std::string(argv[2]) == "overgrowth") return runBenchOvergrowth();   // J-09
                     // `bench check <factor>`
                     return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check", argc > 3 ? std::max(0.1, atof(argv[3])) : 1.0);
                 }},

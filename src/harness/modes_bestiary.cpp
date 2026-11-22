@@ -252,11 +252,11 @@ int runBestiaryPlates(int want) {
 
 // J-07: `bestiary ways`: each way played where a world has it (the scan's first world with such a species and a place for it), its moment
 // drawn at 2x (`ways/ways_<way>.png`) and what happened printed; then every plan stepping through its walk and its run (`ways/gaits.png`)
-namespace {
+// (J-08: shared with `seed fates`: harness.h)
 // a place for a way: open dry ground (0), dry ground off the forest (1: the trees are looked for in the view), water 3 m deep or more (2),
 // a shore with water 0.3 to 1.5 m deep (3: walked to from the sea); a time its sun stands 25 to 55 degrees up, or 12 under the horizon at night.
 // `salt` another place
-bool waysSite(StarSystem& sys, int bi, int need, bool night, double& lat, double& lon, double& t, int salt = 0) {
+bool waysSite(StarSystem& sys, int bi, int need, bool night, double& lat, double& lon, double& t, int salt) {
     const Body& b = sys.bodies[bi];
     Rng r(mix64(b.seed ^ 0x3A75ULL ^ (uint64_t)need ^ (uint64_t)salt * 0x9E37ULL));
     for (int tries = 0; tries < 60; tries++) {
@@ -323,7 +323,7 @@ void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_
         sv.critters.push_back(c);
     }
 }
-}
+
 
 // J-07: the ways' scenes (`creatures_hunt`, `creatures_flock`, `creatures_swimmers`) staged on the site the scene chain found, the camera free and
 // the explorer far off (nothing takes fright): false when its world has no such animal or moment (the next world). A hunt: five of its

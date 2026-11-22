@@ -704,6 +704,65 @@ new ozone or an endless rain (LUSH) and bleached under a thin one (BLEACHED); a 
 chalk sea cools the world 1.5 C at its full. A trait is named only where its look can show, and a cover lies at a share over a half on
 land alone; no height moves.
 
+**The animals' fates (J-08).** What the lines do to a world's animals (`MadeFate`: the traits named, the harm to the land's, the air's
+and the waters' animals, to the shelled alone and to the plant eaters alone, what killed the most, a sickness and the share of the
+survivors that show it, the share of each herd born changed and what steers how, thriving, the steps since it began). A line's fate
+(`lineFateOf`, in its spread, from its second step to its tenth) comes from its genes where it lives: a working poison (a nerve poison
+crazes them, a gut poison wastes them, a blood poison kills); a host of animals by its depth (on the skin its glow or its dye, else bare
+patches; in the gut wasting; in the blood or the cells by its other genes: bloated with a gas, growths where it never stops, stone skin
+with a shell, melting with a flesh rotter, sprouting with spores and binding cells, else it kills); a carrier with a host, its young born
+changed; a flesh rotter festers wounds and rots remains fast; a shell rotter softens the shelled; a soup's or a jelly's waters starve
+their swimmers; a wood rotter's blight the plant eaters. Its reach: the waters' animals where it lives in the sea (half in fresh waters,
+a fifth in brine), the land's where it lives on the land (0.8 by the fresh waters they drink, 0.3 else), the air's half of the most of
+those; a host every animal it meets. The air's fate (`madeFaunaOf`, over the whole world): a sulphide air kills (its purple seas their
+swimmers first), a thinned ozone changes the young, the heat past 6 C warmer kills (a runaway every one), the cold past 4 C colder, an
+ammonia sea its swimmers; a new ozone, an endless rain over the plants or a richer oxygen air makes them thrive. A fate names its traits
+past their shares (a die-off 0.15 of a class, a sickness 0.15, changed young 0.1, thriving 0.2 where nothing died) and keeps nothing under
+them; silence is every class dead to the last over the whole world, of the air's harm and the lines' that reached all of it. A point's
+fate (`madeFateAt`) joins the air's and each line's by its spread's share there, the harms as chances, its age counted from the step the
+spread reached it. The data sheet's MADE line names the animals' traits last: DIE-OFF, WASTING, MELTING, GROWTHS, SPROUTING, BLOATED,
+STONE SKIN, CRAZED, CHANGED YOUNG, GLOWING ANIMALS, a dyed hide by its dye (RED HIDES), THRIVING, SILENCE. The surface turns a point's
+fate into each species' (`06-surface.md`).
+
+**The overgrowth (J-09).** A line that never stops (its STOP cut) and binds its cells grows a tissue over the land it lives on; one that
+slimes without binding lays films on the wet ground by its waters (`MadeGrowth`, a spread's, from `growthOf`). Its type comes from its genes
+and how it lives: a chalk shell's is CORAL, a glass shell's SPONGE, lift's BLADDERS, a flagellum's HAIR, a light-feeder that lives dried
+out under a shield LICHEN, another light-feeder CARPETS, a dead-eater that rests as spores FUNGUS, a grazer that moves SLIME MOULD, else
+FLESH. Its looks come from its genes too: its colour (its dye's, a light-feeder's pigment, else one of its type's own), its texture by its
+cell's shape (blistered spheres, fibrous rods, folded curved cells, coiled spirals), its grain by its cell's size, its wetness by its
+slime, its hardness by its shell (a dried-out one's leathery), its glow (veins and spots at night), cilia where it moves. It begins at the
+line's eighth step and creeps out behind its spread (`madeReachOfStep` of its own steps), the whole world by the line's 32nd. A point's
+share (`madeGrowthAt`) has a ragged edge, lobes a world's fortieth across and fingers of a few hundred metres, fixed to the place: the
+edge only moves out, so what it covered stays covered. Its cover, laid after J-05's pass where the share passes a half on the land its line
+lives on by its warmth (never water, snow, ice or lava; films only by a shore), is one of three materials, TISSUE, THREADS (a fungus's,
+hair's, a carpet's) or HARD GROWTH (a coral's, a sponge's, a lichen's, a plated or bony one's): `madeGrowthCover`. A forest keeps its
+density under it, so its trees stand wrapped; the other plants go. One overgrowth's colour shows a world, the latest growing line's
+(`growthLine`). MADE names the types after the plants (FLESH, FUNGUS, SLIME MOULD and the rest). The ground's structures are the
+surface's (`06-surface.md`).
+
+**Ruins overgrown, and the sound (J-10).** The overgrowth counts its steps on past 24, to 64 (`MadeGrowth::steps`), and a point knows
+how many steps it has lain there since its edge passed (`madeGrowthSince`: the first step whose reach, read with the edge's lobes and
+fingers, stood past the point, and the fraction by how far past). On the ground its cover climbs each ruin from the foot by them, faster
+as it goes (a house's walls in about six steps, a tower's in twelve, a capital's tallest in twenty-five; `06-surface.md`). A stone rotter's
+line (its land look PITTED STONE) keeps its own steps (`MadeSpread::pits`), and the settlements it reached crumble over twelve of them. A
+wet overgrowth (0.3 and over) is WET GROUND (it squelches underfoot), a flesh's or a sponge's BREATHING (its vents breathe): MADE names
+them after the types. Where every animal is gone (SILENCE) nothing living is heard.
+
+**Made kinds (J-11).** Once a world's change passes a line it takes a made kind (`MadeWorld::kind`, `madeKindOf` in `life/seeding`), the
+first that holds, in this order: MADE HOTHOUSE (a runaway's seas dried), MADE SNOWBALL (its ice run to the equator), an overgrown world (an
+overgrowth that reached the whole world and can lie on half its land at least, `MadeGrowth::land`; named by its type: FLESH WORLD, CORAL
+WORLD; films make none), CHARNEL WORLD (every animal gone and the plants felled, dried or blighted over the world, or none), PURPLE WORLD
+(purple seas under a sulphur air), RUST WORLD (an oxygenless world's ground rusted under its new ozone), HAZE WORLD (a thick orange haze),
+each look past 0.6, and GREENED WORLD (a world under 5 C as generated made 3 C warmer, or a steppe's dry one rained on, where nothing was
+harmed: its plants lush, its animals thriving). The snowball has a run of its own beside the runaway's: a living wet world its lines cool
+under -6 C from over it (Budyko's ice-albedo line) ices for six steps (FREEZING OVER), the ice's white cooling it up to 20 C more, then is
+frozen over; its seas then take no fog or colour. A made hothouse and a made snowball lay a dead world's cover over their own living
+ground (`MadeWorld::deadCover`, `deadCoverOf`: the scorched felisian's, the frozen felisian's), in the dead kind's colours for the sand's
+and the snow's families, with the land's heights and the rivers' beds as generated and the old forests standing dead (`06-surface.md`).
+The data sheet's kind line reads "FLESH WORLD, ONCE FELISIAN", the made kind's sentence takes the kind's and `describeBody` its phrase
+(`madeKindName`, `madeKindSentence`, `madeKindPhrase` in `galaxy/made`). `madeHarms` and `madeLivable` read whether a layer harmed its
+world's life or made it more livable; `seed kinds` prints the shares.
+
 **The record.** The guide keeps each seeding as a `seeded` line: the world, the place, the line's key and a copy of its edits (a strain's
 number is the guide's own), the flask's medium, the generation, and the guide's clock when it went down. The guide's clock (`clock`)
 counts the real seconds the game has run, across saves and expeditions; the warp never hurries it. With them, `madeseen` keeps what each
@@ -711,13 +770,13 @@ world showed at its last landing. They are written only once a world is seeded, 
 carries none of them. The game works out a world's seedings once (`Game::seedingsAt`: each line read from its key as a flask reads it),
 again only when the guide's `seeded` lines change.
 
-**What the explorer is told.** The data sheet's SEEDED lines (the latest three: the line, how long ago, DIED where it did), MADE (what
-the layer shows: its waters' traits, then, J-05, its ground's and its plants', then its air's) and, J-04, AIR (what the made climate
-moved: `THICKER, HAZY, 6 C COLDER THAN IT WAS`). The LANDING log on a seeded world says what it shows that the last landing did not
-("UNKNOWN SINCE THE LAST LANDING: RED SEAS"). A vial keeps the guide's clock at its take (`vialclock`): taken where a line had spread by
-then, it holds the line (a tenth of its crowd) beside the world's species, and the natives it outgrew there are a hundredth of what they
-were. The microscope shows it (under its own key), the incubator puts it in a flask as it went down, and the sequencer reads it with its
-changes in the wild.
+**What the explorer is told.** The data sheet's SEEDED lines (the latest three: the line, how long ago, DIED where it did), MADE (what the
+layer shows: its waters' traits, then, J-05, its ground's and its plants', then its air's, J-08 its animals' last) and, J-04, AIR (what
+the made climate moved: `THICKER, HAZY, 6 C COLDER THAN IT WAS`). The LANDING log on a seeded world says what it shows that the last
+landing did not ("UNKNOWN SINCE THE LAST LANDING: RED SEAS"). A vial keeps the guide's clock at its take (`vialclock`): taken where a line
+had spread by then, it holds the line (a tenth of its crowd) beside the world's species, and the natives it outgrew there are a hundredth
+of what they were. The microscope shows it (under its own key), the incubator puts it in a flask as it went down, and the sequencer reads
+it with its changes in the wild.
 
 **Where it is read.** Each frame the game gives the worlds of the system their layers (`Game::madeTick`, nothing in a game with no
 seeding). The renderer keeps them by the world's seed (`SpaceRenderer::setMade`). A new key drops the world's generator, and the world's
@@ -729,15 +788,23 @@ ramp, and the ground in a lent bank (`02-rendering.md`). The air's greenhouse (`
 globe, the maps and the ground agree; the living ground reads the made warmth (`felisianSample`); the plants' colours come through
 `madeMatColour`. J-05: the made pass gives each point the share of its class's look (`madeClassOf`), the maps a made ramp for every
 material, the globe its made bank to one class (`madeGlobeClass`: the waters', else the land's, the plants', the snow's), and the ground a
-lent bank to each class, its trees and undergrowth in the plants' (`02-rendering.md`).
+lent bank to each class, its trees and undergrowth in the plants' (`02-rendering.md`). J-09: an overgrowth's cover is its own colour on
+the maps; the globe gives its made bank to the stain first (the first disc's waters' tint then takes bank 31), and the ground lends it a
+bank before the classes' looks.
 
 **The harness.** `seed test` (J-02) draws a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test
 tint, with a test cover, and as generated again, the last pictures the first pixel for pixel. `seed worlds` prints the six lines' verdicts
 on forty worlds, their drifts, the spread's steps and what each shows. `seed sea` lets the dye line go in a sea off a coast and draws the
-map, the zoom, the globe and the ground before and at its eighth step, and a glowing line's sea at night. J-04: `seed climate` prints
-each gas on twenty worlds, their mean warmth, pressure and air before and after; `seed traits` draws each made air's trait from orbit and
-on the ground, before and after. J-05: `seed looks` draws each made water's, ground's and plants' trait on the landing map, from orbit and
-on the ground, before and after. The unit's `seeding` group holds the rest (`unit-checks.md`), and the flow seeds a world in its last stage.
+map, the zoom, the globe and the ground before and at its eighth step, and a glowing line's sea at night. J-04: `seed climate` prints each
+gas on twenty worlds, their mean warmth, pressure and air before and after; `seed traits` draws each made air's trait from orbit and on
+the ground, before and after. J-05: `seed looks` draws each made water's, ground's and plants' trait on the landing map, from orbit and on
+the ground, before and after. J-08: `seed fates` lets each fate's line go where it brings it, prints what each species came to and draws
+each fate, each change and a herd over its steps. J-09: `overgrowth plates` draws each overgrowth type and forty variants at a forest's
+edge, and `overgrowth world` a world overgrown at four of its steps (`08-testing-and-tools.md`); J-10: `overgrowth ruins` a city and a
+capital overgrown at four steps and a city crumbled. J-11: `seed kinds` prints the made kind each of forty worlds and six lines ends as and
+the shares of harm, looks and more livable, and draws each made kind from orbit, on the data sheet and on the ground. The unit's `seeding`
+group holds the rest
+(`unit-checks.md`), and the flow seeds a world in its last stage.
 
 ## The record (`game/catalogue.cpp`, the guide)
 

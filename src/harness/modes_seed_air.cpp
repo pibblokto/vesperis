@@ -37,11 +37,11 @@ bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild) {
     return wild.valid;
 }
 
-std::vector<SeedAirCase> seedAirCases(int n) {
+std::vector<SeedAirCase> seedAirCases(int n, int rounds) {
     static const int KINDS_TRIED[] = {PT_FELISIAN, PT_ARCHEAN, PT_HOTHOUSE, PT_SUPERHABITABLE, PT_STEPPE, PT_TUNDRA, PT_TERMINATOR, PT_SNOWBALL, PT_EYEBALL,
                                       PT_OCEAN, PT_HYCEAN, PT_AMMONIA, PT_HYDROCARBON, PT_ACIDIC, PT_CHEMOTROPH};
     std::vector<SeedAirCase> out;
-    for (int round = 0; round < 3 && (int)out.size() < n; round++)   // the first of each kind, then the second, then the third
+    for (int round = 0; round < rounds && (int)out.size() < n; round++)   // the first of each kind, then the second, then the third (J-11: and on)
         for (int type : KINDS_TRIED) {
             if ((int)out.size() >= n) break;
             int seen = 0;

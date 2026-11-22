@@ -13,13 +13,20 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
 - `surface_terrain` (`vertexOf`, the material tiles, the rings, reflections, `heightNear`), `surface_sky` (the galaxy's band, `drawSky`,
   meteors, `drawVeil`), `surface_effects` (vents, geysers, spores, `drawWeather`)
 - `site` (`SurfaceSite`, `TerrainCache`: the sun, `groundHeight`, `sampleAt`, nearby roads and marks), `flora` (`forTrees`, `forLogs`,
-  `drawFlora`), `creatures` (`planLife`, `updateLife`, `drawLife`; J-07: the ways' states, `swimmersNear`, the record `lifeSaw`),
-  `bestiary` (`Bestiary::make`; J-06: each species from its own seed; J-07: its way, `words`, `speciesStride`, `speciesGait`),
-  `animal_body` (J-06: a species' body of parts, the sixteen plans' recipes, a world's style, `animalDistance`), `animal_mesh` (J-06: the
-  rig built once a species, `poseAnimal`, `emitAnimal` by detail), `buggy` (`updateBuggy`,
+  `drawFlora`; J-09: a covered forest's trees wrapped), `overgrowth` (J-09: an overgrowth's structures, `forGrowths`, `growthFeet`,
+  `growthColliders`, `drawGrowth`; J-10: its sounds, `updateGrowthSongs`), `overgrowth_ruins` (J-10: a ruin's cover, `overgrowCell`,
+  `stoneRotOf`), `creatures` (`planLife`, `updateLife`, `drawLife`; J-07: the ways' states, `swimmersNear`, the
+  record `lifeSaw`; J-08: the fates on the herds, `cellMembers`, `cellRemains`, `remainsStageOf`, kills and feeding, remains drawn with
+  stains and flies),
+  `bestiary` (`Bestiary::make`; J-06: each species from its own seed; J-07: its way, `words`, `speciesStride`, `speciesGait`; J-08:
+  `AnimalFate`, `animalFateOf`, `animalChangesOf`, `changedBody`), `animal_body` (J-06: a species' body of parts, the sixteen plans'
+  recipes, a world's style, `animalDistance`), `animal_mesh` (J-06: the rig built once a species, `poseAnimal`, `emitAnimal` by detail;
+  J-08: the dead pose, stiff and laid down, girth, sag, a twisted spine, the fates drawn: skeletons, see-through, sores, tumours, stalks,
+  two heads, a joined twin), `buggy` (`updateBuggy`,
   `cameraFeed`), `drone` (`deployDrone`), `vehicle_shape.h` (R-427: the buggy's and the drone's stations, wheels, pods and skids, from
   which the ship's maintenance room builds its models), `forms_draw` (a settlement's forms), `textures` (`buildMesoTile`)
-- `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC` (J-03: galaxy's, which a seeding's place reads too). Films under the lamp's ultraviolet: `filmNicheOf`,
+- `sampling` (Z-03: `readSample`, a place's microhabitat for a vial, `placeMeanC` (J-03: galaxy's, which a seeding's place reads too).
+  Films under the lamp's ultraviolet: `filmNicheOf`,
   `prepareFilmGlow`, `drawFilmGlow`. R-434: the activity vision, `prepareSight` and `drawSight`)
 
 ## Rules and traps
@@ -46,6 +53,16 @@ Over 50 KB (read by range): surface_view, flora, surface_terrain, site, surface_
   vision's metres are local metres (cleared at `init` and `reanchor`, and read again past a quarter metre of tide).
 - The animals (J-06) are posed on the pool, each into a shape list of its own, and filled in bands in the jobs' order. A pose reads the
   ground only through the 3 by 3 heights the main thread read for it (`groundHeight` fills the cache on a miss).
+- J-08: remains are a pure function of their cell: `cellRemains` reads the planet function (`sampleAt`), never the drawn ground
+  (`groundHeight` and `waterAt` hold only what is loaded near the explorer). A species' fate reads the layer (`site.gen.made`) through
+  `madeFateAt`; a world nobody seeded has none, and its herds are drawn as before, old bones the one thing more.
+- J-09: an overgrowth's structures are a pure function of a 16 m cell whose four corners its cover holds (`forGrowths`). Their feet
+  (`growthFeet`) are the colliders' and the drawing's. `forTrees` reads them so no tree stands in one. Its bank (`growthBank`) is lent.
+- J-10: a ruin cell's cover (`climb`, its pieces after each building's at level 0) is made with the cell from the layer; the harness grows
+  it again after it changes the layer (`testRegrowRuins`). Its pieces never collide (`formColliders` skips `FORM_PART_GROWTH`).
+- J-11: a dead world's ground is read through `deadCoverOf(site.gen)` and `deadGroundOf` (galaxy/planetmap.h), never the kind's row's
+  `cover`: a made hothouse and a made snowball lay one too (the trees, logs, undergrowth, bark banks, towns' frost, reservoirs). A made
+  hothouse never rains on the ground (`computeEnvironment`).
 - J-07: what is seen is what `drawLife` drew whole (`lifeSaw`): a run that only updates sees nothing. A way's own state ends by its own
   timer or event, never by the generic choice. Find an animal again by its seed: herds come and go and move the others.
 - A new vehicle: the cookbook's "Add a vehicle".

@@ -83,6 +83,9 @@ static void materialPalette(BodyGen& g) {
     m[MAT_STROMATOLITE] = lerp(RGB(0.58f, 0.54f, 0.40f), base, 0.2f);
     m[MAT_CRUST] = RGB(0.78f, 0.45f, 0.14f);
     m[MAT_MOSS] = RGB(0.30f, 0.40f, 0.15f);
+    m[MAT_TISSUE] = RGB(0.62f, 0.30f, 0.32f);   // J-09: an overgrowth's (its layer gives its own colour: `madeMatColour`)
+    m[MAT_THREADS] = RGB(0.86f, 0.84f, 0.78f);
+    m[MAT_HARD] = RGB(0.82f, 0.78f, 0.70f);
     for (int i = 0; i < K.nPalette; i++) {
         const MatMix& x = K.palette[i];
         switch (x.mode) {

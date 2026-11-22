@@ -22,7 +22,16 @@ planet_grounds2, starfield.
   the air; the living ground reads the made warmth (`felisianSample`: the caps, the snow line, the ice), its heights but the ice's never.
   J-05: the made looks by class (`MadeClass`: the waters, the land, the snow and ice, the plants; `MadeLook`, a spread's `makes`, its
   `landOn`, `lookWaters`, cover), the waters', ground's and plants' traits; in planetmap `madeClassOf`, `madeGlobeClass`, `madeLifeTint`,
-  `madeColourAt`, `madeMatColour` for a sulphide's waters, a rusted ground, lush and bleached plants; the made pass's shares by class
+  `madeColourAt`, `madeMatColour` for a sulphide's waters, a rusted ground, lush and bleached plants; the made pass's shares by class.
+  J-08: the animals' fates (`MadeFate`: the air's in `MadeWorld::fate`, a line's in its spread's; `fauna`, `fateAge`, `rotFast`,
+  `radiusKm`), `madeFateAt` (a point's: the air's and each line's by its share there, its age from the spread's arrival).
+  J-09: the overgrowth (`MadeGrowth` in a spread: its type, looks, age, reach and cover; `growths`, `growthLine`), `madeGrowthAt` (a
+  point's share, its edge fixed to the place); in planetmap the cover's pass (`madeGrowth`, last), `madeGrowthMaterial`, and
+  `madeGlobeGrowth` (the globe's made bank to its stain). The three cover materials are TISSUE, THREADS and HARD (`kinds.h`).
+  J-10: its steps on past 24 (`MadeGrowth::steps`), `madeGrowthSince` (a point's steps under it), a stone rotter's steps
+  (`MadeSpread::pits`), `MADE_WET_GROUND` and `madeGrowthBreathes` (the traits WET GROUND and BREATHING).
+  J-11: the made kind (`MadeKind`, `MadeWorld::kind`, the snowball's `freeze`, `deadCover`) and its words (`madeKindName`,
+  `madeKindSentence`, `madeKindPhrase`); planetmap.h's `deadCoverOf` and `deadGroundOf`; `felisianSample` lays a made kind's dead cover
 - Sky: `almanac` (`almanacOf`, the finders' `registry()`), `nights` (showers, planetshine), `fronts` (`frontsOf`)
 - `probe` (giant atmospheres, the probe's fall: `probeStageAt`), `drifters` (sunless worlds: `drifterInSector`, and `placeInSector`,
   which resolves every saved place)

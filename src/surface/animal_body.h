@@ -82,6 +82,12 @@ struct AnimalBody {
     int bank = 0, coatBank = 1;
     double tone = 0.7, coatTone = 0.45;
     uint64_t seed = 0;             // where the coat's spots fall
+    // J-08: a changed young's (bestiary.h's `changedBody`): a second head beside the first, an extra tail, a twin joined at its side, a leg more
+    // hanging from its flank, a leg gone (its place among the legs drawn; -1 none), the spine twisted (a sideways S and a roll along it, radians)
+    int heads = 1;
+    bool extraTail = false, joined = false, extraLeg = false;
+    int missingLeg = -1;
+    double twist = 0;
 };
 
 // what a world's animals share, so they look related and each world looks its own: the eyes, the joints and the feet, the hide and its

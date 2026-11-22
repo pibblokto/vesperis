@@ -12,7 +12,9 @@ instruments, works_sites, records, charts, music, plan.
   `works_internal.h`, `works_sites`, `works_land`, `works_pieces`
 - Buildings: `buildings` (`buildingForms`, `buildingRoom`) with `buildings_internal.h` (`Gen`), `buildings_frame`, `buildings_dress`,
   `buildings_medieval`, `buildings_ages`, `buildings_works`. `forms` (`formMesh`) with `forms_colliders` and `forms_internal.h`. `ruins`
-  (`ruinOfCell`, `cultureOf`) with `ruins_layout.h`, `ruins_settlement`, `ruins_towns`
+  (`ruinOfCell`, `cultureOf`) with `ruins_layout.h`, `ruins_settlement`, `ruins_towns`. J-10: `ruinElements` reports the openings the
+  walls and rings leave at level 0 (`FormOpening`, `Gen::opening`); `FORM_PART_GROWTH` and `Form::growth`, an overgrowth's pieces (no
+  colliders); `Culture::stoneRot`, a seeded stone rotter's, in `buildingDecay`
 - The records: `records` (`recordsOf`), `shards` (`loreOf`, `shardTextsOf`, and `GRAMMAR_FILES`, which is `grammar/files.inc`),
   `lore.h`, `genres` (`writeRecordTexts`, and Z-06's `writeWatermark`) with `genres_schema`, `grammar` (the `.vg` engine: `vgRecord`)
   with `grammar_internal.h`, `grammar_parse`, `grammar_words` (`grammar/` has its own note)
@@ -23,6 +25,7 @@ instruments, works_sites, records, charts, music, plan.
   hauls)
 
 ## Rules and traps
+- J-10: only the surface sets `Culture::stoneRot` and asks for openings; generation never does, so every people's ruins are as before.
 - No people shapes the planet function: of the world code only `landmarks.cpp` and `planet_bodygen.cpp` read the peoples, and a people's
   seed never reaches the ground.
 - Frames ask `*IfReady` (null or false while a worker builds). `*Of` builds or waits. State stays in its file (`thread_local`). The

@@ -7,6 +7,9 @@
 #include "core/parallel.h"
 #include "galaxy/drainage.h"
 #include "core/rng.h"
+#include "core/sphere.h"
+#include <algorithm>
+#include <array>
 #include <fstream>
 #include <sstream>
 
@@ -32,6 +35,9 @@ MadeWorld testLayerOf(const Body& b) { return madeTestLayer(StarSystem::bodyFrom
 
 void unitSeedingAir(const Check& check);
 void unitSeedingLooks(const Check& check);
+void unitSeedingGrowth(const Check& check);
+void unitSeedingRuins(const Check& check);
+void unitSeedingKinds(const Check& check);
 
 void unitSeeding(const Check& check) {
     StarSystem fs; int fb = -1;
@@ -347,6 +353,9 @@ void unitSeeding(const Check& check) {
     }
     unitSeedingAir(check);   // J-04
     unitSeedingLooks(check);   // J-05
+    unitSeedingGrowth(check);   // J-09
+    unitSeedingRuins(check);    // J-10
+    unitSeedingKinds(check);    // J-11 (unit_seeding_kinds.cpp)
 }
 
 // J-04: the made air. Each gas a world's own sea line gives (`seed climate`'s twenty worlds, eight gases) at the whole world, worked out serially
@@ -635,5 +644,344 @@ void unitSeedingLooks(const Check& check) {
                          w.find("COLOURED SNOW") == std::string::npos && w.find("SLIME") != std::string::npos && w.find("VIOLET LEAVES") != std::string::npos &&
                          w.find("NEW LEAVES") == std::string::npos && w.find("BLEACHED") != std::string::npos;
         check("seeding: the looks' words", all && black == 1, fmt("(MADE %s)", w.c_str()));
+    }
+}
+
+// J-09: the overgrowth. Six gene sets on twelve worlds' own sea lines (never stopping and binding; with a chalk shell, a glass shell or lift;
+// never stopping and sliming, its binding cut; binding alone), serially and on the pool: each type as its genes make it, none before its
+// line's eighth step, its reach growing with its steps. The cover a pure function of place and step (the same twice and on the pool, never on
+// water, snow, ice or lava, a point it covered covered at every later step). On a flora world's ground under each type over the whole world:
+// every structure standing over a step walked round (its colliders at its foot), and no tree in a structure, the trees of its forest wrapped
+void unitSeedingGrowth(const Check& check) {
+    const std::vector<SeedAirCase> worlds = seedAirCases(12);
+    const std::vector<std::vector<std::pair<int, int>>> RECIPES = {
+        {{GN_STOP, -2}, {GN_BIND, -1}}, {{GN_STOP, -2}, {GN_BIND, -1}, {GN_SHELL, SHL_CHALK}}, {{GN_STOP, -2}, {GN_BIND, -1}, {GN_SHELL, SHL_GLASS}},
+        {{GN_STOP, -2}, {GN_BIND, -1}, {GN_LIFT, -1}}, {{GN_STOP, -2}, {GN_SLIME, -1}, {GN_BIND, -2}}, {{GN_BIND, -1}}};
+    static const int STEPS[5] = {7, 9, 14, 20, 32};
+    struct Run { int w = 0, r = 0; Seeding s; SeedLine line; MadeWorld m[5]; };
+    std::vector<Run> runs;
+    for (size_t wi = 0; wi < worlds.size(); wi++)
+        for (size_t ri = 0; ri < RECIPES.size(); ri++) { Run r; r.w = (int)wi; r.r = (int)ri; runs.push_back(r); }
+    auto work = [&](Run& r) {
+        const SeedAirCase& c = worlds[r.w];
+        r.line = seedLineFor(c.sys, c.body, c.wild.kind.s.index, seedGeneEdits(c.wild.genes, RECIPES[r.r]));
+        r.s = seedingFor(c.sys, c.body, r.line, c.lat, c.lon, 0);
+        const std::vector<Seeding> one = {r.s};
+        for (int k = 0; k < 5; k++) r.m[k] = madeWorldOf(c.sys, c.body, one, STEPS[k] * MADE_STEP_S / std::max(0.1, r.s.verdict.pace) + 1);
+    };
+    std::vector<Run> pool = runs;
+    for (Run& r : runs) work(r);
+    parallelFor((int)pool.size(), 1, [&](int i0, int i1) { for (int i = i0; i < i1; i++) work(pool[i]); });
+    const Run* grown = nullptr;
+    {
+        int alike = 0, took = 0, grew = 0, bad = 0, types = 0;
+        std::string firstBad;
+        for (size_t i = 0; i < runs.size(); i++) {
+            const Run& r = runs[i];
+            bool same = true;
+            for (int k = 0; k < 5; k++) same = same && r.m[k].key == pool[i].m[k].key && r.m[k].growths == pool[i].m[k].growths;
+            alike += same;
+            if (!r.s.verdict.takes()) continue;
+            took++;
+            const MadeWorld& m = r.m[4];
+            const CultureWorld& w = r.line.kind.world;
+            const int type = m.grown() ? m.spread[m.growthLine].growth.type : OG_NONE;
+            types |= 1 << type;
+            grew += type != OG_NONE;
+            std::string why;
+            const bool shouldGrow = w.overgrows && (w.bind > 0 || w.slime > 0);
+            if (shouldGrow != (type != OG_NONE)) why = shouldGrow ? "a line that never stops and binds grew nothing" : "an overgrowth from a line that stops";
+            else if (r.m[0].grown()) why = "an overgrowth before its line's eighth step";
+            else if (type != OG_NONE) {
+                const MadeGrowth& G = m.spread[m.growthLine].growth;
+                const double reach[4] = {r.m[1].grown() ? r.m[1].spread[0].growth.reach : 0, r.m[2].spread[0].growth.reach, r.m[3].spread[0].growth.reach, G.reach};
+                if (!(reach[0] > 0 && reach[0] < reach[1] && reach[1] < reach[2] && reach[2] <= reach[3])) why = "its reach not growing with its steps";
+                else if (G.material != madeGrowthCover(G.type, G.hard)) why = "its cover not its type's";
+                else if (w.bind <= 0 && G.type != OG_FILMS) why = "a slime without binding not films";
+                else if (w.bind > 0 && w.shells() && w.shell == SHL_CHALK && G.type != OG_CORAL) why = "a chalk shell's not coral";
+                else if (w.bind > 0 && w.shells() && w.shell == SHL_GLASS && G.type != OG_SPONGE) why = "a glass shell's not a sponge";
+                else if (w.bind > 0 && !w.shells() && w.lift > 0 && G.type != OG_BLADDERS) why = "a lift's not bladders";
+                else if (G.age != STEPS[4] - MADE_GROWTH_START + 1 && G.age != MADE_STEPS) why = "its age not its steps since it began";
+                if (why.empty() && !grown && r.r == 0 && kindHas(worlds[r.w].sys.bodies[worlds[r.w].body].type, KT_FLORA)) grown = &r;
+            }
+            if (!why.empty()) { bad++; if (firstBad.empty()) firstBad = fmt("; %s (%s, recipe %d)", why.c_str(), KINDS[worlds[r.w].sys.bodies[worlds[r.w].body].type].name, r.r); }
+        }
+        std::string named;
+        for (int t = 1; t < OG_COUNT; t++) if ((types >> t) & 1) named += (named.empty() ? "" : ", ") + std::string(MADE_GROWTH_NAMES[t]);
+        check("seeding: the overgrowth by its genes", alike == (int)runs.size() && took > 30 && grew > 15 && bad == 0 && ((types >> OG_CORAL) & 1) && ((types >> OG_FILMS) & 1),
+              fmt("(%d of %zu seedings at five steps alike serially and on the pool; %d took, %d grew: %s; %d against their genes%s)", alike, runs.size(), took, grew,
+                  named.empty() ? "none" : named.c_str(), bad, firstBad.c_str()));
+    }
+    if (grown) {   // the cover over the sphere at its four steps: twice, on the pool, on its own ground, never taken back
+        const SeedAirCase& c = worlds[grown->w];
+        const BodyGen g0 = BodyGen::make(c.sys.bodies[c.body]);
+        const int N = 600;
+        std::vector<Vec3> pts(N);
+        for (int i = 0; i < N; i++) { const double z = 1 - (2 * i + 1.0) / N, la = std::asin(z), lo = std::fmod(i * 2.399963229728653, TAU) - PI; pts[i] = StarSystem::bodyFromLatLon(la, lo); }
+        int covered[5] = {}, differ = 0, offGround = 0, takenBack = 0;
+        std::vector<int> last(N, 0);
+        for (int k = 1; k < 5; k++) {
+            BodyGen gm = g0; gm.made = grown->m[k];
+            std::vector<int> a(N), b(N);
+            for (int i = 0; i < N; i++) a[i] = sampleSurface(gm, pts[i], 16).material;
+            parallelFor(N, 8, [&](int i0, int i1) { for (int i = i0; i < i1; i++) b[i] = sampleSurface(gm, pts[i], 16).material; });
+            BodyGen bare = g0;
+            for (int i = 0; i < N; i++) {
+                differ += a[i] != b[i];
+                const bool on = madeGrowthMaterial(a[i]);
+                covered[k] += on;
+                if (on) {
+                    const SurfaceSample s0 = sampleSurface(bare, pts[i], 16);
+                    if (s0.material == MAT_WATER || s0.material == MAT_SNOW || s0.material == MAT_ICE || s0.material == MAT_LAVA || madeWetAt(s0)) offGround++;
+                }
+                if (last[i] && !on) takenBack++;
+                last[i] = on;
+            }
+        }
+        const MadeGrowth& G = grown->m[4].spread[grown->m[4].growthLine].growth;
+        check("seeding: the overgrowth's cover by place and step", differ == 0 && offGround == 0 && takenBack == 0 && covered[2] < covered[4] && covered[1] <= covered[2] &&
+                                                                     covered[2] <= covered[3] && covered[3] <= covered[4],
+              fmt("(a %s's on a %s, %d of %d points covered at its steps 9, 14, 20 and 32: %d, %d, %d, %d; %d differing on the pool, %d on water, snow, ice or lava, "
+                  "%d taken back)", MADE_GROWTH_NAMES[G.type], KINDS[c.sys.bodies[c.body].type].name, covered[4], N, covered[1], covered[2], covered[3], covered[4], differ, offGround, takenBack));
+    } else check("seeding: the overgrowth's cover by place and step", false, "(no line that never stops and binds grew on a flora world)");
+    {   // the ground under each type: the structures walked round, no tree in one, the forest's trees wrapped
+        GrowthGround land;
+        if (!growthGround(land, false)) { check("seeding: the overgrowth's structures and trees", false, "(no flora world with a forest's edge)"); return; }
+        int structures = 0, colliding = 0, unmatched = 0, walkedThrough = 0, trees = 0, wrapped = 0, inside = 0, shapes = 0, walked = 0, passed = 0;
+        std::string firstBad;
+        for (int type = 1; type < OG_COUNT; type++) {
+            if (type == OG_FILMS) continue;   // (on a shore alone: `overgrowth plates`)
+            StarSystem sys = land.sys;
+            SurfaceView sv;
+            sv.site.made = growthLayer(sys.bodies[land.body].radiusKm, StarSystem::bodyFromLatLon(land.lat, land.lon),
+                                       growthOfType(type, OGT_FOLDED, RGB(0.6f, 0.3f, 0.3f), 0.5, 0.3, type == OG_CORAL || type == OG_SPONGE ? 3 : 0, false, type == OG_HAIR));
+            sv.init(&sys, land.body, land.lat, land.lon, land.day);
+            std::vector<SurfaceView::Collider> cols;
+            for (int cz = -8; cz < 8; cz++)
+                for (int cx = -8; cx < 8; cx++) {
+                    std::vector<GrowthInst> here;
+                    sv.forGrowths(cx, cz, [&](const GrowthInst& S) { here.push_back(S); });
+                    for (const GrowthInst& S : here) {
+                        structures++; shapes |= 1 << S.shape;
+                        if (!S.collides) { walkedThrough += S.h >= SurfaceView::STEP_M; continue; }
+                        colliding++;
+                        GrowthFoot feet[GROWTH_FEET];
+                        const int nf = growthFeet(S, feet, GROWTH_FEET);
+                        for (int f = 0; f < nf; f++) {   // each foot in a collider the walk reads, its span over the ground there
+                            sv.collectColliders(feet[f].x, feet[f].z, cols);
+                            bool met = false;
+                            for (const SurfaceView::Collider& q : cols)
+                                met = met || ((feet[f].x - q.x) * (feet[f].x - q.x) + (feet[f].z - q.z) * (feet[f].z - q.z) <= q.r * q.r + 1e-9 && q.y0 <= S.gy + 0.3 && q.y1 >= S.gy + 0.4);
+                            if (!met) { unmatched++; if (firstBad.empty()) firstBad = fmt("; a %s's shape %d at %.1f %.1f with no collider at its foot %d", MADE_GROWTH_NAMES[type], S.shape, S.x, S.z, f); }
+                        }
+                    }
+                    sv.forTrees(cx, cz, [&](const TreeInst& T) {
+                        trees++; wrapped += T.wrapped;
+                        for (const GrowthInst& S : here)
+                            if (growthHolds(S, T.x, T.z, 0.3)) { inside++; if (firstBad.empty()) firstBad = fmt("; a tree in a %s's shape %d", MADE_GROWTH_NAMES[type], S.shape); }
+                    });
+                }
+            // walked into: the two nearest round ones standing over a step, the explorer 3 m off facing it, three seconds forward; none walked through
+            std::vector<GrowthInst> round;
+            for (int cz = -3; cz < 3; cz++)
+                for (int cx = -3; cx < 3; cx++)
+                    sv.forGrowths(cx, cz, [&](const GrowthInst& S) {
+                        if (S.collides && S.len == 0 && S.shape != GS_CAP && S.r >= 0.4) round.push_back(S);
+                    });
+            std::sort(round.begin(), round.end(), [](const GrowthInst& a, const GrowthInst& b) { return a.x * a.x + a.z * a.z < b.x * b.x + b.z * b.z; });
+            for (size_t k = 0; k < round.size() && k < 2; k++) {
+                const GrowthInst& S = round[k];
+                GrowthFoot foot[GROWTH_FEET];
+                growthFeet(S, foot, GROWTH_FEET);
+                const double a = hash01(mix64(S.hs + 5)) * TAU, d = foot[0].r + 3;
+                sv.player.x = S.x - std::sin(a) * d; sv.player.z = S.z - std::cos(a) * d; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+                sv.player.yaw = a; sv.player.pitch = 0;
+                Input in;
+                double closest = 1e9;
+                for (int f = 0; f < 90; f++) {
+                    in.down[KEY_W] = true;
+                    sv.update(1.0 / 30, in, land.day + f / 30.0, true);   // (J-10: with the controls on: off, the explorer stood still)
+                    in.newFrame();
+                    sv.player.yaw = std::atan2(S.x - sv.player.x, S.z - sv.player.z);   // (held toward it)
+                    closest = std::min(closest, std::hypot(sv.player.x - S.x, sv.player.z - S.z));
+                }
+                walked++;
+                const bool through = closest < 0.9 * foot[0].r;
+                passed += through;
+                if (through && firstBad.empty()) firstBad = fmt("; walked into a %s's shape %d to %.2f m of its middle (its disc %.2f m)", MADE_GROWTH_NAMES[type], S.shape, closest, foot[0].r);
+            }
+        }
+        int nShapes = 0;
+        for (int k = 0; k < GS_COUNT; k++) nShapes += (shapes >> k) & 1;
+        check("seeding: the overgrowth's structures and trees", structures > 100 && colliding > 20 && unmatched == 0 && walked >= 12 && passed == 0 && trees > 20 && wrapped == trees &&
+                                                                    inside == 0 && nShapes >= 14,
+              fmt("(nine types on a %s's ground, 256 cells each: %d structures of %d shapes, %d walked round (a collider at every foot but %d), %d walked through over a step; %d "
+                  "walked into, %d passed; %d trees, %d wrapped, %d in a structure%s)", KINDS[land.sys.bodies[land.body].type].name, structures, nShapes, colliding, unmatched,
+                  walkedThrough, walked, passed, trees, wrapped, inside, firstBad.c_str()));
+    }
+}
+
+// J-10: the overgrowth on the ruins: its climb by place and step, a town's colliders the same under it, its pieces a pure function of the cell,
+// its membranes pushed through; a stone rotter's ruins lower; its sounds' words
+void unitSeedingRuins(const Check& check) {
+    const MadeGrowth flesh = growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false);
+    {   // the climb: the steps since the edge passed, never down as the steps go on, none where the cover is not, the same on the pool
+        const double R = 6000;
+        const Vec3 place = StarSystem::bodyFromLatLon(0.3, 1.1);
+        const uint64_t seed = 0x7E57C11BULL;
+        const int N = 500;
+        std::vector<Vec3> pts(N);
+        for (int i = 0; i < N; i++) {   // within 2,000 km of the place, nearer ones oftener
+            const double d = 2000.0 / R * std::pow((i + 0.5) / N, 2), a = std::fmod(i * 2.399963229728653, TAU);
+            pts[i] = offsetUnit(place, std::sin(a) * d * R * 1000, std::cos(a) * d * R * 1000, R * 1000);
+        }
+        std::vector<double> last(N, -1);
+        int down = 0, mismatch = 0, differ = 0, covered = 0, steps = 0;
+        double top = 0;
+        for (int step = 8; step <= 76; step += 4, steps++) {
+            const MadeWorld m = growthAtStep(R, place, flesh, step);
+            std::vector<double> a(N), b(N);
+            for (int i = 0; i < N; i++) a[i] = madeGrowthSince(m, pts[i], seed);
+            parallelFor(N, 8, [&](int i0, int i1) { for (int i = i0; i < i1; i++) b[i] = madeGrowthSince(m, pts[i], seed); });
+            for (int i = 0; i < N; i++) {
+                int line;
+                differ += a[i] != b[i];
+                mismatch += (a[i] >= 0) != (madeGrowthAt(m, pts[i], seed, line) >= 0.5);
+                down += a[i] < last[i] - 1e-9;
+                last[i] = a[i]; top = std::max(top, a[i]);
+            }
+        }
+        for (double v : last) covered += v >= 0;
+        check("seeding: the ruins' cover by place and step", down == 0 && mismatch == 0 && differ == 0 && covered == N && top >= MADE_GROWTH_STEPS - 1,
+              fmt("(%d points within 2,000 km at %d steps from 8 to 76: %d covered at the last, the longest lain %.1f steps; %d gone down, %d against the cover, %d "
+                  "differing on the pool)", N, steps, covered, top, down, mismatch, differ));
+    }
+    {   // a people's town (the scene's, laid out as if its people ended 300 years ago, so its walls stand) under a flesh let go at its middle: its colliders as
+        // they were, its pieces the same grown twice, its membranes pushed through; then the same town with its stone eaten
+        StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0;
+        if (!setupSceneForType(-1, 25, 35 * DEG, 0.6, -0.05, sv, sys, nb, t, SCENE_TOWN)) { check("seeding: the ruins under an overgrowth", false, "(no town)"); return; }
+        sv.flocks.clear(); sv.critters.clear();
+        const SurfaceView::RuinCell* near[SurfaceView::SETTLEMENTS_NEAR];
+        const int n = sv.settlementsNear(sv.player.x, sv.player.z, near);
+        const SurfaceView::RuinCell* old = nullptr;
+        for (int i = 0; i < n; i++) if (!old || near[i]->spec.buildings.size() > old->spec.buildings.size()) old = near[i];
+        if (!old) { check("seeding: the ruins under an overgrowth", false, "(no settlement near the town scene)"); return; }
+        Culture young = sv.cultures[old->spec.people == 1 && sv.peoples > 1 ? 1 : 0];
+        young.ageYears = young.weatherYears = 300; young.decay = decayOf(300, young.wet);
+        RuinSpec spec = old->spec; spec.people = 0;
+        std::vector<Form> P[3]; std::vector<FormOpening> openings;
+        for (int l = 0; l < 3; l++) ruinElements(spec, young, l, P[l], l == 0 ? &openings : nullptr);
+        double tx = 0, tz = 0; bool placed = false;   // beside it, 400 m past its edge on dry, gentle ground
+        for (int k = 0; k < 8 && !placed; k++) {
+            const double a = k * TAU / 8, d = spec.size + 400;
+            tx = old->r.x + std::sin(a) * d; tz = old->r.z + std::cos(a) * d;
+            const SurfaceSample q = sampleSurface(sv.site.gen, sv.site.unitAt(tx, tz), 16);
+            placed = q.material != MAT_WATER && !(q.water > -1e8 && q.height < q.water + 2) && ruinSiteOk(sv.site.gen, [&] { RuinSpec r = spec; StarSystem::latLonFromBody(sv.site.unitAt(tx, tz), r.lat, r.lon); return r; }());
+        }
+        if (!placed) { check("seeding: the ruins under an overgrowth", false, "(no dry ground beside the town)"); return; }
+        sv.testPlaceSettlement(tx, tz, spec, P, &openings);
+        const SurfaceView::RuinCell& town = sv.placedCells.back();
+        sv.player.x = tx; sv.player.z = tz - spec.size - 30; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+        { Input in; for (int k = 0; k < 10; k++) sv.update(1.0 / 30, in, t, false); }   // (the ground there loaded)
+        auto collidersOf = [&]() {
+            std::vector<SurfaceView::Collider> out;
+            sv.settlementColliders(town.r, town, town.r.x, town.r.z, out);
+            std::vector<std::array<double, 5>> v;
+            for (const SurfaceView::Collider& q : out) v.push_back({q.x, q.z, q.r, q.y0, q.y1});
+            std::sort(v.begin(), v.end());
+            return v;
+        };
+        const auto plain = collidersOf();
+        const int plainPieces = (int)town.elems[0].size();
+        const double R = sys.bodies[sv.site.body].radiusKm;
+        growthLayerOn(sv, growthAtStep(R, sv.site.unitAt(town.r.x, town.r.z), flesh, 11));
+        const auto grown = collidersOf();
+        const std::vector<Form> once = town.elems[0];
+        sv.testRegrowRuins();
+        const std::vector<Form>& twice = town.elems[0];
+        bool same = once.size() == twice.size();
+        for (size_t i = 0; same && i < once.size(); i++)
+            same = once[i].kind == twice[i].kind && once[i].growth == twice[i].growth && once[i].x == twice[i].x && once[i].z == twice[i].z && once[i].y0 == twice[i].y0 &&
+                   once[i].y1 == twice[i].y1 && once[i].hx == twice[i].hx && once[i].seed == twice[i].seed;
+        int membranes = 0, nodules = 0, drapes = 0, unparted = 0;
+        for (const Form& f : twice) {
+            membranes += f.growth == FG_MEMBRANE; nodules += f.growth == FG_NODULE; drapes += f.growth == FG_DRAPE;
+            unparted += f.growth != FG_NONE && f.part != FORM_PART_GROWTH;
+        }
+        double lo = 1e9, hi = -1;
+        for (size_t b = 0; b + 1 < town.climb.size(); b++) if (town.climb[b] >= 0) { lo = std::min(lo, (double)town.climb[b]); hi = std::max(hi, (double)town.climb[b]); }
+        // pushed through: each of up to four doorways' membranes from 2.5 m outside, three seconds forward with the controls; crossed, and torn
+        int tried = 0, crossed = 0, torn = 0;
+        std::string firstBad;
+        for (const Form& f : twice) {
+            if (tried >= 4) break;
+            if (f.growth != FG_MEMBRANE || f.building < 0 || f.y1 - f.y0 < 1.6 || f.hx < 0.8) continue;
+            const Building& B = town.spec.buildings[f.building];
+            double nx = std::sin(f.heading), nz = std::cos(f.heading);   // out of the building
+            if (nx * (f.x - B.x) + nz * (f.z - B.z) < 0) { nx = -nx; nz = -nz; }
+            const double mx = town.r.x + f.x, mz = town.r.z + f.z;
+            if (sv.site.waterAt(mx, mz) > -1e8 && sv.site.groundHeight(mx, mz) < sv.site.waterAt(mx, mz) + 0.3) continue;
+            tried++;
+            sv.player.x = mx + nx * 2.5; sv.player.z = mz + nz * 2.5; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+            sv.player.vx = sv.player.vz = 0; sv.player.yaw = std::atan2(-nx, -nz); sv.player.pitch = 0; sv.tearCue = 0;
+            Input in;
+            bool tore = false;
+            for (int k = 0; k < 90; k++) {
+                in.down[KEY_W] = true;
+                sv.update(1.0 / 30, in, t + k / 30.0, true);
+                in.newFrame();
+                sv.player.yaw = std::atan2(-nx, -nz);
+                tore = tore || sv.tearCue > 0;
+                sv.tearCue = 0;
+            }
+            const double inside = (sv.player.x - mx) * nx + (sv.player.z - mz) * nz;
+            crossed += inside < -0.3; torn += tore;
+            if (inside >= -0.3 && firstBad.empty()) firstBad = fmt("; stopped %.2f m outside a membrane %.1f m wide", inside, 2 * f.hx);
+        }
+        check("seeding: the ruins under an overgrowth", plain == grown && same && plainPieces < (int)twice.size() && membranes > 0 && nodules > 0 && drapes > 0 && unparted == 0 &&
+                                                          tried >= 2 && crossed == tried && torn == tried,
+              fmt("(the scene's %s of %d buildings as if left 300 years ago, a flesh let go at its middle eleven steps on: its walls taken %.1f to %.1f m up; %d colliders, the "
+                  "same as without it %s; %d pieces grown on its %d (%d membranes, %d nodules, %d drapes), the same grown twice %s; %d membranes walked into, %d pushed "
+                  "through, %d torn%s)", SETTLEMENT_CLASS_NAMES[spec.sclass], (int)spec.buildings.size(), lo, hi, (int)grown.size(), plain == grown ? "yes" : "NO",
+                  (int)twice.size() - plainPieces, plainPieces, membranes, nodules, drapes, same ? "yes" : "NO", tried, crossed, torn, firstBad.c_str()));
+        // a stone rotter's: the same young town with its stone eaten, its walls lower
+        Culture rotted = young;
+        rotted.stoneRot = 1;
+        std::vector<Form> a, b;
+        ruinElements(spec, young, 0, a); ruinElements(spec, rotted, 0, b);
+        auto standing = [](const std::vector<Form>& v) { double h = 0; for (const Form& f : v) if (f.kind == FK_BOX && f.part == 0) h += std::max(0.0, f.y1 - f.y0); return h; };
+        const double ha = standing(a), hb = standing(b);
+        check("seeding: a stone rotter's ruins", hb < 0.8 * ha,
+              fmt("(the town's walls standing %.0f m in all as left 300 years ago, %.0f m with their stone eaten; %d pieces, %d)", ha, hb, (int)a.size(), (int)b.size()));
+    }
+    {   // the silence of a dead world: a herd's ground heard for twenty seconds (birds, hoofs, calls, the insects by the water), then the same gone silent
+        StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0;
+        if (setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, sv, sys, nb, t, SCENE_HERD)) {
+            auto listen = [&](bool dead, double t0) {
+                sv.silence = dead;
+                int heard = 0;
+                AudioState a; Input in;
+                for (int k = 0; k < 600; k++) {
+                    sv.update(1.0 / 30, in, t0 + k / 30.0, false);
+                    lifeSoundsTo(sv, a, true);
+                    heard += a.birds > 0 || a.hoofs > 0.01 || a.insects > 0 || a.call > 0;
+                    a.call = 0;
+                }
+                return heard;
+            };
+            const int alive = listen(false, t), dead = listen(true, t + 20);
+            check("seeding: the silence of a dead world", alive > 0 && dead == 0,
+                  fmt("(a herd's ground on a %s: the living heard in %d of 600 frames; gone silent, in %d)", KINDS[sys.bodies[sv.site.body].type].name, alive, dead));
+        } else check("seeding: the silence of a dead world", false, "(no herd's ground)");
+    }
+    {   // the sounds' words: a wet flesh's WET GROUND and BREATHING, a dry lichen's neither
+        const MadeWorld wet = growthAtStep(6000, StarSystem::bodyFromLatLon(0, 0), flesh, 20);
+        const MadeWorld dry = growthAtStep(6000, StarSystem::bodyFromLatLon(0, 0), growthOfType(OG_LICHEN, OGT_FIBROUS, RGB(0.5f, 0.6f, 0.3f), 0.5, 0.0, 1, false, false), 20);
+        std::string ww, wd;
+        for (const std::string& x : madeTraitWords(wet, true)) ww += (ww.empty() ? "" : ", ") + x;
+        for (const std::string& x : madeTraitWords(dry, true)) wd += (wd.empty() ? "" : ", ") + x;
+        check("seeding: an overgrowth's sounds named", ww.find("WET GROUND") != std::string::npos && ww.find("BREATHING") != std::string::npos &&
+                                                         wd.find("WET GROUND") == std::string::npos && wd.find("BREATHING") == std::string::npos,
+              fmt("(a wet flesh's MADE %s; a dry lichen's %s)", ww.c_str(), wd.c_str()));
     }
 }

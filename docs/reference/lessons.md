@@ -204,6 +204,29 @@ Contents:
   is then one of theirs, not the one put down; find a put animal again by its seed (J-07's first trail was 404 m off its hunter).
 - A staged camera wants a clear line to what it frames: on a forest world the hunt was lost among trunks, on a hill the camera looked
   into the ground. Leave a world with a tree near the stage, and try camera places round it till the ground stays under the line (J-07).
+- The ground's rings centre on the explorer: a free camera far from them sees a coarse ring's ground, and what lies low on the fine one
+  sinks under it. Put the explorer near the camera before a shot (J-08: remains 0.2 m thick drew no pixel till the explorer, 400 m off,
+  came within 40 m; a metre's pull toward the eye showed them).
+- A site found without the layer it will be drawn with is another site: a seeded world's made climate moved the snow line down, and the
+  herds left that high ground (J-08's die-off frames found herds there, then none). Choose under the layer that is drawn.
+- A search over a world's places pays for the rivers of each new place: the planet function at 16 m took 4 ms a sample with the
+  drainage, and J-09's forest search 230 s. Search round a few land sites (their rivers worked out once), or with the drainage off where
+  rivers do not matter (a forest by its rivers needs them).
+- A world turned to its sun has no night anywhere: a search that needs one gives the world up at its first place (J-09's plates waited on
+  three felisian worlds, then used a steppe's).
+- The bench's landing looks at the open sea: a cost that lives on land needs a land scene (J-09's overgrown rows there drew nothing).
+- A walk test runs `update` with the controls on: with them off the keys are read as nothing, the explorer stands still and a check that
+  nothing is walked through passes for nothing (J-09's did, till J-10 walked it).
+- A world's ruins can be foundations: an old people's town (31,600 years) stands 0.56 m on average, and nothing grows on walls that are
+  not there. Lay the same town out as if left 300 years ago to test what climbs walls (J-10). A harbour city's middle can lie under a lake
+  the rivers make (its site is checked without them): pick one whose middle is dry with the rivers.
+- A bench row that changes the game's world puts it back: the sector map's row after J-10's overgrown capital ran on its cover and went
+  over its budget.
+- A form wholly in the ground's bank vanishes from the air: J-10's taken buildings showed once drawn five shades under the ground.
+- Wait for a worker with its blocking call (`worldPlanOf`), not by running frames till it is done: their count moves the game's clocks
+  (the save's lab clock), so the output differs between two runs (J-10's ruins mode, caught by the snapshot's second run).
+- A table of what seedings come to needs lines that take: one world's line let go on forty worlds took on 21 of 240 (J-03's), so J-11's
+  `seed kinds` sends each world's own sea line with six edits. A search for a look picks past a pale flesh on pale ground.
 
 ## Pixels and the look
 
@@ -256,6 +279,8 @@ Contents:
 - A fixture that only carries what the frame draws still needs a few millimetres of depth: its front is its corners' difference
   (Z-06's tree on its wall). Which way a wall's t runs depends on the wall's yaw: look before trusting left from right (its tree came
   out mirrored).
+- The mush averages a pixel's light with its neighbours': a lit line a pixel wide on a small globe goes dark with the ground round it.
+  A light seen from orbit wants bands a few pixels wide (J-09's veins: 1,189 lit pixels a frame, none left teal till they were broadened).
 
 ## Space
 
@@ -299,6 +324,13 @@ Contents:
 - A foot stays put only with the stride the phase was counted by (`AnimalPoseIn::stride`) and a stance its leg can reach: a gallop's
   long stride keeps the foot down a shorter share of the cycle, and a hop's arc must come while its feet are up (J-07: the unit's slips
   were a hopper's feet sliding forward on the ground).
+- A pure function of a cell reads the planet function (`sampleAt`), never the drawn ground (`groundHeight`, `waterAt`): those hold only
+  what is loaded near the explorer, so a cell's shore far off read as dry (J-08's remains washed up nowhere till the shore search moved).
+- Many small meshes are made, not filled: 922 overgrowth structures took 4 ms to make on the main thread and 1 ms to fill. Make them on
+  the pool, each list a fixed run of them so the frame is the same on any number of threads, their parts on the plane of the ground's
+  slope read on the main thread (J-09: the forest's cost with them as without).
+- An edge whose noise scales with its reach moves its lobes at every step and uncovers what it covered: fix the noise to the place, so
+  the edge only moves out (J-09's overgrowth).
 
 ## Generation: the worlds
 
@@ -347,6 +379,12 @@ Contents:
   are the ones wanted (its water life its cell's oldest, ours, four letters), and the unit holds the id it gives.
 - `unitFromHash(h >> n)` spans [0, 2^-n) alone (it reads the top 53 bits): mix a shifted hash again before making it a share.
   Z-02's first drawing made every grain of the section's rock pyrite and put every granule on one side of its cell.
+- A layer's reader that checks its key (`madeHarms` reads nothing when `on()` is false) reads nothing while the layer is built, as the
+  key is set last: J-11's greened worlds were judged unharmed so. The builder reads the guard-free `harmsOf`.
+- A made change judged by its size alone misreads its world: J-04's heat dried a tundra warmed from -3 C to 6 C as it dried a felisian
+  warmed to 26 C. J-11 weighs it by the mean the world reaches.
+- A cover laid after the made climate finds the forests already snow: a made kind's dead cover lies over the world as generated, as a
+  dead world's lies over its then-world (J-11's snowball stood no dead trees till then).
 
 ## Generation: the peoples
 

@@ -5,7 +5,9 @@
 // every read does nothing then, to the bit.
 #pragma once
 #include "core/types.h"
+#include "galaxy/kinds.h"
 #include <cstdint>
+#include <string>
 
 constexpr int MADE_LINES = 3;            // a world takes three seedings at most, each acting on the world the ones before left
 constexpr int MADE_STEPS = 24;           // a seeding's spread is read in 24 steps, as the seasons are
@@ -17,8 +19,9 @@ enum MadeOn { MADE_ON_LAND = 1, MADE_ON_WATER = 2 };
 enum MadeWaters { MADE_FRESH = 1, MADE_SEA = 2, MADE_BRINE = 4, MADE_ALL_WATERS = 7 };
 // J-04: the made air's traits (`MadeWorld::air`'s bits), in the order the data sheet names them (life/seeding's words)
 enum MadeAirTrait { MA_THICK = 1, MA_RUNAWAY = 2, MA_ORANGE_HAZE = 4, MA_SULPHUR = 8, MA_OZONE = 16, MA_THIN_OZONE = 32, MA_COLD_HAZE = 64,
-                    MA_GLOW_CLOUDS = 128, MA_DYE_CLOUDS = 256, MA_DYE_RAIN = 512, MA_SEA_SMOKE = 1024, MA_ENDLESS_RAIN = 2048, MA_SPORE_CLOUDS = 4096 };
-constexpr int MADE_AIR_TRAITS = 13;
+                    MA_GLOW_CLOUDS = 128, MA_DYE_CLOUDS = 256, MA_DYE_RAIN = 512, MA_SEA_SMOKE = 1024, MA_ENDLESS_RAIN = 2048, MA_SPORE_CLOUDS = 4096,
+                    MA_FREEZING = 8192 };   // (J-11: the ice running to the equator)
+constexpr int MADE_AIR_TRAITS = 14;
 // J-04: a glowing cloud's form (`MadeWorld::cloudGlowForm`): patches, veins, whole decks
 enum MadeGlowForm { MG_PATCHES = 0, MG_VEINS, MG_DECKS };
 // J-05: the classes of ground a made look lies on, each with a colour and a bank of its own in every view: the waters (J-03's tint), the
@@ -40,6 +43,74 @@ enum MadeWaterLook { MWL_NONE = 0, MWL_DYE, MWL_MILK, MWL_SOUP, MWL_JELLY, MWL_R
 // waters (within `MADE_SHORE_M` over them), rock, sand and dust
 enum MadeLandOn { ML_BARE = 1, ML_SHORE = 2, ML_ROCK = 4, ML_SAND = 8 };
 constexpr double MADE_SHORE_M = 8;
+// J-08: the animals' fates (`MadeFate::fauna`'s bits), in the data sheet's order (IDEAS-seeded-worlds.md section 8): a die-off, the sicknesses
+// its survivors show, their young born changed, a glow or a dye in their skins (dyed hides are named by their dye: "RED HIDES"), thriving,
+// silence (every animal gone)
+enum MadeFaunaTrait { MF_DIE_OFF = 1, MF_WASTING = 2, MF_MELTING = 4, MF_GROWTHS = 8, MF_SPROUTING = 16, MF_BLOATED = 32, MF_STONE_SKIN = 64,
+                      MF_CRAZED = 128, MF_CHANGED_YOUNG = 256, MF_GLOWING = 512, MF_DYED = 1024, MF_THRIVING = 2048, MF_SILENCE = 4096 };
+constexpr int MADE_FAUNA_TRAITS = 13;
+constexpr int MF_SICKNESSES = MF_WASTING | MF_MELTING | MF_GROWTHS | MF_SPROUTING | MF_BLOATED | MF_STONE_SKIN | MF_CRAZED | MF_GLOWING | MF_DYED;
+// J-08: what killed them (`MadeFate::death`): a nerve, a blood or a gut poison, a sulphide air, a thinned ozone, a flesh rotter, a shell rotter,
+// the food lost (a soup's or a jelly's waters, a blight), the heat, the cold, an ammonia sea, a host in the blood
+enum MadeDeath { MD_NONE = 0, MD_NERVE, MD_BLOOD, MD_GUT, MD_SULPHIDE, MD_THIN_OZONE, MD_ROT_FLESH, MD_ROT_SHELL, MD_STARVED, MD_HEAT, MD_COLD,
+                 MD_AMMONIA, MD_HOST, MD_COUNT };
+// J-08: the animals a harm reaches (`MadeFate::harm`'s order): the land's, the air's, the waters'
+enum MadeFaunaClass { MFC_LAND = 0, MFC_AIR, MFC_WATER, MFC_COUNT };
+// J-08: what steers the changed young (`MadeFate::steer`'s bits; section 8): a big or a small cell (giants, dwarfs), a dye (a new colour), a
+// glow (spots, stripes), a spiral cell (twisted spines), a line that never stops (tumours, extra limbs), a flesh rotter (sores), a shell (stone
+// plates, horns), a weak nerve poison (circling)
+enum MadeSteer { MSR_BIG = 1, MSR_SMALL = 2, MSR_DYE = 4, MSR_GLOW = 8, MSR_SPIRAL = 16, MSR_STOP = 32, MSR_ROT = 64, MSR_SHELL = 128, MSR_NERVE = 256 };
+constexpr int MADE_FATE_STEPS = 48;   // the remains' age runs on past the spread's 24 steps, till the last are bones
+// J-08: what a fate does to a world's animals (a line's where it reached, the air's over the whole world): the traits named (`MadeFaunaTrait`
+// bits); the harm on the land, in the air and in the waters, to the shelled alone, to the land's plant eaters alone (0..1 each: the share a
+// species of middling resistance has lost); what killed the most; the sickness the survivors show (an MF_ bit) and the share of them that
+// show it; the share of each herd born changed, what steers how and a new colour's dye (a dyed hide's too); how much they thrive (0..1); the
+// steps since it began (a line's from its second step, the air's from its sixth; at a point, from when its spread reached it)
+struct MadeFate {
+    int fauna = 0, age = 0;
+    double harm[MFC_COUNT] = {0, 0, 0};
+    double shelled = 0, starve = 0;
+    int death = MD_NONE;
+    int sickness = 0; double sick = 0;
+    double changed = 0; int steer = 0, dye = 0;
+    double thrive = 0;
+    bool on() const { return fauna != 0; }
+};
+
+// J-09: the overgrowth (IDEAS-seeded-worlds.md section 7): a line that never stops and binds its cells grows into a tissue over the land it
+// reached (`MadeSpread::growth`). Its type by how the line lives and its genes; its texture by its cell's shape: blistered (spheres),
+// fibrous like muscle (rods), folded like a brain (curved), coiled like gut (spirals)
+enum MadeGrowthType { OG_NONE = 0, OG_FLESH, OG_FUNGUS, OG_SLIME_MOULD, OG_LICHEN, OG_CORAL, OG_SPONGE, OG_HAIR, OG_BLADDERS, OG_CARPETS, OG_FILMS,
+                      OG_COUNT };
+enum MadeGrowthTexture { OGT_BLISTERED = 0, OGT_FIBROUS, OGT_FOLDED, OGT_COILED, OGT_COUNT };
+constexpr int MADE_GROWTH_START = 8;   // the overgrowth begins at its line's eighth step (after the animals) and creeps that far behind its spread
+constexpr int MADE_GROWTH_STEPS = 64;  // J-10: its steps counted to here (every ruin taken whole by then)
+constexpr double MADE_WET_GROUND = 0.3; // J-10: an overgrowth this wet squelches underfoot (WET GROUND)
+// J-10: the overgrowths whose structures breathe (their kits' vents: surface/overgrowth.cpp), BREATHING
+inline bool madeGrowthBreathes(int type) { return type == OG_FLESH || type == OG_SPONGE; }
+// J-11: a world's made kind once its change passed a line (IDEAS-seeded-worlds.md section 10), the data sheet's kind line: its seas boiled away
+// (MADE HOTHOUSE), frozen from pole to pole (MADE SNOWBALL), under a thick orange haze, purple seas under a sulphur air, a rusted ground under an
+// oxygen sky, an overgrowth over the whole world (named by its type: FLESH WORLD and the rest), every animal and plant dead (CHARNEL WORLD), a
+// cold or dry world made warmer or wetter (GREENED WORLD). Its heights and rivers stay as generated
+enum MadeKind { MDK_NONE = 0, MDK_HOTHOUSE, MDK_SNOWBALL, MDK_HAZE, MDK_PURPLE, MDK_RUST, MDK_OVERGROWN, MDK_CHARNEL, MDK_GREENED, MDK_COUNT };
+// J-09: a line's overgrowth: its type and texture, its colour and its veins' (a clear one's dark), its grain (smooth 0 .. knobbly 1: its cell's
+// size), its wetness (dry and leathery 0 .. dripping 1: its slime), its hardness (soft 0, leathery 1, plated 2, bony 3: its shell), its glow at
+// night (veins or spots, 0 none) and its colour, whether it is furred with cilia (its motion), how far it has crept round its line's place
+// (radians) and for how many steps, the cover it lays (a soft tissue, threads, a hard one: `MAT_TISSUE`, `MAT_THREADS`, `MAT_HARD`)
+struct MadeGrowth {
+    int type = OG_NONE, texture = OGT_BLISTERED;
+    RGB colour, veins;
+    double grain = 0.5, wet = 0;
+    int hard = 0;
+    double glow = 0; RGB glowTint;
+    bool hair = false;
+    int age = 0;   // the steps since it began (0 .. MADE_STEPS: its structures grow with it)
+    int steps = 0; // J-10: the same on past MADE_STEPS, to MADE_GROWTH_STEPS (its cover climbs the ruins with them)
+    double reach = 0;
+    int material = -1;
+    double land = 0;   // J-11: the share of the world's land it can lie on (its line's band of warmth, no snow or ice: an overgrown world's past a half)
+    bool on() const { return type != OG_NONE && reach > 0; }
+};
 
 // one seeding's spread: where the line was let go (a unit vector in the body's frame) and how far it has reached (radians of arc). J-03:
 // where its line can live within that reach (the made pass's habitat): the waters by their salt, the land (a line that lives dried out,
@@ -49,6 +120,7 @@ constexpr double MADE_SHORE_M = 8;
 // it lives in the plants (a host of plants, a rotter of wood: whatever its life dried), where on the land its land look lies (`MadeLandOn`;
 // the shores' look by the waters it lives in), the waters its waters' look lies on (a rust's the fresh ones), the cover its land look lays at
 // a share over a half (-1 none) and its albedo, and the mean warmth its plants' look stops at (a frost burn's: where frosts come)
+// J-08: what its line does to the animals where it reached (`fate`, by its share of a point); J-09: what it grows into (`growth`)
 struct MadeSpread {
     Vec3 place;
     double reach = 0;
@@ -63,6 +135,9 @@ struct MadeSpread {
     int cover = -1;
     double coverAlbedo = 0.5;
     double coldC = 1e9;
+    MadeFate fate;
+    MadeGrowth growth;
+    int pits = 0;   // J-10: a stone rotter's steps since it was let go, to MADE_GROWTH_STEPS (0: its line pits no stone): the ruins in its reach crumble
     bool j05() const { return makes != 0 || plants || landOn != 0 || lookWaters != MADE_ALL_WATERS || cover >= 0 || coldC < 1e8; }
 };
 
@@ -133,14 +208,35 @@ struct MadeWorld {
     double plantShare = 1, plantGlow = 0; RGB plantGlowTint;
     double galls = 0, rot = 0;
     double rustGround = 0, lush = 0, bleached = 0;
+    // J-08: the animals' fates: the air's over the whole world (`fate`; a line's where it reached is its spread's), every trait named of all of
+    // them (`fauna`), the steps since the first came (`fateAge`, to MADE_FATE_STEPS: the remains' age), whether remains rot fast (a flesh
+    // rotter's)
+    MadeFate fate;
+    int fauna = 0, fateAge = 0;
+    bool rotFast = false;
+    double radiusKm = 0;            // (the body's, for where a spread had reached at each step: `madeFateAt`)
+    // J-09: the overgrowths' types named (`MadeGrowthType` bits, 1 << type), and the latest line's that grows (its index in `spread`, -1 none:
+    // the one the ground's tile and bank and the globe's stain follow)
+    int growths = 0, growthLine = -1;
+    // J-11: the ice's run on a living wet world cooled past the snowball's line (0 none, a sixth to 1 while it spreads to the equator, 2 frozen
+    // over), and the world's made kind (`MadeKind`; an overgrown world's type, `MadeGrowthType`; a greened world's was cold, else dry)
+    double freeze = 0;
+    int kind = MDK_NONE, kindGrowth = OG_NONE;
+    bool kindCold = false;
+    bool grown() const { return growths != 0; }
+    bool frozen() const { return freeze >= 2; }
+    // J-11: the dead cover a made kind lays over its living ground (`DeadCover`): a made hothouse the scorched felisian's, a made snowball the
+    // frozen felisian's
+    int deadCover() const { return kind == MDK_HOTHOUSE ? DC_SCORCHED : (kind == MDK_SNOWBALL ? DC_FROZEN : DC_NONE); }
     bool on() const { return key != 0; }
+    bool fated() const { return fauna != 0; }
     bool aired() const { return air != 0 || warmC != 0 || pressureK != 1; }   // J-04: its air or its climate moved
     bool j05() const {                                                         // J-05: its waters, ground or plants changed (a dye's waters are J-03's)
         return seas != 0 || grounds != 0 || flora != 0 || waterLook > MWL_DYE || foam > 0 || jelly > 0 || boil > 0 || seaShade > 0 || sour > 0 || land.on ||
                snow.on || plant.on || galls > 0 || rot > 0 || rustGround > 0 || lush > 0 || bleached > 0;
     }
-    bool ground() const { return cover >= 0 || tinted || runaway >= 2 || land.on || snow.on || plant.on; }   // anything the planet function's last pass draws
-    bool looks() const { return ground() || aired() || j05(); }               // anything drawn or read
+    bool ground() const { return cover >= 0 || tinted || runaway >= 2 || land.on || snow.on || plant.on || grown(); }   // anything the planet function's last pass draws
+    bool looks() const { return ground() || aired() || j05() || fated() || grown(); }    // anything drawn or read (J-08: the animals' fates too)
     bool dried() const { return runaway >= 2; }                                // J-04: a runaway's seas gone to their old beds
     bool shares() const { return tinted || land.on || snow.on || plant.on; }  // J-05: a share at each point (`SurfaceSample::madeTint`)
     const MadeLook* lookOf(int cls) const { return cls == MC_LAND ? &land : (cls == MC_SNOW ? &snow : (cls == MC_PLANTS ? &plant : nullptr)); }
@@ -161,3 +257,18 @@ bool madeLives(const MadeSpread& s, bool wet, int salt, double meanC);
 double madeReachOfStep(int step, double radiusKm);
 // J-04: the share of the sphere a reach covers (its cap's area over the whole: 0 none, 1 the whole world)
 double madeCapShare(double reach);
+// J-08: the animals' fate at a point: the air's, and each line's by its spread's share there (harms and shares joined as chances, 1 - the
+// product of what each spares; the sickness, the steering and the dye the latest line's that has them; the age the oldest's there, a line's
+// counted from the step its spread reached the point)
+MadeFate madeFateAt(const MadeWorld& m, const Vec3& unit, uint64_t seed);
+// J-09: how much of a point an overgrowth has covered, 0..1 (the latest line's that covers it: `line`, -1 none): its creep behind its spread
+// with a ragged edge of fingers, at the reach's own scale and at a few hundred metres (neither fades with the detail)
+double madeGrowthAt(const MadeWorld& m, const Vec3& unit, uint64_t seed, int& line);
+// J-10: the steps an overgrowth has lain at a point since its edge passed there (0 at the edge, the fraction by how far past the step's reach
+// the point lies; -1 where none covers it): the latest line's that covers it, its edge read as `madeGrowthAt` reads it
+double madeGrowthSince(const MadeWorld& m, const Vec3& unit, uint64_t seed);
+// J-11: a made kind's words: its name ("PURPLE WORLD"; an overgrown world's by its type, "FLESH WORLD"; empty for none), the data sheet's
+// sentence in its kind's place ("LIVING TISSUE COVERS THE LAND FROM COAST TO COAST.") and `describeBody`'s phrase in place of its kind's
+std::string madeKindName(const MadeWorld& m);
+std::string madeKindSentence(const MadeWorld& m);
+std::string madeKindPhrase(const MadeWorld& m);

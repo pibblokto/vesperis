@@ -369,8 +369,11 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     // J-04: a seeded world's made climate (its warmth now over its generated, `MadeWorld::warmC`) moves the caps' edge (1.6 degrees of latitude a
     // degree, as the mean's fall with latitude near the caps) and the snow line (the lapse rate's 154 m a degree); an endless rain on a cold world
     // snows it over. The ground's heights and the drainage stay the world as generated
-    const double madeC = g.made.warmC, capEdge0 = capEdge, snowLine0 = snowLine;   // (the reefs' heights and the alpine belt read them as generated)
-    if (madeC != 0 || g.made.snowMore > 0) { capEdge += 1.6 * madeC - 8.0 * g.made.snowMore; snowLine += 154.0 * madeC - 1200.0 * g.made.snowMore; }
+    // (J-11: a made hothouse's or snowball's cover lies over the world as generated, as a dead world's over its then-world's)
+    const bool madeCover = deadCoverOf(g) != DC_NONE;
+    const double madeC = madeCover ? 0.0 : g.made.warmC, snowMore = madeCover ? 0.0 : g.made.snowMore;
+    const double capEdge0 = capEdge, snowLine0 = snowLine;   // (the reefs' heights and the alpine belt read them as generated)
+    if (madeC != 0 || snowMore > 0) { capEdge += 1.6 * madeC - 8.0 * snowMore; snowLine += 154.0 * madeC - 1200.0 * snowMore; }
     moist -= 0.12 * smoothstep(0.25, 0.5, o.slopeM) * smoothstep(0.3, 0.6, relief0);   // the ridges are the dry ground (the valley floors gained above); B-404: the material chain's slope
     // inland water. A river is a ribbon cut into the smooth ground along a hashed network (worley cell boundaries
     // at 80 km): across its floodplain the fine relief melts into `hS`, the channel is carved 2.5-11.5 m into it and the
@@ -548,14 +551,18 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     if (s.water > 0.5 && waterZone > 0) s.waterKind = waterKind;
     if (waterZone > 0 && s.water > -1e8) s.shore = shore;   // (a snowfield or a glacier over the zone keeps the plane, so it keeps the edge too)
     else if (s.water < -1e8 && shoreOut < 1e8) s.shore = shoreOut;   // the bank beyond the plane's reach still knows how far the water is
-    if (K.cover != DC_NONE) {   // a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
+    // J-11: a made hothouse's or a made snowball's cover over its own living ground, as a dead world's (`MadeWorld::deadCover`)
+    const int cover = deadCoverOf(g);
+    if (cover != DC_NONE) {   // a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
         // the same in both times, so its people's towns stand where they stood). No liquid is left; the old forests' density stays in `veg` (their dead trees)
         const double oldForest = s.material == MAT_FOREST ? s.veg : 0.0;
         const int was = s.material;
         s.water = -1e9; s.waterKind = 0; s.shore = 1e9; s.veg = 0;
-        if (K.cover == DC_SCORCHED) {   // baked by its swelling sun: the seas boiled off to their salt, the soils cracked clay and dust, the forests stone; a
-            // cold one's (a white dwarf's, a giant's far world) frost where its present's mean falls under freezing
-            const double tNow = g.nowTempC - 0.4 * absLatDeg - 6.5 * std::max(0.0, h) / 1000.0 + (g.locked ? 25.0 * sub : 0.0);   // a locked one's night side the colder
+        if (K.cover == DC_NONE) s.lifeTint = 0;   // (J-11: a made cover's lagoons and living landforms gone with their life)
+        if (cover == DC_SCORCHED) {   // baked by its swelling sun: the seas boiled off to their salt, the soils cracked clay and dust, the forests stone; a
+            // cold one's (a white dwarf's, a giant's far world) frost where its present's mean falls under freezing (J-11: a made hothouse's the made climate's)
+            double tNow = T + g.made.warmC;
+            if (K.cover != DC_NONE) tNow = g.nowTempC - 0.4 * absLatDeg - 6.5 * std::max(0.0, h) / 1000.0 + (g.locked ? 25.0 * sub : 0.0);   // a locked one's night side the colder
             s.biome = BIO_DESERT;
             if (h < 0) {   // the old sea's floor, dry at its depth far under the shores: the deep basins' salt, the slopes' silt, reef limestone on the warm shelves
                 s.height = h; s.oldSea = 1;

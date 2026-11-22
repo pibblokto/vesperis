@@ -120,7 +120,7 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                 if (rp.grain) go += z < lerpZ1 ? rp.grain->atLerp(uu * gs - 0.5, vv * gs - 0.5) : (double)rp.grain->at((int)std::floor(uu * gs), (int)std::floor(vv * gs));
                 if (g2) go += (z < lerpZ2 || g2s < 1.0) ? g2->atLerp(uu * g2s - 0.5, vv * g2s - 0.5) : (double)g2->at((int)std::floor(uu * g2s), (int)std::floor(vv * g2s));
                 go *= gw;
-                if (rp.pattern) {   // the windows
+                if (rp.pattern && !(rp.patternAbove && bank == rp.bank2)) {   // the windows
                     const FacePattern& P = *rp.pattern;
                     if (P.stripe > 0 || P.dado > 0) {   // the wall's courses and its dado, faded to their mean where a course is under two pixels
                         const double coursePx = P.stripe > 0 ? pj.f * P.stripe * iz / FB_SCALE : 1e9;
@@ -385,7 +385,8 @@ bool sameParams(const RasterParams& a, const RasterParams& b) {
            a.grainWeight == b.grainWeight && a.bank2 == b.bank2 && a.grain2b == b.grain2b && a.shade2 == b.shade2 && a.edge == b.edge &&
            a.edgeScale == b.edgeScale && a.edgeAmp == b.edgeAmp && a.cutout == b.cutout && a.quantize == b.quantize && a.zbias == b.zbias &&
            a.darken == b.darken && a.sheen == b.sheen && a.maskBank == b.maskBank && a.reflectMix == b.reflectMix && a.ztest == b.ztest &&
-           a.zwrite == b.zwrite && a.blend == b.blend && a.shadeMin == b.shadeMin && a.shadeMax == b.shadeMax && a.pattern == b.pattern;
+           a.zwrite == b.zwrite && a.blend == b.blend && a.shadeMin == b.shadeMin && a.shadeMax == b.shadeMax && a.pattern == b.pattern &&
+           a.patternAbove == b.patternAbove;
 }
 }
 

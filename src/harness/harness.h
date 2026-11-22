@@ -408,6 +408,28 @@ int runBestiary();
 int runBestiaryPlates(int worlds);   // modes_bestiary.cpp (J-06)
 int runBestiaryWays();               // modes_bestiary.cpp (J-07)
 bool setupWaysScene(SurfaceView& sv, int wantMat, double& t);   // J-07: the hunt's, the flock's and the swimmers' scenes staged (modes_bestiary.cpp)
+// J-07 (shared with J-08's `seed fates`): a place for a way (0 open dry ground, 1 dry ground off the forest, 2 water 3 m deep, 3 a shallow shore)
+// at a time its sun stands 25 to 55 degrees up (or night's 12 under); a frame at 2x mushed to a file; a herd of a species put down round a point
+bool waysSite(StarSystem& sys, int bi, int need, bool night, double& lat, double& lon, double& t, int salt = 0);
+void waysShot(SurfaceView& sv, StarNeighborhood& nb, SpaceRenderer& sr, double t, const std::string& fn);
+void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_t seed);
+int seedFates();   // J-08: `seed fates` (modes_seed_fates.cpp)
+int seedKinds();   // J-11: `seed kinds` (modes_seed_kinds.cpp): the made kinds of forty worlds and six lines, the shares, each kind drawn
+// a sheet of frames side by side, each halved (the mean of four), `cols` to a row (J-09's plates too)
+void writeSheet(const std::vector<std::vector<uint32_t>>& cells, int w, int h, int cols, const std::string& fn);
+int overgrowthPlates();   // J-09: `overgrowth plates` (modes_overgrowth.cpp)
+// J-09: an overgrowth made by hand at its fullest (`overgrowth plates`, the unit, the bench), and a layer of one line it covers the whole world
+// from; the first of `seed climate`'s flora worlds with a place at a forest's edge (or, `shore`, a shore) by day, and a time at night there
+MadeGrowth growthOfType(int type, int texture, const RGB& colour, double grain, double wet, int hard, bool glow, bool hair);
+MadeWorld growthLayer(double radiusKm, const Vec3& place, const MadeGrowth& G);
+struct GrowthGround { StarSystem sys; int body = -1; double lat = 0, lon = 0, day = 0, night = 0; };
+bool growthGround(GrowthGround& P, bool shore);
+int overgrowthWorld();    // J-09: `overgrowth world`
+int overgrowthRuins();    // J-10: `overgrowth ruins`
+// J-10: an overgrowth's layer at its line's step (its steps, age and reach as the seeding makes them), let go at `place`; a layer put on a view's
+// ground and ruins (its tiles sampled again, its ruins' cover grown again)
+MadeWorld growthAtStep(double radiusKm, const Vec3& place, MadeGrowth G, int step);
+void growthLayerOn(SurfaceView& S, const MadeWorld& m);
 void runEncounters(int wanted);
 void renderLandingMaps();
 int runStability(const char* want, double walk);
@@ -512,7 +534,7 @@ std::vector<GeneEdit> seedGeneEdits(const MicrobeGenes& g, const std::vector<std
 int seedLooks();
 bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild);
 struct SeedAirCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; SeedLine wild; };
-std::vector<SeedAirCase> seedAirCases(int n);
+std::vector<SeedAirCase> seedAirCases(int n, int rounds = 3);
 // a game's flask filled with a line in a medium, the lab's clock stepped a minute at a time till it shows FULL (false: not within four hours);
 // a kind's best medium (its cell, its best warmth, its salt, its light and its energy)
 bool labFlaskFull(TestGame& g, int i, const FlaskSpecies& w, const Medium& m);
@@ -527,6 +549,7 @@ void unitLabIncubator(const Check& check);   // B-442, R-440 to R-442: the group
 void unitLabGenes(const Check& check);   // the Y series (Y-01: the trees by world and by folder): the group `genes`
 // a gene's letters a weight `d` heavier (a letter at a time, the first that can), a table's run that reads `want` (its first `n` letters)
 std::string heavier(const GeneCode& c, std::string p, int d);
+std::string lighter(const GeneCode& c, std::string p, int d);   // (`heavier`'s other way: modes_seed.cpp)
 std::string runReading(const GeneCode& c, const std::vector<int>& t, int want, int n);
 void unitLabWorld(const Check& check);   // J-01: the world genes in the lab, the group `world`
 // ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`)
@@ -578,6 +601,7 @@ bool tourSetupNamed(GameState s);   // U-06: the tour opens the state as the gam
 // ---- modes_bench.cpp
 void fillBenchGuide(Guide& G);
 int runBenchForest();
+int runBenchOvergrowth();   // J-09: `bench overgrowth`
 int runBench(bool check, double slack);
 int runPool();
 int runBenchNoise();

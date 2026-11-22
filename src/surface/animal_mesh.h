@@ -7,6 +7,9 @@
 #include "core/raster.h"
 
 constexpr int RIG_RINGS = 13, RIG_LEGS = 12, RIG_JOINTS = 5, RIG_CHAIN = 6;
+// J-08: an animal dead on the ground, as far as it has gone: fresh (on its side, legs stiff, the neck thrown back, the hide dark), bloated,
+// sunken to its ribs and hips, bones (skull, spine, ribs and legs, bleached), scattered (the bones apart and half buried)
+enum RemainsStage { RS_FRESH = 1, RS_BLOATED, RS_SUNKEN, RS_BONES, RS_SCATTERED, RS_COUNT };
 
 struct AnimalRig {
     AnimalBody b;
@@ -48,6 +51,11 @@ struct AnimalPoseIn {
     Vec3 wall;                     // `at` the trunk's surface under its feet, `wall` the trunk's level normal there
     double tiltMax = 0.35;         // the most the trunk tilts with the ground under it (radians: a climber's on a cliff more)
     double tilt = 0;               // the trunk tilted nose up besides (radians: a leaper's along its arc)
+    // J-08: the fates. Remains (`dead`, a RemainsStage of surface_types.h): posed standing at the origin with its legs stiff and its neck thrown
+    // back, then laid on its side on the ground (a flyer with its wings spread, a legless one on its belly); bloated swollen, sunken thin. The
+    // trunk's girth over its own (a bloated one's more, a wasting one's less), a melting hide's sag (0..1)
+    int dead = 0;
+    double girth = 1, sag = 0;
 };
 
 // the pose: every point drawn, local metres
@@ -90,6 +98,14 @@ struct AnimalView {
     double pxPerM = 1;             // framebuffer pixels a metre where the animal stands
     double fbScale = 1;            // framebuffer pixels a 1x pixel (a line's thickness)
     bool eyeshine = false;         // J-07: a night walker's eyes in the dark, bright and big
+    // J-08: the fates as drawn: remains (`dead`: the hide darkened, swollen, sunk to its ribs; bones; bones scattered and half buried), a
+    // sickness shown (an MF_ bit of galaxy/made.h), a changed young's marks (bits of bestiary.h's `AnimalChange` that `changeDrawn` names), the
+    // bank of raw flesh and sores (the ochre's), of a dyed hide or a new colour (-1 none), the animal's own hash (where its sores, growths and
+    // stalks fall), the dark (a glow shows)
+    int dead = 0, sickness = 0;
+    uint64_t marks = 0, seed = 0;
+    int flesh = 31, fate = -1;
+    bool night = false;
 protected:
     ~AnimalView() = default;
 };

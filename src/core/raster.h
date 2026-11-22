@@ -79,6 +79,7 @@ struct RasterParams {   // (a field added here joins `sameParams` in raster.cpp)
     int blend = BLEND_REPLACE;
     double shadeMin = 0, shadeMax = 63;
     const FacePattern* pattern = nullptr;    // windows on the face (u and v in metres)
+    bool patternAbove = false;    // J-10: the windows only on the first bank's pixels (an overgrowth's cover in the second takes them)
 };
 
 constexpr double NEAR_Z = 0.05;

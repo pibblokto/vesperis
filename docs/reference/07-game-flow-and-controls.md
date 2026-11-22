@@ -444,47 +444,45 @@ and snow on the picture grow with it); three readouts at the bottom left: in the
 `TEMP -63 C  WIND 290 KT W` (toward the west, as the surface's) / the chute's state; `MOUSE LOOKS  X CENTRES  P PHOTO  ESC CABIN`
 under them.
 
-Surface (R-414, 2026-10-11: pared down on the user's "it's overblown at times"): on foot the body's name and latitude/longitude,
-the scanner's two lines under it while it is on (R-408: `SCAN RUINS` and `1.6 KM NW`) with its diamond on the compass strip, EPOC,
-the compass strip with the heading, the mark the explorer shows over the view (B-412: one, chosen on the sector map, none by
-default; a diamond and `CITY OF ASH 1.7 KM`, and a hollow white diamond on the compass strip at its bearing beside the scanner's
-filled cyan one; R-408 drew the eight nearest within 25 km), the stamina bar with the pulse (M8-02), `JET HEAT 45%` while the
-jetpack flies (`CTRL DESCENDS` on a comet), and over the stamina what `E` or `Q` would do here, stacked from the bottom:
-`CAPSULE HERE - Q`, `BUGGY HERE - E` or `DRONE HERE - E` within 3.5 m, the record's object or the instrument within reach
-(`A CODEX - E`, `A PAINTED WALL - E`, `A LUTE - E`; C-03's `A SHARD HERE - E`), `A GRAVE: THAELU, 140-212` while a grave's stone
-is within 2.2 m on foot (C-12: the name and the years in the people's count; the first time at each stone a status line
-`A GRAVE: THAELU, YEARS 140 TO 212 OF AIYIN`, a `GRAVE` entry in the log and a `grave` line in the guide). The capsule's, the
-buggy's and the drone's distances are not shown (`K` calls the capsule, `B`/`F` at it unfold a new buggy or drone; `Q` or `E` far
-from the capsule says in the status how far it is; the sector map marks all three). The readings (R-414, `Tab` on the ground and
-in the vehicles, `drawReadings`): a panel at the right under the epoch's lines (rows of 23 characters at most, two readings to a
-row where they fit, so it stops short of the crosshair; twelve rows at most), `Tab` again puts it away (kept as left for the
-session): `SECTOR LON:LAT` (O2), the local time, the sun's altitude and azimuth (D-04: `NO SUN` on a drifter's ground), the
-elevation and the temperature (D-04: `LAMP ON` beside them while it is lit), the gravity and the pressure
-(`GRAV 0.91 G  0.65 ATM`; `GRAV 0.0005 G`, `ESCAPE 9.2 M/S` on a comet, O4), the wind and the weather (`RAIN 40%`, `SNOW`, `HAIL`,
-`DUST 30%`, `FOG`, `AURORA` or `AURORA STORM`, `RING SHADOW` O0-01, `VENTING 40%` O4; a second row when there are many), the life
-sensor (B-321: `LIFE 300 M NE (FLYERS)`, the nearest herd or flock within 1.5 km), the old road underfoot (C-09: `OLD ROAD NE-SW`,
-the way it runs; T-01: its kind, `OLD PATH`, `OLD RAILWAY`, `OLD CANAL`, `OLD HIGHWAY`; the first step onto each road of a landing
-is a status line, `AN OLD ROAD RUNS HERE, NE TO SW`, and a `ROAD` entry in the log), the rangefinder (O1: `AHEAD 8.4 KM 33 MIN`,
-the time at a walk, a drive or a flight at 80 m/s as the explorer goes; `WATER` when the crosshair rests on water; nothing on the
-sky) with the mark the crosshair rests on under it (R-408), `SWIMMING` or `DIVING`, the jetpack's height and climb, `AUTOWALK 3`
-and the vision mode. In the buggy (N4-06) and the drone (R-403) the picture is the nose camera's (`SurfaceView::cameraFeed`) and
-the HUD is its frame: the inner brackets, a blinking `REC`, the name and the coordinates, the scanner's lines under the REC, the
-compass, a pan gauge under it showing the +-70 deg range, a crosshair, the speed in double-size digits (`KM/H BACK` in reverse)
-and the turn bar under the picture (`STEER`, `TURN`: the marker moves right when turning right); no epoch, no stamina; R-414 took
-`CAM 01 NOSE`/`CAM 02 DRONE`, the pan and tilt numbers, the trip, the gear, the height and the climb, the heading, the state, the
-capsule and the local time off the view. Their readings add the heading and the trip, the buggy's gear (`REVERSE`) and state
-(`AIRBORNE`, `SKIDDING`, `BRAKING`, `LIGHTS ON`) and the old road under its wheels, the drone's height over the ground and its
-climb (amber at the 400 m ceiling) and state (`LANDED`, `LIFTING`, `AT ITS CEILING`, `CLIMBING`, `DESCENDING`, `HOVERING`,
-`LIGHTS ON`). The chase view (`V` in a vehicle) shows the walker's HUD without the stamina. N3: the data sheet on the surface
-lists the species seen there (J-07: `LIFE`, the guide's record, named ones `NAME (WORDS)`, the rest by their words, `+3 MORE` where
-the rows run out; `NONE SEEN YET`), a species new to the guide writes a `SIGHTING` entry to the expedition log (its words, what it was
-doing, how far, the world) and `NEW SPECIES: A STRIPED HOPPER` on the status, and counts in `CREATURES SIGHTED` on the statistics
-screen (`Guide::creaturesSeen`, `stat creatures` in the guide file); one seen before is said on its first sight of the landing; N4-05
-adds `LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with `LIFE: <species>`,
-the land species most likely met in that biome (J-07: its name or words once seen, `A HERD` before). W-03: the sector map (`N`) draws the nearest front's rain line
-across it (cyan; amber for a dust front) with its band hatched behind the line, and the legend reads `RAIN FRONT` /
-`IN 2 H 05 MIN` (or `ENDS 1 H 05 MIN` under one); the readings' own (`WIND`, `RAIN`, `DUST`, `TEMP`) are where the front shows on
-the ground.
+Surface (R-414, 2026-10-11: pared down on the user's "it's overblown at times"): on foot the body's name and latitude/longitude, the
+scanner's two lines under it while it is on (R-408: `SCAN RUINS` and `1.6 KM NW`) with its diamond on the compass strip, EPOC, the compass
+strip with the heading, the mark the explorer shows over the view (B-412: one, chosen on the sector map, none by default; a diamond and
+`CITY OF ASH 1.7 KM`, and a hollow white diamond on the compass strip at its bearing beside the scanner's filled cyan one; R-408 drew the
+eight nearest within 25 km), the stamina bar with the pulse (M8-02), `JET HEAT 45%` while the jetpack flies (`CTRL DESCENDS` on a comet),
+and over the stamina what `E` or `Q` would do here, stacked from the bottom: `CAPSULE HERE - Q`, `BUGGY HERE - E` or `DRONE HERE - E`
+within 3.5 m, the record's object or the instrument within reach (`A CODEX - E`, `A PAINTED WALL - E`, `A LUTE - E`; C-03's `A SHARD HERE
+- E`), `A GRAVE: THAELU, 140-212` while a grave's stone is within 2.2 m on foot (C-12: the name and the years in the people's count; the
+first time at each stone a status line `A GRAVE: THAELU, YEARS 140 TO 212 OF AIYIN`, a `GRAVE` entry in the log and a `grave` line in the
+guide). The capsule's, the buggy's and the drone's distances are not shown (`K` calls the capsule, `B`/`F` at it unfold a new buggy or
+drone; `Q` or `E` far from the capsule says in the status how far it is; the sector map marks all three). The readings (R-414, `Tab` on
+the ground and in the vehicles, `drawReadings`): a panel at the right under the epoch's lines (rows of 23 characters at most, two readings
+to a row where they fit, so it stops short of the crosshair; twelve rows at most), `Tab` again puts it away (kept as left for the
+session): `SECTOR LON:LAT` (O2), the local time, the sun's altitude and azimuth (D-04: `NO SUN` on a drifter's ground), the elevation and
+the temperature (D-04: `LAMP ON` beside them while it is lit), the gravity and the pressure (`GRAV 0.91 G  0.65 ATM`; `GRAV 0.0005 G`,
+`ESCAPE 9.2 M/S` on a comet, O4), the wind and the weather (`RAIN 40%`, `SNOW`, `HAIL`, `DUST 30%`, `FOG`, `AURORA` or `AURORA STORM`,
+`RING SHADOW` O0-01, `VENTING 40%` O4; a second row when there are many), the life sensor (B-321: `LIFE 300 M NE (FLYERS)`, the nearest
+herd or flock within 1.5 km), the old road underfoot (C-09: `OLD ROAD NE-SW`, the way it runs; T-01: its kind, `OLD PATH`, `OLD RAILWAY`,
+`OLD CANAL`, `OLD HIGHWAY`; the first step onto each road of a landing is a status line, `AN OLD ROAD RUNS HERE, NE TO SW`, and a `ROAD`
+entry in the log), the rangefinder (O1: `AHEAD 8.4 KM 33 MIN`, the time at a walk, a drive or a flight at 80 m/s as the explorer goes;
+`WATER` when the crosshair rests on water; nothing on the sky) with the mark the crosshair rests on under it (R-408), `SWIMMING` or
+`DIVING`, the jetpack's height and climb, `AUTOWALK 3` and the vision mode. In the buggy (N4-06) and the drone (R-403) the picture is the
+nose camera's (`SurfaceView::cameraFeed`) and the HUD is its frame: the inner brackets, a blinking `REC`, the name and the coordinates,
+the scanner's lines under the REC, the compass, a pan gauge under it showing the +-70 deg range, a crosshair, the speed in double-size
+digits (`KM/H BACK` in reverse) and the turn bar under the picture (`STEER`, `TURN`: the marker moves right when turning right); no epoch,
+no stamina; R-414 took `CAM 01 NOSE`/`CAM 02 DRONE`, the pan and tilt numbers, the trip, the gear, the height and the climb, the heading,
+the state, the capsule and the local time off the view. Their readings add the heading and the trip, the buggy's gear (`REVERSE`) and
+state (`AIRBORNE`, `SKIDDING`, `BRAKING`, `LIGHTS ON`) and the old road under its wheels, the drone's height over the ground and its climb
+(amber at the 400 m ceiling) and state (`LANDED`, `LIFTING`, `AT ITS CEILING`, `CLIMBING`, `DESCENDING`, `HOVERING`, `LIGHTS ON`). The
+chase view (`V` in a vehicle) shows the walker's HUD without the stamina. N3: the data sheet on the surface lists the species seen there
+(J-07: `LIFE`, the guide's record, named ones `NAME (WORDS)`, the rest by their words, `+3 MORE` where the rows run out; `NONE SEEN YET`;
+J-08: its marks after them, `STRIPED HOPPER (DYING)`, `GONE` over `DYING`, then `CHANGED`), a species new to the guide writes a `SIGHTING`
+entry to the expedition log (its words, what it was doing, how far, the world) and `NEW SPECIES: A STRIPED HOPPER` on the status (J-08:
+seen dead, `NEW SPECIES: REMAINS OF A STRIPED HOPPER`), and counts in `CREATURES SIGHTED` on the statistics screen
+(`Guide::creaturesSeen`, `stat creatures` in the guide file); one seen before is said on its first sight of the landing; N4-05 adds
+`LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with `LIFE: <species>`, the land
+species most likely met in that biome (J-07: its name or words once seen, `A HERD` before). W-03: the sector map (`N`) draws the nearest
+front's rain line across it (cyan; amber for a dust front) with its band hatched behind the line, and the legend reads `RAIN FRONT` / `IN
+2 H 05 MIN` (or `ENDS 1 H 05 MIN` under one); the readings' own (`WIND`, `RAIN`, `DUST`, `TEMP`) are where the front shows on the ground.
 
 ## The almanac (W-01, 2026-10-06)
 
@@ -710,7 +708,8 @@ strains a flask gave, `strain <body key>/M<index>/S<n> <parent> <move> <value>`;
 samples taken, `stat samples`, and the worlds they came from, `sampled <body key>`; a friend's sheets lent by their inbox file,
 `lentmicrobe` lines as the `microbe` ones, in cyan and in no count, the explorer's own sheet winning; J-07: the animal species seen,
 `animal <body key>/A<index> <doings> <nearest m> <most at once>` after an `animals 1` line, both once there is one, the index its
-world's bestiary's, the doings `AnimalDoing`'s bits, its name a `name` line), the signals the radar
+world's bestiary's, the doings `AnimalDoing`'s bits, its name a `name` line; J-08: ` <marks>` after them where it has any,
+`AnimalMark`'s bits, a line without them as J-07 wrote it), the signals the radar
 locked (`signal <key> <kind>`: a world's key or a pulsar's star key, C-07) and the recordings heard on it (`heard <body key>/S<index>`, C-07), the explorer's marks on the
 worlds (`mark <body key> <lat> <lon> <kind> <lent> <when> <name>`: radians, the kind a `LandmarkKind` or 8 for a place (T-03: 9 a
 work's; in memory `LM_WORK` is 8 and a place 9, `markKindToFile`), the name last and possibly empty, R-408), the probes' records

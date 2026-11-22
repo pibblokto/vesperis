@@ -1,5 +1,6 @@
 #include "bestiary.h"
 #include "core/rng.h"
+#include <algorithm>
 #include <cmath>
 
 const char* const ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
@@ -270,4 +271,140 @@ std::string Bestiary::words(int i) const {
     int smaller = 0;   // alike in all of those: by size among them
     for (int j : others) smaller += species[j].size < s.size;
     return std::string(smaller == 0 ? "SMALL " : (smaller == (int)others.size() ? "LARGE " : "MIDDLING ")) + kind;
+}
+
+// ---- J-08: the fates
+const char* const CHANGE_NAMES[CHG_COUNT] = {"RIBS SHOWING", "MELTING HIDE", "OPEN SORES", "BARE PATCHES", "FLAYED", "BLOATED BODY", "TUMOURS",
+                                            "STALKS", "STONE PLATES", "OVERGROWN TUSKS", "HORN GROWTHS", "EXTRA LEG", "MISSING LEG", "TWO HEADS",
+                                            "EXTRA EYES", "NO EYES", "TWISTED SPINE", "JOINED PAIR", "SHORT LEGS", "LONG LEGS", "LONG NECK",
+                                            "EXTRA TAIL", "GIANT", "DWARF", "NEW COLOUR", "PALE", "DARK", "GLOWING SPOTS", "GLOWING STRIPES",
+                                            "NEW PATTERN", "IRIDESCENT", "WOOLLY", "HAIRLESS", "SEE-THROUGH", "CALM", "BOLD", "WALKS AT NIGHT",
+                                            "CIRCLES", "STUMBLES", "CLIMBS", "SWARMS", "LIMPS"};
+
+bool speciesShelled(const Species& sp) { return sp.body.dorsal == DORSAL_SHELL || sp.body.dorsal == DORSAL_PLATES || sp.body.hide == HIDE_PLATES; }
+
+AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes, int nChanges) {
+    AnimalFate a;
+    if (!f.on()) return a;
+    const bool air = planFlies(sp.plan), water = planSwims(sp.plan), land = !air && !water;
+    double h = f.harm[air ? MFC_AIR : (water ? MFC_WATER : MFC_LAND)];
+    if (land && f.shelled > 0 && speciesShelled(sp)) h = 1 - (1 - h) * (1 - f.shelled);
+    if (land && f.starve > 0) {   // the plant eaters' food lost, the hunters' prey thinned
+        const double eats = sp.way == WAY_GRAZER || sp.way == WAY_BROWSER || sp.way == WAY_CLIMBER ? 1.0 : (sp.way == WAY_BURROWER ? 0.7 : 0.5);
+        h = 1 - (1 - h) * (1 - eats * f.starve);
+    }
+    const double frail = 0.5 + hash01(mix64(sp.seed ^ 0xFA7E0001ULL));   // how it resists: 0.5 the hardiest, 1.5 the frailest
+    a.dead = h >= 0.95 ? 1.0 : clampd(h * frail, 0, 1);
+    a.death = a.dead > 0 ? f.death : 0;
+    if (land && !a.gone() && f.sickness && f.sick > 0) { a.sickness = f.sickness; a.sick = f.sick; }
+    if (land && !a.gone() && f.changed > 0 && nChanges > 0) {
+        a.changed = f.changed;
+        a.nChanges = std::min(nChanges, 3);
+        for (int i = 0; i < a.nChanges; i++) a.changes[i] = changes[i];
+    }
+    a.dye = f.dye;
+    a.age = f.age;
+    a.thrive = a.dead > 0 ? 0.0 : f.thrive;
+    return a;
+}
+
+namespace {
+// whether a change fits a species' body and ways (a land animal's), and whether two clash
+bool changeFits(const Species& sp, int ch) {
+    const AnimalBody& b = sp.body;
+    const bool legs = b.pairs > 0;
+    switch (ch) {
+        case CHG_TUSKS: return sp.plan != PLAN_SLUG && b.head != HEAD_BEAK && b.head != HEAD_MANDIBLES;
+        case CHG_EXTRA_LEG: case CHG_SHORT_LEGS: case CHG_LONG_LEGS: case CHG_CIRCLES: case CHG_STUMBLES: case CHG_LIMPS: return legs;
+        case CHG_MISSING_LEG: return b.pairs >= 2;
+        case CHG_EXTRA_EYES: return b.eyes >= 1 && b.eyes <= 6;
+        case CHG_NO_EYES: return b.eyes >= 1;
+        case CHG_JOINED: return legs && sp.plan != PLAN_GIANT;
+        case CHG_LONG_NECK: return b.neck > 0.03 * b.size;
+        case CHG_EXTRA_TAIL: return b.tail != TAIL_NONE && b.tailLen > 0.02 * b.size;
+        case CHG_WOOLLY: return b.hide != HIDE_HAIR;
+        case CHG_HAIRLESS: return b.hide == HIDE_FUR || b.hide == HIDE_HAIR || b.hide == HIDE_QUILLS;
+        case CHG_CALM: return sp.temperament != TEMP_INDIFFERENT;
+        case CHG_BOLD: return sp.temperament != TEMP_CURIOUS && sp.social != SOCIAL_TERRITORIAL;
+        case CHG_NIGHT: return sp.activity != ACT_NIGHT;
+        case CHG_CLIMBS: return legs && sp.way != WAY_CLIMBER;
+        case CHG_SWARMS: return sp.social == SOCIAL_HERD;
+        case CHG_GIANT: return sp.plan != PLAN_GIANT;
+        default: return true;
+    }
+}
+bool changesClash(int a, int b) {
+    static const int PAIRS[][2] = {{CHG_GIANT, CHG_DWARF}, {CHG_PALE, CHG_DARK}, {CHG_SHORT_LEGS, CHG_LONG_LEGS}, {CHG_WOOLLY, CHG_HAIRLESS}, {CHG_EXTRA_LEG, CHG_MISSING_LEG},
+                                   {CHG_CALM, CHG_BOLD}, {CHG_EXTRA_EYES, CHG_NO_EYES}, {CHG_RIBS, CHG_BLOATED}, {CHG_SEE_THROUGH, CHG_STONE}, {CHG_JOINED, CHG_TWO_HEADS}};
+    for (const auto& p : PAIRS) if ((a == p[0] && b == p[1]) || (a == p[1] && b == p[0])) return true;
+    return a == b;
+}
+}
+
+int animalChangesOf(const Species& sp, int steer, int out[3]) {
+    if (planFlies(sp.plan) || planSwims(sp.plan)) return 0;   // (the herds' young)
+    const uint64_t h = mix64(sp.seed ^ 0xC4A9E0ULL);
+    const int want = 1 + (int)(h % 3);
+    int n = 0;
+    auto take = [&](int ch) {
+        if (n >= want || !changeFits(sp, ch)) return;
+        for (int i = 0; i < n; i++) if (changesClash(out[i], ch)) return;
+        out[n++] = ch;
+    };
+    // the first by the lines' genes: a big cell's giants, a small one's dwarfs, a dye's new colour, a glow's spots or stripes, a spiral's twist, a
+    // line that never stops tumours or a leg more, a flesh rotter's sores, a shell's stone plates or horns, a weak nerve poison's circling
+    int steered[12], ns = 0;
+    const bool odd = (h >> 8) & 1;
+    if (steer & MSR_BIG) steered[ns++] = CHG_GIANT;
+    if (steer & MSR_SMALL) steered[ns++] = CHG_DWARF;
+    if (steer & MSR_DYE) steered[ns++] = CHG_NEW_COLOUR;
+    if (steer & MSR_GLOW) steered[ns++] = odd ? CHG_GLOW_STRIPES : CHG_GLOW_SPOTS;
+    if (steer & MSR_SPIRAL) steered[ns++] = CHG_TWISTED;
+    if (steer & MSR_STOP) steered[ns++] = odd ? CHG_EXTRA_LEG : CHG_TUMOURS;
+    if (steer & MSR_ROT) steered[ns++] = CHG_SORES;
+    if (steer & MSR_SHELL) steered[ns++] = odd ? CHG_HORNS : CHG_STONE;
+    if (steer & MSR_NERVE) steered[ns++] = CHG_CIRCLES;
+    for (int k = 0; k < ns && n == 0; k++) take(steered[(k + (int)((h >> 12) % (uint64_t)ns)) % ns]);
+    for (int k = 0; k < 64 && n < want; k++) take((int)(mix64(h + 0x9E37ULL * (uint64_t)(k + 1)) % CHG_COUNT));
+    return n;
+}
+
+AnimalBody changedBody(const AnimalBody& b0, const int* changes, int nChanges) {
+    AnimalBody b = b0;
+    const uint64_t h = mix64(b0.seed ^ 0xC4A9E1ULL);
+    for (int i = 0; i < nChanges; i++)
+        switch (changes[i]) {
+            case CHG_BLOATED: b.width *= 1.3; b.depth *= 1.25; break;
+            case CHG_TUSKS:
+                if (b.ornament != ORN_TUSKS) { b.ornament = ORN_TUSKS; b.ornamentLen = std::max(b.ornamentLen, 1.2 * b.headLen); }
+                b.ornamentLen *= 2.2;
+                break;
+            case CHG_STONE: if (b.dorsal == DORSAL_NONE) { b.dorsal = DORSAL_PLATES; b.dorsalH = 0.3 * b.depth; } break;
+            case CHG_EXTRA_LEG: b.extraLeg = true; break;
+            case CHG_MISSING_LEG: b.missingLeg = (int)(h % (uint64_t)(2 * std::min(b.pairs, 6))); break;
+            case CHG_TWO_HEADS: b.heads = 2; break;
+            case CHG_EXTRA_EYES: b.eyes = std::min(8, b.eyes + 2 + (int)((h >> 4) % 3)); break;
+            case CHG_NO_EYES: b.eyes = 0; break;
+            case CHG_TWISTED: b.twist = 0.35; break;
+            case CHG_JOINED: b.joined = true; break;
+            case CHG_SHORT_LEGS: b.size = std::max(0.35 * b.size, b.size - 0.4 * b.leg); b.leg *= 0.6; break;
+            case CHG_LONG_LEGS: b.size += 0.4 * b.leg; b.leg *= 1.4; break;
+            case CHG_LONG_NECK: b.neck = std::max(2.0 * b.neck, 0.6 * b.size); b.neckUp = std::max(b.neckUp, 0.6); break;
+            case CHG_EXTRA_TAIL: b.extraTail = true; break;
+            case CHG_NEW_PATTERN: b.coat = (b.coat + 1 + (int)((h >> 9) % (COAT_COUNT - 1))) % COAT_COUNT; break;
+            case CHG_WOOLLY: b.hide = HIDE_HAIR; break;
+            case CHG_HAIRLESS: b.hide = HIDE_WET; b.coat = COAT_PLAIN; b.tone = std::min(1.0, b.tone * 1.15); break;
+            case CHG_PALE: b.tone = std::min(1.0, b.tone * 1.35); b.coatTone = std::min(1.0, b.coatTone * 1.35); break;
+            case CHG_DARK: b.tone *= 0.45; b.coatTone *= 0.5; break;
+            default: break;
+        }
+    return b;
+}
+
+bool changeDrawn(int ch) {
+    switch (ch) {
+        case CHG_RIBS: case CHG_MELTING: case CHG_SORES: case CHG_BARE: case CHG_FLAYED: case CHG_TUMOURS: case CHG_STALKS: case CHG_STONE: case CHG_HORNS:
+        case CHG_GLOW_SPOTS: case CHG_GLOW_STRIPES: case CHG_IRIDESCENT: case CHG_SEE_THROUGH: case CHG_NEW_COLOUR: return true;
+        default: return false;
+    }
 }

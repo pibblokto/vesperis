@@ -124,7 +124,9 @@ bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after i
 // J-07: what the explorer saw of an animal species, keyed `<body key>/A<index>` (its index its world's bestiary's, generation 18's): a bit for
 // each thing it was seen doing (surface_types.h's `AnimalDoing`), the nearest it came (metres) and the most seen at once. `animal` lines, after
 // the `animals 1` line that marks the keys' scheme (both only once there is one); its name the explorer's (`names`), which a loan carries
-struct AnimalRecord { uint32_t doing = 0; int nearest = 0, most = 0; };
+// J-07: an animal species seen: its doings' bits, the nearest and the most at once; J-08: the marks it was seen with (surface_types.h's
+// `AnimalMark` bits: dying, gone, changed), written only when there is one
+struct AnimalRecord { uint32_t doing = 0; int nearest = 0, most = 0; uint32_t marks = 0; };
 
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)

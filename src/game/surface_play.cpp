@@ -71,12 +71,27 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
 }
 
+// the living's sounds the surface cues: the birds by day where flyers are, a creature's call, the herds' hoofs, the insects at dusk by the water.
+// J-10: none where every animal is gone (J-08's SILENCE: the silence of a dead world, the wind, the ground and the explorer's own alone)
+void lifeSoundsTo(SurfaceView& surf, AudioState& audio, bool waterNear) {
+    audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
+    if (!surf.pendingCalls.empty()) { audio.call = surf.pendingCalls.back().kind; audio.callPitch = surf.pendingCalls.back().pitch; surf.pendingCalls.clear(); }
+    audio.hoofs = surf.hoofLevel;
+    audio.insects = (kindHas(surf.site.gen.type, KT_FLORA) && waterNear && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
+    if (surf.silence) { audio.birds = audio.hoofs = audio.insects = 0; audio.call = 0; }
+}
+
 // Q-03: the sounds of the ground the surface cues into the synth's levels: the dunes' hum at their note, the ice's song, a quake's shaking and
 // its onset (consumed), all as much as the air carries (the wind's rule: a third of a bar and over whole, the thinnest air 0.15, none airless)
 void groundSoundsTo(SurfaceView& surf, AudioState& audio) {
     audio.air = surf.site.atmosphere ? clampd(surf.env.pressureAtm * 3, 0.15, 1.0) : 0.0;
     audio.dunes = surf.duneSong; audio.duneHz = surf.duneHz; audio.ice = surf.iceSong; audio.quake = surf.quake;
     if (surf.quakeCue > 0) { audio.quakeHit = surf.quakeCue; surf.quakeCue = 0; }
+    // J-10: an overgrowth's: its vents breathing at their lips' pace (a wet one's gurgling), its creaks, its hair; a membrane torn
+    const MadeWorld& mw = surf.site.gen.made;
+    audio.vents = surf.ventSong; audio.ventPace = TAU / GROWTH_BREATH_RATE; audio.creaks = surf.creakSong; audio.hair = surf.hairSong;
+    audio.ventWet = mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES ? mw.spread[mw.growthLine].growth.wet : 0;
+    if (surf.tearCue > 0) { audio.tear = surf.tearCue; surf.tearCue = 0; }
 }
 
 void Game::updateSurface(const Input& in, double dt, double realDt) {
@@ -289,11 +304,16 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
                                   ? 0.6
                                   : (std::fabs(surf.site.groundHeight(surf.player.x + 40, surf.player.z) - surf.site.groundHeight(surf.player.x - 40, surf.player.z)) > 12 ? 1.0 : 0.5));
         audio.surf = waterNear && surf.site.hasWater ? 0.6 : 0;
-        audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
+        lifeSoundsTo(surf, audio, waterNear);
         double stride = std::floor(surf.player.stridePhase);
         if (stride != surf.stepPhase && surf.player.onGround && !surf.inVehicle()) {
             surf.stepPhase = stride;
-            audio.step = surf.player.swimming ? 3 : ((mat == MAT_SAND || mat == MAT_SNOW || mat == MAT_GRASS || mat == MAT_DUST || mat == MAT_FOREST) ? 1 : 2);
+            // (J-09: an overgrowth's soft cover; J-10: a wet one's squelch, WET GROUND)
+            const MadeWorld& mw = surf.site.gen.made;
+            const bool wet = (mat == MAT_TISSUE || mat == MAT_THREADS) && mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES &&
+                             mw.spread[mw.growthLine].growth.wet >= MADE_WET_GROUND;
+            audio.step = surf.player.swimming ? 3 : (wet ? 4 : ((mat == MAT_SAND || mat == MAT_SNOW || mat == MAT_GRASS || mat == MAT_DUST || mat == MAT_FOREST ||
+                                                                 mat == MAT_TISSUE || mat == MAT_THREADS) ? 1 : 2));
             audio.stepGain = surf.player.sprinting ? 0.8 : 0.5;
         }
     }
@@ -307,13 +327,6 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
                 audio.leaves = clampd(dens * (0.25 + clampd(surf.env.windKnots / 20.0, 0, 1)) + (moving && tvp.material == MAT_FOREST ? 0.25 * dens : 0), 0, 1);
             }
         }
-    }
-    {   // creature calls, hoof-steps and the dusk insects
-        if (!surf.pendingCalls.empty()) { audio.call = surf.pendingCalls.back().kind; audio.callPitch = surf.pendingCalls.back().pitch; surf.pendingCalls.clear(); }
-        audio.hoofs = surf.hoofLevel;
-        bool waterNear2 = false;
-        for (int k = 0; k < 4 && !waterNear2; k++) { double a = k * PI / 2; waterNear2 = surf.site.waterAt(surf.player.x + std::cos(a) * 30, surf.player.z + std::sin(a) * 30) > -1e8; }
-        audio.insects = (kindHas(surf.site.gen.type, KT_FLORA) && waterNear2 && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
     }
     audio.rain = std::max(surf.env.rain, surf.env.hail);
     updateForecast();
@@ -395,12 +408,14 @@ void Game::animalsSeen() {
         const std::string a = (std::strchr("AEIOU", words[0]) ? "AN " : "A ") + words;   // AN OCTOPOD
         const std::string named = animalNamed(sg.species) ? animalNameOf(sg.species) : "";
         const char* doing = DOING_NAMES[clampi(sg.doing, 0, DO_COUNT - 1)];
+        const std::string who = named.empty() ? a : upper(named);
+        const bool dead = sg.doing == DO_DEAD;   // J-08: its remains
         if (!guide.animals.count(key)) {
             logEvent("SIGHTING", fmt("%s%s%s, %s, %.0f M AWAY ON %s", named.c_str(), named.empty() ? "" : ", ", a.c_str(), doing, sg.dist, upper(bodyNameOf(surf.site.body)).c_str()));
             guide.creaturesSeen++;
-            status(fmt("NEW SPECIES: %s", named.empty() ? a.c_str() : upper(named).c_str()), 4);
+            status(dead ? fmt("NEW SPECIES: REMAINS OF %s", who.c_str()) : fmt("NEW SPECIES: %s", who.c_str()), 4);
             guide.animals[key];
-        } else status(named.empty() ? a : upper(named), 3);
+        } else status(dead ? "REMAINS OF " + who : who, 3);
     }
     surf.sightings.clear();
     for (size_t i = 0; i < surf.lifeSeen.size(); i++) {
@@ -409,8 +424,9 @@ void Game::animalsSeen() {
         s.fresh = false;
         AnimalRecord& r = guide.animals[animalKey((int)i)];
         const int near = (int)std::lround(std::min(s.nearest, 1e6));
-        r.nearest = r.most == 0 ? near : std::min(r.nearest, near);
+        r.nearest = r.most == 0 && r.doing == 0 ? near : std::min(r.nearest, near);
         r.doing |= s.doing;
         r.most = std::max(r.most, s.most);
+        r.marks |= s.marks;   // J-08: dying, gone, changed
     }
 }

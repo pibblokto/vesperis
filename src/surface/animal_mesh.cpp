@@ -1,4 +1,5 @@
 #include "animal_mesh.h"
+#include "bestiary.h"
 #include "core/rng.h"
 #include <cmath>
 #include <algorithm>
@@ -49,6 +50,28 @@ double legOffset(int gait, int p, int n, int s) {
     }
 }
 
+// J-08: the 3 by 3 heights' bilinear surface under a point (held at its edge past it), for remains laid on the ground
+double groundUnder(const AnimalPoseIn& in, const Vec3& p) {
+    const double hx = std::sin(in.heading), hz = std::cos(in.heading);
+    const Vec3 fwd(hx, 0, hz), side(-hz, 0, hx);
+    const Vec3 d = p - in.at;
+    const double u = clampd(dot(d, fwd) / in.gx, -1, 1) + 1, v = clampd(dot(d, side) / in.gz, -1, 1) + 1;
+    const int i = std::min(1, (int)u), j = std::min(1, (int)v);
+    const double fu = u - i, fv = v - j;
+    const double a = in.ground[i][j] + (in.ground[i + 1][j] - in.ground[i][j]) * fu, c = in.ground[i][j + 1] + (in.ground[i + 1][j + 1] - in.ground[i][j + 1]) * fu;
+    return a + (c - a) * fv;
+}
+// J-08: every point of a pose through `pt`, every axis through `vec`
+template <class F, class G> void mapPose(AnimalPose& P, F&& pt, G&& vec) {
+    vec(P.fwd); vec(P.up); vec(P.side);
+    for (int i = 0; i < P.rings; i++) { pt(P.ringC[i]); vec(P.ringS[i]); vec(P.ringU[i]); vec(P.ringT[i]); }
+    for (int j = 0; j <= P.neckN; j++) pt(P.neckP[j]);
+    pt(P.head0); vec(P.headDir); vec(P.headUp); vec(P.headSide);
+    for (int j = 0; j <= P.tailN; j++) { pt(P.tailP[j]); vec(P.tailU[j]); }
+    for (int l = 0; l < P.legs; l++) for (int j = 0; j < RIG_JOINTS; j++) pt(P.leg[l][j]);
+    if (P.arms) for (int a = 0; a < 2; a++) for (int j = 0; j < 3; j++) pt(P.arm[a][j]);
+    for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) pt(P.wing[w][j]);
+}
 // J-07: every point of a pose moved by `d`
 void shiftPose(AnimalPose& P, const Vec3& d) {
     for (int i = 0; i < P.rings; i++) P.ringC[i] += d;
@@ -159,6 +182,48 @@ AnimalRig rigOf(const AnimalBody& b) {
 }
 
 void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
+    if (in.dead > 0) {   // J-08: remains: posed standing at the origin, stiff (`dead` < 0), then laid on the ground
+        AnimalPoseIn lv = in;
+        lv.dead = -in.dead; lv.at = Vec3(0, 0, 0); lv.heading = 0; lv.moving = lv.running = false; lv.lift = lv.headPitch = lv.reach = lv.crouch = lv.sink = 0;
+        lv.climbing = false; lv.tilt = 0; lv.flap = 0; lv.folded = false;
+        lv.aloft = R.flies || R.floats; lv.afloat = R.swims;
+        for (auto& row : lv.ground) for (double& g : row) g = -1e3;   // (nothing clamped to the ground standing)
+        static const double GIRTH[RS_COUNT] = {1, 1.0, 1.45, 0.78, 0.85, 0.85};
+        lv.girth = in.girth * GIRTH[clampi(in.dead, 0, RS_COUNT - 1)];
+        poseAnimal(R, lv, P);
+        const AnimalBody& b = R.b;
+        const double k = in.scale;
+        const int n = P.rings;
+        const bool legless = b.pairs == 0 && !R.flies && !R.swims && !R.floats;
+        double maxW = 0, maxH = 0;
+        for (int i = 0; i < n; i++) { maxW = std::max(maxW, P.ringW[i]); maxH = std::max(maxH, P.ringH[i]); }
+        const double cy = P.ringC[n / 2].y;
+        // on its side (a walker, a swimmer), a flyer nearly flat with its wings spread, a legless one on its belly, a floater's bag fallen in
+        const double roll = legless || R.floats ? 0.0 : (R.flies ? 0.12 : PI / 2) * ((in.seed & 1) ? 1 : -1);
+        const double lie = legless ? 0.0 : (R.flies || R.floats ? 0.7 * maxH : 0.85 * maxW);
+        const double squash = R.floats ? 0.35 : (legless ? 0.8 : 1.0);
+        const double cr = std::cos(roll), sr = std::sin(roll), ch = std::cos(in.heading), sh = std::sin(in.heading);
+        auto turn = [&](const Vec3& q) {
+            const Vec3 r(q.x * cr - q.y * sr, q.x * sr + q.y * cr, q.z);
+            return Vec3(r.x * ch + r.z * sh, r.y, -r.x * sh + r.z * ch);
+        };
+        auto pt = [&](Vec3& p) {
+            Vec3 q = turn(p - Vec3(0, legless ? 0.0 : cy, 0));
+            q.y *= squash;
+            p = in.at + q + Vec3(0, lie, 0);
+            p.y += groundUnder(in, p) - in.at.y;   // draped over the ground under it
+        };
+        auto vec = [&](Vec3& v) { v = turn(v); };
+        mapPose(P, pt, vec);
+        const double floorY = 0.02 * b.size * k;
+        auto above = [&](Vec3& p) { p.y = std::max(p.y, groundUnder(in, p) + floorY); };
+        for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) above(P.wing[w][j]);
+        for (int l = 0; l < P.legs; l++) for (int j = 0; j < RIG_JOINTS; j++) above(P.leg[l][j]);
+        for (int j = 0; j <= P.neckN; j++) above(P.neckP[j]);
+        for (int j = 0; j <= P.tailN; j++) above(P.tailP[j]);
+        above(P.head0);
+        return;
+    }
     if (in.climbing) {   // J-07: posed on level ground at the origin, then turned onto the trunk
         AnimalPoseIn lv = in;
         lv.climbing = false; lv.at = Vec3(0, 0, 0); lv.heading = 0; lv.aloft = lv.afloat = false; lv.sink = 0;
@@ -183,6 +248,7 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
     };
     const bool onGround = !in.aloft && !in.afloat;
     const bool legless = b.pairs == 0;
+    const bool stiff = in.dead < 0;   // J-08: remains standing at the origin before they are laid down: legs straight, the neck thrown back
     const double phase = in.phase, TAUp = TAU * phase;
     const int pairs = std::min(b.pairs, 6);
     // J-07: the metres the body goes in a cycle, and the bounding gaits, whose backs arch and stretch once a cycle
@@ -226,11 +292,13 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
             const double env = R.swims && b.variant == SWIM_FISH ? std::pow(1 - x, 1.5) : 0.8;
             s = waveA * env * std::sin(TAU * (waves * x - wavePh));
         }
+        if (b.twist > 0) s += b.twist * b.width * k * std::sin(TAU * x);   // J-08: a changed young's twisted spine
         Vec3 c = base + T0 * (R.ringF[i] * k) + side * s + U0 * (R.ringLift[i] * k);
         if (bounding) c += up * (0.12 * b.depth * k * std::sin(TAUp + 0.8) * (1 - (2 * x - 1) * (2 * x - 1)));   // the back arched, then stretched
         if (onGround && legless) c.y = groundAt(c) + R.ringH[i] * k + (b.plan == PLAN_SLUG ? 0.12 * R.ringH[i] * k * std::sin(TAU * (3 * x - phase)) : 0);
+        P.ringW[i] = R.ringW[i] * k * in.girth; P.ringH[i] = R.ringH[i] * k * in.girth;   // J-08: swollen, wasted
+        if (in.sag > 0) { c -= U0 * (0.18 * in.sag * P.ringH[i]); P.ringH[i] *= 1 + 0.15 * in.sag; }   // a melting hide sagging
         P.ringC[i] = c;
-        P.ringW[i] = R.ringW[i] * k; P.ringH[i] = R.ringH[i] * k;
     }
     for (int i = 0; i < n; i++) {
         const Vec3 t = normalize(P.ringC[std::min(n - 1, i + 1)] - P.ringC[std::max(0, i - 1)]);
@@ -249,8 +317,8 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
         const int nn = b.neck > b.size ? 3 : 2;
         P.neckN = nn;
         const double nod = in.moving && !in.running && !legless ? 0.07 * std::sin(TAUp * 2 + 0.6) : 0;   // J-07: nodding with the step
-        const double np = b.neckUp - in.headPitch * (b.neckUp + 0.73) - 0.45 * in.crouch + in.reach * (1.3 - b.neckUp) + nod;
-        const double a0 = b.arched ? np + 0.35 * (1 - in.headPitch) : np, a1 = b.arched ? np - 0.35 : np;
+        const double np = stiff ? 2.1 : b.neckUp - in.headPitch * (b.neckUp + 0.73) - 0.45 * in.crouch + in.reach * (1.3 - b.neckUp) + nod;
+        const double a0 = b.arched && !stiff ? np + 0.35 * (1 - in.headPitch) : np, a1 = b.arched && !stiff ? np - 0.35 : np;
         Vec3 p = cFront + tFront * (0.2 * hFront) + uFront * (0.25 * hFront);
         P.neckP[0] = p; P.neckR[0] = 0.5 * b.neckThick * k;
         for (int j = 1; j <= nn; j++) {
@@ -261,7 +329,7 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
             P.neckP[j] = p; P.neckR[j] = 0.5 * b.neckThick * k * (1 - 0.35 * j / nn);
         }
         P.head0 = p;
-        P.headDir = normalize(neckDir * 0.6 + flatFwd * 0.5 - up * (0.25 + 0.4 * in.headPitch + 0.1 * in.crouch - 1.1 * in.reach));
+        P.headDir = stiff ? normalize(neckDir - flatFwd * 0.2) : normalize(neckDir * 0.6 + flatFwd * 0.5 - up * (0.25 + 0.4 * in.headPitch + 0.1 * in.crouch - 1.1 * in.reach));
     } else {
         P.head0 = cFront + tFront * (0.3 * hFront);
         P.headDir = normalize(tFront - up * (0.12 + 0.5 * in.headPitch + 0.1 * in.crouch - 0.7 * in.reach));
@@ -295,7 +363,8 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
         }
         if (in.aloft) { a0 = 0.02; a1 = -0.1; }
         if (b.plan == PLAN_SERPENT || (R.swims && b.variant == SWIM_EEL)) { a0 = 0; a1 = 0; }
-        const double wag = R.swims ? 0.45 * std::sin(in.t * 4.0 + (in.seed % 7)) : std::sin(in.t * 3 + (in.seed % 7)) * (in.moving ? 0.35 : 0.12);
+        if (stiff && b.tail != TAIL_CURL) { a0 = 0.1; a1 = 0.05; }   // J-08: stiff, straight back
+        const double wag = stiff ? 0.0 : R.swims ? 0.45 * std::sin(in.t * 4.0 + (in.seed % 7)) : std::sin(in.t * 3 + (in.seed % 7)) * (in.moving ? 0.35 : 0.12);
         const Vec3 tb = -P.ringT[0], tu = P.ringU[0], ts = P.ringS[0];
         Vec3 p = P.ringC[0] + tb * (0.2 * P.ringH[0]) + tu * (0.15 * P.ringH[0]);
         if (b.plan == PLAN_SERPENT) p = P.ringC[0];
@@ -362,6 +431,8 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
                 foot = b.wings == WINGS_SKIN ? hip + S * (sg * L * 0.85) + T * ((p == 0 ? 0.35 : -0.35) * L) : hip - U * (L * 0.3) - T * (L * 0.6);
             } else if (in.afloat) {
                 foot = hip - U * (L * 0.5) - T * (L * 0.5);
+            } else if (stiff) {   // J-08: straight out, the front pair forward and the hind back (laid down, they stick out from its side)
+                foot = hip - up * (L * 0.97) + fwd * (L * (pairs < 2 ? 0.1 : (p == 0 ? 0.3 : (p == pairs - 1 ? -0.25 : 0.0))));
             } else {   // J-07: a foot on the ground stays where it was put while the body goes over it, then swings forward lifted
                 double fx = 0, liftA = 0;
                 if (in.moving) {
@@ -514,7 +585,25 @@ namespace {
 struct Emitter {
     const AnimalRig& R; const AnimalPose& P; const AnimalView& V; ShapeSink& out; int detail;
     const AnimalBody& b;
-    Emitter(const AnimalRig& r, const AnimalPose& p, const AnimalView& v, ShapeSink& o, int d) : R(r), P(p), V(v), out(o), detail(d), b(r.b) {}
+    // J-08: a fate drawn (remains, a sickness, a changed young's marks); a bank and a tone every face takes (a skull's bone)
+    bool fated = false;
+    int forceBank = -1; double forceTone = 0.8;
+    Emitter(const AnimalRig& r, const AnimalPose& p, const AnimalView& v, ShapeSink& o, int d) : R(r), P(p), V(v), out(o), detail(d), b(r.b) {
+        fated = v.dead > 0 || v.sickness != 0 || v.marks != 0;
+    }
+    bool mark(int ch) const { return (V.marks >> ch) & 1; }
+    // J-08: a face's bank and tone under its fate: a dyed hide's or a new colour's bank, stone skin's grey, a flayed flank's raw flesh, an
+    // iridescent sheen where it faces the eye, remains' darkened hide
+    void fateCoat(int part, double x, double nu, double vn, int& bank, double& tone) const {
+        if (forceBank >= 0) { bank = forceBank; tone = forceTone; return; }
+        if (!fated) return;
+        if ((V.sickness == MF_DYED || mark(CHG_NEW_COLOUR)) && V.fate >= 0 && bank == hideBank()) bank = V.fate;
+        if ((V.sickness == MF_STONE_SKIN || mark(CHG_STONE)) && part != 3) { bank = V.bone; tone = 0.42 + 0.06 * nu; }
+        if (mark(CHG_FLAYED) && part == 0 && x > 0.3 && x < 0.72 && nu < 0.3) { bank = V.flesh; tone = 0.62; }
+        if ((V.sickness == MF_MELTING || mark(CHG_MELTING)) && part <= 1 && nu < -0.15) { bank = V.flesh; tone = 0.5; }   // the hide sloughing off its underside
+        if (mark(CHG_IRIDESCENT) && vn > 0.6) { bank = coatBank(); tone = std::min(1.0, b.coatTone * 1.5 + 0.2); }
+        if (V.dead >= RS_FRESH && V.dead <= RS_SUNKEN) tone *= V.dead == RS_BLOATED ? 0.68 : 0.55;
+    }
 
     double shadeOf(double light, double tone) const { const double s = light * tone; return s + (63 - s) * V.fog; }
     RVert vert(const Vec3& w, double shade) const { const Vec3 v = V.view(w); RVert q; q.x = v.x; q.y = v.y; q.z = v.z; q.shade = clampd(shade, 0, 63); return q; }
@@ -522,7 +611,7 @@ struct Emitter {
     int hideBank() const { return V.hide[b.bank & 1]; }
     int coatBank() const { return V.hide[b.coatBank & 1]; }
     // a face's bank and tone by the coat: part 0 the trunk, 1 the neck, 2 the head, 3 the tail; i its segment, x along the trunk, nu the up share of its normal
-    void coat(int part, int i, double x, double nu, int k, int& bank, double& tone) const {
+    void coat(int part, int i, double x, double nu, int k, int& bank, double& tone, double vn = 0) const {
         bank = hideBank(); tone = b.tone;
         bool c = false;
         switch (b.coat) {
@@ -536,6 +625,7 @@ struct Emitter {
         }
         if (b.hide == HIDE_WET) tone = std::min(1.0, tone * 1.08);
         if (c) { bank = coatBank(); tone = b.coatTone; }
+        fateCoat(part, x, nu, vn, bank, tone);   // J-08
     }
     // a convex polygon (world corners) facing n: left out facing away unless two-sided, its shade by the light at its middle (`light` <= 0: given)
     void polygon(const Vec3* w, int m, Vec3 n, int bank, double tone, bool twoSided) const {
@@ -582,7 +672,8 @@ struct Emitter {
                 const Vec3 fn = normalize(nv[i][k] + nv[i + 1][k] + nv[i + 1][k1] + nv[i][k1]);
                 if (dot(fn, fc - V.eye) > 0.02 * length(fc - V.eye)) continue;
                 int bank; double tone;
-                coat(part, i, x0 + (x1 - x0) * (i + 0.5) / std::max(1, n - 1), fn.y, k, bank, tone);
+                const double vn = fated && mark(CHG_IRIDESCENT) ? -dot(fn, normalize(fc - V.eye)) : 0.0;   // J-08: an iridescent sheen's
+                coat(part, i, x0 + (x1 - x0) * (i + 0.5) / std::max(1, n - 1), fn.y, k, bank, tone, vn);
                 RVert q[4] = {vv[i][k], vv[i + 1][k], vv[i + 1][k1], vv[i][k1]};
                 q[0].shade = clampd(shadeOf(lt[i][k], tone), 0, 63); q[1].shade = clampd(shadeOf(lt[i + 1][k], tone), 0, 63);
                 q[2].shade = clampd(shadeOf(lt[i + 1][k1], tone), 0, 63); q[3].shade = clampd(shadeOf(lt[i][k1], tone), 0, 63);
@@ -598,9 +689,81 @@ struct Emitter {
         }
     }
 
+    // J-08: a skeleton: the spine through the rings' middles, the ribs round the middle rings, the neck's, the legs' and the tail's bones
+    // (bleached, the bone bank); scattered, each bone moved apart by its own hash and pressed half into the ground, a few gone
+    void skeleton() const {
+        const int n = P.rings, bone = V.bone;
+        const bool scattered = V.dead == RS_SCATTERED;
+        double floorY = 1e18;
+        for (int i = 0; i < n; i++) floorY = std::min(floorY, P.ringC[i].y - std::max(P.ringW[i], P.ringH[i]));
+        const double reach = 0.35 * b.length * P.scale;
+        auto at = [&](const Vec3& p, int piece) {
+            if (!scattered) return p;
+            const uint64_t h = mix64(V.seed + 0x5CA7ULL * (uint64_t)(piece + 1));
+            Vec3 q = p + Vec3((hash01(h) - 0.5) * 2 * reach, 0, (hash01(mix64(h + 1)) - 0.5) * 2 * reach);
+            q.y = floorY + 0.35 * (p.y - floorY);
+            return q;
+        };
+        auto gone = [&](int piece) { return scattered && hash01(mix64(V.seed + 0x60E7ULL * (uint64_t)(piece + 1))) < 0.3; };
+        const int th = std::max(1, thick(0.25 * P.ringH[n / 2]));
+        for (int i = 0; i + 1 < n; i++) if (!gone(i)) line(at(P.ringC[i], i), at(P.ringC[i + 1], i), bone, 0.85, th);
+        if (detail >= 1)
+            for (int i = 1; i + 1 < n || (n == 2 && i < 2); i++) {
+                const double x = (double)i / (n - 1);
+                if (n > 3 && (x < 0.2 || x > 0.85)) continue;
+                for (int sd = -1; sd <= 1; sd += 2) {
+                    const int piece = 20 + 2 * i + (sd > 0);
+                    if (gone(piece)) continue;
+                    Vec3 prev;
+                    for (int q = 0; q <= 4; q++) {   // from the spine round to the belly
+                        const double a = PI / 2 - PI * q / 4;
+                        const Vec3 pq = at(P.ringC[i] + P.ringS[i] * (sd * P.ringW[i] * 0.95 * std::cos(a)) + P.ringU[i] * (P.ringH[i] * 0.95 * std::sin(a)), piece);
+                        if (q) line(prev, pq, bone, 0.8, 1);
+                        prev = pq;
+                    }
+                }
+            }
+        for (int l = 0; l < P.legs; l++) {
+            if (gone(40 + l) || l == b.missingLeg) continue;
+            const int nj = std::min(P.joints, R.bones + 1);
+            for (int j = 0; j + 1 < nj; j++) line(at(P.leg[l][j], 40 + l), at(P.leg[l][j + 1], 40 + l), bone, 0.8, 1);
+        }
+        if (!gone(60)) for (int j = 0; j < P.tailN; j++) line(at(P.tailP[j], 60), at(P.tailP[j + 1], 60), bone, 0.8, 1);
+        if (!gone(61)) for (int j = 0; j < P.neckN; j++) line(at(P.neckP[j], 61), at(P.neckP[j + 1], 61), bone, 0.85, th);
+    }
+    // J-08: where a scattered skeleton's skull lies (its own piece), as `skeleton` moves it
+    Vec3 skullAt() const {
+        if (V.dead != RS_SCATTERED) return P.head0;
+        double floorY = 1e18;
+        for (int i = 0; i < P.rings; i++) floorY = std::min(floorY, P.ringC[i].y - std::max(P.ringW[i], P.ringH[i]));
+        const uint64_t h = mix64(V.seed + 0x5CA7ULL * 63);
+        const double reach = 0.35 * b.length * P.scale;
+        Vec3 q = P.head0 + Vec3((hash01(h) - 0.5) * 2 * reach, 0, (hash01(mix64(h + 1)) - 0.5) * 2 * reach);
+        q.y = floorY + 0.5 * (P.head0.y - floorY);
+        return q;
+    }
+    // J-08: a see-through hide: its rings' outlines, faint, over the skeleton inside
+    void outline() const {
+        const int n = P.rings;
+        for (int i = 0; i < n; i++)
+            for (int q = 0; q < 8; q++) {
+                const double a0 = TAU * q / 8, a1 = TAU * (q + 1) / 8;
+                line(P.ringC[i] + P.ringS[i] * (P.ringW[i] * std::cos(a0)) + P.ringU[i] * (P.ringH[i] * std::sin(a0)),
+                     P.ringC[i] + P.ringS[i] * (P.ringW[i] * std::cos(a1)) + P.ringU[i] * (P.ringH[i] * std::sin(a1)), hideBank(), 0.45 * b.tone, 1);
+            }
+        for (int q = 0; q < 4; q++)   // the hide's length at its top, belly and flanks
+            for (int i = 0; i + 1 < n; i++) {
+                const double a = TAU * q / 4;
+                line(P.ringC[i] + P.ringS[i] * (P.ringW[i] * std::cos(a)) + P.ringU[i] * (P.ringH[i] * std::sin(a)),
+                     P.ringC[i + 1] + P.ringS[i + 1] * (P.ringW[i + 1] * std::cos(a)) + P.ringU[i + 1] * (P.ringH[i + 1] * std::sin(a)), hideBank(), 0.45 * b.tone, 1);
+            }
+    }
+
     // the trunk's rings rounded off at both ends (a ring a third in, beyond each end ring) and, near, each segment halved on a smooth curve
     void trunk() const {
         const int n = P.rings;
+        if (V.dead >= RS_BONES) { skeleton(); return; }   // J-08
+        if (mark(CHG_SEE_THROUGH) && detail >= 1) { skeleton(); outline(); return; }
         if (detail == 0) {
             const Vec3 a = P.ringC[0], c = P.ringC[n - 1];
             line(a, c, hideBank(), b.tone, thick(2 * P.ringH[n / 2]));
@@ -633,7 +796,7 @@ struct Emitter {
     }
 
     void neck() const {
-        if (P.neckN == 0) return;
+        if (P.neckN == 0 || V.dead >= RS_BONES) return;
         const int n = P.neckN + 1;
         if (detail == 0) { for (int j = 0; j < P.neckN; j++) line(P.neckP[j], P.neckP[j + 1], hideBank(), b.tone, thick(2 * P.neckR[j])); return; }
         Vec3 S[RIG_CHAIN + 1], U[RIG_CHAIN + 1];
@@ -698,8 +861,8 @@ struct Emitter {
             }
         }
         if (detail < 2) return;
-        // the eyes: glints in a pair, a row, a ring or on stalks
-        if (b.eyes > 0) {
+        // the eyes: glints in a pair, a row, a ring or on stalks (J-08: none on remains)
+        if (b.eyes > 0 && V.dead == 0) {
             const int ne = std::min(b.eyes, 8);
             const int sz = W * 2 * V.pxPerM > 40 ? 2 : 1;
             for (int e = 0; e < ne; e++) {
@@ -806,7 +969,7 @@ struct Emitter {
     }
 
     void tail() const {
-        if (P.tailN == 0) return;
+        if (P.tailN == 0 || V.dead >= RS_BONES) return;
         const int n = P.tailN + 1;
         const bool thin = detail == 0 || b.tail == TAIL_WHIP || b.tail == TAIL_CURL || b.tail == TAIL_STINGER || P.tailR[0] * V.pxPerM < 2.5;
         if (thin) {
@@ -844,10 +1007,19 @@ struct Emitter {
     }
 
     void legs() const {
-        if (P.legs == 0) return;
+        if (P.legs == 0 || V.dead >= RS_BONES) return;
         const bool tubes = detail >= 1 && P.legR * 2 * V.pxPerM >= 2.0 * V.fbScale;
         const int th = thick(2 * P.legR);
+        if (b.extraLeg && !R.floats && detail >= 1) {   // J-08: a leg more, limp, hanging from its flank
+            const int i = clampi((int)std::lround(0.45 * (P.rings - 1)), 0, P.rings - 1);
+            const double L = b.leg * P.scale * 0.8;
+            const Vec3 S = P.ringS[i], U = P.ringU[i], T = P.ringT[i];
+            const Vec3 hip = P.ringC[i] + S * (P.ringW[i] * 0.9) - U * (P.ringH[i] * 0.3);
+            const Vec3 knee = hip + S * (0.25 * L) - U * (0.45 * L) - T * (0.15 * L), foot = knee - U * (0.4 * L) + S * (0.1 * L) - T * (0.25 * L);
+            line(hip, knee, hideBank(), b.tone * 0.85, th); line(knee, foot, hideBank(), b.tone * 0.8, std::max(1, th - 1));
+        }
         for (int l = 0; l < P.legs; l++) {
+            if (l == b.missingLeg && !R.floats) continue;   // J-08: a changed young's leg gone
             const Vec3* J = P.leg[l];
             const int nj = R.floats ? P.joints : std::min(P.joints, R.bones + 1);
             if (R.floats) {   // strands
@@ -900,6 +1072,11 @@ struct Emitter {
 
     void wings() const {
         if (P.wings == 0) return;
+        if (V.dead >= RS_BONES) {   // J-08: a wing's bones (the arm and the hand), the rest gone
+            if (V.dead == RS_SCATTERED) return;
+            for (int w = 0; w < P.wings; w++) for (int j = 0; j + 1 < std::min(P.wingPts, 3); j++) line(P.wing[w][j], P.wing[w][j + 1], V.bone, 0.8, 1);
+            return;
+        }
         for (int w = 0; w < P.wings; w++) {
             const Vec3* Wp = P.wing[w];
             if (detail == 0) { line(Wp[0], Wp[P.wingPts == 6 ? 2 : 1], hideBank(), b.tone, 1); continue; }
@@ -921,7 +1098,7 @@ struct Emitter {
 
     // plates, spines, a sail, a shell or a fin along the back
     void dorsal() const {
-        if (detail == 0 || b.dorsal == DORSAL_NONE || b.dorsal == DORSAL_HUMPS) return;
+        if (detail == 0 || b.dorsal == DORSAL_NONE || b.dorsal == DORSAL_HUMPS || V.dead >= RS_BONES) return;
         const int n = P.rings;
         const double H = b.dorsalH * P.scale;
         auto top = [&](int i) { return P.ringC[i] + P.ringU[i] * (P.ringH[i] * 0.95); };
@@ -1045,14 +1222,166 @@ struct Emitter {
 };
 }
 
+namespace {
+// J-08: what a fate shows on the hide, near: ribs under a thin hide (wasting, a changed young's, remains sunk), sores and drips (melting),
+// tumours (growths), stalks with their heads (sprouting: Ophiocordyceps' stromata), the cracks of stone skin, bare patches, glowing spots and
+// stripes (bright at night, pale by day), horns grown where none should be; each at its own place by the animal's hash
+void fateMarks(const Emitter& E) {
+    const AnimalPose& P = E.P; const AnimalView& V = E.V; const AnimalBody& b = E.b;
+    if (E.detail < 2 || !E.fated || V.dead >= RS_BONES) return;
+    const int n = P.rings;
+    auto onHide = [&](double x, double a, double lift) {
+        const double fi = clampd(x, 0, 1) * (n - 1);
+        const int i0 = std::min(n - 2, (int)fi);
+        const double q = fi - i0;
+        const Vec3 c = P.ringC[i0] + (P.ringC[i0 + 1] - P.ringC[i0]) * q, s = P.ringS[i0], u = P.ringU[i0];
+        const double w = P.ringW[i0] + (P.ringW[i0 + 1] - P.ringW[i0]) * q, h = P.ringH[i0] + (P.ringH[i0 + 1] - P.ringH[i0]) * q;
+        return c + s * (w * lift * std::cos(a)) + u * (h * lift * std::sin(a));
+    };
+    auto normalAt = [&](double x, double a) { const int i = clampi((int)(x * (n - 1)), 0, n - 1); return normalize(P.ringS[i] * std::cos(a) + P.ringU[i] * std::sin(a)); };
+    auto facing = [&](const Vec3& p, const Vec3& nn) { return dot(nn, p - V.eye) <= 0; };
+    auto h01 = [&](int k) { return hash01(mix64(V.seed + 0xFA7EULL * (uint64_t)(k + 1))); };
+    const int sz = P.ringH[n / 2] * 2 * V.pxPerM > 60 ? 2 : 1;
+    const double depth = b.depth * P.scale;
+    const int sick = V.sickness;
+    // ribs: three strokes down each flank at the middle rings
+    if (sick == MF_WASTING || E.mark(CHG_RIBS) || V.dead == RS_SUNKEN)
+        for (int i = 1; i + 1 < n; i++) {
+            const double x = (double)i / (n - 1);
+            if (x < 0.25 || x > 0.8) continue;
+            for (int sd = 0; sd < 2; sd++) {
+                const double a0 = sd ? PI - 1.0 : 1.0, a1 = sd ? PI + 0.7 : -0.7;
+                if (!facing(onHide(x, 0.5 * (a0 + a1), 1.03), normalAt(x, 0.5 * (a0 + a1)))) continue;
+                Vec3 prev = onHide(x, a0, 1.03);
+                for (int q = 1; q <= 3; q++) { const Vec3 p = onHide(x, a0 + (a1 - a0) * q / 3, 1.03); E.line(prev, p, V.dark, 0.35, 1); prev = p; }
+            }
+        }
+    // sores and the drips off a melting hide
+    if (sick == MF_MELTING || E.mark(CHG_MELTING) || E.mark(CHG_SORES)) {
+        for (int j = 0; j < 12; j++) {
+            const double x = 0.08 + 0.84 * h01(j), a = h01(j + 40) * TAU;
+            const Vec3 p = onHide(x, a, 1.04), nn = normalAt(x, a);
+            if (facing(p, nn)) E.point(p, V.flesh, E.shadeOf(V.light(p, nn), 0.72), sz + 1);
+        }
+        if (sick == MF_MELTING || E.mark(CHG_MELTING))
+            for (int j = 0; j < 6; j++) {
+                const double x = 0.12 + 0.76 * h01(j + 80), a = -PI / 2 + (h01(j + 90) - 0.5) * 1.2;
+                const Vec3 p = onHide(x, a, 1.0);
+                E.line(p, p - P.up * (depth * (0.25 + 0.3 * h01(j + 100))), V.flesh, 0.55, std::max(1, E.thick(0.04 * depth)));
+            }
+    }
+    // tumours: lumps off the trunk and the neck, faced to the eye, a raw middle
+    if (sick == MF_GROWTHS || E.mark(CHG_TUMOURS))
+        for (int j = 0; j < 7; j++) {
+            const double x = 0.05 + 0.9 * h01(j + 120), a = h01(j + 130) * TAU;
+            const Vec3 nn = normalAt(x, a), p = onHide(x, a, 1.0) + nn * (0.06 * depth);
+            if (!facing(p, nn)) continue;
+            const Vec3 dir = normalize(p - V.eye);
+            Vec3 rt = cross(dir, P.up); rt = length(rt) > 1e-6 ? normalize(rt) : P.side;
+            const Vec3 upv = cross(rt, dir);
+            const double r = depth * (0.1 + 0.12 * h01(j + 140));
+            Vec3 c[6];
+            for (int k = 0; k < 6; k++) c[k] = p + rt * (r * std::cos(TAU * k / 6)) + upv * (r * std::sin(TAU * k / 6));
+            E.polygon(c, 6, -dir, E.hideBank(), b.tone * 0.72, true);
+            E.point(p, V.flesh, E.shadeOf(V.light(p, nn), 0.7), 1);
+        }
+    // stalks out of the back and the head, each with its swollen head
+    if (sick == MF_SPROUTING || E.mark(CHG_STALKS))
+        for (int j = 0; j < 5; j++) {
+            const double x = 0.15 + 0.85 * h01(j + 160), a = PI / 2 + (h01(j + 170) - 0.5) * 1.4;
+            const Vec3 base = j == 4 ? P.head0 + P.headUp * (0.5 * P.headH) : onHide(x, a, 1.0);
+            const double L = b.size * P.scale * (0.35 + 0.45 * h01(j + 180));
+            const Vec3 tip = base + P.up * L + P.side * ((h01(j + 190) - 0.5) * 0.4 * L) + P.fwd * ((h01(j + 200) - 0.5) * 0.3 * L);
+            E.line(base, tip, V.bone, 0.72, 1);
+            E.point(tip, V.bone, E.shadeOf(V.light(tip, P.up), 0.92), sz + 1);
+        }
+    // stone skin's cracks
+    if (sick == MF_STONE_SKIN || E.mark(CHG_STONE))
+        for (int j = 0; j < 9; j++) {
+            const double x = 0.05 + 0.85 * h01(j + 220), a = h01(j + 230) * TAU;
+            const Vec3 p = onHide(x, a, 1.02), nn = normalAt(x, a);
+            if (facing(p, nn)) E.line(p, onHide(x + 0.06 + 0.06 * h01(j + 240), a + 0.5 * (h01(j + 250) - 0.5), 1.02), V.dark, 0.4, 1);
+        }
+    // bare patches (a host on the skin's, a changed young's)
+    if (E.mark(CHG_BARE) || (sick == MF_WASTING && (V.seed & 4)))
+        for (int j = 0; j < 7; j++) {
+            const double x = 0.1 + 0.8 * h01(j + 260), a = h01(j + 270) * TAU;
+            const Vec3 p = onHide(x, a, 1.03), nn = normalAt(x, a);
+            if (facing(p, nn)) E.point(p, V.bone, E.shadeOf(V.light(p, nn), 0.75), sz + 1);
+        }
+    // a glow in the skin: spots or stripes, bright in the dark
+    const bool spots = sick == MF_GLOWING || E.mark(CHG_GLOW_SPOTS), stripes = E.mark(CHG_GLOW_STRIPES);
+    if (spots)
+        for (int j = 0; j < 14; j++) {
+            const double x = 0.06 + 0.88 * h01(j + 300), a = h01(j + 310) * TAU;
+            const Vec3 p = onHide(x, a, 1.04), nn = normalAt(x, a);
+            if (!facing(p, nn)) continue;
+            if (V.night) E.point(p, V.glint, 60, sz + 1); else E.point(p, V.bone, E.shadeOf(V.light(p, nn), 0.9), sz);
+        }
+    if (stripes)
+        for (int i = 1; i + 1 < n; i++)
+            for (int q = 0; q < 8; q++) {
+                const double a0 = TAU * q / 8, a1 = TAU * (q + 1) / 8;
+                const Vec3 p0 = onHide((double)i / (n - 1), a0, 1.03), p1 = onHide((double)i / (n - 1), a1, 1.03);
+                if (!facing((p0 + p1) * 0.5, normalAt((double)i / (n - 1), 0.5 * (a0 + a1)))) continue;
+                if (V.night) { RVert v0 = E.vert(p0, 58), v1 = E.vert(p1, 58); E.out.line(v0, v1, V.glint, true, 1); }
+                else E.line(p0, p1, V.bone, 0.85, 1);
+            }
+    // horns grown where none should be
+    if (E.mark(CHG_HORNS))
+        for (int j = 0; j < 4; j++) {
+            const double x = 0.3 + 0.7 * h01(j + 340), a = PI / 4 + PI / 2 * h01(j + 350);
+            const Vec3 nn = normalAt(x, a), p = onHide(x, a, 1.0);
+            E.line(p, p + nn * (0.3 * depth) + P.fwd * (0.1 * depth), V.bone, 0.85, std::max(1, E.thick(0.06 * depth)));
+        }
+}
+}
+
 void emitAnimal(const AnimalRig& R, const AnimalPose& P, const AnimalView& V, int detail, ShapeSink& out) {
     const Emitter E(R, P, V, out, detail);
     E.legs();
     E.trunk();
     E.dorsal();
     E.neck();
-    E.head();
+    if (V.dead >= RS_BONES) {   // J-08: the skull, bleached (a scattered one's apart), its horns on it
+        AnimalPose S = P;
+        S.head0 = E.skullAt(); S.headLen *= 0.85; S.headW *= 0.75; S.headH *= 0.75;
+        Emitter K(R, S, V, out, detail);
+        K.forceBank = V.bone; K.forceTone = 0.8;
+        K.head();
+    } else E.head();
     E.tail();
     E.wings();
     E.marks();
+    fateMarks(E);
+    const AnimalBody& b = R.b;
+    if (V.dead >= RS_BONES || detail == 0) return;
+    if (b.heads >= 2) {   // J-08: a second head beside the first, its neck out of the same shoulders
+        AnimalPose H = P;
+        const double off = 1.3 * std::max(P.headW, 0.6 * P.neckR[0] * 2);
+        const Vec3 sd = P.headSide;
+        for (int j = 1; j <= H.neckN; j++) H.neckP[j] += sd * (off * j / std::max(1, H.neckN));
+        H.head0 += sd * off;
+        H.headDir = normalize(H.headDir + sd * 0.35);
+        Vec3 hs = cross(H.headDir, P.up); H.headSide = length(hs) > 1e-6 ? normalize(hs) : P.headSide; H.headUp = cross(H.headSide, H.headDir);
+        const Emitter E2(R, H, V, out, detail);
+        E2.neck(); E2.head();
+    }
+    if (b.extraTail && P.tailN > 0) {   // a tail more, out of the same rump
+        AnimalPose T = P;
+        const double off = 2.5 * std::max(P.tailR[0], 0.02 * b.size * P.scale);
+        for (int j = 1; j <= T.tailN; j++) T.tailP[j] += P.ringS[0] * (off * j / T.tailN) - P.up * (0.3 * off * j / T.tailN);
+        const Emitter E3(R, T, V, out, detail);
+        E3.tail();
+    }
+    if (b.joined) {   // a twin joined at its flank: the whole of it again, beside
+        AnimalPose J = P;
+        double w = 0;
+        for (int i = 0; i < P.rings; i++) w = std::max(w, P.ringW[i]);
+        shiftPose(J, P.side * (1.7 * w));
+        AnimalBody one = b; one.joined = false; one.heads = 1; one.extraTail = false;
+        AnimalRig R2 = R; R2.b = one;
+        const Emitter E4(R2, J, V, out, detail);
+        E4.legs(); E4.trunk(); E4.neck(); E4.head(); E4.tail();
+    }
 }

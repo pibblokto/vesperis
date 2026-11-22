@@ -97,6 +97,9 @@ enum Material {
     MAT_STROMATOLITE,   // a stromatolite reef's flat, the pale carbonate between its domes (family rock; the archean's second accent; the domes, objects, wear the mats)
     MAT_CRUST,    // lichen crusts on bare ground and stone (family rock; the lichen world's first accent)
     MAT_MOSS,     // moss mats in the wet hollows (family grass; the lichen world's second accent)
+    MAT_TISSUE,   // J-09: an overgrowth's soft tissue (flesh, slime mould, bladders, films; family rock: drawn in the overgrowth's own bank)
+    MAT_THREADS,  // J-09: an overgrowth's threads (fungus, hair, carpets)
+    MAT_HARD,     // J-09: an overgrowth's hard ground (coral, sponge, lichen, a plated or bony tissue)
     MAT_COUNT
 };
 // N1-01: material families share a palette bank in every view (rock, water, forest, grass, sand, snow); P-00: a kind without flora

@@ -259,6 +259,7 @@ public:
     std::string testForecastLine() const { return forecastLine(); }
     double testMapShadowMax();                                    // the darkest shadow on the landing map now (0..1)
     void testSetTime(double tt) { t = tt; }
+    double testT() const { return t; }   // J-10: the game's clock
     const char* testReliefClass(double lat, double lon);         // FLAT / HILLS / MOUNTAINS at a site of the parked body
     // ---- the status, the explorer, the vehicles, the cabin, flight and the aim
     std::string testStatus() const { return statusMsg; }

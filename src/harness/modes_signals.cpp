@@ -227,6 +227,23 @@ std::vector<GroundSound> groundSounds() {
                 a.air = 0.6;
             },
             "a tectonic world's quake, its lava's rumble with it"});
+    // J-10: an overgrowth's: steps on wet ground, its vents breathing near (dry, and wet with bubbles), its tissue creaking, a hair field in the
+    // wind, a membrane pushed through
+    {
+        auto last = std::make_shared<int>(-1);
+        S.push_back({"squelch", 6.0, [last](AudioState& a, double t) { const int k = (int)(t / 0.55); if (k != *last) { *last = k; a.step = 4; a.stepGain = 0.5; } a.air = 1.0; },
+                     "a walk on wet ground (WET GROUND), a step every 0.55 s"});
+    }
+    S.push_back({"vents_dry", 16.0, [](AudioState& a, double) { a.vents = 1.0; a.ventPace = TAU / GROWTH_BREATH_RATE; a.ventWet = 0; a.air = 1.0; },
+                 "beside a dry overgrowth's vent (BREATHING), two breaths"});
+    S.push_back({"vents_wet", 16.0, [](AudioState& a, double) { a.vents = 1.0; a.ventPace = TAU / GROWTH_BREATH_RATE; a.ventWet = 0.8; a.air = 1.0; },
+                 "beside a wet one's, bubbling as it breathes out"});
+    S.push_back({"creaks", 20.0, [](AudioState& a, double) { a.creaks = 1.0; a.air = 1.0; }, "among a hard overgrowth's ribs and spires in the wind"});
+    S.push_back({"hair", 8.0, [](AudioState& a, double) { a.hair = 1.0; a.air = 1.0; }, "in a hair field in the wind"});
+    {
+        auto done = std::make_shared<bool>(false);
+        S.push_back({"tear", 2.0, [done](AudioState& a, double t) { if (t > 0.3 && !*done) { *done = true; a.tear = 0.8; } a.air = 1.0; }, "a membrane across a doorway pushed through"});
+    }
     return S;
 }
 RenderStats renderGroundSound(const GroundSound& gs, std::vector<int16_t>* pcm, int* iceEvents, std::vector<float>* raw) {

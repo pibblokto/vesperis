@@ -3,6 +3,7 @@
 // the environment at the place and the nearest front's line, the flocks and the creatures, the trees and the logs, and a
 // settlement in the view's metres (`Ruin`)
 #include "site.h"
+#include "animal_mesh.h"
 #include "galaxy/fronts.h"
 #include "peoples/ruins.h"
 #include "life/samples.h"
@@ -173,8 +174,49 @@ enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT,
                     CS_UNDER, CS_CLIMB, CS_DISPLAY, CS_CHARGE, CS_STATES };
 // J-07: what an animal is seen doing (the guide keeps a bit of each a species was seen doing): a land animal's state, then the air's and the
 // water's
-enum AnimalDoing { DO_FLYING = CS_STATES, DO_PERCHED, DO_SWARMING, DO_SOARING, DO_DRIFTING, DO_SWIMMING, DO_LEAPING, DO_COUNT };
+// J-08: feeding at remains (a hunter's, a scavenger's: a land state numbered after the doings, whose bits the guide keeps), and remains seen
+enum AnimalDoing { DO_FLYING = CS_STATES, DO_PERCHED, DO_SWARMING, DO_SOARING, DO_DRIFTING, DO_SWIMMING, DO_LEAPING, DO_FEEDING, DO_DEAD, DO_COUNT };
+constexpr int CS_FEED = DO_FEEDING;
 extern const char* const DOING_NAMES[DO_COUNT];
+// J-08: what the record marks a species seen with (the guide keeps the bits): dying (its remains or a sick one seen), gone (remains where none
+// of it lives), changed (a changed young seen)
+enum AnimalMark { AM_DYING = 1, AM_GONE = 2, AM_CHANGED = 4 };
+// J-09: an overgrowth's structures (`SurfaceView::forGrowths`): the shared ones, then each type's own (a fungus's caps and shelves, a slime
+// mould's creeping veins, a coral's spires, a sponge's vases, hair's waving tufts, the rising bladders)
+constexpr double GROWTH_BREATH_RATE = 0.8;   // J-10: a vent's lips breathe at this many radians a second (the drawing and its sound)
+enum GrowthShape { GS_MOUND = 0, GS_RIDGE, GS_BLISTER, GS_SAC, GS_STALK, GS_FOLD, GS_VENT, GS_ARCH, GS_TEETH, GS_MEMBRANE, GS_POLYP, GS_CAP, GS_SHELF,
+                   GS_VEINS, GS_SPIRE, GS_VASE, GS_HAIR, GS_BLADDER, GS_COUNT };
+// J-09: one structure: its shape, its foot and the ground there, its radius (a stalk's, a rib's or a post's girth, a tuft's or a cluster's
+// reach), its height (a bladder's float), its heading and its length along it (a ridge's, a fold's, an arch's span, a row's, a membrane's,
+// the veins'), its hash; whether the explorer walks round it (`collides`: what stands over a step)
+struct GrowthInst {
+    int shape = GS_MOUND;
+    double x = 0, z = 0, gy = 0, r = 0, h = 0, heading = 0, len = 0;
+    uint64_t hs = 0;
+    bool collides = false;
+};
+double growthReachOf(const GrowthInst& S);                                // how far it reaches over the ground from its foot
+bool growthHolds(const GrowthInst& S, double x, double z, double margin);  // whether a point lies under it (within `margin` of its reach)
+// the points it stands on (a round one's foot, a row's teeth, an arch's ribs' feet, along a ridge, a fold or a membrane) with the disc each
+// stands in the way with: the colliders' and the drawing's
+struct GrowthFoot { double x = 0, z = 0, r = 0; };
+constexpr int GROWTH_FEET = 24;
+int growthFeet(const GrowthInst& S, GrowthFoot* out, int max);
+extern const char* const ANIMAL_MARK_NAMES[3];
+// J-08: an animal dead on the ground as far as it has gone (`RemainsStage`, animal_mesh.h's: how it is posed and drawn)
+extern const char* const REMAINS_NAMES[RS_COUNT];
+// J-08: remains: a die-off's (its habitat cell's, a pure function of the cell: `SurfaceView::cellRemains`), a kill's, old bones on any world. Its
+// species, where it lies and which way, its size, its stage, its own hash, its cell (dropped with the cell); on high ground with stalks (a
+// sprouting one's), a kill (the hunters feed at it: `eaten` the seconds they fed, past which it is sunk to its ribs), old bones
+struct Remains {
+    int species = -1;
+    double x = 0, z = 0, heading = 0, size = 1;
+    int stage = RS_FRESH;
+    uint64_t seed = 0;
+    int gLat = 0, gLon = 0;
+    bool cell = true, stalks = false, kill = false, old = false;
+    double eaten = 0;
+};
 struct Critter {
     double x = 0, z = 0, heading = 0, speed = 0, timer = 0, size = 1;
     uint64_t seed = 0;
@@ -198,6 +240,15 @@ struct Critter {
     uint64_t quarry = 0;                      // a hunter's quarry, a scavenger's hunter (their seeds); 0 none
     double hungerT = 0;                       // till a hunter hunts again, a territorial charges again
     double calmT = 0;                         // a climber's or a burrower's time since the explorer was near
+    // J-08: its fate: a sickness it shows (an MF_ bit of galaxy/made.h, 0 none), born changed (its species' changes: the changed rig), the remains
+    // it feeds at (their seed, 0 none), a crazed or a stumbling one's fall (seconds left), a hunt's one roll for the kill made, killed (gone after
+    // the frame)
+    int sick = 0;
+    bool changed = false;
+    uint64_t food = 0;
+    double fallT = 0;
+    bool rolled = false, killed = false;
+    int64_t fallWin = -1;                     // the four seconds' window its last fall came in
 };
 // N2: one tree, placed by SurfaceView::forTrees (drawing, colliders, coverage and creatures read the same list)
 struct TreeInst {
@@ -209,6 +260,7 @@ struct TreeInst {
     bool dead = false, bare = false;   // a dead skeleton; deciduous in winter
     bool stump = false;            // a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
     bool made = false, galls = false;   // J-05: in a made plants' look (its leaves in its bank: a blight, new leaves, a glow), swellings on it
+    bool wrapped = false;          // J-09: wrapped in an overgrowth (its trunk and canopy in its bank and tile)
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };

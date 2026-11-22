@@ -66,6 +66,7 @@ struct SeedVerdict {
     // bleaches them)
     RGB forest;
     bool reefs = false;
+    double growLand = 0;   // J-11: the share of its land an overgrowth of its line could lie on (not snow or ice, within its band of warmth)
     bool takes() const { return fate == SF_GROWS; }
 };
 // the verdict: the furnace and the solvent, the medium (`growthIn`, its food a native it eats or one that feeds it), oxygen, pH and the dose,
@@ -104,7 +105,7 @@ MadeWorld madeWorldOf(const StarSystem& sys, int body, const std::vector<Seeding
 MadeWorld madeTestLayer(const Vec3& place, double reach, int cover, double coverAlbedo, const RGB& tint);
 // what a layer shows, in the data sheet's words: "RED SEAS", "GLOWING SEAS"; J-05: the waters', the ground's and the plants' after them,
 // "MILK SEAS", "CRUSTS", "RED SNOW", "BLIGHT"; J-04: the air's last, "THICK AIR", "ORANGE HAZE", "RED CLOUDS", "BLOOD RAIN" and the rest
-// (none: empty)
+// (none: empty); J-08: the animals' after the air's, "DIE-OFF", "WASTING", "RED HIDES", "SILENCE"
 std::vector<std::string> madeTraitWords(const MadeWorld& m, bool seas);
 // J-04: the made air's names (`MadeAirTrait`'s order; a dyed cloud's and rain's words are their dye's: `madeTraitWords`)
 extern const char* const MADE_AIR_NAMES[MADE_AIR_TRAITS];
@@ -113,5 +114,23 @@ extern const char* const MADE_AIR_NAMES[MADE_AIR_TRAITS];
 extern const char* const MADE_SEA_NAMES[MADE_SEA_TRAITS];
 extern const char* const MADE_GROUND_NAMES[MADE_GROUND_TRAITS];
 extern const char* const MADE_PLANT_NAMES[MADE_PLANT_TRAITS];
+// J-08: the animals' fates' names (`MadeFaunaTrait`'s order; dyed hides are named by their dye: "RED HIDES"), and what killed them ("A NERVE
+// POISON", "THE HEAT")
+extern const char* const MADE_FAUNA_NAMES[MADE_FAUNA_TRAITS];
+// J-09: the overgrowths' names (`MadeGrowthType`'s order: "FLESH", "FUNGUS", "SLIME MOULD" ... "FILMS"); the cover a type lays at a hardness
+// (a coral's, a sponge's, a lichen's or a plated or bony one's hard ground; a fungus's, hair's or a carpet's threads; else a soft tissue)
+extern const char* const MADE_GROWTH_NAMES[OG_COUNT];
+inline int madeGrowthCover(int type, int hard) {
+    if (type == OG_CORAL || type == OG_SPONGE || type == OG_LICHEN || hard >= 2) return MAT_HARD;
+    return type == OG_FUNGUS || type == OG_HAIR || type == OG_CARPETS ? MAT_THREADS : MAT_TISSUE;
+}
+extern const char* const MADE_DEATH_NAMES[MD_COUNT];
 // J-04: the data sheet's AIR line: "THICKER, 9 C WARMER THAN IT WAS", "HAZY, 4 C COLDER THAN IT WAS" (none: empty)
 std::string madeAirWords(const MadeWorld& m);
+// J-11: whether a layer harmed its world's life, and whether it made the world more livable where it harmed nothing (IDEAS-seeded-worlds.md
+// section 5's shares, which `seed kinds` prints). Harm: a die-off, a sickness (a glow or a dye in the skin alone is a look), changed young or
+// silence; plants blighted, rotted, frost-burnt, bleached, galled or dried by the heat; seas a soup, a jelly, sour, purple, black or boiling; a
+// runaway, the ice running, a thinned ozone; an overgrowth over the land (films by the waters are a look). More livable: thriving animals, lush
+// plants, a new ozone, a greened world
+bool madeHarms(const MadeWorld& m);
+bool madeLivable(const MadeWorld& m);

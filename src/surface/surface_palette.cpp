@@ -1,6 +1,7 @@
 // E-08: the frame's palette: the look a world's kind and palette give (`lookFor`), the banks' ramps (`setupPalette`: the
 // ground's families, the sky, the water, the aurorae, the exposure) and the frame's lamps (`setupLamps`, `lampAt`)
 #include "surface_internal.h"
+#include "life/cultures.h"
 
 // the ground colours come from the body's material palette (BodyGen::matColor, shared with the globe
 // and the landing map); the sky, the fog, the night and the cloud layer are the kind's row
@@ -25,7 +26,7 @@ SurfaceLook lookFor(const BodyGen& g, const Star& star) {
     const RGB* m = g.matColor;
     L.ground = madeMatColour(g, familyRep(g.type, FAM_ROCK));   // (J-05: rusted by a made oxygen)
     L.sand = madeMatColour(g, familyRep(g.type, FAM_SAND));
-    L.snow = m[familyRep(g.type, FAM_SNOW)];
+    L.snow = madeMatColour(g, familyRep(g.type, FAM_SNOW));   // (J-11: a made hothouse's salt, a made snowball's frost)
     L.grass = madeMatColour(g, familyRep(g.type, FAM_GRASS));   // a kind's first accent where it lends the grass bank; J-04: plants dried by a made heat
     L.flora2 = madeFlora2(g);
     // bank 2 (secondary): water where there is a sea, lava on hot worlds, else the bright crystal/ejecta tint
@@ -167,7 +168,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     {   // bank 16: bark, a brown of the planet's own (toward the second flora colour); bank 17: cut wood, pale. On
         // the ground bank, whose dark stops take the sky's colour, trunks would be black and branches grey-blue
         RGB bark = lerp(RGB(0.36f, 0.25f, 0.15f), site.gen.vegColor2 * 0.55f, 0.3f), wood(0.74f, 0.62f, 0.44f);
-        const int cover = KINDS[site.gen.type].cover;   // a frozen world's dead wood white with frost, a scorched world's turned to stone
+        const int cover = deadCoverOf(site.gen);   // a frozen world's dead wood white with frost, a scorched world's turned to stone (J-11: a made kind's too)
         if (cover == DC_FROZEN) { bark = RGB(0.80f, 0.84f, 0.90f); wood = RGB(0.86f, 0.88f, 0.92f); }
         if (cover == DC_SCORCHED) { bark = RGB(0.58f, 0.48f, 0.40f); wood = RGB(0.74f, 0.56f, 0.46f); }
         if (site.gen.hasTrait(TR_FUNGAL)) { bark = lerp(site.gen.matColor[MAT_FOREST], RGB(0.92f, 0.90f, 0.86f), 0.6f); wood = RGB(0.90f, 0.86f, 0.78f); }   // the stems pale
@@ -271,7 +272,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         // J-06: the animals' two hide banks, each its world's colour (`Bestiary::style`): banks the world leaves free (the first people's 24 and 20
         // where no people built, 13 with no glowing body in the sky, 12 with no second sun), else lent ones no trait holds; the forest's and the
         // rock's where none is free
-        hideBanks[0] = 3; hideBanks[1] = 0;
+        hideBanks[0] = 3; hideBanks[1] = 0; fateBank = -1;
         if (kindHas(site.gen.type, KT_FAUNA)) {
             bool glowing = false;
             for (int bi = 0; bi < (int)site.sys->bodies.size(); bi++) if (bi != site.body && kindHas(site.sys->bodies[bi].type, KT_GLOWS)) glowing = true;
@@ -287,6 +288,44 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             const RGB lt = lerp(site.sys->star.color, white, 0.5f);
             for (int h = 0; h < 2 && h < nc; h++) { hideBanks[h] = cand[h]; matRamp(cand[h], bestiary.style.colour[h] * lt); }
             if (nc == 1) hideBanks[1] = hideBanks[0];
+            // J-08: a third free bank for a dyed hide (its dye's colour) or a changed young's new colour (one of five by the world)
+            fateBank = -1;
+            const MadeWorld& fw = site.gen.made;
+            bool newColour = false;
+            for (const SpeciesChanges& sc : speciesChanges) newColour = newColour || ((sc.drawn >> CHG_NEW_COLOUR) & 1);
+            if (fw.on() && fw.fated() && nc >= 3 && ((fw.fauna & MF_DYED) || newColour)) {
+                int dye = fw.fate.dye;
+                for (int i = 0; i < fw.lines && i < MADE_LINES; i++) if (fw.spread[i].fate.dye) dye = fw.spread[i].fate.dye;
+                static const RGB NEW_COLOURS[5] = {RGB(0.62f, 0.12f, 0.14f), RGB(0.36f, 0.20f, 0.58f), RGB(0.18f, 0.34f, 0.66f), RGB(0.86f, 0.78f, 0.30f), RGB(0.92f, 0.92f, 0.90f)};
+                const RGB c = dye > WD_NONE ? dyeColour(dye) : NEW_COLOURS[(int)(hash01(mix64(site.gen.seed ^ 0xC010ULL)) * 5) % 5];
+                fateBank = cand[2];
+                matRamp(fateBank, c * lt);
+            }
+        }
+        // J-09: an overgrowth's cover, its structures and what it wraps in a bank of its own (the latest line's that grows: its colour, a wet one's
+        // gloss in the top stops, its veins' light at night in the upper ones where it glows), lent before the looks it covers; the rock's where
+        // none is free
+        growthBank = -1; growthGlow = 0; growthWet = 0;
+        const MadeWorld& gw = site.gen.made;
+        bool placedSecond = false;   // (J-10: the harness's settlements staged in the first people's banks leave the lent ones to it)
+        for (const RuinCell& c : placedCells) placedSecond = placedSecond || c.spec.people == 1;
+        if (gw.on() && gw.grown() && gw.growthLine >= 0 && gw.growthLine < MADE_LINES && peoples < 2 && !placedSecond) {
+            for (int lb : {28, 27, 26, 25})
+                if (lb != tintBankMade && lb != tintBankSnow && lb != tintBankStrata && lb != tintBankL && lb != tintBankW && lb != tintBankSprings &&
+                    !(lb == 26 && site.gen.hasTrait(TR_PETRIFIED)) && lb != hideBanks[0] && lb != hideBanks[1] && lb != fateBank) { growthBank = lb; break; }
+            if (growthBank >= 0) {
+                const MadeGrowth& G = gw.spread[gw.growthLine].growth;
+                const RGB c = G.colour * lerp(site.sys->star.color, white, 0.5f), dk = lerp(G.veins, G.colour, 0.3f) * lerp(site.sys->star.color, white, 0.5f);
+                growthWet = G.wet;
+                if (G.glow > 0 && day < 0.5) {   // the veins' light (the shade lifts it into the upper stops: `vertexOf`, the structures)
+                    growthGlow = 1 - 2 * day;
+                    const RGB L = G.glowTint;
+                    setRamp(fb.pal, growthBank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.6f}, {40, c * 0.85f}, {45, lerp(c, L * 0.4f, (float)growthGlow)},
+                                                 {54, lerp(c, L * 0.8f, (float)growthGlow)}, {63, lerp(lerp(c, white, 0.5f), lerp(L, white, 0.35f), (float)growthGlow)}});
+                } else if (G.wet > 0.3)   // a wet one's gloss: its top stops whiter
+                    setRamp(fb.pal, growthBank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.62f}, {44, c}, {54, lerp(c, white, 0.35f)}, {63, white}});
+                else matRamp(growthBank, c);
+            }
         }
         // J-05: the land's, the plants' and the snow's made looks, each in a lent bank the traits and the waters' tint leave free (28, 27, 26,
         // 25 in turn); a glowing forest's leaves carry its light at night (the luminous flora's ramp, in its colour)
@@ -300,7 +339,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             auto taken = [&](int bk) {
                 return bk == tintBankMade || bk == tintBankSnow || bk == tintBankStrata || bk == tintBankL || bk == tintBankW || bk == tintBankSprings ||
                        (bk == 26 && site.gen.hasTrait(TR_PETRIFIED)) || bk == madeBanks[MC_LAND] || bk == madeBanks[MC_PLANTS] || bk == madeBanks[MC_SNOW] ||
-                       bk == hideBanks[0] || bk == hideBanks[1];
+                       bk == hideBanks[0] || bk == hideBanks[1] || bk == fateBank || bk == growthBank;
             };
             const RGB lt = lerp(site.sys->star.color, white, 0.5f);
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {

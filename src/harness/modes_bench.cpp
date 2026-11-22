@@ -91,6 +91,38 @@ void fillBenchGuide(Guide& G) {
 }
 
 // B-310: `bench forest`: the forest scene at 4x rendered 150 times, for a profiler (`sample vesperis_test 5` on macOS)
+// J-09: `bench overgrowth`: the forest's and the open ground's views of the budgets' rows, each without and then under an overgrowth over
+// the whole world (a flesh's in the forest, a coral's on the open ground), with the frame's sections and the structures drawn
+int runBenchOvergrowth() {
+    struct Row { const char* name; int scale, scene, type, texture, hard; RGB colour; };
+    const Row rows[] = {{"forest 4x", 4, SCENE_FOREST, OG_FLESH, OGT_FOLDED, 0, RGB(0.62f, 0.16f, 0.18f)},
+                        {"forest 2x", 2, SCENE_FOREST, OG_FLESH, OGT_FOLDED, 0, RGB(0.62f, 0.16f, 0.18f)},
+                        {"open 2x", 2, SCENE_HERD, OG_CORAL, OGT_FOLDED, 3, RGB(0.90f, 0.56f, 0.56f)},
+                        {"open 4x", 4, SCENE_HERD, OG_CORAL, OGT_FOLDED, 3, RGB(0.90f, 0.56f, 0.56f)}};
+    for (const Row& r : rows) {
+        setFramebufferScale(r.scale);
+        for (int pass = 0; pass < 2; pass++) {
+            SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
+            if (!setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, sv, sys, nb, t, r.scene)) continue;
+            if (pass) {
+                const MadeWorld m = growthLayer(sys.bodies[sv.site.body].radiusKm, sv.site.up0, growthOfType(r.type, r.texture, r.colour, 0.5, r.type == OG_FLESH ? 0.6 : 0.2, r.hard, false, false));
+                sv.site.made = m; sv.site.gen.made = m;
+                for (TerrainCache* c : {&sv.site.lodN, &sv.site.lod0, &sv.site.lod1, &sv.site.lod2, &sv.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
+            }
+            Framebuffer fb; Input in;
+            for (int i = 0; i < 5; i++) { sv.update(1.0 / 30, in, t, false); sv.render(fb, t, nb.stars, sr, 1.0); }
+            const double t0 = nowSec();
+            for (int i = 0; i < 30; i++) { sv.update(1.0 / 30, in, t + i * 0.033, false); sv.render(fb, t + i * 0.033, nb.stars, sr, 1.0); fb.mush(2); }
+            const TerrainVertex& tv = sv.site.lod0.at((int)std::floor(sv.player.x / 16), (int)std::floor(sv.player.z / 16));
+            printf("%-11s %-10s %.2f ms/frame (sky %.1f warm %.1f terrain %.1f objects %.1f flora %.1f rest %.1f; %d structures; the ground %s)\n", r.name,
+                   pass ? "overgrown" : "plain", (nowSec() - t0) * 1000 / 30, sv.lastRenderMs[0], sv.lastRenderMs[1], sv.lastRenderMs[2], sv.lastRenderMs[3],
+                   sv.lastRenderMs[4], sv.lastRenderMs[5], sv.lastGrowthsDrawn, MATERIAL_NAMES[clampi(tv.material, 0, MAT_COUNT - 1)]);
+            if (pass) saveFB(fb, fmt("shots/tests/bench_overgrown_%s_%dx.png", r.scene == SCENE_FOREST ? "forest" : "open", r.scale).c_str());
+        }
+    }
+    return 0;
+}
+
 int runBenchForest() {
     setFramebufferScale(4);
     SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
@@ -337,6 +369,17 @@ void Bench::forest() {
                    sv2.lastNearTrees, sv2.lastMidTrees, sv2.lastFarTrees, sv2.lastTreesHidden, sv2.lastFloraPoints, sv2.lastFloraMs[0], sv2.lastFloraMs[1]);
             saveFB(fb2, "shots/tests/bench_forest.png");
             budget("forest 2x", ms, 8.2);   // a tropical giant forest, the densest case (12 ms on an M4 then, 5.46 after F-10; the budget 14 -> 8.2)
+            {   // J-09: the same forest under a flesh's overgrowth over the whole world (its trees wrapped, its structures among them): its budget
+                const MadeWorld m = growthLayer(sys2.bodies[sv2.site.body].radiusKm, sv2.site.up0, growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false));
+                sv2.site.made = m; sv2.site.gen.made = m;
+                for (TerrainCache* c : {&sv2.site.lodN, &sv2.site.lod0, &sv2.site.lod1, &sv2.site.lod2, &sv2.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
+                for (int i = 0; i < 5; i++) { sv2.update(1.0 / 30, in2, t2, false); sv2.render(fb2, t2, nb2.stars, sr2, 1.0); }
+                const double tg = nowSec();
+                for (int i = 0; i < 30; i++) { sv2.update(1.0 / 30, in2, t2 + i * 0.033, false); sv2.render(fb2, t2 + i * 0.033, nb2.stars, sr2, 1.0); fb2.mush(2); }
+                const double msg = (nowSec() - tg) * 1000 / 30;
+                printf("forest 2x    %.2f ms/frame overgrown (J-09: a flesh's cover, its trees wrapped, %d structures drawn)\n", msg, sv2.lastGrowthsDrawn);
+                budget("forest 2x overgrown", msg, 8.2);
+            }
         }
         setFramebufferScale(4);   // the same forest at 4x (the default picture)
         { SpaceRenderer sr4; StarNeighborhood nb4; StarSystem sys4; SurfaceView sv4; double t4 = 0;
@@ -375,7 +418,37 @@ void Bench::forest() {
                 saveFB(fb4, "shots/tests/bench_forest_made.png");
                 budget("forest 4x made", ms5, 13);
             }
+            {   // J-09: the same forest under an overgrowth over the whole world (a flesh's: its trees wrapped in it, its structures among them)
+                const MadeWorld m = growthLayer(sys4.bodies[sv4.site.body].radiusKm, sv4.site.up0, growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false));
+                sv4.site.made = m; sv4.site.gen.made = m;
+                for (TerrainCache* c : {&sv4.site.lodN, &sv4.site.lod0, &sv4.site.lod1, &sv4.site.lod2, &sv4.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
+                for (int i = 0; i < 5; i++) { sv4.update(1.0 / 30, in4, t4, false); sv4.render(fb4, t4, nb4.stars, sr4, 1.0); }
+                const double t6 = nowSec();
+                for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
+                const double ms6 = (nowSec() - t6) * 1000 / 30;
+                printf("forest 4x    %.2f ms/frame overgrown (J-09: a flesh's cover, its trees wrapped, %d structures drawn; flora sections trees %.1f, cells %.1f ms)\n", ms6,
+                       sv4.lastGrowthsDrawn, sv4.lastFloraMs[0], sv4.lastFloraMs[1]);
+                saveFB(fb4, "shots/tests/bench_forest_overgrown.png");
+                budget("forest 4x overgrown", ms6, 13);
+            }
         } }
+        for (int sc : {2, 4}) {   // J-09: open grassland (a herd's) under a coral's overgrowth (spires, folds, vases, polyps), new budgets at 1.5 times the
+            // first measure (5.0 and 6.8 ms; the same views plain 4.5 and 6.8: the structures cost what the grass they cover did)
+            setFramebufferScale(sc);
+            SpaceRenderer srO; StarNeighborhood nbO; StarSystem sysO; SurfaceView svO; double tO = 0;
+            if (!setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, svO, sysO, nbO, tO, SCENE_HERD)) continue;
+            const MadeWorld m = growthLayer(sysO.bodies[svO.site.body].radiusKm, svO.site.up0, growthOfType(OG_CORAL, OGT_FOLDED, RGB(0.90f, 0.56f, 0.56f), 0.5, 0.2, 3, false, false));
+            svO.site.made = m; svO.site.gen.made = m;
+            for (TerrainCache* c : {&svO.site.lodN, &svO.site.lod0, &svO.site.lod1, &svO.site.lod2, &svO.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
+            Framebuffer fbO; Input inO;
+            for (int i = 0; i < 5; i++) { svO.update(1.0 / 30, inO, tO, false); svO.render(fbO, tO, nbO.stars, srO, 1.0); }
+            const double t0 = nowSec();
+            for (int i = 0; i < 30; i++) { svO.update(1.0 / 30, inO, tO + i * 0.033, false); svO.render(fbO, tO + i * 0.033, nbO.stars, srO, 1.0); fbO.mush(2); }
+            const double ms = (nowSec() - t0) * 1000 / 30;
+            printf("open %dx      %.2f ms/frame overgrown (J-09: a coral's cover on open ground, %d structures drawn)\n", sc, ms, svO.lastGrowthsDrawn);
+            saveFB(fbO, fmt("shots/tests/bench_open_overgrown_%dx.png", sc).c_str());
+            budget(sc == 2 ? "open 2x overgrown" : "open 4x overgrown", ms, sc == 2 ? 7.5 : 10.3);
+        }
         setFramebufferScale(saved);
     }
 }
@@ -450,6 +523,27 @@ void Bench::herd() {
             }
             printf("herd 1x      update %.2f ms, draw %.2f ms per frame (%d in the herd, %zu creatures at the site)\n", upd / 15, drw / 15, n, sv3.critters.size());
             budget("herd draw 1x", drw / 15, 0.6);   // 0.07 after F-10 (F-11: 1 -> 0.6, the median + 0.5)
+            {   // J-08: the same herd among twelve remains of its kind at every stage within 12 m of it (flies over the fresh), the herd's budget
+                double hx = 0, hz = 0; int m = 0;
+                for (const Critter& c : sv3.critters) if (c.herd == 0) { hx += c.x; hz += c.z; m++; }
+                if (m) { hx /= m; hz /= m; }
+                const int spi = m ? sv3.critters[0].species : 0;
+                for (int k = 0; k < 12; k++) {
+                    Remains r; r.species = spi; r.x = hx + 12 * (hash01(mix64(0xBE7CULL + k)) - 0.5) * 2; r.z = hz + 12 * (hash01(mix64(0xBE7DULL + k)) - 0.5) * 2;
+                    r.heading = hash01(mix64(0xBE7EULL + k)) * TAU; r.size = sv3.bestiary.species.empty() ? 1 : sv3.bestiary.species[spi].size; r.stage = RS_FRESH + k % 5;
+                    r.seed = mix64(0xBE7FULL + k); r.cell = false;
+                    sv3.testRemainsAdd(r);
+                }
+                upd = drw = 0;
+                for (int i = 0; i < 20; i++) {
+                    sv3.update(1.0 / 30, in3, t3 + (20 + i) * 0.033, false);
+                    sv3.render(fb3, t3 + (20 + i) * 0.033, nb3.stars, sr3, 1.0);
+                    if (i >= 5) { upd += sv3.lastLifeMs[0]; drw += sv3.lastLifeMs[1]; }
+                }
+                printf("herd remains update %.2f ms, draw %.2f ms per frame (J-08: the herd and %zu remains)\n", upd / 15, drw / 15, sv3.remains.size());
+                saveFB(fb3, "shots/tests/bench_herd_remains.png");
+                budget("herd remains 1x", drw / 15, 0.6);
+            }
         }
     }
 }
@@ -659,6 +753,27 @@ void Bench::people() {
                 }
                 printf("capital 4x   %.2f ms/frame, worst %.1f ms (the forms %.2f ms; F-01)\n", sum / 60, worst, game.testSurface().lastRuinMs);
                 budget("capital 4x", sum / 60, 8.3);   // 5.48 after F-10
+                {   // J-10: the same capital under a flesh's overgrowth let go at its middle, twenty steps on: the same budget
+                    const MadeGrowth flesh = growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false);
+                    SurfaceView& S = const_cast<SurfaceView&>(game.testSurface());
+                    const MadeWorld before = S.site.made;
+                    growthLayerOn(S, growthAtStep(msys.bodies[mw.body].radiusKm, cap.unit, flesh, 20));
+                    for (int i = 0; i < 10; i++) { game.frame(in8, 1.0 / 60); in8.newFrame(); }
+                    sum = 0; worst = 0;
+                    for (int i = 0; i < 60; i++) {
+                        const double t0 = nowSec();
+                        game.frame(in8, 1.0 / 60);
+                        in8.newFrame();
+                        const double msF = (nowSec() - t0) * 1000;
+                        sum += msF;
+                        worst = std::max(worst, msF);
+                    }
+                    printf("capital 4x   %.2f ms/frame overgrown, worst %.1f ms (J-10: the forms %.2f ms: %d items, %d polygons)\n", sum / 60, worst, game.testSurface().lastRuinMs,
+                           game.testSurface().lastRuinElems, game.testSurface().lastFormPolys);
+                    writePNG("shots/tests/bench_capital_overgrown.png", game.output(), FBW, FBH);
+                    budget("capital 4x overgrown", sum / 60, 8.3);
+                    growthLayerOn(S, before);   // (the rows after it see the world as it was)
+                }
             }
             game.settings.renderScale = 1; game.applySettings();
         }
@@ -794,6 +909,19 @@ void Bench::unbudgeted() {
                 const double msC = (nowSec() - t0) * 1000 / 30;
                 printf("city 4x      %.2f ms/frame from its edge (the forms %.2f ms; F-01)\n", msC, svC.lastRuinMs);
                 budget("city 4x", msC, 8.3);   // 5.52 after F-10
+                {   // J-10: the same city under a flesh's overgrowth let go at its middle, twenty steps on (its walls taken some 30 m up, the second bank
+                    // across their faces, its nodules and drapes among them): the same budget
+                    const MadeGrowth flesh = growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false);
+                    growthLayerOn(svC, growthAtStep(sysC.bodies[svC.site.body].radiusKm, svC.site.unitAt(cx, cz), flesh, 20));
+                    for (int i = 0; i < 5; i++) { svC.update(1.0 / 30, inC, tC, false); svC.render(fbC, tC, nbC.stars, srC, 1.0); fbC.mush(2); }
+                    const double tg = nowSec();
+                    for (int i = 0; i < 30; i++) { svC.update(1.0 / 30, inC, tC + i * 0.033, false); svC.render(fbC, tC + i * 0.033, nbC.stars, srC, 1.0); fbC.mush(2); }
+                    const double msG = (nowSec() - tg) * 1000 / 30;
+                    printf("city 4x      %.2f ms/frame overgrown (J-10: a flesh's cover up its walls; the forms %.2f ms: %d items, %d polygons)\n", msG, svC.lastRuinMs,
+                           svC.lastRuinElems, svC.lastFormPolys);
+                    saveFB(fbC, "shots/tests/bench_city_overgrown.png");
+                    budget("city 4x overgrown", msG, 8.3);
+                }
             }
             setFramebufferScale(saved);
         }

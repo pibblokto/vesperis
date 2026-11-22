@@ -5,6 +5,7 @@
 // names them: an unnamed one goes by its words, `Bestiary::words`)
 #pragma once
 #include "galaxy/planetmap.h"
+#include "galaxy/made.h"
 #include "animal_body.h"
 #include <string>
 #include <vector>
@@ -45,11 +46,55 @@ struct Species {
     int prey = -1;                   // J-07: a hunter's prey, a land species of its world; -1 none
 };
 
-// J-07: the metres an animal goes in a cycle of its gait at a speed (scale `k` of its species', gravity `g`): a stride of 2.3 hip heights times
+// J-08: what a seeding makes of a species' young (IDEAS-seeded-worlds.md section 8's list): wasting and wounds (ribs showing, a melting hide, open
+// sores, bare patches, flayed, a bloated body), growths (tumours, stalks, stone plates, overgrown tusks, horn growths), the body (an extra leg, a
+// leg missing, two heads, extra eyes, none, a twisted spine, a joined pair, short legs, long legs, a long neck, an extra tail), the size (a
+// giant, a dwarf), the hide (a new colour, pale, dark, glowing spots, glowing stripes, a new pattern, iridescent, woolly, hairless,
+// see-through), the ways (calm, bold, walks at night, circles, stumbles, climbs, swarms, limps)
+enum AnimalChange { CHG_RIBS = 0, CHG_MELTING, CHG_SORES, CHG_BARE, CHG_FLAYED, CHG_BLOATED, CHG_TUMOURS, CHG_STALKS, CHG_STONE, CHG_TUSKS, CHG_HORNS,
+                    CHG_EXTRA_LEG, CHG_MISSING_LEG, CHG_TWO_HEADS, CHG_EXTRA_EYES, CHG_NO_EYES, CHG_TWISTED, CHG_JOINED, CHG_SHORT_LEGS, CHG_LONG_LEGS,
+                    CHG_LONG_NECK, CHG_EXTRA_TAIL, CHG_GIANT, CHG_DWARF, CHG_NEW_COLOUR, CHG_PALE, CHG_DARK, CHG_GLOW_SPOTS, CHG_GLOW_STRIPES,
+                    CHG_NEW_PATTERN, CHG_IRIDESCENT, CHG_WOOLLY, CHG_HAIRLESS, CHG_SEE_THROUGH, CHG_CALM, CHG_BOLD, CHG_NIGHT, CHG_CIRCLES, CHG_STUMBLES,
+                    CHG_CLIMBS, CHG_SWARMS, CHG_LIMPS, CHG_COUNT };
+extern const char* const CHANGE_NAMES[CHG_COUNT];
+// J-08: a species' fate where it lives (a herd's place, a flock's, a swimmer's): the share of it that died and what killed it; the sickness its
+// survivors show and the share of them (land animals'); the share of its young born changed (a herd's) and how (one to three changes, the
+// species' own on its world: `animalChangesOf`); how much it thrives; a dyed hide's dye
+struct AnimalFate {
+    double dead = 0;
+    int death = 0;
+    int sickness = 0; double sick = 0;
+    double changed = 0;
+    int changes[3] = {-1, -1, -1}, nChanges = 0;
+    double thrive = 0;
+    int dye = 0;
+    int age = 0;   // the steps since its fate came where it lives (the remains' age there)
+    bool gone() const { return dead >= 0.999; }
+    bool on() const { return dead > 0 || sick > 0 || changed > 0 || thrive > 0; }
+    bool has(int ch) const { for (int i = 0; i < nChanges; i++) if (changes[i] == ch) return true; return false; }
+};
+
+// J-07: the metres an animal goes in a cycle of its gait (scale `k` of its species', gravity `g`): a stride of 2.3 hip heights times
 // the Froude number's 0.3th power (Alexander's), a third of its legs to four and a half; a legless one's by its body (a serpent's a wave)
 double speciesStride(const Species& sp, double k, double speed, double g);
 // J-07: its gait at a speed: its walk, a four-legged runner's trot past a Froude number of 0.4, its run's gait past 2.5 or when it runs
 int speciesGait(const Species& sp, double k, double speed, double g, bool running);
+
+// J-08: whether a species bears a shell (a shell's or plates' back, a plated hide): a shell rotter's
+bool speciesShelled(const Species& sp);
+// J-08: a species' fate under a point's (`madeFateAt`): its class's harm by how it resists (a hash of its seed: a middling one loses the harm's
+// share, the hardiest half of it, the frailest half again as much; past 0.95 none is spared), a shell rotter's on the shelled, the food lost on
+// the plant eaters (half on the hunters, whose prey thins), the sickness on the land's survivors, the changed young's share of a herd and its
+// changes (`changes`: the species' own, from the world's steering), the thriving
+AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes, int nChanges);
+// J-08: a species' changes on its world: one to three, the first steered by the lines' genes (`MadeSteer` bits) where one fits its body, the rest
+// by a hash of the species, none clashing (a giant never a dwarf) and each one its body takes (no extra leg on a serpent)
+int animalChangesOf(const Species& sp, int steer, int out[3]);
+// J-08: the body its changed young are born with: its own with the changes that shape a body (no eyes, more eyes, legs short or long, a long
+// neck, overgrown tusks, a new pattern, woolly, hairless, bloated, a twisted spine, two heads, an extra tail, a joined pair, a leg more or less)
+AnimalBody changedBody(const AnimalBody& b, const int* changes, int nChanges);
+// J-08: whether a change shows on the hide or the body as drawn (`AnimalView::marks`), rather than in the body's parts or the ways
+bool changeDrawn(int ch);
 
 struct Bestiary {
     std::vector<Species> species;    // land species first, then flyers, then swimmers

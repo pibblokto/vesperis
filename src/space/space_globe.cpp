@@ -602,12 +602,19 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     // over its waters (a dye's, in a water's ramp), with a glow on the night side where its line glows
     // J-05: or its land's, plants' or snow's look where the waters have none (`madeGlobeClass`; a glowing forest's light on the night side)
     const int madeCls = madeGlobeClass(bgen.made);
-    const int madeBank = !c.skyMode && (bgen.made.tinted || madeCls >= 0) && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck ? (bank == 2 ? 25 : 26) : -1;
+    const bool discMade = !c.skyMode && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck;
+    // J-09: an overgrowth's stain in the made bank where its cover lies, its veins lit at night where it glows; the waters' tint in bank 31
+    // on the first disc where no trait holds it, else in the waters' own
+    const bool madeGrowth = discMade && madeGlobeGrowth(bgen.made);
+    const int growthPb = madeGrowth ? (bank == 2 ? 25 : 26) : -1;
+    const bool growthGlows = madeGrowth && bgen.made.spread[bgen.made.growthLine].growth.glow > 0;
+    const bool traits31 = bgen.hasTrait(TR_BLOOMS) || bgen.hasTrait(TR_REEFS) || bgen.hasTrait(TR_PINK_LAKES);
+    const int madeBank = discMade && (bgen.made.tinted || madeCls >= 0) ? (madeGrowth ? (bank == 2 && !traits31 && bgen.made.tintOn == MADE_ON_WATER ? 31 : -1) : (bank == 2 ? 25 : 26)) : -1;
     const bool madeOnWater = bgen.made.tintOn == MADE_ON_WATER, madeGlow = bgen.made.tinted ? madeOnWater && bgen.made.glow > 0 : madeCls == MC_PLANTS && bgen.made.plantGlow > 0;
     int madeClassOfMat[MAT_COUNT];
     for (int m = 0; m < MAT_COUNT; m++) madeClassOfMat[m] = madeClassOf(bgen, m, false);
     // J-04: its made clouds in the same bank (a dye's or the spores' colour; a glow on the night side, by its form), and a fog on its seas
-    const int madeCloudPb = !c.skyMode && (bgen.made.cloudTintK > 0 || bgen.made.cloudGlow > 0) && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck ? (bank == 2 ? 25 : 26) : -1;
+    const int madeCloudPb = discMade && !madeGrowth && (bgen.made.cloudTintK > 0 || bgen.made.cloudGlow > 0) ? (bank == 2 ? 25 : 26) : -1;
     const double madeSmoke = c.skyMode ? 0.0 : bgen.made.seaSmoke;
     parallelFor(y1 - y0 + 1, 48, [&](int rb, int re) {
     for (int y = y0 + rb; y < y0 + re; y++) {
@@ -669,7 +676,11 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (tintBank31 && std::max(map.lifeTintAt(ti), pinkLakes ? map.waterTintAt(ti) : 0.0) > 0.5) tintPb = 31;
                     if (milkyGlow || waterLights) glowW = map.waterTintAt(ti);
                 }
-                if (madeBank >= 0 && (bgen.made.tinted ? (mat == MAT_WATER) == madeOnWater : mat < MAT_COUNT && madeClassOfMat[mat] == madeCls)) {
+                if (growthPb >= 0 && madeGrowthMaterial(mat)) {   // J-09: the cover itself is the stain; its veins a ridge of noise, broad enough to
+                    // keep their light through the frame's smoothing (a pixel-wide line is averaged into the dark round it)
+                    tintPb = growthPb;
+                    if (growthGlows) glowW = 0.8 * smoothstep(0.24, 0.06, std::fabs(fbm3(StarSystem::bodyFromLatLon(lat, lon) * 12.0, b.seed ^ 0x6E0E30ULL, 3)));
+                } else if (madeBank >= 0 && (bgen.made.tinted ? (mat == MAT_WATER) == madeOnWater : mat < MAT_COUNT && madeClassOfMat[mat] == madeCls)) {
                     const double mtw = ph.ok ? plateMadeTint(ph) : (haveMap ? map.madeTintAt(map.texelIndex(lon, lat)) : 0.0);
                     if (mtw > 0.5) { tintPb = madeBank; if (madeGlow) glowW = std::max(glowW, mtw); }
                 }

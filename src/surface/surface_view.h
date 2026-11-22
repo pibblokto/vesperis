@@ -118,6 +118,10 @@ public:
         std::vector<Form> instrumentForms;
         std::vector<int> instrumentFirst;
         mutable bool watered = false;
+        // J-10: the openings its walls leave (lod 0) and how high an overgrowth's cover has climbed each building (the last: the graves' stones; -1
+        // none), its pieces of the cover among each building's (`overgrowCell`)
+        std::vector<FormOpening> openings;
+        std::vector<float> climb;
     };
     mutable std::unordered_map<uint64_t, RuinCell> ruinCells;
     Culture cultures[2]; int peoples = 1;           // the world's, set at init; C-13: one a people (a settlement's is `cultures[spec.people]`)
@@ -194,7 +198,8 @@ public:
     // habitat cell (512 m squares of the body's latitude and longitude, hashed: a chance by biome, a species, a size),
     // spawned when the explorer comes within 900 m of the cell's centre and forgotten beyond 1300 m, so there are animals
     // wherever the biome has them, not only round the capsule (the landing spot)
-    struct Herd { double cx = 0, cz = 0; int gLat = 0, gLon = 0; bool origin = false; };
+    // J-08: `empty`, a cell held for its remains alone (none of its herd living, or no herd)
+    struct Herd { double cx = 0, cz = 0; int gLat = 0, gLon = 0; bool origin = false, empty = false; };
     std::vector<Herd> herds;
     Bestiary bestiary;
     double habitatT = -1e9;
@@ -276,6 +281,9 @@ public:
     // the explorer or the buggy (0..1, held a while as the sand runs on) and the note it hums at (`duneSongHz`), the ice's song round the
     // explorer (0..1: the ice near, the day warming or cooling it)
     double duneSong = 0, duneHz = 80, iceSong = 0;
+    // J-10: an overgrowth's sounds round the explorer (`updateGrowthSongs`): its vents breathing near (0..1), its tissue creaking (0..1: its tall and
+    // hard structures near, in the wind), its hair hissing (0..1); `tearCue` a membrane pushed through (one-shot: its strength, consumed by the game)
+    double ventSong = 0, creakSong = 0, hairSong = 0, tearCue = 0;
     // dust devils on a desert world: columns of dust that wander with the wind for a few minutes
     struct DustDevil { double x, z, height, radius, age, life, phase; };
     std::vector<DustDevil> devils;
@@ -374,7 +382,7 @@ private:
     // the forms' frame: the items gathered (a form, its foot, its level of detail, the people whose banks it takes; a
     // silhouette at level 3), the chunks the workers build them into (the polygons and lines in view space, lit and fogged,
     // with the rows they touch), the raster parameters of the peoples' banks and windows
-    struct FormItem { const Form* f; Vec3 foot; double skirt, d, fog; int lod, people; };
+    struct FormItem { const Form* f; Vec3 foot; double skirt, d, fog; int lod, people; float climb = -1; };   // J-10: the cover's climb on it (-1 none)
     struct FormPolyOut { int first, n, rp, y0, y1; };
     struct FormLineOut { RVert a, b; int bank, thick, y0, y1; };
     struct FormChunk { std::vector<RVert> v; std::vector<FormPolyOut> polys; std::vector<FormLineOut> lines; int silhouettes = 0; };
@@ -399,20 +407,50 @@ private:
     // pool into a shape list of its own and the lists filled in bands in their order
     std::vector<AnimalRig> rigs;
     int hideBanks[2] = {3, 0};
-    struct LifeJob { int rig = 0; AnimalPoseIn in; int detail = 0; double pxPerM = 1, fog = 0; int doing = -1; double dist = 0; bool eyeshine = false; };   // J-07: what it does (-1 the harness's)
+    // J-07: what it does (-1 the harness's); J-08: its fate drawn (the changed rig, remains' stage, a sickness, a changed young's marks, its
+    // hash) and the record's marks it gives (`AnimalMark` bits)
+    struct LifeJob {
+        int rig = 0; AnimalPoseIn in; int detail = 0; double pxPerM = 1, fog = 0; int doing = -1; double dist = 0; bool eyeshine = false;
+        bool changed = false; int dead = 0, sickness = 0, marks = 0; uint64_t looks = 0, seed = 0;
+        int over = -1;   // J-09: remains an overgrowth took in, drawn in its bank (-1: in the hides')
+    };
     std::vector<LifeJob> lifeJobs;
     std::vector<ShapeList> lifeLists;
     // the harness's specimens (`bestiary plates`): a species each where it is put, standing (0), aloft (1) or afloat (2); the game puts none
-    struct Specimen { int species = 0; Vec3 at; double heading = 0; int how = 0; double flap = 0.3; int gait = -1; double phase = 0, stride = 0; bool running = false; };   // J-07: a gait (-1 still) at a phase
+    // J-07: a gait (-1 still) at a phase; J-08: remains' stage, a sickness, a changed young's changes drawn (its species' changed rig)
+    struct Specimen {
+        int species = 0; Vec3 at; double heading = 0; int how = 0; double flap = 0.3; int gait = -1; double phase = 0, stride = 0; bool running = false;
+        int dead = 0, sickness = 0; bool changed = false; bool night = false; double scale = 1;
+    };
     std::vector<Specimen> specimens;
+public:
+    // J-08: the animals' fates on a seeded world (none on a world nobody seeded): each species' changes on its world (`animalChangesOf`, from
+    // every line's steering) and its changed young's rig (its own where it has none), the remains on the ground (the cells', the kills', old
+    // bones), the bank of a dyed hide or a new colour (-1 none), whether every animal is gone (silence)
+    struct SpeciesChanges { int changes[3] = {-1, -1, -1}; int n = 0; uint64_t drawn = 0; };
+    std::vector<SpeciesChanges> speciesChanges;
+    std::vector<AnimalRig> changedRigs;
+    std::vector<Remains> remains;
+    int fateBank = -1;
+    // J-09: an overgrowth's bank (-1 none: its cover in the rock's), its veins' light tonight (0 by day) and its wetness (the gloss)
+    int growthBank = -1;
+    double growthGlow = 0, growthWet = 0;
+    // a structure the frame draws, chosen on the main thread: its size in 1x pixels, the ground's slope at its foot (its parts stand on
+    // that plane)
+    struct GrowthDraw { GrowthInst S; double px = 0, sx = 0, sz = 0; };
+    std::vector<GrowthDraw> growthDraws;    // (the frame's structures, their shapes made in sixteen lists on the pool, filled in bands)
+    ShapeList growthLists[16];
+    int lastGrowthsDrawn = 0;
+    bool silence = false;
 public:
     // J-07: what the landing saw of each species (its doings' bits, the nearest it came, the most in view at once; `fresh` since the game last
     // read it), and the animal the crosshair rests on this frame (its species, -1 none; how far)
-    struct SeenAnimal { uint32_t doing = 0; double nearest = 1e9; int most = 0; bool fresh = false; };
+    // J-08: and the marks it was seen with (`AnimalMark` bits: remains or a sick one, none of it living there, a changed young)
+    struct SeenAnimal { uint32_t doing = 0; double nearest = 1e9; int most = 0; bool fresh = false; uint32_t marks = 0; };
     std::vector<SeenAnimal> lifeSeen;
     struct LifeTarget { int species = -1; double dist = 0; };
     LifeTarget lifeTarget;
-    struct LifeDrawn { int species = -1, doing = 0; double dist = 0, sx = 0, sy = 0, r = 0; };   // this frame's animals drawn whole (the record's, the target's)
+    struct LifeDrawn { int species = -1, doing = 0; double dist = 0, sx = 0, sy = 0, r = 0; int marks = 0; };   // this frame's animals drawn whole (the record's, the target's)
     std::vector<LifeDrawn> lifeDrawn;
 
 public:
@@ -474,6 +512,7 @@ public:
     void refreshFogFloor();
     double rainWall(double x, double z, double dist) const { return localFront.on ? localFront.wall(localFront.ahead0, localFront.ahead(x, z), dist, env.frontRain) : 0.0; }
     void updateGroundSongs(double dt, double t);
+    void updateGrowthSongs(double dt, double px0, double pz0);   // J-10 (overgrowth.cpp): (px0, pz0) where the explorer stood before this frame's move
     static double duneSongHz(const BodyGen& g, double gravity);   // the grains' note: Andreotti's 0.4 sqrt(g / d), d 150-320 microns by the world
 private:
     void computeEnvironment(double t);
@@ -548,6 +587,14 @@ public:
     // mats, standing from the water's edge; the drawing and the colliders both (`RockInst`: size the radius, gy the foot)
     void forDomes(int cx, int cz, const std::function<void(const RockInst&)>& fn);
     void forChimneys(int cx, int cz, const std::function<void(const RockInst&)>& fn);   // the chemotroph's sinter chimneys a 16 m cell (KT_VENT_LIFE)
+    // J-09: a 16 m cell's overgrowth structures (a pure function of the cell: on a cell whose four corners its cover holds, none in water, a
+    // room, on a road, a street or a work's ground, none overlapping, all within the cell); the drawing, the colliders and the trees read it
+    void forGrowths(int cx, int cz, const std::function<void(const GrowthInst&)>& fn);
+    void growthColliders(const GrowthInst& S, std::vector<Collider>& out) const;   // the discs it stands in the way with
+    // a structure the frame draws (`GrowthDraw`); its shapes into a list in the overgrowth's bank and tile, on the pool (it reads the
+    // view and never the ground)
+    bool growthVisible(const GrowthInst& S, double& px) const;
+    void drawGrowth(ShapeSink& out, const GrowthDraw& D, double t, double ambient, double sunUp, double lf, const GrainTexture* tile) const;
     void forMeteorites(int cx, int cz, const std::function<void(const RockInst&)>& fn);   // a strewn field's iron masses a 16 m cell (TR_METEORITES)
     void collectSupports(double x, double z, double reach = 6);
     double floorAt(double x, double z, double feet, bool* blocked = nullptr);
@@ -599,6 +646,7 @@ public:
     double drawRadiusM() const { return ringR[3] ? ringR[3] * 2048.0 : (ringR[2] ? ringR[2] * 512.0 : ringR[1] * 64.0); }   // how far the terrain is drawn
 private:
     const GrainTexture* mesoFor(int material);
+    int growthTexture(int material) const;   // J-09: an overgrowth's tile's look (-1 the hashed one)
     void buildMesoTiles(uint32_t want);   // the tiles of a set of materials not made yet, a material to a worker
     double castShadowLit(TerrainCache& cache, int cx, int cz, double h, const Vec3& sd);
     void gatherReflections();
@@ -692,6 +740,17 @@ public:
     // the herd a habitat cell holds, if any: its centre (local metres), species and size; deterministic
     static bool planCellHerd(const SurfaceSite& s, const Bestiary& B, int gLat, int gLon, Herd& h, int& species, int& n);
     void updateHabitat();
+    // J-08: a species' fate at a point (local metres) on this world's layer (none on a world nobody seeded)
+    AnimalFate fateAt(int species, double x, double z) const;
+    // J-08: a habitat cell's remains, a pure function of the cell (and the world's layer): its herd's dead where they lived and at the water (on
+    // high ground for a sprouting one), a few old bones (any world), the flyers fallen in it, the swimmers washed up on its shore. `hd`, `spi`,
+    // `n` its herd (`planCellHerd`'s; null none)
+    void cellRemains(int gLat, int gLon, const Herd* hd, int spi, int n, std::vector<Remains>& out);
+    // J-08: a herd's members as a cell draws them (`n` of them, a share of the last dead: their places are the remains')
+    void cellMembers(const Herd& hd, int spi, int n, uint64_t hs, std::vector<Critter>& out) const;
+    // J-08: remains' stage by their fate's age where they lie, their hash, a flesh rotter's pace (old bones: bones or scattered)
+    int remainsStageOf(uint64_t seed, bool old, int age) const;
+    void testRemainsAdd(const Remains& r) { remains.push_back(r); }
 private:
     void drawLife(Framebuffer& fb, double t);
     void updateLife(double dt, double t);
@@ -741,13 +800,23 @@ public:
     void gatherSettlement(const Ruin& r, const RuinCell& cell, double dist);
     void drawFormItems(Framebuffer& fb);
     static void groupPieces(RuinCell& c);   // `groups` from the pieces' building indices (B-420: and the cell's `Ruin::reach`)
+    // ---- J-10: a seeded world's overgrowth on its ruins (overgrowth_ruins.cpp)
+    // a cell's cover: how high it has climbed each building (from the steps since the overgrowth's edge passed it), and its pieces among each
+    // building's at level 0 (membranes across the openings it climbed past, nodules on the walls under it, drapes from the tops it nearly
+    // reached); what an earlier layer grew taken out first. A pure function of the cell and the layer
+    void overgrowCell(RuinCell& c) const;
+    // a stone rotter's share of a settlement at local (x, z) (0..1: its line's share there and its steps since its spread came; 0 where no line
+    // pits stone): its culture's `stoneRot` when its pieces are laid out
+    double stoneRotOf(double x, double z) const;
 
     // ---- the harness's: vesperis_test calls these; the game never does
     int testSightMissing() const;   // R-434: the square metres within the activity vision's reach not yet read
     void testSightCounts(int& read, int& faint, int& strong) const;   // those read (within reach), faint and strong
     // A-02 (tests): place a settlement of forms with its centre at local (x, z): its layout (the buildings' footprints) and its
     // pieces at the three levels of detail; drawn at any distance (the skyline), its colliders walked into. `testClearPlaced` empties them
-    void testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3]);
+    void testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3], const std::vector<FormOpening>* openings = nullptr);
+    // J-10 (tests): every kept cell's cover grown again for the layer set since (the pieces themselves stay as laid out)
+    void testRegrowRuins();
     void testClearPlaced() { placedCells.clear(); supportMeshes.clear(); supports.clear(); }
     double testCanopyCoverage(double radiusM);      // share of forest-biome ground within the radius under a canopy
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
@@ -760,6 +829,11 @@ public:
     void testSpecimenStep(int gait, double phase, double stride, bool running) {
         if (specimens.empty()) return;
         Specimen& s = specimens.back(); s.gait = gait; s.phase = phase; s.stride = stride; s.running = running;
+    }
+    // J-08: the one put last as remains at a stage, sick, a changed young (its species' changed rig), at a scale of its species' size
+    void testSpecimenFate(int dead, int sickness, bool changed, double scale) {
+        if (specimens.empty()) return;
+        Specimen& s = specimens.back(); s.dead = dead; s.sickness = sickness; s.changed = changed; s.scale = scale;
     }
     int testHideBank(int k) const { return hideBanks[k & 1]; }
     int testAheadCells() const { return aheadStat; }

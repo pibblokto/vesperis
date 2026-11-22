@@ -108,6 +108,7 @@ void SurfaceView::computeEnvironment(double t) {
             else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
         }
     }
+    if (made.dried()) { env.rain = 0; env.hail = 0; }   // J-11: a made hothouse's seas gone to steam, its rain dries before it reaches the ground
     if (K.dustThreshold > 0 && site.atmosphere) {   // no dust rises where the air fell as snow
         double storm = gnoise2(t / 2400.0, 5.1, site.gen.seed + 21);
         env.dust = clampd((storm - K.dustThreshold) / 0.3, 0, 1);   // the storm's wind is applied with the wind update below (B-206); R-307: rarer on a desert world

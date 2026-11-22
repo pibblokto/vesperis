@@ -62,6 +62,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - A people's ground is never edited: nothing is flattened and the terrain cache is never touched (terraces are walls) [C-01],
   [C-08]; replaced by [T-02], [T-03]
 - Only the terrain is a floor: no piece is stood on (a heap or a bank is a wall of discs) [B-405], [C-08]; replaced by [B-420]
+- No hunt ends in a kill before J-08's remains: the quarry swerves within a body's length, the hunter tires [J-07]; replaced by [J-08]
+  (one try a chase at the kill, the pack feeding at the remains)
 
 ## The civilisations and their grammar
 
@@ -192,6 +194,12 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   waters a line lives in; the cover still never on water)
 - A seeding's step comes every five minutes of the clock; a world takes three seedings at most [J-02]; replaced by [J-03] (at the
   line's pace; three living lines, a dead one counting none)
+- The globe's made bank takes the waters' look; else, with no made cloud's colour, the land's, the plants' or the snow's in turn
+  [J-05]; replaced by [J-09] (an overgrowth's stain first, the first disc's waters' look then in bank 31)
+- A made heat dries the plants and kills the animals by how much warmer the world is alone (from 5 C and 6 C warmer) [J-04], [J-08];
+  replaced by [J-11] (by how warm it now is too: none under a mean of 5 C, all of it from 15 C, so a cold world warmed greens)
+- A runaway's dried waters are drawn by the made pass (salt in the deep basins, dust, the beds' sand, salt and clay) [J-04]; replaced by
+  [J-11] (a made hothouse lays the scorched felisian's whole cover over its own ground)
 
 ## The harness and the proof
 
@@ -397,3 +405,9 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [R-447]: log/7-1.5.0.md
 [J-02]: log/7-1.5.0.md
 [J-03]: log/7-1.5.0.md
+[J-05]: log/7-1.5.0.md
+[J-07]: log/7-1.5.0.md
+[J-08]: log/7-1.5.0.md
+[J-09]: log/7-1.5.0.md
+[J-04]: log/7-1.5.0.md
+[J-11]: log/7-1.5.0.md

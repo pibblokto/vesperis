@@ -176,6 +176,9 @@ SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls)
         case MAT_STROMATOLITE: put(NI_MAT, "STROMATOLITE REEF FLAT", H.meanC, readC); break;
         case MAT_CRUST: put(NI_CRUST, kindHas(b.type, KT_FLORA) || b.type == PT_LICHEN ? "LICHEN CRUST ON STONE" : "CRUST ON THE DRY GROUND", H.meanC, readC); break;
         case MAT_MOSS: put(NI_CRUST, "MOSS IN A WET HOLLOW", H.meanC, readC); break;
+        case MAT_TISSUE: H.bloom = true; put(NI_MAT, "SOFT OVERGROWTH", H.meanC, readC); break;   // J-09: an overgrowth's cover
+        case MAT_THREADS: H.bloom = true; put(NI_MAT, "THREADS OVER THE GROUND", H.meanC, readC); break;
+        case MAT_HARD: H.bloom = true; put(NI_MAT, "HARD OVERGROWTH", H.meanC, readC); break;
         case MAT_FOREST: H.shade = true; put(NI_SOIL, "SOIL UNDER THE TREES", H.meanC, readC); break;
         case MAT_GRASS: put(NI_SOIL, "SOIL UNDER THE GRASS", H.meanC, readC); break;
         case MAT_MUD: put(NI_SILT, "MUD", H.meanC, readC); break;

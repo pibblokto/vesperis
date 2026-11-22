@@ -60,10 +60,10 @@ with a culture, left out at first (the worlds stayed as generated), came in with
 | 20 | The seeded worlds | J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | done 2026-11-21 |
 | 21 | The animals | J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | done 2026-11-21 |
 | 22 | The animals | J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | done 2026-11-21 |
-| 23 | The animals | J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | planned |
-| 24 | The overgrowth | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | planned |
-| 25 | The overgrowth | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | planned |
-| 26 | The close | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | planned |
+| 23 | The animals | J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | done 2026-11-21 |
+| 24 | The overgrowth | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | done 2026-11-21 |
+| 25 | The overgrowth | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | done 2026-11-22 |
+| 26 | The close | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | done 2026-11-22 |
 | 27 | The close | J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets

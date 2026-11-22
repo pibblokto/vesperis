@@ -478,35 +478,39 @@ render at that resolution scale (tests default to 1x for speed; the game default
   statistics (`probe_stats`: `PROBES SENT 1   DEEPEST DESCENT ...`), the giant's data sheet and `Right` (`probe_profile`); slot 3 is then
   the newest save, so the load at the end resumes the probe on its screen (`the newest save is the probe's: state 24, ...`) (output:
   `shots/tests/flow_<step>.png`, stdout with state and status per step)
-* `bench`: frame times for space and surface at every scale 1x-4x (B-310: the surface rows print the render's sections: sky, the
-  vertex warm pass, the terrain bands, objects, flora, the rest), walking and turning at 1x, the first/worst of the first 60
-  descent frames, and (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree
-  tiers, hidden trees, points, the trees listed and their visits over the band threads, and the flora sections' milliseconds
-  (`shots/tests/bench_forest.png`); `bench check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one
-  listed under "Unit tests, frame hashes and budgets"; `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5 (I-02: the
-  start on the bridge), the ship's spaces at 4x from their middles at one instant, each once the maps its view starts are made
-  (B-439: budgeted again on the dressed ship; I-02: the bridge 8.6, the hall 3.6, the library 3.3, the laboratory 3.4, the dome
-  6.6; I-03: the bridge facing the sun 4.0, its disc in the great window and its patches on the floor, the ship turned to it and
-  back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide, `lab time`'s at its 5 s,
-  in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms); Z-05: the laboratory stocked
-  (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks 4x` 3.7), surface
-  2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13, herd draw 1x 0.6, drone 2x 3.3 (R-403: 60 frames at full thrust 200 m up with the
-  camera tilted down 30 deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving
-  from the seat through the game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through
-  `TestGame::testParkAtBelt`, 1.9 ms), vimana 2x 2.0 (G-07: sixty frames halfway through a 10,000 ly flight coreward from home, the
-  streaks and the band blended from its keyframes with the next one's share built, `bench_vimana.png`), descent first 26, sprint
-  worst 10 ms (N3: the herd scene's life update and draw times per frame); `bench forest` renders the forest at 4x 150 times for a
-  profiler (`sample vesperis_test 5` on macOS found the trunk lines: every band thread walked every line in full);
-  `VESPERIS_THREADS=1` runs any mode serially (the baseline: surface 4x 17.9 ms, forest 4x 35 ms against 10 and 14 with eight
-  workers); W-06: `telescope 2x`, sixty frames at x1024 on the parked world (the globe over the whole frame,
-  `bench_telescope.png`; X-02: `probe 2x`, sixty frames of the probe's camera on Wailie VI over the ammonia deck's tops and sixty
-  between the decks, the worse of the two against 8.9 ms, `bench_probe.png`; since the review's rework the frames build the plate
-  within its 8000 samples a frame, so the row is the eyepiece at its dearest, the plate's line printed under it), budget 13 ms;
-  A-02: `city 2x`, the test city (`forms city`) from 300 m outside its edge and from its plaza, the worse of the two, budgeted at
-  5.7 ms in `bench check`; T-01: `descent people`, the first descent frame onto the modern test world 400 m outside its capital's
-  core (its plan built at the parking on its own thread and waited for, the drainage too; 57.4 ms of 80, 62 since F-11) and
-  `capital 2x`, sixty frames on the ground there facing the capital (8.9 ms of 16, 5.4 since F-11, `bench_capital.png`) (output:
-  stdout, `shots/tests/bench_*.png`)
+* `bench`: frame times for space and surface at every scale 1x-4x (B-310: the surface rows print the render's sections: sky, the vertex
+  warm pass, the terrain bands, objects, flora, the rest), walking and turning at 1x, the first/worst of the first 60 descent frames, and
+  (N2-04) a deep tropical forest at 2x and (B-310) at 4x through the surface renderer alone with the tree tiers, hidden trees, points, the
+  trees listed and their visits over the band threads, and the flora sections' milliseconds (`shots/tests/bench_forest.png`); `bench
+  check` budgets (F-11: about 1.5 times the dev Mac's medians after F-10, every one listed under "Unit tests, frame hashes and budgets";
+  `bench check <factor>` multiplies them): space 2x 3.1 and 4x 9.5 (I-02: the start on the bridge), the ship's spaces at 4x from their
+  middles at one instant, each once the maps its view starts are made (B-439: budgeted again on the dressed ship; I-02: the bridge 8.6,
+  the hall 3.6, the library 3.3, the laboratory 3.4, the dome 6.6; I-03: the bridge facing the sun 4.0, its disc in the great window and
+  its patches on the floor, the ship turned to it and back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide,
+  `lab time`'s at its 5 s, in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms); Z-05:
+  the laboratory stocked (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks
+  4x` 3.7), surface 2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13 (J-09: the same forests under a flesh's overgrowth, `forest 2x` and `4x
+  overgrown`, held to them; a herd's grassland under a coral's, `open 2x overgrown` 7.5 and `open 4x overgrown` 10.3), herd draw 1x 0.6
+  and herd remains 1x 0.6 (J-08: the same herd among twelve remains at every stage, `bench_herd_remains.png`), drone 2x 3.3 (R-403: 60
+  frames at full thrust 200 m up with the camera tilted down 30
+  deg, `bench_drone.png`; 7.3 ms measured), buggy 2x 6.1 and 4x 6.1 (N4: 60 frames of full-throttle driving from the seat through the
+  game, 5.4 / 8.7 ms), belt 2x 1.1 (O3: parked beside a rock of the first belt near the start through `TestGame::testParkAtBelt`, 1.9 ms),
+  vimana 2x 2.0 (G-07: sixty frames halfway through a 10,000 ly flight coreward from home, the streaks and the band blended from its
+  keyframes with the next one's share built, `bench_vimana.png`), descent first 26, sprint worst 10 ms (N3: the herd scene's life update
+  and draw times per frame); J-10's `city 4x overgrown` and `capital 4x overgrown` the same city and capital under a flesh's
+  overgrowth twenty steps on (8.3 ms each; the capital's world put back after); `bench overgrowth` (J-09) times the forest at 4x and
+  2x and a herd's grassland at 2x and 4x, each plain and
+  under an overgrowth, by the frame's sections, with the structures drawn; `bench forest` renders the forest at 4x 150 times for a
+  profiler (`sample vesperis_test 5` on macOS found the
+  trunk lines: every band thread walked every line in full); `VESPERIS_THREADS=1` runs any mode serially (the baseline: surface 4x 17.9
+  ms, forest 4x 35 ms against 10 and 14 with eight workers); W-06: `telescope 2x`, sixty frames at x1024 on the parked world (the globe
+  over the whole frame, `bench_telescope.png`; X-02: `probe 2x`, sixty frames of the probe's camera on Wailie VI over the ammonia deck's
+  tops and sixty between the decks, the worse of the two against 8.9 ms, `bench_probe.png`; since the review's rework the frames build the
+  plate within its 8000 samples a frame, so the row is the eyepiece at its dearest, the plate's line printed under it), budget 13 ms;
+  A-02: `city 2x`, the test city (`forms city`) from 300 m outside its edge and from its plaza, the worse of the two, budgeted at 5.7 ms
+  in `bench check`; T-01: `descent people`, the first descent frame onto the modern test world 400 m outside its capital's core (its plan
+  built at the parking on its own thread and waited for, the drainage too; 57.4 ms of 80, 62 since F-11) and `capital 2x`, sixty frames on
+  the ground there facing the capital (8.9 ms of 16, 5.4 since F-11, `bench_capital.png`) (output: stdout, `shots/tests/bench_*.png`)
 * `terrain`: O5, rebuilt in O6-01 as the acceptance harness of Terrain III: 48 hashed land sites per landable type (four bodies,
   twelve each, measured in parallel), each on four grids of the planet function (24 x 24 at 4 m, 48 x 48 at 16 m, 32 x 32 at 64 m,
   32 x 32 at 512 m), grouped by the relief class the landing map prints (`Game::siteSlope`, `reliefClass`) and judged against the
@@ -1168,8 +1172,9 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   dunes as a slide down a slip face (the hum rising over a second, held three, dying as the sand runs on) at an Earth's grains'
   note and at Titan's, a thin-aired Mars' and a heavy world's gravity, with the note and the loudest frequency; the singing ice at
   dusk's level and at noon's, with the sounds counted; a quake under an air, through the boots of an airless world and on a
-  tectonic world (its lava's rumble with it); the wind, the waves and the rain beside them (R-430: the rooms aboard, I-04's, gone
-  with their sounds) (output: `shots/tests/sound_<name>.wav`, stdout (peak, rms))
+  tectonic world (its lava's rumble with it); J-10's overgrowth: steps on wet ground (`squelch`), a vent breathing dry and wet
+  (`vents_dry`, `vents_wet`), its creaks, a hair field in the wind, a membrane torn; the wind, the waves and the rain beside them
+  (R-430: the rooms aboard, I-04's, gone with their sounds) (output: `shots/tests/sound_<name>.wav`, stdout (peak, rms))
 * `scene singing_dunes | singing_ice | quakes`: Q-03: the sounds' cues on the ground, each on the scan's first world with the
   trait under an air of a third of a bar or more (finders -99, -100, -101): the explorer on a dune's slip face of 15 degrees or
   more (over 4, 8 and 16 m: a face, not a ledge; no hazy world), the frame from the crest, then walking down it; on flat ice with
@@ -1427,6 +1432,46 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   nearest dry edge. The landing map, the globe and the ground before it went down and once it has the whole world, two steps on. Prints
   each trait's world, the line's edits, the MADE words, the ground under the eye, and the pixels changed; exit 1 when a trait found no
   world or its ground did not change (output: stdout, `shots/tests/look_<trait>_<map|orbit|ground>_<before|after>.png`)
+* `seed fates` (`modes_seed_fates.cpp`): J-08: each of 23 fates' lines (`fateRecipes`: a nerve, a blood or a gut poison, a sulphide gas,
+  a host of animals at each depth with a glow, a dye, a gas, a cut STOP, a shell, a flesh rotter, spores and binding cells or a carrier,
+  a thinning gas, a flesh, a shell or a wood rotter, a cut STOP alone, the heat, the cold, ammonia, oxygen, a killing pair) let go where it
+  takes on the first of the worlds with animals, plants and a sea line where it brings its trait (a sickness's where some live on), its
+  layer read with the remains' age run out. Prints the world, the traits, what killed them, the harms by class, and each species' dead,
+  sick, changed (its changes) and thriving. Draws each fate on that world's ground (`fates/fate_<tag>.png`): a sickness or changed young
+  on four of a land species side on; a die-off's remains as the cells laid them, at the lit land nearest the place whose herd cell holds a
+  dying species, twelve steps after the spread reached it, framed on the three nearest remains; thriving on its herds. Then the five
+  stages of remains in a row (`fates/remains.png`), remains of each kind (`fates/remains_kinds.png`), each change on a young with one born
+  whole beside it (`fates/change_<name>.png`, all 42 in rows of seven in `fates/changes.png`), and a blood poison's die-off over its
+  steps on the first world where a herd stands 0.8 m or more (`fates/steps_NN.png`, steps 0 to 48, the living and the remains by stage
+  printed). The explorer stands 40 m behind each camera (the ground's rings centre on them). Exit 1 when a fate found no world (output:
+  stdout, `shots/tests/fates/`)
+* `seed kinds` (`modes_seed_kinds.cpp`): J-11: six lines (a world's own sea line with its gas set to CO2, methane, oxygen, a sulphide or
+  a cold haze's, or cut never to stop with its cells bound) on forty of `seed climate`'s worlds (its kinds' first to twelfth), each to
+  its 64th step: the made kind each ends as, whether it harmed the world's life, changed only its looks or made it more livable
+  (`madeHarms`, `madeLivable`), and the shares. Then each kind's recipe (nine: a hothouse, a snowball, a haze, purple, rust, flesh and
+  coral, charnel's two lines, greened) on the first of those worlds where its lines take and make it (a flesh's among its sea species,
+  not a pale one): the globe from the parking orbit before and after, the data sheet and the ground by day, at the coast or on the
+  ground the kind is drawn on (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`). Prints each world, its kind line, sentence and
+  phrase. Exit 1 when a recipe found no world (about 11 s)
+* `overgrowth plates` (`modes_overgrowth.cpp`): J-09: each of the ten overgrowth types (`type_<name>.png`) and forty variants of them
+  (`variant_NN_<tag>.png`: their colours, textures, grains, wetness, hardness, a glow at night, cilia) at 2x, each a layer made by hand
+  that covers the whole world (`growthOfType`, `growthLayer`), on the first clear-aired flora world of `seed climate`'s with a forest's
+  edge round one of its land sites (`growthGround`: open grass with the forest on a fifth to two thirds of a ring 20-60 m round it, its
+  rivers worked out once a site) by day, a glowing one at night there; films on a shore. The camera a few metres behind the biggest
+  structure ahead, facing the forest (or the water). Prints each plate's cover, the covered cells and the structures; the sheets
+  `types.png` and `variants.png`. Exit 1 when a plate drew nothing (about 30 s; output: stdout, `shots/tests/overgrowth/`)
+* `overgrowth world` (`modes_overgrowth.cpp`): J-09: a world's own sea line cut never to stop and to bind, let go a kilometre to eight
+  off the first world's coast where it takes (of `seed climate`'s with plants), in a game (`overgrowth_guide.txt`); at its steps 9, 14,
+  20 and 32 the landing map, the globe and the ground on the covered land nearest the place (`world_NN_<map|orbit|ground>.png`), and at
+  32 the night side with its veins lit (a line that does not glow given a glow as a test layer, `testMadeSet`:
+  `world_32_orbit_night.png`). Prints the overgrowth at each step and the ground landed on. Exit 1 when fewer than three steps showed it
+  on the ground (about 5 s)
+* `overgrowth ruins` (`modes_overgrowth.cpp`): J-10: the industrial test world's first city whose middle is dry with the rivers, and its
+  capital, each under a flesh's overgrowth let go 10 km south of its middle (`testMadeSet`, then `growthLayerOn` for each step), landed
+  by a dry day: at its steps 9, 14, 20 and 32 the biggest building near from 40 m (`ruins_city_NN_street.png`) and from 30 m up 90 m off
+  (`ruins_<city|capital>_NN.png`), a doorway grown shut at step 14 from 3.5 m (`ruins_doorway.png`), and the city twenty steps after a
+  stone rotter beside the city as generated (`ruins_crumbled.png`, `ruins_uncrumbled.png`). Prints the buildings covered, how high, and
+  the membranes, nodules and drapes. Exit 1 when a frame is missing (about 10 s)
 * `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
   its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
   five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of

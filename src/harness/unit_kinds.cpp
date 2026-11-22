@@ -1153,6 +1153,8 @@ void unitTraits(const Check& check) {
                 if (nm == "dunes_mars") { lo = 0.003; hi = 0.03; }
                 if (nm == "ice_dusk") { lo = 0.015; hi = 0.08; evDusk = ev; }
                 if (nm == "ice_noon") { lo = 0.005; hi = 0.04; evNoon = ev; }
+                if (nm == "squelch" || nm == "creaks" || nm == "tear") { lo = 0.004; hi = 0.04; }   // J-10: the overgrowth's, beside the wind's 0.02 to 0.05
+                if (nm == "vents_dry" || nm == "vents_wet" || nm == "hair") { lo = 0.01; hi = 0.05; }
                 bool ok = r.nan == 0 && r.peak < 0.75 && r.rms >= lo && r.rms <= hi;
                 std::string extra;
                 if (nm.rfind("dunes", 0) == 0) {
@@ -1172,6 +1174,44 @@ void unitTraits(const Check& check) {
             lvOk = lvOk && evDusk > evNoon && evDusk >= 10 && zcAirless < 0.7 * zcAir;
             check("sounds: the ground's within their levels, the dunes at their note, the ice oftener at dusk, a quake through the boots muffled (Q-03)", lvOk,
                   lv + fmt("the ice's sounds %d at dusk, %d at noon; a quake's pitch %.0f Hz with an air, %.0f through the boots", evDusk, evNoon, zcAir, zcAirless));
+        }
+        {   // J-10: an overgrowth's: the squelch's suck rising (its zero crossings later in a step over earlier), the vents breathing at their lips' pace (the
+            // loudest second of each breath one period apart), the wet ones bubbling (a higher peak), the creaks now and then, none of it without an air
+            std::map<std::string, std::vector<float>> X; std::map<std::string, RenderStats> RS; int creakEv = 0;
+            for (const GroundSound& gs : groundSounds()) {
+                const std::string nm = gs.name;
+                if (nm != "squelch" && nm != "vents_dry" && nm != "vents_wet" && nm != "creaks" && nm != "tear" && nm != "hair") continue;
+                int ev = 0;
+                std::vector<float> x;
+                RS[nm] = renderGroundSound(gs, nullptr, &ev, &x);
+                X[nm] = x;
+                if (nm == "creaks") { AudioSynth syn; AudioState st; st.master = 0.8; gs.set(st, 0); double tt = 0; renderReceiver(syn, st, gs.seconds, nullptr, [&](double dt) { tt += dt; gs.set(st, tt); }); creakEv = st.creakEvents; }
+            }
+            auto zcRate = [](const std::vector<float>& x, double t0, double t1) {
+                int zc = 0; const int i0 = (int)(t0 * 22050), i1 = std::min((int)x.size(), (int)(t1 * 22050));
+                for (int i = i0 + 1; i < i1; i++) if ((x[i - 1] < 0) != (x[i] < 0)) zc++;
+                return zc / 2.0 / std::max(1e-9, t1 - t0);
+            };
+            const std::vector<float>& sq = X["squelch"];
+            const double early = zcRate(sq, 0.55 + 0.12, 0.55 + 0.19), late = zcRate(sq, 0.55 + 0.26, 0.55 + 0.33);   // (the second step: the first at 0)
+            auto loudest = [](const std::vector<float>& x, double t0, double t1) {   // the second whose rms is the most, in [t0, t1)
+                double best = -1, at = 0;
+                for (double a = t0; a + 1 <= t1; a += 0.25) {
+                    double e = 0; const int i0 = (int)(a * 22050), i1 = std::min((int)x.size(), (int)((a + 1) * 22050));
+                    for (int i = i0; i < i1; i++) e += x[i] * x[i];
+                    if (e > best) { best = e; at = a; }
+                }
+                return at;
+            };
+            const double pace = TAU / GROWTH_BREATH_RATE, b1 = loudest(X["vents_dry"], 0, pace), b2 = loudest(X["vents_dry"], pace, 2 * pace);
+            AudioState airless; airless.air = 0; airless.vents = 1; airless.creaks = 1; airless.hair = 1;
+            AudioSynth syn; std::vector<float> buf(22050); airless.master = 0.8;
+            syn.render(buf.data(), (int)buf.size(), 22050, airless);
+            double quiet = 0; for (float v : buf) quiet = std::max(quiet, (double)std::fabs(v));
+            const bool ok = late > 1.3 * early && std::fabs((b2 - b1) - pace) < 0.6 && RS["vents_wet"].peak > 1.2 * RS["vents_dry"].peak && creakEv >= 4 && quiet < 1e-6;
+            check("sounds: an overgrowth's (J-10): the squelch's suck rising, the vents at their lips' pace, the wet ones bubbling, the creaks now and then, none airless", ok,
+                  fmt("(the suck's crossings %.0f a second early in a step, %.0f late; a breath's loudest second %.2f and %.2f s, the lips' period %.2f; the wet vents' peak %.2f, "
+                      "the dry's %.2f; %d creaks in 20 s; airless, the loudest sample %.1g)", early, late, b1, b2, pace, RS["vents_wet"].peak, RS["vents_dry"].peak, creakEv, quiet));
         }
         {
             std::string cw; bool cuesOk = true;

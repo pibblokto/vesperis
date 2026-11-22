@@ -432,18 +432,20 @@ stalking, chasing, trailing, under the ground, climbing, displaying and charging
 
 **The ways at work** (J-07). A browser walks to the nearest live tree within 30 m (`treeNear`) and raises its neck into it for 10-18 s. A
 hunter whose herd's leader is hungry (its `hungerT` run out) stalks the nearest of its prey within 150 m, low and slow (0.6 of its walk
-plus 0.1 of its run), and chases from about two and a half seconds' run away (9 to 30 m), or as soon as its quarry runs; its pack
-follows the leader. The chase lasts 6-9 s at its run speed, aimed where the quarry is going; within a body's length the quarry swerves
-(no kill until J-08's remains), then the hunter rests 12-22 s and is not hungry for 70-130 s. A quarry flees a hunter of its kind
-chasing within 40 m or stalking within 12 m, its herd mates within 40 m running the same way. A scavenger keeps 25-60 m from the
-nearest hunter within 300 m, nose to the ground. A burrower goes under at a threat (anyone within 18 m) or to rest: it sinks in 1.2 s,
-stays under 12-40 s (longer while the explorer is near) and comes up where it went down. A climber runs to the nearest trunk within 25
-m and climbs it, each a side and a height of its own, holding on while the explorer is near and coming down 8 s after; it rests in trees
-too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up, calling; within 14 m it
-charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night walkers are the
-species active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a few metres
-across, settling at rest; a soarer circles 70-150 m up and drifts over the nearest hunter within 600 m; a floater goes with the wind at
-most of its speed and comes in again 600 m upwind once it is 700 m off.
+plus 0.1 of its run), and chases from about two and a half seconds' run away (9 to 30 m), or as soon as its quarry runs; its pack follows
+the leader. The chase lasts 6-9 s at its run speed, aimed where the quarry is going. Within a body's length the hunter has one try a chase
+(J-08): it kills by a chance from 0.15 to 0.6 that grows with its size against its quarry's, and the quarry falls as fresh remains the
+pack feeds at for 40-70 s; else the quarry swerves, and the hunter rests 12-22 s and is not hungry for 70-130 s. A quarry flees a hunter
+of its kind chasing within 40 m or stalking within 12 m, its herd mates within 40 m running the same way. A scavenger feeds at the nearest
+fresh, bloated or sunken remains within 300 m where no hunter feeds (J-08), else keeps 25-60 m from the nearest hunter within 300 m, nose
+to the ground; a hungry hunter feeds at remains within 120 m before it hunts. A burrower goes under at a threat (anyone within 18 m) or to
+rest: it sinks in 1.2 s, stays under 12-40 s (longer while the explorer is near) and comes up where it went down. A climber runs to the
+nearest trunk within 25 m and climbs it, each a side and a height of its own, holding on while the explorer is near and coming down 8 s
+after; it rests in trees too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up,
+calling; within 14 m it charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night
+walkers are the species active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a
+few metres across, settling at rest; a soarer circles 70-150 m up and drifts over the nearest hunter within 600 m; a floater goes with the
+wind at most of its speed and comes in again 600 m upwind once it is 700 m off.
 
 **Drawing** (`drawLife`, `surface/animal_mesh`; to `250 + 120 size` m, 600 at most). Each species' rig is built at the landing (`rigOf`:
 the rings along the trunk, a leg's bones, the hips' heights). Each frame the main thread lists the animals to draw, reads the ground
@@ -482,7 +484,91 @@ middle of the screen within its size (12 pixels at least) and 40 m (50 on the wa
 the HUD says it ("A STRIPED HOPPER - N") and N names it (`TEXT_ANIMAL`, the guide's `names`); without one N opens the map as before. A
 name travels in a friend's export as every name does (the inbox's, the explorer's own winning). The data sheet's LIFE line lists the
 species seen there, named ones as "NAME (WORDS)", counting the ones it has no room for; X's labels and the landing map's LIFE (once seen;
-"A HERD" before) use the same words.
+"A HERD" before) use the same words. J-08: remains seen record their species (`DO_DEAD`, "REMAINS OF A STRIPED HOPPER" said) and its
+marks (`AnimalMark`): DYING for remains or a sick one, GONE for remains where none of it lives there now, CHANGED for a changed young;
+old bones mark nothing. The LIFE line shows them after the words: "STRIPED HOPPER (DYING)".
+
+**Fates** (J-08, `animalFateOf`, `cellRemains`). On a seeded world each species' fate at a place comes from the layer's
+(`13-life.md`): its class's harm by how it resists (a hash of its seed: the hardiest lose half the harm's share, the frailest half again
+as much; past 0.95 none is spared), the shell rotter's on the shelled, the food lost on the plant eaters (half on the hunters, 0.7 on the
+burrowers), the sickness on the land's survivors, its changed young's share of a herd, the thriving. Its changes (`animalChangesOf`,
+one to three, the species' own on its world) are steered by the lines' genes where one fits (a big cell's giants, a small one's dwarfs,
+a dye's new colour, a glow's spots or stripes, a spiral's twisted spine, a line that never stops tumours or a leg more, a flesh rotter's
+sores, a shell's stone plates or horns, a weak nerve poison's circling), the rest by its hash among the 42 its body takes, none
+clashing. A herd (the landing's, a cell's) is drawn as before and loses its dead: a cell's last members' places are its remains (a
+thriving herd has a half more). Each living member is sick by its hash at the share (wasting thin with its ribs showing and slow,
+melting with its underside raw, sores and drips, growths, sprouting stalks and climbing to the high ground, bloated, stone skin grey and
+cracked, crazed circling and falling, a glow in its skin bright at night, a dyed hide in a third free bank), born changed at its herd's
+share (a changed rig built once a species: two heads, an extra leg or tail, a leg gone, a joined twin, legs short or long, a long neck,
+tusks, eyes more or none, a twisted spine, a new pattern, woolly, hairless, pale, dark; marks: ribs, sores, bare patches, flayed, tumours,
+stalks, stone plates, horn growths, glowing spots and stripes, iridescent, see-through to its bones; ways: calm, bold, by night,
+circling, stumbling, climbing, swarming, limping), a giant 1.6 times its size and a dwarf 0.55. Flocks lose their dead; a swimmer's spot
+is empty by its share. **Remains** are a pure function of their cell (`cellRemains`, read from the planet function, never the drawn
+ground): a herd's dead where they lived, two in five by the water within 150 m of its spot (where the sick go), half of a sprouting
+one's on the highest of twelve points within 100 m with their stalks; up to three of each flyer fallen over the cell and each swimmer
+washed up on its shore by their dead; and on any world, seeded or not, old bones by a herd's cell in eight. A kill's remains are kept
+till the explorer is 1,300 m off. Their stage (`remainsStageOf`) follows their fate's age where they lie, each death a share of the
+first 18 steps: fresh under 2 steps, bloated under 5, sunken under 10, bones under 20, then scattered; three times as fast with a flesh
+rotter; old bones are bones or scattered. Posed dead (`poseAnimal`'s `dead`): standing stiff at the origin, legs straight, the neck
+thrown back, then laid on its side and draped over the ground (a flyer nearly flat with its wings spread, a legless one on its belly);
+bloated 1.45 times its girth, sunken 0.78 with its ribs and its hide dark; bones a skeleton (spine, ribs, skull, legs, tail, the bone bank
+29), scattered apart and half buried with a few gone. A dried-blood stain lies under the fresh and the bloated, and flies circle them
+within 30 m (fewer and lower over a small one). Remains are drawn a few centimetres toward the eye, so the ground never hides them.
+Silence: no herd, flock, swimmer or night eyes, and the dusk insects quiet. The bench's herd among twelve remains (`bench`, `herd
+remains 1x`, budget 0.6 ms). J-09: remains on an overgrowth's cover are taken in: drawn in its bank, with no stain and no flies.
+
+**The overgrowth** (J-09, `surface/overgrowth.cpp`). On a seeded world the layer's overgrowth (`13-life.md`) lies on the ground as one of
+three cover materials (TISSUE, THREADS, HARD GROWTH), each with a tile of four looks chosen by the overgrowth's texture: blisters with a
+pore at their tops, muscle's fibres, a brain's folds, gut's coils, all veined; threads crossing with tufts; a hard ground's pores, plates,
+knobs or rings (`growthTexture`). It takes a lent bank of its own before the made looks (`growthBank`, the first free of 28, 27, 26,
+25; the rock's where none is free) in its colour, a wet one's top stops whiter and its faces glossy in the sun, and at night where it
+glows its upper stops in its light. The cover is mottled in 40 m lobes; on the near ring its veins run dark by day and lit at night.
+Its structures (`forGrowths`) are a pure function of a 16 m cell whose four corners it covers: 0.6 to 6 a cell by its type (a carpet's
+and a film's few), their sizes by its grain and its age, none in a room, on a road, a street or a work's ground, in water, overlapping
+another or past the cell's edge. Eighteen shapes (`GrowthShape`): mounds, ridges, blisters, sacs, stalks with a knob, folds, vents
+whose lip breathes, rib arches (three to five ribs), rows of teeth, membranes sagging between two posts, clusters of polyps waving
+their tentacles, caps on stalks, shelves stacked on a stump, creeping veins over the ground, spires (a coral's branching), vases, tufts
+of hair waving with the wind, bladders floating on their tethers and rising and sinking slowly. Each type has its own mix: a flesh's
+mounds, ridges, blisters, folds, vents, ribs, teeth and membranes; a fungus's caps and shelves; a slime mould's veins and stalks; a
+lichen's mounds and folds; a coral's spires and polyps; a sponge's vases; hair's tufts; bladders'. Each is drawn in the overgrowth's
+bank and tile (`drawGrowth`): a lathe of rings smoothly shaded (a hard one in facets), a wet one glossy, a glowing one's spots lit at
+night, cilia waving on a moving one's, a near one with a blob shadow. Those within 12 cells and over 2 pixels at 1x (4 for hair and
+veins) are chosen on the main thread with the ground's slope at their foot (`GrowthDraw`); their shapes are made on the pool into
+sixteen lists, each a fixed run of them so the frame is the same on any number of threads, their small parts (a cap's cluster, polyps,
+teeth, a membrane's posts, veins, hair) standing on that plane, a far one (under 8 pixels) plain; then filled in bands. The points
+each stands on (`growthFeet`: a round one's foot, a row's teeth, each rib's two feet, along a ridge, a fold or a membrane) are its colliders (`growthColliders`, in `collectColliders`) where it stands over a
+step; veins, hair, polyps and bladders are walked through. Trees on a covered forest are wrapped (`TreeInst::wrapped`: trunk, branches
+and canopy in its bank, the trunk in its tile and half again as thick, the canopy in smooth lumps) and none stands in a structure
+(`growthHolds`); rocks on it are drawn in its bank and tile. A vial on it says SOFT OVERGROWTH, THREADS OVER THE GROUND or HARD
+OVERGROWTH, and the HUD names the ground. The bench's `forest 2x` and `4x overgrown` hold it to the forest's budgets (8.2 and 13 ms),
+and `open 2x` and `4x overgrown`, a herd's grassland under a coral's, to their own (7.5 and 10.3 ms): the structures cost about what the
+plants they cover did. `bench overgrowth` times each of those views plain and overgrown, by the frame's sections.
+
+**Ruins overgrown** (J-10, `surface/overgrowth_ruins.cpp`). When a settlement's or a work's cell is laid out on an overgrown world, each
+building gets the height its cover has climbed (`RuinCell::climb`, the last for the graves' stones): 0.3 + s + 0.012 s³ metres after s
+steps since the edge passed its middle (`madeGrowthSince`), spread a sixth by its hash; a settlement whose middle is on snow, ice, water
+or lava stays bare. The forms are drawn with the cover in the rasteriser's second bank under it (`drawFormItems`): each vertex weighted
+by its height over the climb, a face its edge crosses drawn in the growth bank and tile below it with the ground's edge noise (about
+0.8 m of wobble), the windows only above it (`RasterParams::patternAbove`), and a face wholly under it the cover alone, five shades under
+the ground's so a building taken whole still stands out. The people's pieces, their earth and their drifts take it; records, instruments
+and lit pieces stay bare. Each building's own pieces of the cover follow its pieces at level 0 (`overgrowCell`, `FORM_PART_GROWTH` and
+`Form::growth`): a membrane across each doorway and window it climbed half way up (the openings the walls and rings leave, which
+`ruinElements` reports as `FormOpening`s), a sheet bulging in or out and a little darker; nodules (lumpy blobs) on the walls round its
+edge; drapes from the tops it nearly reached, cut out under a ragged foot. None has a collider: the explorer pushes through a membrane,
+and it tears (`tearCue`). The streets and roads under the cover keep it. A stone rotter's share of a settlement (`stoneRotOf`) is its
+culture's `stoneRot` when its pieces are laid out: its earth, stone, brick and concrete decay further (`buildingDecay`), so its walls
+stand lower and its roofs and towers fall. The bench's `city 4x overgrown` and `capital 4x overgrown` hold the overgrown city and
+capital, twenty steps on, to their budgets (8.3 ms).
+
+**The overgrowth's sounds** (J-10, `updateGrowthSongs`). Round the explorer on foot: the nearest vent within 24 m (`ventSong`), the tall
+and hard structures within 20 m in the wind (`creakSong`; a soft overgrowth's half), the hair within 15 m in the wind (`hairSong`), and a
+membrane crossed since the last frame (`tearCue`); the game sings them (`groundSoundsTo`) with a squelch for a step on a wet cover.
+
+**Made kinds on the ground** (J-11). A made hothouse's and a made snowball's ground is a dead world's (P-04's, below): the trees, the
+logs, the undergrowth, the bark's banks, the towns' frost and the reservoirs read `deadCoverOf(site.gen)` and `deadGroundOf`, so the old
+forests stand as stone stumps under a made hothouse and as frost-white skeletons on a made snowball. The ground's snow colour comes
+through `madeMatColour` like the rest (a made hothouse's salt, a made snowball's frost). A made hothouse never rains: its rain dries
+before it reaches the ground (`computeEnvironment`).
 
 ## Sky additions (N5, 2026-09-26)
 

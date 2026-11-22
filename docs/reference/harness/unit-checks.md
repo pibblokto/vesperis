@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-53 groups, 522 checks in their order; a group's heading gives its file, its function, the render scale it
+53 groups, 526 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -60,7 +60,7 @@ starts at and its count.
 - giants: each class's globe (P-07)
 - giants: the probe's, the regress's and home's worlds as drawn (P-07)
 
-## traits (`unit_kinds.cpp`, `unitTraits`, 1x): 14
+## traits (`unit_kinds.cpp`, `unitTraits`, 1x): 15
 
 - traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)
 - traits: the new slots of distinct kinds, eligible, none excluded or moving a people's ground, packed; a fifth with none (Q-01)
@@ -75,6 +75,7 @@ starts at and its count.
 - qualities: the ground's, a stratum's accent, the gypsum's dunes, a petrified forest's trunks, a spring's pool and its terraces, a strewn field heard (Q-02)
 - sounds: each carried, on a world it fits, the dunes' slip faces and the ice there (Q-03)
 - sounds: the ground's within their levels, the dunes at their note, the ice oftener at dusk, a quake through the boots muffled (Q-03)
+- sounds: an overgrowth's (J-10): the squelch's suck rising, the vents at their lips' pace, the wet ones bubbling, the creaks now and then, none airless
 - sounds: each cue where its world has it and nowhere else (Q-03)
 
 ## drifters (`unit_drifters.cpp`, `unitDrifters`, 1x): 18
@@ -673,7 +674,7 @@ starts at and its count.
 - seeding: a loan, an unseeded world
 - seeding: samples
 
-## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 7
+## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 10
 
 - animals: the bestiary a pure function
 - animals: no two of a world alike
@@ -682,6 +683,9 @@ starts at and its count.
 - animals: the record and its names
 - animals: the herds' cells
 - animals: an older save's notice
+- animals: the fates' shares fixed by world and line
+- animals: remains a pure function of their cell
+- animals: the record's marks
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

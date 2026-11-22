@@ -61,6 +61,7 @@ struct Gen {
     // a dwelling of a people that painted each house its own (`GV_POLYCHROMY`): its walls' shades over the slot's, and its walls in the
     // accent now and then
     float tone = 0; bool painted = false;
+    std::vector<FormOpening>* openings = nullptr;   // J-10: the openings the walls leave, at level 0 (none: not asked)
     Gen(const Building& bb, const Culture& cc, const SiteRead& ss, int l, std::vector<Form>& o, int i)
         : b(bb), c(cc), st(ss), lod(l), out(o), bi(i), sx(std::cos(bb.heading)), sz(-std::sin(bb.heading)), fx(std::sin(bb.heading)), fz(std::cos(bb.heading)), great(greatKind(bb)) {
         if (dwellingKind(bb.kind) && cc.age >= AGE_MEDIEVAL && cc.age <= AGE_FUTURISTIC && cc.genome.of(GV_POLYCHROMY) == PC_VARIED) {
@@ -98,6 +99,12 @@ struct Gen {
         if (tone != 0 && slot <= 1 && part != 7 && part != 8) e.tone = tone;
         out.push_back(e);
         return out.back();
+    }
+    // J-10: an opening in a wall at (lx, lz) of the building's frame, the wall's heading the building's turned by `dh`
+    void opening(double lx, double lz, double dh, double half, double y0, double y1, double thick, bool door) {
+        if (!openings || y1 - y0 < 0.3) return;
+        FormOpening o; to(lx, lz, o.x, o.z); o.heading = b.heading + dh; o.half = half; o.y0 = y0; o.y1 = y1; o.thick = thick; o.building = bi; o.door = door;
+        openings->push_back(o);
     }
     Form& box(double lx, double lz, double dh, double hx, double hz, double y0, double y1, int slot, int mat, int part = 0) { return add(FK_BOX, 0, lx, lz, dh, hx, hz, y0, y1, slot, mat, part); }
     Form& lathe(int sub, double lx, double lz, double r, double y0, double y1, int slot, int mat, int sides = 0) {

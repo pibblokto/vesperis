@@ -26,7 +26,8 @@ const char* buildingPlaceName(int kind);
 // a building's pieces at a level of detail (0 whole, 1 the walls as one box each, 2 the building as a few boxes), each tagged
 // with its material (`Form::material`); the drifts of sand on a desert against the walls the wind meets (C-08). The pieces of
 // a settlement are `ruinElements` (ruins.h), building by building
-void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int lod, std::vector<Form>& out, int bi);
+// J-10: at level 0 the openings its walls leave go into `openings` where given
+void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int lod, std::vector<Form>& out, int bi, std::vector<FormOpening>* openings = nullptr);
 
 // a building's room: its floor in the building's frame (a rectangle of half extents hw x hd round (cx, cz), or a circle of radius
 // r), its doorway's midpoint in the settlement's metres (none for an open ring or a foot), the spots a record can lie at in the

@@ -149,8 +149,14 @@ void Game::renderDataSheet() {
     auto put = [&](const std::string& s, uint32_t c) { sheet.push_back({s, c, sec, gap}); gap = false; };
     auto section = [&](bool withGap) { sec++; gap = withGap; };
     put(fmt("%s", upper(bodyNameOf(bi)).c_str()), HUD_AMBER);
-    put(fmt("%s%s", KINDS[b.type].name, b.parent >= 0 ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str()).c_str() : ""), HUD_GREEN);
-    for (const std::string& w : wrapText(upper(KINDS[b.type].description), 50)) put(w, HUD_DIM);
+    {   // the kind's line and its sentence; J-11: a made kind's ("FLESH WORLD, ONCE FELISIAN", wrapped where a moon's name runs on) and its own
+        const MadeWorld& made = spaceR.genFor(b).made;
+        const std::string mk = made.on() ? madeKindName(made) : std::string();
+        const std::string moon = b.parent >= 0 ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str()) : std::string();
+        if (mk.empty()) put(fmt("%s%s", KINDS[b.type].name, moon.c_str()), HUD_GREEN);
+        else for (const std::string& w : wrapText(mk + ", ONCE " + KINDS[b.type].name + moon, 50)) put(w, HUD_GREEN);
+        for (const std::string& w : wrapText(upper(mk.empty() ? std::string(KINDS[b.type].description) : madeKindSentence(made)), 50)) put(w, HUD_DIM);
+    }
     for (const std::string& w : wrapText(upper(describeBody(b, spaceR.genFor(b))), 50)) put(w, HUD_CYAN);
     {   // the traits (Q-01: six slots, on two lines), and the facts read from the orbit and the spin on one
         const std::string tl = traitList(spaceR.genFor(b)), fl = factList(sys, bi);
@@ -272,7 +278,12 @@ void Game::renderDataSheet() {
             for (int i = 0; i < (int)surf.bestiary.species.size(); i++) {
                 if (!guide.animals.count(animalKey(i))) continue;
                 const std::string w = surf.bestiary.words(i);
-                seen.push_back(animalNamed(i) ? upper(animalNameOf(i)) + " (" + w + ")" : w);
+                const uint32_t mk = guide.animals.at(animalKey(i)).marks;   // J-08: GONE over DYING, then CHANGED
+                std::string marks = (mk & AM_GONE) ? "GONE" : ((mk & AM_DYING) ? "DYING" : "");
+                if (mk & AM_CHANGED) marks += marks.empty() ? "CHANGED" : ", CHANGED";
+                std::string one = animalNamed(i) ? upper(animalNameOf(i)) + " (" + w + ")" : w;
+                if (!marks.empty()) one += animalNamed(i) ? " " + marks : " (" + marks + ")";
+                seen.push_back(one);
             }
             // the forecast takes the third life line's row (the sheet was already past the frame on a world of many species); what does not
             // fit is counted (KI-466: the last were cut)

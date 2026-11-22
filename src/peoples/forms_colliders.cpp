@@ -53,6 +53,7 @@ void pyramidOutline(const Form& e, double y, std::vector<std::pair<double, doubl
 }   // namespace
 
 void formColliders(const Form& e, std::vector<FormDisc>& out) {
+    if (e.part == FORM_PART_GROWTH) return;   // J-10: an overgrowth's membranes, nodules and drapes: pushed through, never walked into
     if (formTop(e) < 0.9) return;   // A-03: what is lower than C-01's walls that block (0.9 m) is stepped over: a post's hole, a ring of stones, a stump
     if (formWalkable(e)) return;    // stood on (the view's `formSupportAt`)
     const double ch = std::cos(e.heading), sh = std::sin(e.heading);

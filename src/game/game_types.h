@@ -263,3 +263,4 @@ void drawRecordKindGlyph(RGBCanvas& fb, int x, int y, int kind, uint32_t col);
 // Q-03: the sounds of the ground the surface cues (the dunes' hum, the ice's song, a quake's heave and rumble) into the synth's levels, as much
 // as the air carries (game/surface_play.cpp; the harness's scenes hear them through it too)
 void groundSoundsTo(SurfaceView& surf, AudioState& audio);
+void lifeSoundsTo(SurfaceView& surf, AudioState& audio, bool waterNear);   // J-10: the living's (none on a world gone silent)

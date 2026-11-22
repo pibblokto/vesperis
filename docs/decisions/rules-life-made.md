@@ -1,7 +1,8 @@
 # Rules: what a seeded world is made into
 
 Rules for the made traits a seeding gives a world (1.5.0, R-448: J-04 on), one line per rule with its log entries (`log/`); a replaced
-rule moves to `superseded.md`. The world genes, the layer and the seed trip are in `rules-life-world.md`.
+rule moves to `superseded.md`. The world genes, the layer and the seed trip are in `rules-life-world.md`; the overgrowth in
+`rules-life-overgrowth.md`; the made kinds in `rules-life-kinds.md`.
 
 ## The made air and its climate
 - A world's made air is the layer's (its warmth, pressure, traits and looks), worked out in `life/seeding` from the lines that took [J-04]
@@ -10,12 +11,12 @@ rule moves to `superseded.md`. The world genes, the layer and the seed trip are 
 - CO2 warms, less where seas take it up; methane warms, a little where oxygen burns it, and hazes orange without; ammonia warms the cold [J-04]
 - Hydrogen warms a thick air only; nitrous oxide and hydrogen sulphide thin an oxygen air's ozone; oxygen forms one where there was none [J-04]
 - Dimethyl sulphide cools under a pale haze and lays a fog on the seas; hydrogen sulphide yellows the horizon [J-04]
-- A living wet world whose mean passes 42 C runs away: its seas steam for six steps, then dry to their old beds (a scorched world's rule) [J-04]
+- A living wet world whose mean passes 42 C runs away: its seas steam for six steps, then dry to their old beds (J-11: a made hothouse) [J-04]
 - What lift carries up: a glow into the clouds (patches, veins or decks), a dye into clouds and rain, ice that rains every cloud, spores [J-04]
 - Each look is 0 below the share its trait is named at: what is drawn is what the data sheet says [J-04]
 - The made climate moves a living world's caps (1.6 degrees a degree), its snow line (154 m), its ice and its frozen waters [J-04]
 - It never moves a height or a river; a biome moves only across the ice's edge; the reefs and the alpine belt read them as generated [J-04]
-- Its heat dries the plants toward straw in every view (`madeMatColour`) and kills a share of the trees on the ground [J-04]
+- Its heat dries the plants toward straw in every view (`madeMatColour`), kills a share of the trees, by how warm the world now is [J-04], [J-11]
 - The HUD's TEMP takes the made warmth where there is air, ATM its pressure; the data sheet's AIR line says what moved [J-04]
 - Samples, a later line's verdict and the spreads' bands read the world's warmth as generated [J-04]
 
@@ -41,9 +42,16 @@ rule moves to `superseded.md`. The world genes, the layer and the seed trip are 
 - A dyed rain falls in the dyed waters' bank and leaves puddles on flat open ground near the explorer; spores drift round the eye by day [J-04]
 - A fog on the seas lies from the sea's level to 22-40 m (a runaway's steam to 70 m), as the fog seas' fog lies [J-04]
 - Each class's colour has a lent bank on the ground (28, 27, 26 and 25 where the traits leave them) and a ramp on the maps [J-05]
-- The globe's made bank takes the waters' look; else, with no made cloud's colour, the land's, the plants' or the snow's in turn [J-05]
+- The globe's made bank takes a stain, else the waters' look (bank 31 under a stain), else the land's, plants' or snow's, cloudless [J-09]
 - The world's own colours turn through `madeMatColour` and `madeLifeTint` in every view; the tide's flooded flats take their sea's [J-05]
 - On the ground: foam on its waters' edges, bubbles on boiling seas, glints, pits, a dark ice's meltwater, galls, slow jelly waves [J-05]
 
+## The animals' fates
+- A line's fate comes of its genes where it lives (its steps 2 to 10), the air's of the made air over the whole world (`madeFaunaOf`) [J-08]
+- A fate keeps nothing under the share its trait is named at; no thriving where any die-off is named; silence is every class gone [J-08]
+
 [J-04]: log/7-1.5.0.md
 [J-05]: log/7-1.5.0.md
+[J-08]: log/7-1.5.0.md
+[J-09]: log/7-1.5.0.md
+[J-11]: log/7-1.5.0.md

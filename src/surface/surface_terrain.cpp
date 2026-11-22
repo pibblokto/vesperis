@@ -10,14 +10,26 @@ void SurfaceView::buildMesoTiles(uint32_t want) {
     static_assert(MAT_COUNT <= 32, "a bit a material");
     int mats[MAT_COUNT], k = 0;
     for (int m = 0; m < MAT_COUNT; m++) if ((want >> m & 1u) && !mesoBuilt[m] && materialHasMesoTile(m)) mats[k++] = m;
-    parallelFor(k, 1, [&](int b, int e) { for (int i = b; i < e; i++) buildMesoTile(mesoTiles[mats[i]], mats[i], site.gen.seed); });
+    parallelFor(k, 1, [&](int b, int e) { for (int i = b; i < e; i++) buildMesoTile(mesoTiles[mats[i]], mats[i], site.gen.seed, growthTexture(mats[i])); });
     for (int i = 0; i < k; i++) mesoBuilt[mats[i]] = true;
 }
 
 const GrainTexture* SurfaceView::mesoFor(int material) {
     if (material < 0 || material >= MAT_COUNT || !materialHasMesoTile(material)) return nullptr;
-    if (!mesoBuilt[material]) { buildMesoTile(mesoTiles[material], material, site.gen.seed); mesoBuilt[material] = true; }
+    if (!mesoBuilt[material]) { buildMesoTile(mesoTiles[material], material, site.gen.seed, growthTexture(material)); mesoBuilt[material] = true; }
     return &mesoTiles[material];
+}
+
+// J-09: an overgrowth's tile by its texture (the soft tissue's and the threads' as the cell's shape; the hard ground's by its type: a coral's or
+// a sponge's pores, a lichen's knobs, a plated tissue's plates, a bony one's knobs), -1 the hashed look
+int SurfaceView::growthTexture(int material) const {
+    const MadeWorld& m = site.gen.made;
+    if (!madeGrowthMaterial(material) || m.growthLine < 0 || m.growthLine >= MADE_LINES) return -1;
+    const MadeGrowth& G = m.spread[m.growthLine].growth;
+    if (material != MAT_HARD) return G.texture;
+    if (G.type == OG_CORAL || G.type == OG_SPONGE) return G.texture == OGT_COILED ? 3 : 0;
+    if (G.type == OG_LICHEN) return 2;
+    return G.hard >= 3 ? 2 : 1;
 }
 
 // Fraction of direct sunlight reaching a vertex (M10-06): march toward the sun over the
@@ -183,6 +195,7 @@ void SurfaceView::drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) co
 void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const {
     albedo = v.albedo;
     bank = 0;
+    if (growthBank >= 0 && madeGrowthMaterial(v.material)) { bank = (uint8_t)growthBank; return; }   // J-09: an overgrowth's cover in its own bank
     // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
     if (v.mtint > 127 && v.material != MAT_WATER && v.material != MAT_LAVA) {   // J-02: last of all
         if (site.gen.made.tinted && (site.gen.made.tintOn & MADE_ON_LAND)) { if (tintBankMade >= 0) { bank = (uint8_t)tintBankMade; return; } }   // (the test layer's land)
@@ -330,7 +343,9 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     }
     // M10-10 quantised speculars on ice, quartz and snow
     double spec = 0;
-    if ((tv.material == MAT_ICE || tv.material == MAT_QUARTZ || tv.material == MAT_SNOW || tv.material == MAT_METAL || tv.material == MAT_GLASS) && sunUp > 0.05) {
+    const bool growth = madeGrowthMaterial(tv.material);
+    if ((tv.material == MAT_ICE || tv.material == MAT_QUARTZ || tv.material == MAT_SNOW || tv.material == MAT_METAL || tv.material == MAT_GLASS ||
+         (growth && growthWet > 0.3)) && sunUp > 0.05) {   // (J-09: a wet overgrowth's gloss)
         Vec3 toCam = normalize(Vec3(camPos.x - x, camPos.y - h, camPos.z - z));
         Vec3 half = normalize(toCam + sd);
         double sp = std::pow(std::max(0.0, dot(nrm, half)), 48.0) * sunUp * lf;
@@ -348,6 +363,15 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         shade = exposureStop(albedo, light, site.atmosphere);   // the one exposure rule
         if (tv.material == MAT_FOREST) shade *= 1 - 0.38 * (cache.cellSize <= 64 ? canopyDensityAt(x, z, tv.veg) : tv.veg * 0.55);   // the floor is darker under the canopy (far ring: the average)
         shade += 16 * emissive + spec;
+        if (growth && cache.cellSize <= 64) {   // J-09: an overgrowth's cover mottled in lobes; its veins on the near ring, dark by day, lit at night where it glows
+            shade += 4 * gnoise2(x / 40.0, z / 40.0, site.gen.seed ^ 0x6E0E60ULL) * (1 - growthGlow);
+            if (cache.cellSize <= 4) {
+                const Worley3 w = worley3(Vec3(x / 9.0, z / 9.0, 0.3), site.gen.seed ^ 0x6E0E40ULL);
+                const double vein = 1 - smoothstep(0.02, 0.12, w.f2 - w.f1);
+                shade -= 5 * vein * (1 - growthGlow);
+                if (growthGlow > 0.02) shade = std::max(shade, (14 + 36 * vein) * growthGlow);
+            }
+        }
         // the broad tone tile (patches of 23-85 m, +-4 shades; a texel is two metres, or a cell for the far rings),
         // sampled per vertex: the cells are smaller than its patches, so the gradient carries it across them
         if (tv.material != MAT_WATER) {

@@ -42,7 +42,7 @@ void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
     for (int mm = 0; mm < MAT_COUNT; mm++) {
         MatRamp& r = ramps[MAP_MADE + mm];
         r = ramps[mm];
-        if (mm == MAT_LAVA) continue;
+        if (mm == MAT_LAVA || madeGrowthMaterial(mm)) continue;   // (J-09: an overgrowth's cover its own colour)
         if (g.made.tinted && (mm == MAT_WATER ? (g.made.tintOn & MADE_ON_WATER) : (g.made.tintOn & MADE_ON_LAND))) r = tintRamp;
         else if (mm != MAT_WATER && !(g.made.tinted && (g.made.tintOn & MADE_ON_LAND))) {
             const MadeLook* L = g.made.lookOf(madeClassOf(g, mm, false));

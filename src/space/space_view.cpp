@@ -315,6 +315,21 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         const bool clouds = g && (g->made.cloudTintK > 0 || g->made.cloudGlow > 0);   // J-04: its made clouds in the bank's upper stops too
         const int mb = which == 0 ? 25 : 26;
         const int cls = g ? madeGlobeClass(g->made) : -1;
+        if (g && madeGlobeGrowth(g->made)) {   // J-09: an overgrowth's stain, its lit veins in the upper stops where it glows (the night side's)
+            const MadeGrowth& G = g->made.spread[g->made.growthLine].growth;
+            const RGB oc = G.colour * lightOf();
+            if (G.glow > 0) {
+                const RGB L = G.glowTint;
+                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, oc}, {46, L * 0.3f}, {54, L * 0.7f}, {63, lerp(L, white, 0.35f)}});
+            } else { RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk); materialRamp(fb.pal, mb, oc, hasSky ? &sk : nullptr); }
+            // the first disc's waters' tint in bank 31 where no trait holds it (a glowing line's light in its upper stops)
+            if (which == 0 && g->made.tinted && g->made.tintOn == MADE_ON_WATER && !g->hasTrait(TR_BLOOMS) && !g->hasTrait(TR_REEFS) && !g->hasTrait(TR_PINK_LAKES)) {
+                const RGB wc = g->made.tint * lightOf(), W = g->made.glowTint;
+                if (g->made.glow > 0) setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, wc * 0.3f}, {34, wc * 0.7f}, {44, W * 0.35f}, {54, W * 0.75f}, {63, lerp(W, white, 0.35f)}});
+                else setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, wc * 0.3f}, {34, wc * 0.7f}, {47, wc}, {56, lerp(wc, white, 0.5f)}, {63, white}});
+            }
+            continue;
+        }
         if (g && !g->made.tinted && !clouds && cls >= 0) {   // J-05: its land's, plants' or snow's look (a glowing forest's light in the upper stops)
             const MadeLook& ml = *g->made.lookOf(cls);
             const RGB oc = (ml.tinted ? ml.tint : madeMatColour(*g, familyRep(g->type, FAM_FOREST))) * lightOf();

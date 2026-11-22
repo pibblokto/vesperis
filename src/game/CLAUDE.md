@@ -15,7 +15,9 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   flasks, the lab clock). Shared helpers of split subsystems: `autoexplore_internal`, `probe_internal`, `radar_internal`,
   `audio_internal`
 - Flight and scenes: `autopilot` (SPACE), `scene_draw`, `hud`, `surface_play` (the capsule, the ground; R-434: Shift+O for the activity
-  vision, `VISION_ACTIVITY`; J-07: the animals' record, `animalsSeen`, `animalKey`, `animalNameOf`, and N naming the one aimed at),
+  vision, `VISION_ACTIVITY`; J-07: the animals' record, `animalsSeen`, `animalKey`, `animalNameOf`, and N naming the one aimed at;
+  J-08: the record's marks and REMAINS OF, the dusk insects quiet in silence; J-10: `lifeSoundsTo`, nothing living heard in silence,
+  a squelch on a wet cover, an overgrowth's sounds in `groundSoundsTo`),
   `sector_map`, `search` (Z-03: the kit's vials, the scoop, the cold store (any number since R-432), their save lines)
 - The laboratory (Z-04): `microscope` is the state `MICROSCOPE`: the vial list, a vial on the stage, the view, the four things done to a
   slide, tracking, what is seen (`microscopeSee`: the guide saves it as `microbe` lines), the sheet's lines, its pad. `microscope_draw`
@@ -55,7 +57,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   deck, the garden (R-429: E trims a bed), the core, the capsule and its drop. `wall_screen` (R-428): the state `WALL`, the quarters'
   wall as the explorer hung it. `vehicles_draw` (R-427): the buggy and the drone on their platforms in the maintenance room, each in its
   ground shape, built from the bay drones' primitives.
-- Screens: `cabin` (with SHIPSCREEN, CONSOLE), `menus`, `data_sheet`, `guide_screens` (GUIDE, TEXT_ENTRY, LOG...), `star_map`,
+- Screens: `cabin` (with SHIPSCREEN, CONSOLE), `menus`, `data_sheet` (J-11: a made kind's line, "FLESH WORLD, ONCE FELISIAN", and
+  sentence), `guide_screens` (GUIDE, TEXT_ENTRY, LOG...), `star_map`,
   `galaxy_chart`, `landing_map` + `landing_map_build`, `persistence` (saves, SLOTS), `pad` (the controller)
 - The guide: `guide` (guide.txt), `names` (`starNameOf`, `bodyNameOf`, `logEvent`, `noteVisit`), `marks` (the scanner)
 - Devices: `radar` + `radar_camera`, `telescope`, `probe` + `probe_feed` + `probe_records`, `drones` + `drone_draw` + `seed_trip`
@@ -64,7 +67,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   `shards_screen` + `history_screen` + `chart_draw` + `medium_draw`, `player` (R-431: the state `PLAYER` at the deck, a folder per
   world, music only), the case `instruments_screen` + `instrument_draw`, `almanac`, `autoexplore` + `autoexplore_space` +
   `autoexplore_ground` + `autoexplore_hands`, `tape` + `audio_deck`
-- Sound: `audio` (`AudioState`, the synth), `audio_radar`, `audio_music`, `audio_medium`, `audio_rogue`. `settings`, and `ui`
+- Sound: `audio` (`AudioState`, the synth; J-10: an overgrowth's voices, `growthSample`), `audio_radar`, `audio_music`, `audio_medium`,
+  `audio_rogue`. `settings`, and `ui`
   (`drawPanel`, `menuStep`, `wrapText`, the HUD's colours)
 
 ## Rules and traps

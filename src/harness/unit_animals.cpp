@@ -1,7 +1,8 @@
 // J-06 (R-448): the unit's `animals` group: the bestiary a pure function (serially, reversed and on the pool), under 1.5% of 1,000 species
 // alike another of their world, every plan's poses within bounds (and its shapes made at each detail), the herds' habitat cells as generation
 // 17 placed them (which 512 m cells round a landing hold a herd, and where its spot is), and an older save's notice. J-07: every plan's gaits
-// within bounds and its feet put down; the record of what was seen, a name given with N, the guide's bytes, a loan's names
+// within bounds and its feet put down; the record of what was seen, a name given with N, the guide's bytes, a loan's names. J-08: the fates'
+// shares fixed by world and line, remains a pure function of their cell, the record's marks
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "surface/surface_view.h"
@@ -82,6 +83,28 @@ struct TestView final : AnimalView {
     double light(const Vec3&, const Vec3& n) const override { return 52 * std::pow(0.15 + 0.85 * std::max(0.0, dot(n, normalize(Vec3(0.4, 0.8, 0.2)))), 0.65); }
 };
 std::string fileText(const std::string& path) { std::ifstream f(path, std::ios::binary); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }
+}
+
+// J-08: a layer's animal fates hashed (the air's, each line's, the traits, the age), and each species' fate under it at a place
+uint64_t fateDigest(const MadeWorld& m, const Bestiary& B, const Vec3& at, uint64_t seed) {
+    uint64_t h = 0xFA7E5ULL;
+    auto mix = [&](double v) { h = mix64(h ^ (uint64_t)std::llround(v * 1e6) ^ 0x9E3779B97F4A7C15ULL); };
+    auto fate = [&](const MadeFate& f) { mix(f.fauna); for (double v : f.harm) mix(v); mix(f.shelled); mix(f.starve); mix(f.death); mix(f.sickness); mix(f.sick); mix(f.changed); mix(f.steer); mix(f.dye); mix(f.thrive); mix(f.age); };
+    fate(m.fate);
+    for (int i = 0; i < m.lines; i++) fate(m.spread[i].fate);
+    mix(m.fauna); mix(m.fateAge); mix(m.rotFast);
+    const MadeFate here = madeFateAt(m, at, seed);
+    fate(here);
+    int steer = m.fate.steer;
+    for (int i = 0; i < m.lines; i++) steer |= m.spread[i].fate.steer;
+    for (const Species& sp : B.species) {
+        int ch[3] = {-1, -1, -1};
+        const int nc = animalChangesOf(sp, steer, ch);
+        const AnimalFate af = animalFateOf(sp, here, ch, nc);
+        mix(af.dead); mix(af.sickness); mix(af.sick); mix(af.changed); mix(af.thrive); mix(af.age);
+        for (int k = 0; k < af.nChanges; k++) mix(af.changes[k]);
+    }
+    return h;
 }
 
 void unitAnimals(const Check& check) {
@@ -337,5 +360,166 @@ void unitAnimals(const Check& check) {
         for (const char* f : {"_save_auto.txt", "_guide.txt", "_settings.txt"}) remove((pre + f).c_str());
         check("animals: an older save's notice", said.find(fmt("WORLDS REGENERATED (GEN 17, NOW %d)", GEN_VERSION)) != std::string::npos,
               fmt("a save of generation 17 said '%s'%s", said.c_str(), player.c_str()));
+    }
+    // ---- J-08: the fates. Worlds with animals and plants and their own sea lines, four lines a world (a nerve poison, a blood poison, a sulphide
+    // gas, a host of the animals' cells that passes its genes on), each let go where it takes and read at three clocks
+    struct FateCase { const StarSystem* sys; int body; Seeding sd; };
+    std::vector<SeedAirCase> fateWorlds;
+    for (const SeedAirCase& c : seedAirCases(36))
+        if (kindHas(c.sys.bodies[c.body].type, KT_FAUNA) && kindHas(c.sys.bodies[c.body].type, KT_FLORA)) fateWorlds.push_back(c);
+    std::vector<FateCase> fcases;
+    const std::vector<std::vector<std::pair<int, int>>> fateLines = {{{GN_POISON, PZ_NERVE}}, {{GN_POISON, PZ_BLOOD}}, {{GN_GAS, WG_H2S}}, {{GN_HOST, HO_ANIMALS}, {GN_CARRIER, -1}}};
+    for (const SeedAirCase& c : fateWorlds)
+        for (const auto& genes : fateLines) {
+            SeedLine line = seedLineFor(c.sys, c.body, c.wild.kind.s.index, seedGeneEdits(c.wild.genes, genes));
+            line.key += "/S1";
+            double lat = c.lat, lon = c.lon;
+            if (!line.valid || !seedPlaceTaking(c.sys, c.body, line, lat, lon)) continue;
+            FateCase f{&c.sys, c.body, seedingFor(c.sys, c.body, line, lat, lon, 0)};
+            if (f.sd.verdict.takes()) fcases.push_back(f);
+        }
+    {   // the shares fixed by world and line: every case's fates (the layer's and each species' at its place) the same serially, reversed and
+        // on the pool, at steps 4, 16 and 40; and named where they are drawn
+        const int n = (int)fcases.size();
+        auto digestOf = [&](int k, int step) {
+            const FateCase& f = fcases[k];
+            const Body& b = f.sys->bodies[f.body];
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, step * MADE_STEP_S / f.sd.verdict.pace + 1);
+            return fateDigest(m, Bestiary::make(b, BodyGen::make(b)), StarSystem::bodyFromLatLon(f.sd.lat, f.sd.lon), b.seed);
+        };
+        int same = 0, fated = 0, dieOffs = 0, sick = 0, changed = 0;
+        for (int step : {4, 16, 40}) {
+            std::vector<uint64_t> serial(n), reversed(n), pooled(n);
+            for (int k = 0; k < n; k++) serial[k] = digestOf(k, step);
+            for (int k = n - 1; k >= 0; k--) reversed[k] = digestOf(k, step);
+            parallelFor(n, 1, [&](int a, int b) { for (int k = a; k < b; k++) pooled[k] = digestOf(k, step); });
+            for (int k = 0; k < n; k++) same += serial[k] == reversed[k] && serial[k] == pooled[k];
+        }
+        for (const FateCase& f : fcases) {
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            fated += m.fated(); dieOffs += (m.fauna & MF_DIE_OFF) != 0; sick += (m.fauna & MF_SICKNESSES) != 0; changed += (m.fauna & MF_CHANGED_YOUNG) != 0;
+        }
+        const MadeWorld none;   // (a world nobody seeded: no fate for any species)
+        const Body& b0 = fateWorlds.empty() ? Body() : fateWorlds[0].sys.bodies[fateWorlds[0].body];
+        bool unseeded = true;
+        if (!fateWorlds.empty()) for (const Species& sp : Bestiary::make(b0, BodyGen::make(b0)).species) unseeded = unseeded && !animalFateOf(sp, madeFateAt(none, Vec3(1, 0, 0), b0.seed), nullptr, 0).on();
+        check("animals: the fates' shares fixed by world and line", n > 0 && same == 3 * n && fated > n / 2 && dieOffs > 0 && sick > 0 && changed > 0 && unseeded,
+              fmt("%d seedings on %zu worlds: %d of %d fates alike serially, reversed and on the pool (steps 4, 16, 40); at step 40 %d with a fate, %d a die-off, %d a "
+                  "sickness, %d changed young; a world nobody seeded %s", n, fateWorlds.size(), same, 3 * n, fated, dieOffs, sick, changed, unseeded ? "untouched" : "TOUCHED"));
+    }
+    {   // remains a pure function of their cell: a blood poison's die-off at step 16 round its place, the cells' remains the same from two landings
+        // 3 km apart (each in its own local metres, compared on the body) and in any order; a world nobody seeded has old bones alone
+        int cells = 0, remainsN = 0, alike = 0, old = 0, oldOnly = 1;
+        bool done = false;
+        for (const FateCase& f : fcases) {
+            if (done || f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            const MadeWorld m = madeWorldOf(sys, f.body, {f.sd}, 16 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            const Body& b = sys.bodies[f.body];
+            const BodyGen g = BodyGen::make(b);
+            double la = 0, lo = 0;   // the land nearest the place
+            bool land = false;
+            for (double km = 1; km < 400 && !land; km *= 1.3)
+                for (int k = 0; k < 16 && !land; k++) {
+                    la = f.sd.lat + km / b.radiusKm * std::cos(k * TAU / 16); lo = f.sd.lon + km / b.radiusKm * std::sin(k * TAU / 16) / std::max(0.05, std::cos(f.sd.lat));
+                    const SurfaceSample smp = sampleSurface(g, StarSystem::bodyFromLatLon(la, lo), 16);
+                    land = !madeWetAt(smp) && smp.material != MAT_SNOW && smp.material != MAT_ICE;
+                }
+            if (!land) continue;
+            auto remainsOf = [&](double lat, double lon, bool reversed, const MadeWorld& made, std::vector<std::pair<Vec3, Remains>>& out) {
+                SurfaceView sv;
+                sv.site.made = made;
+                sv.init(&sys, f.body, lat, lon, 1000);
+                double cla, clo;   // (the cells round the first landing, the same cells from the second)
+                int gLat0, gLon0;
+                SurfaceSite first; first.made = made; first.init(&sys, f.body, la, lo, 1000);
+                SurfaceView::lifeCellAt(first, 0, 0, gLat0, gLon0);
+                (void)cla; (void)clo;
+                std::vector<std::pair<int, int>> order;
+                for (int dl = -2; dl <= 2; dl++) for (int dn = -3; dn <= 3; dn++) order.push_back({gLat0 + dl, gLon0 + dn});
+                if (reversed) std::reverse(order.begin(), order.end());
+                for (const auto& [gl, gn] : order) {
+                    SurfaceView::Herd hd; int spi = -1, nn = 0;
+                    const bool herd = SurfaceView::planCellHerd(sv.site, sv.bestiary, gl, gn, hd, spi, nn);
+                    std::vector<Remains> rs;
+                    sv.cellRemains(gl, gn, herd ? &hd : nullptr, spi, nn, rs);
+                    for (const Remains& r : rs) out.push_back({sv.site.unitAt(r.x, r.z), r});
+                }
+            };
+            std::vector<std::pair<Vec3, Remains>> a, a2, c, w;
+            remainsOf(la, lo, false, m, a);
+            remainsOf(la, lo, true, m, a2);
+            remainsOf(la + 3.0 / b.radiusKm, lo, false, m, c);
+            remainsOf(la, lo, false, MadeWorld(), w);
+            std::sort(a2.begin(), a2.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            std::sort(c.begin(), c.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            std::vector<std::pair<Vec3, Remains>> as = a;
+            std::sort(as.begin(), as.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            cells = 35; remainsN = (int)a.size();
+            if (as.size() == a2.size() && as.size() == c.size())
+                for (size_t k = 0; k < as.size(); k++) {
+                    const Remains &p = as[k].second, &q = a2[k].second, &r = c[k].second;
+                    const bool sameCell = p.species == q.species && p.stage == q.stage && p.seed == q.seed && std::fabs(p.x - q.x) < 1e-9 && std::fabs(p.z - q.z) < 1e-9;
+                    const bool sameBody = p.species == r.species && p.stage == r.stage && p.seed == r.seed && length(as[k].first - c[k].first) * b.radiusKm * 1000 < 0.01;
+                    alike += sameCell && sameBody;
+                }
+            for (const auto& [u, r] : w) { old++; if (!r.old || (r.stage != RS_BONES && r.stage != RS_SCATTERED)) oldOnly = 0; }
+            done = true;
+        }
+        check("animals: remains a pure function of their cell", done && remainsN > 0 && alike == remainsN && oldOnly,
+              fmt("%d cells of a blood poison's die-off at step 16: %d remains, %d alike in another order and from a landing 3 km off (on the body within a "
+                  "centimetre); a world nobody seeded %d old bones%s", cells, remainsN, alike, old, oldOnly ? ", all of them old" : ", NOT ALL OLD"));
+    }
+    {   // the record's marks: remains in view mark their species DYING (GONE where none of it lives there), a changed young CHANGED; the guide's
+        // `animal` lines keep them and read back the same bytes, a line with no marks as J-07 wrote it; a loan carries no animal lines
+        std::string marksSeen;
+        bool dying = false, changedSeen = false, bytes = false, plain = false, loan = false;
+        for (const FateCase& f : fcases) {
+            if (f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            const MadeWorld m = madeWorldOf(sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb; Input in;
+            sv.site.made = m;
+            sv.init(&sys, f.body, f.sd.lat + 0.02, f.sd.lon, 1000);
+            if (!sv.bestiary.landCount) continue;
+            nb.update(sv.site.worldPos(1000, 0, 0, 0));
+            sv.critters.clear(); sv.flocks.clear(); sv.herds.clear(); sv.remains.clear(); sv.habitatT = 1e18;
+            const int spi = 0;
+            sv.freeCam = true; sv.freePos = Vec3(0, sv.site.groundHeight(0, 0) + 1.6, 0); sv.freeYaw = 0; sv.freePitch = -0.25;
+            Remains r; r.species = spi; r.x = 0.4; r.z = 5; r.heading = 1.2; r.size = sv.bestiary.species[spi].size; r.stage = RS_FRESH; r.seed = 99; r.cell = false;
+            sv.testRemainsAdd(r);
+            // a changed young beside it (its species' changes, or one given)
+            SurfaceView::Herd hd; hd.cx = -1; hd.cz = 6; hd.origin = true; sv.herds.push_back(hd);
+            Critter c; c.herd = 0; c.species = spi; c.x = -1.2; c.z = 6; c.heading = 1.0; c.timer = 30; c.size = sv.bestiary.species[spi].size; c.seed = 7; c.changed = true;
+            c.homeX = c.x; c.homeZ = c.z;
+            if (sv.speciesChanges.size() > (size_t)spi && sv.speciesChanges[spi].n == 0) { sv.speciesChanges[spi].n = 1; sv.speciesChanges[spi].changes[0] = CHG_PALE; }
+            sv.critters.push_back(c);
+            sv.player.x = 0; sv.player.z = -60; sv.player.y = sv.site.surfaceHeight(0, -60);
+            for (int k = 0; k < 3; k++) { sv.update(1.0 / 30, in, 1000 + k / 30.0, false); Framebuffer fb; sv.render(fb, 1000 + k / 30.0, nb.stars, sr, 1.0); }
+            const uint32_t mk = sv.lifeSeen.size() > (size_t)spi ? sv.lifeSeen[spi].marks : 0;
+            dying = (mk & (AM_DYING | AM_GONE)) != 0 && (sv.lifeSeen[spi].doing >> DO_DEAD & 1);
+            changedSeen = (mk & AM_CHANGED) != 0;
+            marksSeen = fmt("%s%s%s", (mk & AM_DYING) ? "DYING " : "", (mk & AM_GONE) ? "GONE " : "", (mk & AM_CHANGED) ? "CHANGED" : "");
+            break;
+        }
+        {   // the guide's bytes with marks, and a record without
+            const std::string pre = "shots/tests/unit_fates";
+            Guide g;
+            const std::string k0 = Guide::bodyKey(150, 0, 36, 1) + "/A0", k1 = Guide::bodyKey(150, 0, 36, 1) + "/A1";
+            g.animals[k0] = AnimalRecord{(1u << DO_DEAD) | 1u, 12, 3, AM_DYING | AM_CHANGED};
+            g.animals[k1] = AnimalRecord{2u, 30, 5, 0};
+            g.save(pre + "_a.txt");
+            Guide g2; g2.load(pre + "_a.txt"); g2.save(pre + "_b.txt");
+            const std::string ta = fileText(pre + "_a.txt");
+            bytes = ta == fileText(pre + "_b.txt") && g2.animals[k0].marks == (AM_DYING | AM_CHANGED);
+            plain = ta.find("animal " + k1 + " 2 30 5\n") != std::string::npos && ta.find(fmt("animal %s %u 12 3 %d\n", k0.c_str(), (1u << DO_DEAD) | 1u, AM_DYING | AM_CHANGED)) != std::string::npos;
+            Guide lent;
+            loan = lent.importInbox(pre + "_a.txt") >= 0 && lent.animals.empty();
+            for (const char* fn : {"_a.txt", "_b.txt"}) remove((pre + fn).c_str());
+        }
+        check("animals: the record's marks", dying && changedSeen && bytes && plain && loan,
+              fmt("remains and a changed young in view marked their species %s; the guide's marks read back %s, a record without them as J-07 wrote it %s; a "
+                  "loan's animal lines %s", marksSeen.empty() ? "NOTHING" : marksSeen.c_str(), bytes ? "the same bytes" : "DIFFERENT", plain ? "yes" : "NO",
+                  loan ? "none" : "SOME"));
     }
 }

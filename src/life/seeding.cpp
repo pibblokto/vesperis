@@ -11,12 +11,19 @@ const char* const SEED_FATE_NAMES[SF_COUNT] = {"GROWS", "A FURNACE", "WRONG LIQU
                                                "OUTGROWN BY THE NATIVES"};
 
 const char* const MADE_AIR_NAMES[MADE_AIR_TRAITS] = {"THICK AIR", "RUNAWAY", "ORANGE HAZE", "SULPHUR AIR", "OZONE", "THIN OZONE", "COLD HAZE",
-                                                      "GLOWING CLOUDS", "COLOURED CLOUDS", "COLOURED RAIN", "SEA SMOKE", "ENDLESS RAIN", "SPORE CLOUDS"};
+                                                      "GLOWING CLOUDS", "COLOURED CLOUDS", "COLOURED RAIN", "SEA SMOKE", "ENDLESS RAIN", "SPORE CLOUDS",
+                                                      "FREEZING OVER"};
 const char* const MADE_SEA_NAMES[MADE_SEA_TRAITS] = {"PURPLE SEAS", "BLACK SEAS", "MILK SEAS", "FOAM SEAS", "JELLY SEAS", "SOUP SEAS", "SOUR SEAS",
                                                       "RUST RIVERS", "BOILING SEAS"};
 const char* const MADE_GROUND_NAMES[MADE_GROUND_TRAITS] = {"COLOURED SNOW", "DARK ICE", "CRUSTS", "MATS", "STROMATOLITES", "RUST GROUND", "CHALK GROUND",
                                                             "GLASS SANDS", "SULPHUR CRUSTS", "PITTED STONE", "SLIME"};
 const char* const MADE_PLANT_NAMES[MADE_PLANT_TRAITS] = {"BLIGHT", "ROT", "FROST BURN", "GALLS", "NEW LEAVES", "GLOWING FORESTS", "LUSH", "BLEACHED"};
+const char* const MADE_FAUNA_NAMES[MADE_FAUNA_TRAITS] = {"DIE-OFF", "WASTING", "MELTING", "GROWTHS", "SPROUTING", "BLOATED", "STONE SKIN", "CRAZED",
+                                                          "CHANGED YOUNG", "GLOWING ANIMALS", "DYED HIDES", "THRIVING", "SILENCE"};
+const char* const MADE_GROWTH_NAMES[OG_COUNT] = {"NO OVERGROWTH", "FLESH", "FUNGUS", "SLIME MOULD", "LICHEN", "CORAL", "SPONGE", "HAIR", "BLADDERS",
+                                                  "CARPETS", "FILMS"};
+const char* const MADE_DEATH_NAMES[MD_COUNT] = {"NOTHING", "A NERVE POISON", "A BLOOD POISON", "A GUT POISON", "A SULPHIDE AIR", "A THIN OZONE",
+                                                "A FLESH ROTTER", "A SHELL ROTTER", "HUNGER", "THE HEAT", "THE COLD", "AN AMMONIA SEA", "A HOST IN THE BLOOD"};
 
 namespace {
 bool rockFamily(int m) { return m == MAT_ROCK || m == MAT_BASALT || m == MAT_METAL || m == MAT_GRAPHITE || m == MAT_GLASS || m == MAT_QUARTZ; }
@@ -198,6 +205,173 @@ MadeSpread spreadOf(const Seeding& s, LineLooks* looks = nullptr) {
     return sp;
 }
 
+// J-09: what a line that never stops grows into (IDEAS-seeded-worlds.md section 7). One that binds its cells grows a tissue over the land it
+// reached: a chalk shell's coral, a glass shell's sponge, lift's bladders, flagella's hair, a light-feeder that lives dried out under a shield a
+// lichen, another light-feeder a carpet, a dead-eater that rests a fungus, a grazer that moves a slime mould, else flesh (a chemical-eater's,
+// a hunter's); one that slimes without binding lays films on the wet ground. Its variants by its genes: its colour (its dye, a light-feeder's
+// pigment, else one of its type's own by its key), its texture by its cell's shape, its grain by its size, its wetness by its slime, its
+// hardness by its shell (a dried-out one's leathery), its glow, cilia where it moves. It begins at its line's eighth step and creeps behind
+// its spread, the whole world by its 32nd
+const RGB FLESH_LOOKS[8] = {RGB(0.62f, 0.16f, 0.18f), RGB(0.86f, 0.52f, 0.54f), RGB(0.86f, 0.78f, 0.72f), RGB(0.42f, 0.46f, 0.58f),
+                            RGB(0.42f, 0.20f, 0.40f), RGB(0.40f, 0.26f, 0.20f), RGB(0.12f, 0.09f, 0.09f), RGB(0.84f, 0.86f, 0.82f)};   // red, pink, pale, bruised grey-blue, purple, brown, black, clear
+const RGB FUNGUS_LOOKS[4] = {RGB(0.90f, 0.88f, 0.82f), RGB(0.80f, 0.72f, 0.56f), RGB(0.56f, 0.54f, 0.52f), RGB(0.88f, 0.56f, 0.20f)};
+const RGB MOULD_LOOKS[3] = {RGB(0.92f, 0.82f, 0.20f), RGB(0.90f, 0.50f, 0.12f), RGB(0.86f, 0.30f, 0.20f)};
+const RGB LICHEN_LOOKS[3] = {RGB(0.55f, 0.60f, 0.45f), RGB(0.85f, 0.55f, 0.15f), RGB(0.80f, 0.78f, 0.30f)};
+const RGB CORAL_LOOKS[3] = {RGB(0.92f, 0.88f, 0.80f), RGB(0.90f, 0.56f, 0.56f), RGB(0.90f, 0.62f, 0.30f)};
+const RGB SPONGE_LOOKS[3] = {RGB(0.86f, 0.82f, 0.56f), RGB(0.62f, 0.64f, 0.66f), RGB(0.52f, 0.62f, 0.78f)};
+const RGB HAIR_LOOKS[3] = {RGB(0.86f, 0.82f, 0.74f), RGB(0.12f, 0.10f, 0.10f), RGB(0.62f, 0.24f, 0.16f)};
+const RGB BLADDER_LOOKS[3] = {RGB(0.86f, 0.62f, 0.66f), RGB(0.62f, 0.78f, 0.56f), RGB(0.80f, 0.80f, 0.62f)};
+const RGB FILM_LOOKS[3] = {RGB(0.62f, 0.66f, 0.58f), RGB(0.46f, 0.40f, 0.24f), RGB(0.30f, 0.34f, 0.42f)};
+MadeGrowth growthOf(const Seeding& s, int lineSteps, double radiusKm) {
+    MadeGrowth G;
+    if (!s.run) return G;
+    const CultureKind& k = s.wild.kind;
+    const CultureWorld& w = k.world;
+    if (!w.overgrows || (w.bind <= 0 && w.slime <= 0)) return G;
+    const uint64_t h = mix64(fnv1a(s.line) ^ 0x06E0ULL);
+    const bool flagella = k.s.motion == MO_RUN_TUMBLE || k.s.motion == MO_HELICAL || k.s.motion == MO_CORKSCREW;
+    if (w.bind <= 0) G.type = OG_FILMS;
+    else if (w.shells() && w.shell == SHL_CHALK) G.type = OG_CORAL;
+    else if (w.shells() && w.shell == SHL_GLASS) G.type = OG_SPONGE;
+    else if (w.lift > 0) G.type = OG_BLADDERS;
+    else if (flagella) G.type = OG_HAIR;
+    else if (k.s.way == LW_LIGHT && w.dry > 0 && w.shield > 0) G.type = OG_LICHEN;
+    else if (k.s.way == LW_LIGHT) G.type = OG_CARPETS;
+    else if (k.s.way == LW_DEAD && k.s.sporeYears > 0) G.type = OG_FUNGUS;
+    else if (k.s.way == LW_GRAZER && k.s.motion != MO_NONE) G.type = OG_SLIME_MOULD;
+    else G.type = OG_FLESH;
+    const int pick = (int)(h >> 8);
+    switch (G.type) {
+        case OG_FUNGUS: G.colour = FUNGUS_LOOKS[pick % 4]; break;
+        case OG_SLIME_MOULD: G.colour = MOULD_LOOKS[pick % 3]; break;
+        case OG_LICHEN: G.colour = LICHEN_LOOKS[pick % 3]; break;
+        case OG_CORAL: G.colour = CORAL_LOOKS[pick % 3]; break;
+        case OG_SPONGE: G.colour = SPONGE_LOOKS[pick % 3]; break;
+        case OG_HAIR: G.colour = HAIR_LOOKS[pick % 3]; break;
+        case OG_BLADDERS: G.colour = BLADDER_LOOKS[pick % 3]; break;
+        case OG_CARPETS: G.colour = k.s.pigment != PG_NONE ? pigmentColour(k.s.pigment) : FLESH_LOOKS[4]; break;
+        case OG_FILMS: G.colour = FILM_LOOKS[pick % 3]; break;
+        default: G.colour = FLESH_LOOKS[pick % 8]; break;
+    }
+    if (w.dyes()) G.colour = lerp(G.colour, dyeColour(w.dye), 0.7f);
+    else if (k.s.pigment != PG_NONE && G.type != OG_CARPETS && G.type != OG_FILMS) G.colour = lerp(G.colour, pigmentColour(k.s.pigment), 0.35f);
+    const bool clear = G.type == OG_FLESH && pick % 8 == 7;
+    G.veins = clear ? RGB(0.30f, 0.08f, 0.10f) : G.colour * 0.55f;
+    switch (k.s.plan) {
+        case MP_SPHERE: case MP_BUDDING: case MP_ROLLER: case MP_VESICLE: case MP_DROPLET: G.texture = OGT_BLISTERED; break;
+        case MP_ROD: case MP_FILAMENT: case MP_CHAIN: case MP_BRANCHING: G.texture = OGT_FIBROUS; break;
+        case MP_CURVED: case MP_LAMELLAR: case MP_PLATE: case MP_SHELLED: G.texture = OGT_FOLDED; break;
+        case MP_SPIRAL: case MP_CORKSCREW: G.texture = OGT_COILED; break;
+        default: G.texture = (int)((h >> 20) % OGT_COUNT); break;
+    }
+    G.grain = clampd((std::log(std::max(0.2, k.bodyUm)) + 0.5) / 4.0, 0, 1);
+    G.wet = clampd(w.slime, 0, 1);
+    G.hard = w.shells() ? (w.shell == SHL_CHALK || w.shell == SHL_GLASS ? 3 : 2) : (w.dry > 0 ? 1 : 0);
+    if (k.s.glows) { G.glow = 1; G.glowTint = GLOW_COLOURS[fnv1a(s.line) % 3]; }
+    G.hair = G.type == OG_HAIR || k.s.motion != MO_NONE;
+    G.material = madeGrowthCover(G.type, G.hard);
+    G.land = s.verdict.growLand;   // (J-11)
+    G.steps = clampi(lineSteps - MADE_GROWTH_START + 1, 0, MADE_GROWTH_STEPS);
+    G.age = std::min(G.steps, MADE_STEPS);
+    G.reach = madeReachOfStep(G.age, radiusKm);
+    return G;
+}
+
+double roundTo(double v, double q);
+// J-08: a harm joined to what a fate already has, as a chance: the share spared is the product of what each spares
+void harmAdd(double& h, double x) { h = 1 - (1 - h) * (1 - clampd(x, 0, 1)); }
+// what a fate names and keeps (each look 0 under the share its trait is named at, so what is drawn is what the data sheet says): a die-off
+// past 0.15 of a class the world has, a sickness past 0.15, changed young past 0.1, thriving past 0.2 where nothing died
+void fateNamed(MadeFate& f, bool land, bool sea) {
+    const bool has[MFC_COUNT] = {land, true, sea};
+    double most = 0;
+    for (int c = 0; c < MFC_COUNT; c++) { if (!has[c] || f.harm[c] < 0.15) f.harm[c] = 0; most = std::max(most, f.harm[c]); }
+    if (!land || f.shelled < 0.15) f.shelled = 0;
+    if (!land || f.starve < 0.15) f.starve = 0;
+    most = std::max(most, std::max(f.shelled, f.starve));
+    f.fauna = 0;
+    if (most > 0) f.fauna |= MF_DIE_OFF; else f.death = MD_NONE;
+    if (f.sickness && f.sick >= 0.15) f.fauna |= f.sickness; else { f.sickness = 0; f.sick = 0; }
+    if (f.changed >= 0.1) f.fauna |= MF_CHANGED_YOUNG; else { f.changed = 0; f.steer = 0; }
+    if (!(f.fauna & MF_DYED) && !(f.steer & MSR_DYE)) f.dye = 0;
+    if (f.thrive >= 0.2 && most < 0.1) f.fauna |= MF_THRIVING; else f.thrive = 0;
+    for (double* v : {&f.harm[0], &f.harm[1], &f.harm[2], &f.shelled, &f.starve, &f.sick, &f.changed, &f.thrive}) *v = roundTo(*v, 0.01);
+}
+// J-08: what a line does to the animals where it lives (IDEAS-seeded-worlds.md sections 5 and 8), by its genes, from its second step to its
+// tenth. A working poison: a nerve poison crazes them, a gut poison wastes them, a blood poison kills. A host of animals by its depth: on the
+// skin its glow or its dye, else bare patches; in the gut wasting; in the blood or the cells by its other genes (bloated with a gas, growths
+// where it never stops, stone skin with a shell, melting with a flesh rotter, sprouting with spores and binding cells, else it kills); in the
+// cells with a carrier, or a carrier at any depth, their young born changed. A flesh rotter festers wounds (and rots remains fast), a shell
+// rotter softens the shelled, a soup's or a jelly's waters starve their swimmers, a wood rotter's blight the plant eaters. Its reach: the
+// waters' animals where it lives in the sea (less in fresh waters or brine), the land's where it lives on the land or in the fresh waters
+// they drink, the air's half of the most of those; a host's every animal it meets
+MadeFate lineFateOf(const Seeding& s, const MadeSpread& sp, const LineLooks& L, int step, bool land, bool sea) {
+    MadeFate f;
+    if (!s.run || step < 2) return f;
+    const CultureKind& k = s.wild.kind;
+    const CultureWorld& w = k.world;
+    const double ramp = smoothstep(1.0, 10.0, (double)step);
+    const double inWater = (sp.waters & MADE_SEA) ? 1.0 : ((sp.waters & MADE_FRESH) ? 0.5 : 0.2);
+    const double onLand = sp.land ? 1.0 : ((sp.waters & MADE_FRESH) ? 0.8 : 0.3);
+    const double reach[MFC_COUNT] = {onLand, 0.5 * std::max(onLand, inWater), inWater};
+    double worst = 0;
+    auto harm = [&](double x, int death, bool host) {   // x on every class by its reach (a host's on every one)
+        for (int c = 0; c < MFC_COUNT; c++) harmAdd(f.harm[c], x * (host ? 1.0 : reach[c]));
+        if (x > worst) { worst = x; f.death = death; }
+    };
+    auto sicken = [&](int sickness, double share) { if (share > f.sick) { f.sickness = sickness; f.sick = share; } };
+    if (w.poisons()) {
+        const double str = clampd(0.25 + 0.75 * w.poisonRate, 0, 1);
+        if (w.poison == PZ_NERVE) { harm(0.8 * str, MD_NERVE, false); sicken(MF_CRAZED, 0.5); }
+        else if (w.poison == PZ_BLOOD) harm(0.95 * str, MD_BLOOD, false);
+        else { harm(0.5 * str, MD_GUT, false); sicken(MF_WASTING, 0.5); }
+    }
+    const bool rotsFlesh = w.rots() && w.rot == ROT_FLESH;
+    if (w.hosted() && (w.host == HO_ANIMALS || w.host == HO_BOTH)) {
+        const int depth = clampi((int)(w.hostRate * 4), 0, 3);
+        if (depth == 0) {
+            if (k.s.glows) sicken(MF_GLOWING, 0.6);
+            else if (w.dyes()) { sicken(MF_DYED, 0.6); f.dye = w.dye; }
+            else { sicken(MF_WASTING, 0.4); harm(0.1, MD_HOST, true); }
+        } else if (depth == 1) { sicken(MF_WASTING, 0.6); harm(0.3, MD_HOST, true); }
+        else if (!(depth == 3 && w.carrier > 0)) {
+            if (w.gives()) { sicken(MF_BLOATED, 0.5); harm(0.35, MD_HOST, true); }
+            else if (w.overgrows) { sicken(MF_GROWTHS, 0.5); harm(0.3, MD_HOST, true); }
+            else if (w.shells()) { sicken(MF_STONE_SKIN, 0.5); harm(0.3, MD_HOST, true); }
+            else if (rotsFlesh) { sicken(MF_MELTING, 0.6); harm(0.5, MD_ROT_FLESH, true); }
+            else if (k.s.sporeYears > 0 && w.bind > 0) { sicken(MF_SPROUTING, 0.4); harm(0.5, MD_HOST, true); }
+            else { sicken(MF_WASTING, 0.3); harm(0.6, MD_HOST, true); }
+        }
+        if (w.carrier > 0) f.changed = depth == 3 ? 0.25 + 0.5 * w.carrier : 0.15 + 0.3 * w.carrier;
+    }
+    if (rotsFlesh && f.sickness != MF_MELTING) harm(0.25 * w.rotRate, MD_ROT_FLESH, false);
+    if (w.rots() && w.rot == ROT_SHELL) { harmAdd(f.shelled, 0.7 * w.rotRate); if (0.7 * w.rotRate > worst) { worst = 0.7 * w.rotRate; f.death = MD_ROT_SHELL; } }
+    if (L.water == MWL_SOUP || L.water == MWL_JELLY) { harmAdd(f.harm[MFC_WATER], 0.75 * inWater); if (0.75 * inWater > worst) { worst = 0.75 * inWater; f.death = MD_STARVED; } }
+    if (L.flora & (MP_BLIGHT | MP_ROT)) {   // the plant eaters' food lost (a rot's fallen forests most)
+        const double x = (L.flora & MP_ROT) ? 0.6 : 0.45 * L.plantShare;
+        harmAdd(f.starve, x);
+        if (x > worst) { worst = x; f.death = MD_STARVED; }
+        sicken(MF_WASTING, 0.4);
+    }
+    // what steers the changed young: the cell's size, the line's dye and glow, a spiral cell, a line that never stops, a flesh rotter, a shell,
+    // a weak nerve poison
+    if (f.changed > 0) {
+        if (k.bodyUm >= 12) f.steer |= MSR_BIG;
+        else if (k.bodyUm <= 1.2) f.steer |= MSR_SMALL;
+        if (w.dyes()) { f.steer |= MSR_DYE; f.dye = w.dye; }
+        if (k.s.glows) f.steer |= MSR_GLOW;
+        if (k.s.plan == MP_SPIRAL || k.s.plan == MP_CORKSCREW) f.steer |= MSR_SPIRAL;
+        if (w.overgrows) f.steer |= MSR_STOP;
+        if (rotsFlesh) f.steer |= MSR_ROT;
+        if (w.shells()) f.steer |= MSR_SHELL;
+        if (w.poison == PZ_NERVE && w.poisonRate < 0.5) f.steer |= MSR_NERVE;
+    }
+    for (double& h : f.harm) h *= ramp;
+    f.shelled *= ramp; f.starve *= ramp; f.sick *= ramp; f.changed *= ramp;
+    fateNamed(f, land, sea);
+    return f;
+}
+
 // J-04: how a world's air answers what its lines give it (IDEAS-seeded-worlds.md section 5): whether it has air, oxygen in it and methane
 // (the archean's haze, a hydrocarbon world's); its seas of water, a living ground's climate (its ice and snow move), its plants, its clouds and
 // whether they rain; its pressure (the HUD's), its mean warmth as generated; and three hashed values: how much a gas warms it, how much its
@@ -292,7 +466,30 @@ const RGB COLD_HAZE(0.80f, 0.82f, 0.84f);
 const RGB SPORE_LOOKS[3] = {RGB(0.86f, 0.72f, 0.30f), RGB(0.66f, 0.34f, 0.18f), RGB(0.90f, 0.90f, 0.86f)};
 constexpr double RUNAWAY_C = 42;    // a wet world's mean past this runs away (about Kasting 1988's moist greenhouse)
 constexpr int RUNAWAY_STEAM = 6;    // its seas steam for six steps, then are gone
+// J-11: a wet world's mean cooled under this from over it ices to its equator (Budyko 1969's ice-albedo line: the caps' white throws back the
+// sun that warmed it), the ice running for six steps and its white cooling the world by up to 20 C more, then frozen from pole to pole
+constexpr double SNOWBALL_C = -6;
+constexpr int SNOWBALL_RUN = 6;
+constexpr double SNOWBALL_COOLS = 20;
 double roundTo(double v, double q) { return std::round(v / q) * q; }
+// J-11: how much of a warming's heat a world's plants and animals feel: none while its mean stays under 5 C, all of it from 15 C
+double heatFelt(const AirWorld& w, double warmC) { return smoothstep(5.0, 15.0, w.meanC + warmC); }
+// J-04, J-11: the steps since the first step boundary of any line at which the world's mean passed a line (its warmth as `airWarmthOf` reads it,
+// without the steam's or the ice's own), at the clock's own pace: a runaway's (over `RUNAWAY_C`) or the ice's (under `SNOWBALL_C`)
+int stepsPast(const AirWorld& w, const std::vector<const Seeding*>& took, double clock, bool hot) {
+    double onset = clock;
+    std::vector<double> marks;
+    for (const Seeding* s : took) {
+        const double pace = s->verdict.pace > 0 ? s->verdict.pace : 1.0;
+        for (int j = 1; j <= MADE_STEPS; j++) { const double c = s->clock + j * MADE_STEP_S / pace + 1e-6; if (c <= clock) marks.push_back(c); }
+    }
+    std::sort(marks.begin(), marks.end());
+    for (double c : marks) {
+        const double mean = w.meanC + airWarmthOf(w, airSumAt(took, c));
+        if (hot ? mean >= RUNAWAY_C : mean <= SNOWBALL_C) { onset = c; break; }
+    }
+    return (int)std::floor((clock - onset) / MADE_STEP_S + 1e-9);
+}
 
 // the layer's air at the clock from the lines that took (in their order): the warming and the pressure, the hazes, the horizon, the ozone, a
 // runaway (from the first step its world's mean passed RUNAWAY_C), the plants' health, what the lift carries up; each look zero under the
@@ -307,20 +504,20 @@ void madeAirOf(const Body& b, const std::vector<const Seeding*>& took, double cl
     double dP = 0.5 * a.gas[WG_CO2] + 0.1 * a.gas[WG_METHANE] + 0.1 * a.gas[WG_AMMONIA] + (w.pressure >= 1 ? 0.2 * a.gas[WG_HYDROGEN] : 0.0);
     // a runaway: the first step boundary of any line at which the world's mean passed RUNAWAY_C, its steps since (at the clock's own pace)
     if (w.living && w.wet && w.meanC + warm >= RUNAWAY_C) {
-        double onset = clock;
-        std::vector<double> marks;
-        for (const Seeding* s : took) {
-            const double pace = s->verdict.pace > 0 ? s->verdict.pace : 1.0;
-            for (int j = 1; j <= MADE_STEPS; j++) { const double c = s->clock + j * MADE_STEP_S / pace + 1e-6; if (c <= clock) marks.push_back(c); }
-        }
-        std::sort(marks.begin(), marks.end());
-        for (double c : marks) if (w.meanC + airWarmthOf(w, airSumAt(took, c)) >= RUNAWAY_C) { onset = c; break; }
-        const int steps = (int)std::floor((clock - onset) / MADE_STEP_S + 1e-9);
+        const int steps = stepsPast(w, took, clock, true);
         m.runaway = steps < RUNAWAY_STEAM ? (steps + 1) / (double)RUNAWAY_STEAM : 2.0;
         warm += 25 * std::min(1.0, m.runaway);   // the steam's own greenhouse
         dP += 1.5 * std::min(1.0, m.runaway);
         m.air |= MA_RUNAWAY;
     }
+    // J-11: the ice's run on a living wet world its lines cooled under SNOWBALL_C (one already under it as generated keeps its own climate)
+    if (w.living && w.wet && w.meanC > SNOWBALL_C && w.meanC + warm <= SNOWBALL_C) {
+        const int steps = stepsPast(w, took, clock, false);
+        m.freeze = steps < SNOWBALL_RUN ? (steps + 1) / (double)SNOWBALL_RUN : 2.0;
+        warm -= SNOWBALL_COOLS * std::min(1.0, m.freeze) * w.warmBy;   // the ice's white
+        m.air |= MA_FREEZING;
+    }
+    const bool iced = m.frozen();   // (its seas ice: no fog lies on them, nothing colours them)
     m.warmC = std::fabs(warm) < 0.5 ? 0.0 : roundTo(warm, 0.1);
     m.pressureK = roundTo(1 + dP, 0.01);
     if (green >= 4 || dP >= 0.12) m.air |= MA_THICK;
@@ -334,9 +531,10 @@ void madeAirOf(const Body& b, const std::vector<const Seeding*>& took, double cl
     if (sulphur >= 0.2) { m.air |= MA_SULPHUR; m.sulphur = roundTo(sulphur, 0.01); }
     if (!w.oxygen && a.gas[WG_OXYGEN] >= 0.3) { m.air |= MA_OZONE; m.ozone = 1; }
     else if (w.oxygen && a.gas[WG_N2O] + a.gas[WG_H2S] >= 0.3) { m.air |= MA_THIN_OZONE; m.ozone = -1; }
-    if (w.living && w.flora) m.wilt = roundTo(std::max(smoothstep(5.0, 18.0, m.warmC), m.runaway >= 1 ? 1.0 : 0.0), 0.01);
+    // (J-11: by how warm the world now is too: a cold world warmed into the temperate is greened, not scorched)
+    if (w.living && w.flora) m.wilt = roundTo(std::max(smoothstep(5.0, 18.0, m.warmC) * heatFelt(w, m.warmC), m.runaway >= 1 ? 1.0 : 0.0), 0.01);
     // a fog on the seas: dimethyl sulphide's smoke, a runaway's steam while its seas last
-    const double smoke = w.wet ? smoothstep(0.1, 0.5, a.gas[WG_DMS]) : 0.0;
+    const double smoke = w.wet && !iced ? smoothstep(0.1, 0.5, a.gas[WG_DMS]) : 0.0;
     if (smoke >= 0.2) { m.air |= MA_SEA_SMOKE; m.seaSmoke = roundTo(smoke, 0.01); }
     if (m.runaway > 0 && m.runaway <= 1) m.seaSmoke = std::max(m.seaSmoke, roundTo(m.runaway, 0.01));
     if (m.runaway > 0) m.cloudMore = roundTo(0.5 * std::min(1.0, m.runaway), 0.01);
@@ -359,7 +557,7 @@ void madeAirOf(const Body& b, const std::vector<const Seeding*>& took, double cl
     // J-05: what the air does to the waters, the ground and the plants: a sulphide turns every water purple (black where no sun feeds the purple
     // bacteria), a sour sea bleaches the reefs, an oxygen rusts an oxygenless world's ground; the plants lush under a new ozone or an endless
     // rain, bleached under a thin ozone; a runaway's seas boil while they steam
-    const bool waterSeas = w.wet && b.type != PT_HYDROCARBON && b.type != PT_AMMONIA;
+    const bool waterSeas = w.wet && b.type != PT_HYDROCARBON && b.type != PT_AMMONIA && !iced;
     if (waterSeas) {
         const double sh = smoothstep(0.3, 0.9, a.gas[WG_H2S]);
         if (sh >= 0.2) { m.seas |= m.sunless ? MS_BLACK : MS_PURPLE; m.seaShade = roundTo(sh, 0.01); m.seaShadeTint = m.sunless ? BLACK_SEA : PURPLE_SEA; }
@@ -377,6 +575,118 @@ void madeAirOf(const Body& b, const std::vector<const Seeding*>& took, double cl
         if (bleach >= 0.2) { m.flora |= MP_BLEACHED; m.bleached = roundTo(bleach, 0.01); }
     }
     if (m.runaway > 0 && m.runaway <= 1 && waterSeas) { m.seas |= MS_BOILING; m.boil = roundTo(m.runaway, 0.01); }
+}
+
+// J-08: what the made air does to the animals over the whole world (IDEAS-seeded-worlds.md sections 5 and 8): a sulphide air kills them (its
+// purple seas their swimmers first: the end-Permian's proposed killer), a thinned ozone changes their young and kills a few, the heat past 6 C
+// warmer kills (a runaway every one), the cold past 4 C colder, an ammonia sea its swimmers; a new ozone or an endless rain over the plants
+// (the lush) and an oxygen air made richer make them thrive. Silence where every class died to the last. Then every trait named, the steps
+// since the first fate came (a line's from its second step, the air's from its sixth: the remains' age) and a flesh rotter's fast rotting
+void madeFaunaOf(const Body& b, const std::vector<const Seeding*>& took, double clock, const int* lineSteps, MadeWorld& m) {
+    if (took.empty() || !kindHas(b.type, KT_FAUNA)) return;
+    const bool land = kindHas(b.type, KT_FLORA), sea = kindHas(b.type, KT_SEA);
+    MadeFate f;
+    const AirWorld w = airWorldOf(b, took[0]->verdict.worldC);
+    if (w.air) {
+        const AirSum a = airSumAt(took, clock);
+        double worst = 0;
+        auto harm = [&](int c, double x, int death) { if (x <= 0) return; harmAdd(f.harm[c], x); if (x > worst) { worst = x; f.death = death; } };
+        const double sul = smoothstep(0.15, 0.8, a.gas[WG_H2S]);
+        harm(MFC_LAND, 0.9 * sul, MD_SULPHIDE); harm(MFC_AIR, 0.9 * sul, MD_SULPHIDE); harm(MFC_WATER, smoothstep(0.1, 0.6, a.gas[WG_H2S]), MD_SULPHIDE);
+        if (m.ozone < 0) {
+            const double thin = smoothstep(0.3, 0.9, a.gas[WG_N2O] + a.gas[WG_H2S]);
+            f.changed = 0.4 * thin;
+            for (int c = 0; c < MFC_COUNT; c++) harm(c, 0.1 * thin, MD_THIN_OZONE);
+        }
+        const double heat = m.runaway >= 1 ? 1.0 : smoothstep(6.0, 22.0, m.warmC) * heatFelt(w, m.warmC);
+        harm(MFC_LAND, heat, MD_HEAT); harm(MFC_AIR, heat, MD_HEAT); harm(MFC_WATER, m.dried() ? 1.0 : 0.8 * heat, MD_HEAT);
+        const double cold = smoothstep(4.0, 16.0, -m.warmC);
+        harm(MFC_LAND, cold, MD_COLD); harm(MFC_AIR, cold, MD_COLD); harm(MFC_WATER, 0.6 * cold, MD_COLD);
+        if (w.wet && b.type != PT_HYDROCARBON && b.type != PT_AMMONIA) harm(MFC_WATER, smoothstep(0.2, 0.8, a.gas[WG_AMMONIA]), MD_AMMONIA);
+        f.thrive = std::max(m.lush, w.oxygen ? smoothstep(0.3, 1.0, a.gas[WG_OXYGEN]) : 0.0);
+    }
+    fateNamed(f, land, sea);
+    {   // silence: every class dead to the last over the whole world, of the air's harm and the lines' that reached all of it
+        double h[MFC_COUNT];
+        for (int c = 0; c < MFC_COUNT; c++) h[c] = f.harm[c];
+        for (int i = 0; i < m.lines && i < MADE_LINES; i++)
+            if (m.spread[i].reach >= PI) for (int c = 0; c < MFC_COUNT; c++) harmAdd(h[c], m.spread[i].fate.harm[c]);
+        if (h[MFC_AIR] >= 0.95 && (!land || h[MFC_LAND] >= 0.95) && (!sea || h[MFC_WATER] >= 0.95)) f.fauna |= MF_SILENCE | MF_DIE_OFF;
+    }
+    m.fate = f;
+    m.fauna = f.fauna;
+    for (int i = 0; i < m.lines && i < MADE_LINES; i++) m.fauna |= m.spread[i].fate.fauna;
+    if (m.fauna & MF_DIE_OFF) {   // no thriving named where any die-off is: what thrives is the share spared
+        m.fauna &= ~MF_THRIVING; m.fate.fauna &= ~MF_THRIVING; m.fate.thrive = 0;
+        for (int i = 0; i < m.lines && i < MADE_LINES; i++) { m.spread[i].fate.fauna &= ~MF_THRIVING; m.spread[i].fate.thrive = 0; }
+    }
+    int age = -1;
+    int airAge = -1;
+    for (int i = 0; i < m.lines && i < MADE_LINES; i++) {
+        if (m.spread[i].fate.on()) age = std::max(age, lineSteps[i] - 2);
+        if (f.on()) airAge = std::max(airAge, lineSteps[i] - 6);
+    }
+    age = std::max(age, airAge);
+    if (m.fate.on()) m.fate.age = clampi(airAge, 0, MADE_FATE_STEPS);
+    for (const Seeding* s : took) {
+        const CultureWorld& cw = s->wild.kind.world;
+        if (cw.rots() && cw.rot == ROT_FLESH && seedingStep(*s, clock) >= 2) m.rotFast = true;
+    }
+    m.fateAge = m.fauna ? clampi(age, 0, MADE_FATE_STEPS) : 0;
+    if (!m.fauna) m.rotFast = false;
+}
+}   // namespace
+
+namespace {
+// (the layer's harm read before its key is set: `madeKindOf`'s)
+bool harmsOf(const MadeWorld& m) {
+    if (m.fauna & (MF_DIE_OFF | MF_SILENCE | MF_CHANGED_YOUNG | (MF_SICKNESSES & ~(MF_GLOWING | MF_DYED)))) return true;
+    if ((m.flora & (MP_BLIGHT | MP_ROT | MP_FROST_BURN | MP_BLEACHED | MP_GALLS)) || m.wilt >= 0.2) return true;
+    if ((m.seas & (MS_SOUP | MS_JELLY | MS_SOUR | MS_PURPLE | MS_BLACK | MS_BOILING)) || (m.air & (MA_RUNAWAY | MA_FREEZING | MA_THIN_OZONE))) return true;
+    return (m.growths & ~(1 << OG_FILMS)) != 0;
+}
+}   // namespace
+bool madeHarms(const MadeWorld& m) { return m.on() && harmsOf(m); }
+bool madeLivable(const MadeWorld& m) {
+    return m.on() && !madeHarms(m) && ((m.fauna & MF_THRIVING) || (m.flora & MP_LUSH) || (m.air & MA_OZONE) || m.kind == MDK_GREENED);
+}
+
+namespace {
+// J-11: a world's made kind (IDEAS-seeded-worlds.md section 10), the first whose line it passed: its seas dried by a runaway (MADE HOTHOUSE), its
+// ice run to the equator (MADE SNOWBALL), an overgrowth over the whole world and on half its land at least (KIND_GROWN; the latest line's that
+// has; films lie by the waters alone), every
+// animal gone and the plants with them or none (CHARNEL WORLD), purple seas under a sulphur air, an oxygenless ground rusted under its new ozone,
+// a thick orange haze (each look past KIND_LINE), a cold world (its mean under 5 C as generated) made 3 C warmer or a dry one (a steppe's grass
+// band) rained on, where nothing was harmed (GREENED WORLD)
+constexpr double KIND_LINE = 0.6, KIND_GROWN = 0.5;
+void madeKindOf(const Body& b, const std::vector<const Seeding*>& took, double clock, MadeWorld& m) {
+    m.kind = MDK_NONE; m.kindGrowth = OG_NONE; m.kindCold = false;
+    if (took.empty()) return;
+    if (m.dried()) { m.kind = MDK_HOTHOUSE; return; }
+    if (m.frozen()) { m.kind = MDK_SNOWBALL; return; }
+    for (int i = std::min(m.lines, MADE_LINES) - 1; i >= 0; i--) {
+        const MadeGrowth& G = m.spread[i].growth;
+        if (G.on() && G.type != OG_FILMS && G.reach >= PI && G.land >= KIND_GROWN) { m.kind = MDK_OVERGROWN; m.kindGrowth = G.type; return; }
+    }
+    const bool flora = kindHas(b.type, KT_FLORA);
+    if (m.fauna & MF_SILENCE) {
+        bool rotsAll = false;
+        for (int i = 0; i < m.lines && i < MADE_LINES; i++) rotsAll = rotsAll || (m.spread[i].plants && m.spread[i].reach >= PI);
+        const bool felled = rotsAll && (((m.flora & MP_ROT) && m.rot >= KIND_LINE) || ((m.flora & MP_BLIGHT) && m.plant.kind == MP_BLIGHT && m.plant.variant == 2));
+        if (!flora || felled || m.wilt >= 0.8) { m.kind = MDK_CHARNEL; return; }
+    }
+    if ((m.seas & MS_PURPLE) && m.seaShade >= KIND_LINE && (m.air & MA_SULPHUR) && m.sulphur >= KIND_LINE) { m.kind = MDK_PURPLE; return; }
+    if ((m.grounds & MGT_RUST) && m.rustGround >= KIND_LINE && (m.air & MA_OZONE)) { m.kind = MDK_RUST; return; }
+    const AirWorld w = airWorldOf(b, took[0]->verdict.worldC);
+    if ((m.air & MA_ORANGE_HAZE) && orangeHazeOf(w, airSumAt(took, clock)) >= KIND_LINE) { m.kind = MDK_HAZE; return; }
+    if (livingGround(b.type) && flora && !harmsOf(m)) {
+        const bool cold = w.meanC < 5 && m.warmC >= 3, dry = KINDS[b.type].grassBand > 0 && m.rainMore >= 0.4;
+        if (cold || dry) {   // its plants spreading (lush), its animals thriving on the new grazing (section 8)
+            m.kind = MDK_GREENED; m.kindCold = cold;
+            m.flora |= MP_LUSH; m.lush = std::max(m.lush, 0.5);
+            if (kindHas(b.type, KT_FAUNA)) { m.fate.thrive = std::max(m.fate.thrive, 0.3); m.fate.fauna |= MF_THRIVING; m.fauna |= MF_THRIVING; }
+        }
+    }
 }
 }   // namespace
 
@@ -556,12 +866,13 @@ SeedLine seedWildLine(const SeedLine& line, const std::vector<GeneEdit>& drift) 
 
 // J-04: the share of a world's surface a line lives on (its spread's habitat at 96 points spread evenly over the sphere, read at 20 km) and the
 // world's mean warmth as generated over the same points (at the water's level or the ground's)
-static void seedHabitatOf(const StarSystem& sys, int body, const MadeSpread& sp, double freezeC, double& share, double& meanC) {
+// J-11: and the share of its land an overgrowth of the line could lie on (land that is not lava, snow or ice, within its band of warmth)
+static void seedHabitatOf(const StarSystem& sys, int body, const MadeSpread& sp, double freezeC, double& share, double& meanC, double& growLand) {
     const Body& b = sys.bodies[body];
     const BodyGen g = BodyGen::make(b);
     MadeWorld m; m.tempK = b.tempK; m.sunless = sys.sunless(); m.freezeC = freezeC;
     constexpr int N = 96;
-    int lives = 0; double sum = 0;
+    int lives = 0, land = 0, grows = 0; double sum = 0;
     for (int i = 0; i < N; i++) {
         const double z = 1 - (2 * i + 1) / (double)N, r = std::sqrt(std::max(0.0, 1 - z * z)), phi = i * 2.399963229728653;   // the golden angle
         const Vec3 u(r * std::cos(phi), r * std::sin(phi), z);
@@ -569,16 +880,18 @@ static void seedHabitatOf(const StarSystem& sys, int body, const MadeSpread& sp,
         const bool wet = madeWetAt(smp);
         const int salt = wet ? madeSaltAt(g, smp) : 0;
         sum += placeMeanC(g, b.tempK, m.sunless, u, wet ? smp.water : smp.height);
-        if (smp.material != MAT_LAVA && madeLives(sp, wet, salt, madeMeanAt(g, m, u, smp, wet, salt))) lives++;
+        const double c = madeMeanAt(g, m, u, smp, wet, salt);
+        if (smp.material != MAT_LAVA && madeLives(sp, wet, salt, c)) lives++;
+        if (!wet && smp.material != MAT_LAVA) { land++; grows += smp.material != MAT_SNOW && smp.material != MAT_ICE && c >= sp.tLo && c <= sp.tHi; }
     }
-    share = lives / (double)N; meanC = sum / N;
+    share = lives / (double)N; meanC = sum / N; growLand = land ? grows / (double)land : 0.0;
 }
 
 void seedingRun(const StarSystem& sys, int body, Seeding& s) {
     s.verdict = seedVerdictOf(sys, body, s.sent, s.lat, s.lon);
     s.wild = s.verdict.takes() ? seedWildLine(s.sent, s.verdict.drift) : s.sent;
     s.run = true;
-    if (s.verdict.takes()) seedHabitatOf(sys, body, spreadOf(s), freezeOf(s.wild.kind.chemistry), s.verdict.share, s.verdict.worldC);
+    if (s.verdict.takes()) seedHabitatOf(sys, body, spreadOf(s), freezeOf(s.wild.kind.chemistry), s.verdict.share, s.verdict.worldC, s.verdict.growLand);
 }
 
 int seedingStep(const Seeding& s, double clock) {
@@ -592,11 +905,14 @@ MadeWorld madeWorldOf(const StarSystem& sys, int body, const std::vector<Seeding
     if (body < 0 || body >= (int)sys.bodies.size()) return m;
     const Body& b = sys.bodies[body];
     std::vector<const Seeding*> took;   // J-04: the lines that took and went down by the clock, for the air
+    int lineSteps[MADE_LINES] = {-1, -1, -1};   // J-08: each spread's steps on past MADE_STEPS (the remains' age)
+    const bool fauna = kindHas(b.type, KT_FAUNA), land = kindHas(b.type, KT_FLORA), sea = kindHas(b.type, KT_SEA);
     for (const Seeding& s : seedings) {
         if (m.lines >= MADE_LINES) break;
         if (s.run && !s.verdict.takes()) continue;   // a culture that died there made nothing
         const int step = seedingStep(s, clock);
         if (step < 0) continue;
+        lineSteps[m.lines] = (int)std::min<double>(1e6, std::floor((clock - s.clock) * (s.run ? s.verdict.pace : 1.0) / MADE_STEP_S));
         MadeSpread& sp = m.spread[m.lines++];
         LineLooks L;
         sp = spreadOf(s, &L);
@@ -624,12 +940,22 @@ MadeWorld madeWorldOf(const StarSystem& sys, int body, const std::vector<Seeding
         if (!kindHas(b.type, KT_FLORA)) { L.plant = MadeLook(); L.flora = 0; L.galls = L.rot = 0; sp.makes &= ~(1 << MC_PLANTS); }
         m.seas |= L.seas; m.grounds |= L.grounds; m.flora |= L.flora;
         if (L.land.on) m.land = L.land;
+        if (L.land.on && L.land.kind == MGT_PITTED) sp.pits = clampi(lineSteps[m.lines - 1], 1, MADE_GROWTH_STEPS);   // J-10: its ruins crumble
         if (L.snow.on) m.snow = L.snow;
         if (L.plant.on) { m.plant = L.plant; m.plantShare = L.plantShare; m.plantGlow = L.plantGlow; m.plantGlowTint = L.plantGlowTint; }
         m.galls = std::max(m.galls, L.galls); m.rot = std::max(m.rot, L.rot);
+        if (fauna) {   // J-08: what it does to the animals where it reached, and the steps since it began
+            sp.fate = lineFateOf(s, sp, L, step, land, sea);
+            if (sp.fate.on()) sp.fate.age = clampi(lineSteps[m.lines - 1] - 2, 0, MADE_FATE_STEPS);
+        }
+        sp.growth = growthOf(s, lineSteps[m.lines - 1], b.radiusKm);   // J-09: what it grows into, creeping behind its spread
+        if (sp.growth.on()) { m.growths |= 1 << sp.growth.type; m.growthLine = m.lines - 1; }
     }
     if (m.lines) { m.tempK = b.tempK; m.sunless = sys.sunless(); }
     madeAirOf(b, took, clock, m);   // J-04
+    if (m.lines && (kindHas(b.type, KT_FAUNA) || m.grown())) m.radiusKm = b.radiusKm;   // (J-08, J-09: where the spreads had reached at each step)
+    madeFaunaOf(b, took, clock, lineSteps, m);   // J-08
+    madeKindOf(b, took, clock, m);   // J-11
     if (m.looks()) m.key = madeKey(m);
     return m;
 }
@@ -647,13 +973,13 @@ MadeWorld madeTestLayer(const Vec3& place, double reach, int cover, double cover
 std::vector<std::string> madeTraitWords(const MadeWorld& m, bool seas) {
     std::vector<std::string> w;
     if (!m.on()) return w;
-    if (m.tinted && m.tintOn == MADE_ON_WATER && !m.dried()) {   // (a runaway's waters gone, their colours with them)
+    if (m.tinted && m.tintOn == MADE_ON_WATER && !m.dried() && !m.frozen()) {   // (a runaway's waters gone, their colours with them; J-11: a snowball's under ice)
         const char* waters = seas ? " SEAS" : " WATERS";
         if (m.dye > WD_NONE && m.dye < WD_COUNT && !(m.dye == WD_BLACK && (m.seas & MS_BLACK))) w.push_back(std::string(WORLD_DYE_NAMES[m.dye]) + waters);   // (J-05's BLACK SEAS)
         if (m.glow > 0) w.push_back(std::string("GLOWING") + waters);
     }
     // J-05: the waters' (none once a runaway dried them), the ground's (a coloured snow by its dye: RED SNOW), the plants' (new leaves by theirs)
-    for (int i = 0; i < MADE_SEA_TRAITS; i++) if ((m.seas >> i) & 1 && !m.dried()) w.push_back(MADE_SEA_NAMES[i]);
+    for (int i = 0; i < MADE_SEA_TRAITS; i++) if ((m.seas >> i) & 1 && !m.dried() && !m.frozen()) w.push_back(MADE_SEA_NAMES[i]);
     for (int i = 0; i < MADE_GROUND_TRAITS; i++) {
         if (!((m.grounds >> i) & 1)) continue;
         if ((1 << i) == MGT_COLOURED_SNOW && m.snow.dye > WD_NONE && m.snow.dye < WD_COUNT) w.push_back(std::string(WORLD_DYE_NAMES[m.snow.dye]) + " SNOW");
@@ -664,6 +990,12 @@ std::vector<std::string> madeTraitWords(const MadeWorld& m, bool seas) {
         if ((1 << i) == MP_NEW_LEAVES && m.plant.dye > WD_NONE && m.plant.dye < WD_COUNT) w.push_back(std::string(WORLD_DYE_NAMES[m.plant.dye]) + " LEAVES");
         else w.push_back(MADE_PLANT_NAMES[i]);
     }
+    for (int i = 1; i < OG_COUNT; i++) if ((m.growths >> i) & 1) w.push_back(MADE_GROWTH_NAMES[i]);   // J-09: the overgrowths after the plants
+    if (m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES) {   // J-10: the latest's sounds (its squelch underfoot, its vents' breath)
+        const MadeGrowth& G = m.spread[m.growthLine].growth;
+        if (G.wet >= MADE_WET_GROUND) w.push_back("WET GROUND");
+        if (madeGrowthBreathes(G.type)) w.push_back("BREATHING");
+    }
     // J-04: the air's, a dyed cloud and rain by their dye (RED CLOUDS; BLOOD RAIN a red or crimson one's)
     for (int i = 0; i < MADE_AIR_TRAITS; i++) {
         const int bit = 1 << i;
@@ -672,6 +1004,15 @@ std::vector<std::string> madeTraitWords(const MadeWorld& m, bool seas) {
         else if (bit == MA_DYE_RAIN && m.rainDye > WD_NONE && m.rainDye < WD_COUNT)
             w.push_back(m.rainDye == WD_RED || m.rainDye == WD_CRIMSON ? std::string("BLOOD RAIN") : std::string(WORLD_DYE_NAMES[m.rainDye]) + " RAIN");
         else w.push_back(MADE_AIR_NAMES[i]);
+    }
+    // J-08: the animals' last (dyed hides by their dye: RED HIDES)
+    for (int i = 0; i < MADE_FAUNA_TRAITS; i++) {
+        const int bit = 1 << i;
+        if (!(m.fauna & bit)) continue;
+        int dye = m.fate.dye;
+        for (int j = 0; j < m.lines && j < MADE_LINES && bit == MF_DYED; j++) if (m.spread[j].fate.fauna & MF_DYED) dye = m.spread[j].fate.dye;
+        if (bit == MF_DYED && dye > WD_NONE && dye < WD_COUNT) w.push_back(std::string(WORLD_DYE_NAMES[dye]) + " HIDES");
+        else w.push_back(MADE_FAUNA_NAMES[i]);
     }
     return w;
 }

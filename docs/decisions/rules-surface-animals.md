@@ -30,9 +30,20 @@ Rules for a world's animals (1.5.0, R-448: J-06 on), one line per rule with its 
 ## Ways and the record
 - A gait's stride follows its speed (`speciesStride`); a foot on the ground stays where it was put while the body goes over it [J-07]
 - The ways are states of the one machine (`updateLife`): a way's own state is left only by its own end, never by the generic choice [J-07]
-- No hunt ends in a kill before J-08's remains: the quarry swerves within a body's length, the hunter tires [J-07]
+- A hunt has one try at the kill within a body's length, by a chance from 0.15 to 0.6 by size; the quarry's remains feed the pack [J-08]
 - Seen is drawn whole (a coarse mesh or more) on the screen within reach; the record reads `drawLife`'s, never the update's [J-07]
 - The guide keeps a species seen by `<body key>/A<index>` (`animal` lines, written once there is one); a loan carries only the names [J-07]
 
+## Fates
+- A species' fate at a place is the layer's there (`madeFateAt`) by how it resists, a hash of its seed; past 0.95 harm none is spared [J-08]
+- A herd is drawn as before and loses its dead (its last members' places are their remains); its sick and changed by each member's hash [J-08]
+- A species' changes are its own on its world: one to three its body takes, the first steered by the lines' genes, none clashing [J-08]
+- Remains are a pure function of their cell, read from the planet function, never the drawn ground; old bones lie on any world [J-08]
+- Remains age by their fate's age where they lie (counted from the spread's arrival there), three times as fast with a flesh rotter [J-08]
+- A scavenger feeds at remains where no hunter feeds; a hungry hunter feeds at remains within 120 m before it hunts [J-08]
+- Remains seen record DYING (GONE where none of it lives there), a changed young CHANGED; the guide keeps the marks; old bones mark none [J-08]
+- Remains are drawn a few centimetres toward the eye, so the ground they lie on never hides them [J-08]
+
 [J-06]: log/7-1.5.0.md
 [J-07]: log/7-1.5.0.md
+[J-08]: log/7-1.5.0.md

@@ -207,6 +207,10 @@ inline const BodyGen& thenWorld(const BodyGen& g, BodyGen& tmp) {
     return tmp;
 }
 inline int nowKind(const BodyGen& g) { return g.deadAs >= 0 ? g.deadAs : g.type; }   // P-04: the kind the explorer walks (a then-world's: the dead kind)
+// J-11: the dead cover over a world's living ground: its kind's (P-04's dead worlds), else its made kind's (`MadeWorld::deadCover`: a made
+// hothouse's scorched, a made snowball's frozen); and whether its ground is so dead (its old forests standing dead, nothing else growing)
+inline int deadCoverOf(const BodyGen& g) { return KINDS[g.type].cover != DC_NONE ? KINDS[g.type].cover : (g.made.on() ? g.made.deadCover() : DC_NONE); }
+inline bool deadGroundOf(const BodyGen& g) { return deadKind(g.type) || (g.made.on() && g.made.deadCover() != DC_NONE); }
 
 // B-321: the climate's mean surface temperature (degrees C) at a latitude, height and season on a living world: the
 // biome table and the HUD read the same number. `sub` is dot(unit, lockedDir) on a locked world (0 otherwise).
@@ -226,6 +230,8 @@ double madeMeanAt(const BodyGen& g, const MadeWorld& m, const Vec3& unit, const 
 // grass and its forest, where it has plants) dried toward straw by the heat (`MadeWorld::wilt`), its second flora's leaves with them; every
 // other colour, and every world's without a wilt, as generated
 RGB madeMatColour(const BodyGen& g, int mat);
+// J-09: an overgrowth's cover (a soft tissue, threads, a hard one)
+inline bool madeGrowthMaterial(int mat) { return mat == MAT_TISSUE || mat == MAT_THREADS || mat == MAT_HARD; }
 RGB madeFlora2(const BodyGen& g);
 // J-05: and the waters (every water turned purple or black by a sulphide), the ground (an oxygenless world's rock, sand, dust and mud rusted
 // by an oxygen), the plants made lush or bleached; a reef's lagoon bleached by a sour sea (`madeLifeTint`, else `lifeTintColour`)
@@ -248,6 +254,9 @@ inline int madeGlobeClass(const MadeWorld& m) {
     }
     return -1;
 }
+// J-09: whether the globe gives its made bank (25 or 26) to an overgrowth's stain, before all of those (its cover's pixels; the waters' tint
+// moves to bank 31 on the first disc where no trait holds it, and a made cloud keeps its bank's colour no more)
+inline bool madeGlobeGrowth(const MadeWorld& m) { return m.on() && m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES; }
 // J-05: a material's colour where a made share lies over a half (the class's colour: the waters' tint, the land's, the snow's, the plants';
 // the test layer's over the land), else `madeMatColour` (the landing map's zoom)
 RGB madeColourAt(const BodyGen& g, int mat, double share);

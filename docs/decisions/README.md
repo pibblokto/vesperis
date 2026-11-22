@@ -27,6 +27,10 @@ before changing anything there.
   down (the drone bay's seed trip, the verdict, the drift, the spread and its looks): the J series.
 - `rules-life-made.md`: what a seeded world is made into, J-04 on: the made air and its climate (each gas's answer by its world, a
   runaway, what lift carries up, the caps, the snow and the plants moved) and how it is drawn.
+- `rules-life-overgrowth.md`: what a seeded line's overgrowth makes of a world, J-09 on: its cover and structures, the ruins it takes and
+  crumbles, its sounds.
+- `rules-life-kinds.md`: a seeded world's made kind, J-11 on: the lines each kind passes (a hothouse, a snowball, the overgrown and the
+  rest), the dead covers laid over a living ground, the data sheet's kind line.
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and screens, controls and the frame, auto-explore.

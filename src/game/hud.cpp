@@ -387,7 +387,7 @@ void Game::renderSurfaceHUD() {
             drawRectRGB(canvas, lx - 4, ly - 4, lx + 4, ly + 4, HUD_CYAN);
             double d = std::sqrt((c.x - pl.x) * (c.x - pl.x) + (c.z - pl.z) * (c.z - pl.z));
             const bool known = c.species >= 0 && c.species < (int)surf.bestiary.species.size();   // J-07: its name, else its words
-            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", known ? trunc(upper(animalNameOf(c.species)), 14).c_str() : "CREATURE", DOING_NAMES[clampi(c.state, 0, CS_STATES - 1)], d).c_str(), HUD_CYAN);
+            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", known ? trunc(upper(animalNameOf(c.species)), 14).c_str() : "CREATURE", DOING_NAMES[clampi(c.state, 0, DO_COUNT - 1)], d).c_str(), HUD_CYAN);
         }
         for (const Flock& f : surf.flocks) {
             double a = f.phase + t * f.speed;
@@ -467,7 +467,11 @@ void Game::drawReadings() {
     }
     if (!surf.inDrone) {   // the suit's life sensor: the nearest herd or flock within 1.5 km (`X` still brackets what is in view)
         double best = 1e9, bx = 0, bz = 0; bool flock = false;
-        for (const SurfaceView::Herd& hd : surf.herds) { double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = false; } }
+        for (const SurfaceView::Herd& hd : surf.herds) {
+            if (hd.empty) continue;   // J-08: a cell held for its remains alone
+            double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz);
+            if (d < best) { best = d; bx = dx; bz = dz; flock = false; }
+        }
         for (const Flock& f : surf.flocks) {
             double a = f.phase + t * f.speed;
             double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz);

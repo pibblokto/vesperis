@@ -40,8 +40,7 @@ SeedLine seedLineFor(const StarSystem& sys, int body, int species, const std::ve
     return L;
 }
 
-namespace {
-std::string lighter(const GeneCode& c, std::string p, int d) {   // (`heavier`'s other way)
+std::string lighter(const GeneCode& c, std::string p, int d) {   // (`heavier`'s other way; J-08: shared, harness.h)
     const char* abc = alphabetOf(c.letters);
     for (int guard = 0; d > 0 && guard < 64; guard++)
         for (int i = 0; i < (int)p.size() && d > 0; i++) {
@@ -51,7 +50,6 @@ std::string lighter(const GeneCode& c, std::string p, int d) {   // (`heavier`'s
         }
     return p;
 }
-}   // namespace
 
 const char* const SEED_LINE_NAMES[SL_COUNT] = {"wild", "warm", "cold", "a dye", "a methane-maker", "STOP cut"};
 
@@ -428,8 +426,13 @@ int runSeed(int argc, char** argv) {
     if (what == "climate") return seedClimate();
     if (what == "traits") return seedTraits();
     if (what == "looks") return seedLooks();
+    if (what == "fates") return seedFates();
+    if (what == "kinds") return seedKinds();
     if (what != "test") {
-        printf("seed: test | worlds | sea | climate | traits | looks (J-02: the test layer in every view, and off again; J-03: six lines on forty worlds, a seeded sea; J-04: each gas on twenty worlds, each made air's trait drawn; J-05: each made water's, ground's and plants' trait drawn)\n");
+        printf("seed: test | worlds | sea | climate | traits | looks | fates | kinds (J-02: the test layer in every view, and off again; J-03: six lines on forty "
+               "worlds, a seeded sea; J-04: each gas on twenty worlds, each made air's trait drawn; J-05: each made water's, ground's and plants' trait drawn; "
+               "J-08: each fate of the animals and each change drawn, a seeded world's herds over its steps; J-11: the made kind each of forty worlds and six "
+               "lines ends as, the shares of harm, looks and more livable, each made kind drawn)\n");
         return 1;
     }
     const double t0 = nowSec();
