@@ -68,7 +68,7 @@ with a culture, left out at first (the worlds stayed as generated), came in with
 | 28 | Any world | J-13 | The cold worlds: brine lines to -45 C, places at their own warmth, cultures sent down a drill hole (R-454) | L | done 2026-11-22 |
 | 29 | Any world | J-14 | The clouds: THE CLOUDS a place on a world with a cloud deck, acid life let go there, its looks in the clouds (R-454) | M | done 2026-11-23 |
 | 30 | Any world | J-15 | Greening a desert: a light-feeder's carpet or lichen grows grass and shrubs; GREENED DESERT (R-454) | L | done 2026-11-23 |
-| 31 | The close | J-16 | The known issues: each one 1.5.0 found and left open, fixed or closed on the user's word | XL | planned |
+| 31 | The close | J-16 | The known issues: each one 1.5.0 found and left open, fixed or closed on the user's word | XL | done 2026-11-23 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.
@@ -784,3 +784,7 @@ for a reason the user agrees to. The ones found before 1.5.0 (KI-020 to KI-431) 
   flow's heap).
 * Done when: each fixed or closed, the list in the report; the battery against j15; `bench check`; `make check`; `tools/prove snapshot
   j16`.
+* Done 2026-11-23: 34 of the 36 fixed by 33 bugs (B-474 to B-507, B-495 unused; KI-448 and KI-449 one, KI-509 and KI-510 one), each with a
+  check that failed on the old code. KI-502 is fixed in part (B-494: the clouds dealt first); its cap of five or six made colours a disc,
+  and KI-503 (a far flask dims), stay open, proposed closed as the palette's limits. KI-436's fix changes which worlds are chemotrophs and
+  rides generation 18. New rows KI-511 to KI-526 for what the fixes found.

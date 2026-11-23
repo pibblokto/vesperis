@@ -59,6 +59,7 @@ uint64_t madeKey(const MadeWorld& m) {
         h = hashOf(h, m.foam); rgbOf(m.foamTint); h = hashOf(h, m.jelly); h = hashOf(h, m.boil); h = hashOf(h, m.seaShade); rgbOf(m.seaShadeTint);
         h = hashOf(h, m.sour); lookOf(m.land); lookOf(m.snow); lookOf(m.plant);
         h = hashOf(h, m.plantShare); h = hashOf(h, m.plantGlow); rgbOf(m.plantGlowTint); h = hashOf(h, m.galls); h = hashOf(h, m.rot);
+        if (m.landGlow > 0) { h = hashOf(h, m.landGlow); rgbOf(m.landGlowTint); }   // (J-16: a layer with none keeps its key)
         h = hashOf(h, m.rustGround); h = hashOf(h, m.lush); h = hashOf(h, m.bleached);
     }
     if (m.fated()) {   // J-08 (a layer without the animals' fates keeps J-05's key)
@@ -225,7 +226,9 @@ double madeGrowthSince(const MadeWorld& m, const Vec3& unit, uint64_t seed) {
     return since;
 }
 
-bool madeGreens(int type) { return kindHas(type, KT_DRY) && !kindHas(type, KT_FLORA) && KINDS[type].accent[0] < 0; }   // (its grass bank free for them)
+// J-16 (KI-510): a bare world with air, no plants or seas of its own (a desert, a rust, a salt, a thin-aired world and the rest): its grass in
+// its line's own bank, never the world's grass bank (KI-509)
+bool madeGreens(int type) { return KINDS[type].landable && KINDS[type].atmosphere && !kindHas(type, KT_FLORA) && !kindHas(type, KT_SEA); }
 
 double madeGreenAt(const MadeWorld& m, int line, const Vec3& unit, uint64_t seed, double& thick) {
     thick = 0;
@@ -321,7 +324,8 @@ double madeReachAt(const MadeWorld& m, const Vec3& unit, uint64_t seed) {
 }
 
 bool madeLives(const MadeSpread& s, bool wet, int salt, double meanC) {
-    if (s.deep != MADE_SURFACE) return !wet && s.deep == MADE_UNDER_ICE;   // J-13: its look on the cracks over its sea, whatever their warmth
+    if (s.deep != MADE_SURFACE) return !wet && (s.deep == MADE_UNDER_ICE || s.deep == MADE_DEEP_ROCK);   // J-13: its look on the cracks over its sea, whatever
+    // their warmth; J-16 (KI-506): a rock line's on the seeps its water comes up through (a cloud line's in the air alone)
     if (wet ? !(s.waters & (1 << clampi(salt, 0, 2))) : !s.land) return false;
     return meanC > s.tLo && meanC < s.tHi;
 }

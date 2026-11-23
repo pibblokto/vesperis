@@ -128,13 +128,43 @@ Vec3 fromFace(int face, double al, double be) {
     c[k] = face & 1 ? -1.0 : 1.0; c[(k + 1) % 3] = std::tan(al); c[(k + 2) % 3] = std::tan(be);
     return normalize(Vec3(c[0], c[1], c[2]));
 }
+uint64_t latticeKey(int face, int i, int j) { return ((uint64_t)face << 42) | ((uint64_t)i << 21) | (uint64_t)j; }
 }   // namespace
+
+int SurfaceView::growthLatticeAt(const Vec3& unit, double radiusM, int& face, int& i, int& j) {
+    double al, be;
+    toFace(unit, face, al, be);
+    const int N = latticeN(radiusM);
+    const double d = (PI / 2) / N;
+    i = clampi((int)std::floor((al + PI / 4) / d), 0, N - 1); j = clampi((int)std::floor((be + PI / 4) / d), 0, N - 1);
+    return N;
+}
+
+// KI-490: whether the cover holds a world cell, fixed to the world as the cell is: the cover at its four corners, out of the water, as the
+// planet function lays it (a corner's madeGrowthAt first: under a half, no cover and nothing sampled), each corner read once a landing
+bool SurfaceView::growthCornerAt(int face, double al, double be) const {
+    const Vec3 u = fromFace(face, al, be);
+    int line;
+    if (madeGrowthAt(site.gen.made, u, site.gen.seed, line) < 0.5 || line < 0) return false;
+    const SurfaceSample s = sampleSurface(site.gen, u, 16);   // (lod0's detail, as the landing's corners were read)
+    return madeGrowthMaterial(s.material) && !(s.water > -1e8 && s.height < s.water + 0.3);
+}
+
+bool SurfaceView::growthCornerHolds(int face, int ci, int cj, int N) {
+    const uint64_t key = latticeKey(face, ci, cj);
+    const auto it = growthCorners.find(key);
+    if (it != growthCorners.end()) return it->second;
+    const double d = (PI / 2) / N;
+    const bool holds = growthCornerAt(face, -PI / 4 + ci * d, -PI / 4 + cj * d);
+    growthCorners[key] = holds;
+    return holds;
+}
 
 // a world cell's structures, placed once a landing (its middle and its two edges read into the local metres, each structure inside the cell by
 // its own reach, none overlapping another), each in the local cell its middle lies in; what the landing lays (its settlements, roads, streets
 // and works, the ground drawn, the water) is tested where they are asked for
 const SurfaceView::GrowthCell& SurfaceView::growthCellOf(int face, int i, int j, int N) {
-    const uint64_t key = ((uint64_t)face << 42) | ((uint64_t)i << 21) | (uint64_t)j;
+    const uint64_t key = latticeKey(face, i, j);
     const auto it = growthLattice.find(key);
     if (it != growthLattice.end()) return it->second;
     GrowthCell& gc = growthLattice[key];
@@ -145,6 +175,8 @@ const SurfaceView::GrowthCell& SurfaceView::growthCellOf(int face, int i, int j,
     site.localAt(fromFace(face, al, be + 0.5 * d), xb, zb);
     const double ax = 2 * (xa - x0), az = 2 * (za - z0), bx = 2 * (xb - x0), bz = 2 * (zb - z0);   // a cell across along each angle
     gc.x = x0; gc.z = z0;
+    // KI-490: a cell the cover holds at its four corners, read on the world (a landing's own 16 m samples put the cover's edge elsewhere)
+    for (int k = 0; k < 4; k++) if (!growthCornerHolds(face, i + (k & 1), j + (k >> 1), N)) return gc;
     int line = -1;   // KI-473: the line whose cover lies at its middle (its kit, its sizes, its colour)
     madeGrowthAt(site.gen.made, fromFace(face, al, be), site.gen.seed, line);
     if (line < 0 || line >= MADE_LINES || !site.gen.made.spread[line].growth.on()) line = site.gen.made.growthLine;
@@ -186,40 +218,42 @@ const SurfaceView::GrowthCell& SurfaceView::growthCellOf(int face, int i, int j,
 
 // the structures whose middles lie in a local 16 m cell, as the world's cells round its middle placed them (kept a landing)
 const std::vector<GrowthInst>& SurfaceView::growthsOwned(int cx, int cz) {
-    if (growthLatticeKey != site.gen.made.key || growthOwned.size() > 16384 || growthLattice.size() > 16384) {
-        growthLattice.clear(); growthOwned.clear(); growthLatticeKey = site.gen.made.key;
+    if (growthLatticeKey != site.gen.made.key || growthOwned.size() > 16384 || growthLattice.size() > 16384 || growthCorners.size() > 32768) {
+        growthLattice.clear(); growthOwned.clear(); growthCorners.clear(); growthLatticeKey = site.gen.made.key;
     }
     const uint64_t key = ((uint64_t)(uint32_t)cx << 32) | (uint32_t)cz;
     const auto it = growthOwned.find(key);
     if (it != growthOwned.end()) return it->second;
     std::vector<GrowthInst>& out = growthOwned[key];
+    if (!growthOn()) return out;
     const double cs = 16;
-    int face; double al, be;
-    toFace(site.unitAt(cx * cs + 8, cz * cs + 8), face, al, be);
-    const int N = latticeN(site.R);
+    int face, i0, j0;
+    const int N = growthLatticeAt(site.unitAt(cx * cs + 8, cz * cs + 8), site.R, face, i0, j0);
     const double d = (PI / 2) / N;
-    const int i0 = (int)std::floor((al + PI / 4) / d), j0 = (int)std::floor((be + PI / 4) / d);
+    uint64_t seen[9]; int nSeen = 0;
     for (int dj = -1; dj <= 1; dj++)
         for (int di = -1; di <= 1; di++) {
-            const int i = i0 + di, j = j0 + dj;
-            if (i < 0 || j < 0 || i >= N || j >= N) continue;   // (a cube's edge: its strip goes without)
-            const GrowthCell& gc = growthCellOf(face, i, j, N);
+            int f = face, i = i0 + di, j = j0 + dj;
+            // KI-489: a neighbour across a cube's edge: the cell on the face beyond, where its middle carried over the edge lies (round a cube's
+            // corner two of the eight come to one cell)
+            if (i < 0 || j < 0 || i >= N || j >= N) growthLatticeAt(fromFace(face, -PI / 4 + (i + 0.5) * d, -PI / 4 + (j + 0.5) * d), site.R, f, i, j);
+            const uint64_t ck = latticeKey(f, i, j);
+            if (std::find(seen, seen + nSeen, ck) != seen + nSeen) continue;
+            seen[nSeen++] = ck;
+            const GrowthCell& gc = growthCellOf(f, i, j, N);
             if (std::fabs(gc.x - (cx * cs + 8)) > 2 * cs || std::fabs(gc.z - (cz * cs + 8)) > 2 * cs) continue;
             for (const GrowthInst& S : gc.s) if ((int)std::floor(S.x / cs) == cx && (int)std::floor(S.z / cs) == cz) out.push_back(S);
         }
     return out;
 }
 
-bool SurfaceView::growthCellHolds(int cx, int cz) {
+bool SurfaceView::growthOn() const {
     const MadeWorld& m = site.gen.made;
-    if (!m.grown() || m.growthLine < 0 || m.growthLine >= MADE_LINES) return false;
-    for (int k = 0; k < 4; k++) if (!madeGrowthMaterial(site.lod0.at(cx + (k & 1), cz + (k >> 1)).material)) return false;
-    const TerrainVertex& tv = site.lod0.at(cx, cz);
-    return !(tv.water > -1e8f && tv.h < tv.water + 0.3);
+    return m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES;
 }
 
 void SurfaceView::forGrowths(int cx, int cz, const std::function<void(const GrowthInst&)>& fn) {
-    if (!growthCellHolds(cx, cz)) return;
+    if (!growthOn()) return;
     const double cs = 16;
     const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;
     for (GrowthInst S : growthsOwned(cx, cz)) {
@@ -233,6 +267,32 @@ void SurfaceView::forGrowths(int cx, int cz, const std::function<void(const Grow
         if (S.gy < site.waterAt(S.x, S.z) + 0.1) continue;
         fn(S);
     }
+}
+
+// KI-492: the cover's veins as the ground's (`vertexOf`: cells of 9 m, a vein where the two nearest points are near alike far), a tile of four
+// cells a side that repeats: -64 on a vein, +64 clear of one (a ruin's glowing cover draws its veins' light where it falls under the weight)
+void SurfaceView::buildGrowthVeins() {
+    if (growthVeinsBuilt) return;
+    growthVeinsBuilt = true;
+    GrainTexture& g = growthVeins;
+    g.resize(128);
+    const int n = 128, cells = 4;
+    const uint64_t seed = site.gen.seed ^ 0x6E0E41ULL;
+    for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++) {
+            const double fx = (x + 0.5) * cells / n, fy = (y + 0.5) * cells / n;
+            const int x0 = (int)std::floor(fx), y0 = (int)std::floor(fy);
+            double f1 = 1e9, f2 = 1e9;
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++) {
+                    const int cx = x0 + dx, cy = y0 + dy;
+                    const uint64_t h = hash2i(((cx % cells) + cells) % cells, ((cy % cells) + cells) % cells, seed);
+                    const double px = cx + unitFromHash(h), py = cy + unitFromHash(mix64(h + 1)), d = std::hypot(px - fx, py - fy);
+                    if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+                }
+            const double vein = 1 - smoothstep(0.02, 0.12, f2 - f1);
+            g.v[((size_t)y << g.shift) | x] = (int8_t)clampi((int)std::lround(64 - 128 * vein), -64, 64);
+        }
 }
 
 int SurfaceView::growthAt(double x, double z, double margin) {

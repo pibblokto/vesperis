@@ -396,4 +396,63 @@ void unitShip(const Check& check) {
               fmt("the ship's save: %s at %.2f %.2f, light %d; the old cabin line: %s at %.2f %.2f, light %d", shipRooms()[kept.room].name, kept.x, kept.z, back.testCabinLights(),
                   shipRooms()[start.room].name, start.x, start.z, old.testCabinLights()));
     }
+    {   // B-501 (KI-435): aboard, the local target's bracket where the glass shows it alone. Parked at the home star's first world, the next
+        // world out the target and the bow turned a little right of it, the head turned to it: from the great window its bracket drawn; from
+        // each of the plan's views and each device's stand where it lies out of the glass's box (or no glass is in view), behind the walls, none
+        TestGame game;
+        game.savePrefix = "shots/tests/unit_ship_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_ship_guide.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, false);
+        StarSystem hs; hs.generate(home);
+        int park = -1, far = -1;
+        for (const Body& b : hs.bodies) {
+            if (b.type == PT_COMPANION || b.parent >= 0) continue;
+            if (park < 0) park = b.index; else if (far < 0) far = b.index;
+        }
+        int window = 0, windowMarked = 0, walls = 0, wallsMarked = 0, boxed = 0, boxedMarked = 0;
+        std::string where;
+        if (park >= 0 && far >= 0) {
+            game.testParkAt(home, park, false);
+            game.setState(GameState::SPACE);
+            game.testSetLocalTarget(far);
+            const Vec3 D = normalize(game.testSystem().bodyPos(far, game.testT()) - game.testShipPos());
+            game.testShipAttitude(std::atan2(D.x, D.z) + 0.25, std::asin(clampd(D.y, -1, 1)));   // the bow a little right of it (the great window's pillar ahead)
+            // the bracket's pixels: HUD_GREEN in its four corners' blocks (the HUD's box round the body, `renderSpaceHUD`)
+            auto marked = [&](const BodyScreenInfo& bi) {
+                const int S = FB_SCALE, r = (int)std::max(6.0, bi.radiusPx / S + 5), sx = (int)(bi.sx / S), sy = (int)(bi.sy / S);
+                const uint32_t* px = game.output();
+                int n = 0;
+                for (int cx : {sx - r, sx + r})
+                    for (int cy : {sy - r, sy + r})
+                        for (int y = (cy - 1) * S; y < (cy + 2) * S; y++)
+                            for (int x = (cx - 1) * S; x < (cx + 2) * S; x++)
+                                if (x >= 0 && y >= 0 && x < FBW && y < FBH && px[(size_t)y * FBW + x] == HUD_GREEN) n++;
+                return n;
+            };
+            auto one = [&](const char* name, bool great) {
+                const Vec3 d = cameraBasis(game.testShipYaw(), game.testShipPitch()) * D;
+                game.testCabinTurn(std::atan2(d.x, d.z), std::asin(clampd(d.y, -1, 1)));   // the head turned to it
+                game.frame(in, 1.0 / 30); in.newFrame();
+                const BodyScreenInfo bi = game.testSpaceR().bodyInfo[far];
+                if (!bi.inFront || bi.sx < 0 || bi.sy < 0 || bi.sx >= FBW || bi.sy >= FBH) return;
+                const CabinFrame& f = game.testCabinFrame();
+                const bool inBox = f.sight.seesOut && bi.sx >= f.sight.ox0 && bi.sx < f.sight.ox1 && bi.sy >= f.sight.oy0 && bi.sy < f.sight.oy1;
+                const bool m = marked(bi) > 0;
+                if (great) { window++; windowMarked += m; }
+                else if (!inBox) { walls++; wallsMarked += m; if (m) where += fmt(" %s", name); }
+                else { boxed++; boxedMarked += m; }
+            };
+            game.testCabinView("THE FRONT WINDOW");
+            one("THE FRONT WINDOW", true);
+            for (const ShipView& v : shipViews()) { game.testCabinView(v.name); one(v.name, false); }
+            for (const CabinDevice& d : Game::cabinDevices()) if (d.facing != FACE_NOTHING) { game.testCabinAtDevice(d.facing); one(d.use, false); }
+        }
+        remove(game.guidePath.c_str());
+        check("ship: aboard, the target's bracket where the glass shows it alone (B-501)", window == 1 && windowMarked == 1 && walls >= 10 && wallsMarked == 0,
+              fmt("the great window: %d of %d bracketed; behind the walls (out of the glass's box) from %d views and stands: %d bracketed%s; in the glass's box %d of %d",
+                  windowMarked, window, walls, wallsMarked, where.c_str(), boxedMarked, boxed));
+    }
 }

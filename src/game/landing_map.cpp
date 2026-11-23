@@ -121,6 +121,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
         surf.site.made = madeNow(landBody);   // J-02: the ground takes its world's layer at the landing
         surf.init(&sys, landBody, landLat, landLon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
+        deadToLanding();   // B-489
         surf.cameraOverrideAlt = 1800;
         surf.cameraOverridePitch = -60 * DEG;
         surf.player.yaw = wrap2pi(landLon + 1.0);

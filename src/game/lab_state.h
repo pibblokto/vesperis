@@ -11,6 +11,7 @@
 #include "life/genes.h"
 #include "ship_plan.h"
 #include "galaxy/system.h"
+#include "surface/bestiary.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -126,6 +127,17 @@ struct MicroscopeState {
     std::vector<std::string> said;
     double fieldShown = -100;
     bool answersDirty = false; double answersSavedAt = -100;
+    // B-502 (KI-437): under the electron the slide is kept while the stage is still (`microscopeElectron`): each mount staged counted, what
+    // drew the slide kept (the mount's count, the view, the focus, the things done to it, the frame's size), the slide's pixels and depths
+    uint64_t staged = 0;
+    struct ElectronKept {
+        uint64_t staged = ~0ull, seed = 0; size_t events = 0;
+        double cx = 0, cy = 0, um = 0, t = 0, turn = 0, tilt = 0, focus = 0;
+        int w = 0, h = 0, step = 0;
+    };
+    ElectronKept keptAt;
+    std::vector<Pix> keptIdx;
+    std::vector<float> keptInvz;
 };
 constexpr uint32_t SCOPE_LOOKED = 1u << 31;   // R-437: a kind's told bits once it was first in view (its state as found, not said)
 
@@ -239,6 +251,7 @@ struct TreeLeaf {
     // Y-01: a lab's line (a strain: its species' lineage and world): its depth under its species (0 standing in its species' place, a
     // folder's strain kept without it) and the key it hangs under
     bool lab = false; int depth = 0; std::string parent;
+    std::string where;            // B-497: an unnamed world's place ("(+195 +0 +46 / 3)"), its words where its world is said
 };
 // Y-01 (R-444): a page of the tree: the ship's own, a world's (its body key), a folder's (its id); its name in the head
 enum TreePageKind { TP_SHIP = 0, TP_WORLD, TP_FOLDER };
@@ -343,7 +356,9 @@ struct CatalogueRow {
 // J-12: a seeded line found in the wild: the world it went down on, its line's key, its species' key (its sheet), the line as the wild left it
 // (its form, its values), what the wild changed in it ("23, 29"), whether the sequencer read it there, the guide's clock when it went down
 struct CatalogueWild { std::string world, line, species, drift; Morph form; Microbe s; bool read = false; double clock = 0; };
-struct CatalogueAnimal { std::string words; int way = 0, social = 0; };   // J-12: an animal species (its words, its way and its company)
+// J-12: an animal species (its words, its way and its company). B-500: its species as the ground draws it, its world's two hide colours, where
+// it lives (0 the land, 1 the air, 2 the waters) and its fate there as its world's record holds it at the guide's clock (AnimalMark bits)
+struct CatalogueAnimal { std::string words; int way = 0, social = 0; Species sp; RGB hide[2]; int lives = 0; uint32_t fate = 0; };
 struct CatalogueWorld {           // a world as the catalogue reads it: its kind, its list's species and forms
     bool ok = false;
     int kind = 0;
@@ -355,6 +370,7 @@ struct CatalogueWorld {           // a world as the catalogue reads it: its kind
     int took = 0;
     std::map<int, std::pair<std::string, int>> diedOut;
     std::vector<CatalogueAnimal> animals; bool animalsMade = false;
+    Genesis genesis;              // B-500: its life's genesis (its animals' kin: the kin page's head they go under)
 };
 // J-12: the LIFE page's seeded worlds, made as it opens: how many, the lines sent and those that took, the made kinds now (a name a world),
 // the explorer's species seen that died out (the catalogue's DIED OUT rows) and the animals seen gone
@@ -372,4 +388,5 @@ struct CatalogueState {
     std::unique_ptr<Framebuffer> fb;                // the form's slide: a framebuffer of its own (every bank its way's)
     std::vector<uint32_t> rgb;                      // and its colours
     uint64_t still = 0;                             // the still drawn in them (under the electron: its species' and the scale's), 0 none
+    int animalPx = 0;                               // B-500: an animal's picture's pixels as last drawn (the unit's)
 };

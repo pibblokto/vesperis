@@ -311,9 +311,10 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         }
     }
     // J-02 to J-09, KI-461, KI-475: each disc's made colours, each in a bank of its own, in turn: its overgrowth's stain (its veins lit at night
-    // where it glows), its waters' tint (a water's ramp; a glowing line's light at night) or the test layer's land, its land's, plants' and snow's
-    // looks (a glowing forest's light at night), each class's latest line first, its made clouds (a dye's or the spores' colour; a glow at
-    // night), then each other line's own colour; two of one colour share a bank, and one past the banks takes its kind's nearest
+    // where it glows), its waters' tint (a water's ramp; a glowing line's light at night) or the test layer's land, its made clouds (a dye's or
+    // the spores' colour; a glow at night; J-16: before the looks), its land's, plants' and snow's looks (a glowing forest's light at night),
+    // each class's latest line first, then each other line's own colour; two of one colour share a bank, and one past the banks takes its
+    // kind's nearest
     for (int which = 0; which < 2; which++) {
         DiscMade& dm = discMade[which];
         dm.clear();
@@ -360,7 +361,7 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         };
         auto lookOf = [&](int cls, int i) {
             const MadeLook& ml = m.spread[i].look[cls];
-            const bool glows = cls == MC_PLANTS && m.spread[i].plantsGlow() > 0;
+            const bool glows = (cls == MC_PLANTS && m.spread[i].plantsGlow() > 0) || (cls == MC_LAND && m.spread[i].landsGlow() > 0);   // (J-16: a deep line's cracks)
             if (!ml.on || (!ml.tinted && !glows) || dm.look[cls][i] >= 0) return;
             for (int j = 0; j < lines; j++) {
                 const MadeLook& o = m.spread[j].look[cls];
@@ -386,7 +387,6 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
             dm.land = take();
             if (dm.land >= 0) materialRamp(fb.pal, dm.land, m.tint * lightOf(), hasSky ? &sk : nullptr);
         }
-        for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) { const int i = latestOf(cls); if (i >= 0) lookOf(cls, i); }
         if ((m.cloudTintK > 0 || m.cloudGlow > 0) && hasOpaqueDeck(g->type)) {   // J-14: a deck's dyed lanes, its own colour toward the dye; its glow apart
             const RGB cc = lerp(g->matColor[MAT_CLOUD], m.cloudTint, (float)clampd(0.75 * m.cloudTintK, 0, 1)) * lightOf();
             if (m.cloudTintK > 0 && (dm.cloud = take()) >= 0) materialRamp(fb.pal, dm.cloud, cc, nullptr);
@@ -404,6 +404,8 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
                 } else materialRamp(fb.pal, dm.cloud, cc, nullptr);
             }
         }
+        // J-16 (KI-502): each class's latest look after the clouds (they cover the disc; a look past the pool takes its nearest's)
+        for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) { const int i = latestOf(cls); if (i >= 0) lookOf(cls, i); }
         for (int i = lines - 1; i >= 0; i--) {   // each other line's own
             stainOf(i); waterOf(i);
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) lookOf(cls, i);

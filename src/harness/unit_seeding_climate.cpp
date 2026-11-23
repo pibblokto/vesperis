@@ -83,7 +83,8 @@ void unitSeedingClimate(const Check& check) {
             const MadeWorld before = madeWorldOf(c.sys, c.body, {r.s}, at);
             const double d = second.verdict.place.hab.meanC - r.s.verdict.place.hab.meanC;
             later++;
-            const bool ok = std::fabs(d - before.warmC) < 0.25 || second.verdict.place.hab.niche != NI_LIQUID;   // (a sea the first froze or dried is its ice or its floor)
+            const bool ok = std::fabs(d - before.warmC) < 0.25 || second.verdict.place.hab.niche != NI_LIQUID ||   // (a sea the first froze or dried is its ice or its floor;
+                            r.s.verdict.place.hab.meanC <= -1.95;   // B-475: one at its freezing point as generated, its own mean under it)
             right += ok;
             if (first.empty() || !ok) first = fmt("; %s's sea %.1f C as generated, %.1f C for a line let go once its first made it %.1f C warmer", KINDS[bodyOf(r).type].name,
                                            r.s.verdict.place.hab.meanC, second.verdict.place.hab.meanC, before.warmC);
@@ -91,7 +92,8 @@ void unitSeedingClimate(const Check& check) {
             const Vec3 u = StarSystem::bodyFromLatLon(c.lat, c.lon);
             const SurfaceSample s = sampleSurface(g, u, 1000);
             MadeWorld none = before; none.warmC = 0;
-            bands += std::fabs(madeMeanAt(g, before, u, s, madeWetAt(s), 1) - madeMeanAt(g, none, u, s, madeWetAt(s), 1) - before.warmC) < 1e-9;
+            bands += std::fabs(madeMeanAt(g, before, u, s, madeWetAt(s), 1) - madeMeanAt(g, none, u, s, madeWetAt(s), 1) - before.warmC) < 1e-9 ||
+                     r.s.verdict.place.hab.meanC <= -1.95;   // (B-475: a sea at its freezing point as generated)
         }
         check("seeding: a later line read at the warmth made", later > 0 && right == later && bands == later,
               fmt("(%d of %d later lines' seas at the warmth the first made, %d bands read at it%s)", right, later, bands, first.c_str()));
@@ -207,5 +209,75 @@ void unitSeedingClimate(const Check& check) {
         check("seeding: the cold harms by the mean reached", warmCooled > 0 && spared == warmCooled,
               fmt("(%d of %d warm worlds cooled 4 C or more into the temperate or over spared the cold; %d of %d cooled to 5 C or under lost animals to it)", spared,
                   warmCooled, coldHarmed, coldCooled));
+    }
+    {   // B-476 (KI-499): a line's share is read at the warmth its own gas makes too (with the lines before it) and kept where that is more, so
+        // none lives on more of its world at the warmth it made than its gas was given off for (one of the habitat's 96 points at most); and a
+        // line its own warmth drives back keeps its air (its share never under the one it went down with)
+        int changing = 0, more = 0, less = 0, opened = 0; double worst = 0; std::string worstAt;
+        for (const Run& r : runs) {
+            if (!r.s.verdict.takes() || std::fabs(r.m.warmC) < 1) continue;
+            const SeedAirCase& c = worlds[r.w];
+            const double made = madeWorldOf(c.sys, c.body, {r.s}, 1e18).warmC, at = seedShareAt(c.sys, c.body, r.s, made);
+            const double first = seedShareAt(c.sys, c.body, r.s, 0);   // (the world as generated: the share it went down with)
+            changing++; more += at > r.s.verdict.share + 1.5 / 96; less += r.s.verdict.share < first - 0.5 / 96; opened += r.s.verdict.share > first + 0.5 / 96;
+            if (at - r.s.verdict.share > worst) {
+                worst = at - r.s.verdict.share;
+                worstAt = fmt("; the worst a %s's: %.3f given off for, %.3f at the %+.1f C it made", KINDS[bodyOf(r).type].name, r.s.verdict.share, at, made);
+            }
+        }
+        check("seeding: a line's share read at its own warming (B-476)", changing > 10 && more == 0 && less == 0,
+              fmt("(%d of %d lines that warm or cool their world 1 C or more live on more of it at the warmth they made than their gas was given off for%s; %d "
+                  "under the share they went down with; %d spread further on the world they made)", more, changing, worstAt.c_str(), less, opened));
+    }
+    {   // B-493 (KI-500): a warmed living world's ice sheets draw back: their margin, out to a share of the dome that grows with the warmth, melts
+        // to dark ice (a dark zone), the white ice poleward of it shrinking; every height as generated (the first tundra, 36 by 72 points)
+        StarSystem S; int bi = -1;
+        int white[3] = {}, dark[3] = {}; double moved = 0;
+        if (firstBodyOfType(PT_TUNDRA, S, bi)) {
+            const BodyGen g0 = BodyGen::make(S.bodies[bi]);
+            const double warm[3] = {0, 3, 6};
+            std::vector<double> h0;
+            for (int w = 0; w < 3; w++) {
+                BodyGen g = g0; g.made.warmC = warm[w];
+                for (int j = 0; j < 36; j++)
+                    for (int i = 0; i < 72; i++) {
+                        const SurfaceSample z = sampleSurface(g, StarSystem::bodyFromLatLon((j + 0.5) / 36 * PI - PI / 2, (i + 0.5) / 72 * TAU - PI), 20000);
+                        const bool sheet = z.height > 1 && (z.material == MAT_SNOW || z.material == MAT_ICE);
+                        if (sheet) (z.albedo < 0.4 ? dark[w] : white[w])++;
+                        if (w == 0) h0.push_back(sheet ? z.height : -1e9);   // (the sheets' heights alone: a sea's ice melts to its water)
+                        else if (h0[j * 72 + i] > -1e8) moved = std::max(moved, std::fabs(z.height - h0[j * 72 + i]));
+                    }
+            }
+        }
+        check("seeding: a warmed ice sheet's margin melts dark, its white ice drawn back, its heights as generated (B-493)",
+              bi >= 0 && dark[0] == 0 && dark[1] > 0 && dark[2] > dark[1] && white[2] < white[1] && white[1] < white[0] && moved == 0,
+              fmt("(the first tundra's ice on its land at 0, +3 and +6 C: white %d, %d, %d; dark %d, %d, %d; the most a height moved %.1f m)", white[0], white[1], white[2],
+                  dark[0], dark[1], dark[2], moved));
+    }
+    {   // B-475 (KI-498): a line's gas answers by how much of the room its kind of place has on its world it fills (its waters of its salts, or its
+        // land), so a sea line on a terminator world, whose seas are a hundredth of it, changes its air; over `seed kinds`' forty worlds and six
+        // lines, under one seeding in twelve shows nothing (the design: none but where a line has no room to change)
+        const std::vector<SeedAirCase> forty = seedAirCases(40, 12);
+        const std::vector<std::pair<int, int>> SIX[6] = {{{GN_GAS, WG_CO2}}, {{GN_GAS, WG_METHANE}}, {{GN_GAS, WG_OXYGEN}}, {{GN_GAS, WG_H2S}},
+                                                         {{GN_GAS, WG_DMS}}, {{GN_STOP, -2}, {GN_BIND, -1}}};
+        int took = 0, nothing = 0, terminators = 0, terminatorsNamed = 0;
+        std::string first;
+        for (const SeedAirCase& c : forty) {
+            const bool seas = kindHas(c.sys.bodies[c.body].type, KT_SEA), term = c.sys.bodies[c.body].type == PT_TERMINATOR;
+            for (int k = 0; k < 6; k++) {
+                const Seeding s = seedingFor(c.sys, c.body, seedLineFor(c.sys, c.body, c.wild.kind.s.index, seedGeneEdits(c.wild.genes, SIX[k])), c.lat, c.lon, 0);
+                if (!s.verdict.takes()) continue;
+                took++;
+                const MadeWorld m = madeWorldOf(c.sys, c.body, {s}, (MADE_GROWTH_STEPS * MADE_STEP_S + 1) / std::max(0.05, s.verdict.pace));
+                const bool none = !madeHarms(m) && !madeLivable(m) && madeTraitWords(m, seas).empty();
+                nothing += none;
+                if (term && k < 5) { terminators++; terminatorsNamed += !none; }
+                if (none && first.empty()) first = fmt("; the first a %s's line of %.3f of its world", KINDS[c.sys.bodies[c.body].type].name, s.verdict.share);
+            }
+        }
+        check("seeding: a line's gas by the room it fills, a terminator world's sea line seen (B-475)", took > 200 && nothing * 12 < took && terminators > 0 &&
+                      terminatorsNamed * 2 > terminators,
+              fmt("(%d of %d seedings of six lines on forty worlds show nothing%s; %d of %d gas lines on terminator worlds change something)", nothing, took, first.c_str(),
+                  terminatorsNamed, terminators));
     }
 }

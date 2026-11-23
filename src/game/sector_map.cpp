@@ -136,6 +136,7 @@ void Game::renderSectorMap() {
         double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * cell));   // a 3% grade at most for full shading
         const bool survey = sys.sunless();   // the survey look of a world with no sun, by the frame's heights
         double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
+        const bool greened = surf.site.gen.made.green > 0 && madeGreens(surf.site.gen.type);   // J-16 (KI-509): its grass a carpet's, each its line's
         for (int y = 0; y < sectorImgH; y++)
             for (int x = 0; x < sectorImgW; x++) {
                 const TerrainVertex& v = tv[y * sectorImgW + x];
@@ -143,7 +144,8 @@ void Game::renderSectorMap() {
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
                 if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // a tidal flat its wet sand
-                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1, v.mtint / 255.0, v.mline - 1);
+                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1,
+                                                         greened && v.material == MAT_GRASS && v.mline > 0 ? 1.0 : v.mtint / 255.0, v.mline - 1);   // (J-16: a carpet's grass its line's)
             }
         if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // the tide lines, the high water's pale along the flat's landward edge, the low water's dark
             const double S = surf.site.seaLevel;

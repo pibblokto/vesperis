@@ -103,7 +103,7 @@ void Game::renderSpaceHUD() {
         // marker on the remote star
         Mat3 cam = viewBasis();
         Vec3 v = cam * (ship.remote.pos - ship.pos);
-        if (v.z > 0) {
+        if (v.z > 0 && (!cabinFrame.aboard || cabinFrame.remoteOut)) {   // B-501: aboard, where the glass shows it alone
             int sx = (int)(UW / 2 + spaceR.proj.f * v.x / v.z / FB_SCALE), sy = (int)(UH / 2 - spaceR.proj.f * v.y / v.z / FB_SCALE);
             if (sx > 4 && sy > 4 && sx < UW - 4 && sy < UH - 4) {
                 drawRectRGB(canvas, sx - 4, sy - 4, sx + 4, sy + 4, HUD_CYAN);
@@ -121,7 +121,7 @@ void Game::renderSpaceHUD() {
             drawTextShadow(canvas, UW - 8 - textWidth(rs.c_str()), UH - 32, rs.c_str(), HUD_CYAN, HUD_SHADOW);
             Mat3 cam = viewBasis();
             Vec3 v = cam * (rk.pos - ship.pos);
-            if (v.z > 0) {
+            if (v.z > 0 && (!cabinFrame.aboard || cabinFrame.rockOut)) {   // B-501: aboard, where the glass shows it alone
                 int sx = (int)(UW / 2 + spaceR.proj.f * v.x / v.z / FB_SCALE), sy = (int)(UH / 2 - spaceR.proj.f * v.y / v.z / FB_SCALE);
                 int r = (int)std::max(6.0, spaceR.proj.f * rk.radiusKm / v.z / FB_SCALE + 5);
                 if (sx > -r && sy > -r && sx < UW + r && sy < UH + r) {
@@ -152,7 +152,7 @@ void Game::renderSpaceHUD() {
             if (bi.inFront) {
                 int r = (int)std::max(6.0, bi.radiusPx / FB_SCALE + 5);
                 int sx = (int)(bi.sx / FB_SCALE), sy = (int)(bi.sy / FB_SCALE);
-                if (sx > -r && sy > -r && sx < UW + r && sy < UH + r) {
+                if (sx > -r && sy > -r && sx < UW + r && sy < UH + r && (!cabinFrame.aboard || cabinFrame.localOut)) {   // B-501: aboard, through the glass alone
                     int l = std::max(3, r / 3);
                     uint32_t col = HUD_GREEN;
                     drawLineRGB(canvas, sx - r, sy - r, sx - r + l, sy - r, col); drawLineRGB(canvas, sx - r, sy - r, sx - r, sy - r + l, col);

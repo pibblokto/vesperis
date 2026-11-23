@@ -14,7 +14,7 @@ const char* sizeWord(double r, int type) {
 }
 }
 
-std::string describeBody(const Body& b, const BodyGen& g) {
+std::string describeBody(const Body& b, const BodyGen& g, bool ofSecondSun) {
     Rng r(b.seed ^ 0xDE5C);
     if (b.type == PT_COMPANION)
         return std::string("The second sun of the system, a ") + STAR_CLASSES[b.starClass].name + " bound to the primary" + (b.moonCount > 0 ? ", with worlds of its own." : ".");
@@ -33,7 +33,7 @@ std::string describeBody(const Body& b, const BodyGen& g) {
     }
     for (int k = 0; k < TRAIT_SLOTS; k++) if (g.traits[k]) s += TRAITS[g.traits[k]].phrase;   // (Q-01: the six slots)
     if (b.doublePlanet) s += b.parent >= 0 ? ", the smaller half of a double planet" : ", the larger half of a double planet";
-    else if (b.parent >= 0) s += ", a moon";
+    else if (b.parent >= 0) s += ofSecondSun ? ", circling the second sun" : ", a moon";
     if (b.locked && livingGround(b.type) && !kindHas(b.type, KT_FIXED_SUN) && !(g.made.on() && g.made.deadCover() != DC_NONE))
         s += ", ice on its night side and deserts under its sun";   // a fixed sun's kind says it its own way (J-11: a made hothouse or snowball has neither)
     double gg = b.gravity / 9.8;

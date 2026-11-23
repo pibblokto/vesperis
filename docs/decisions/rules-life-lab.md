@@ -23,9 +23,11 @@ log entries (`log/`); a replaced rule moves to `superseded.md`. Where life is: `
 - A kind moves while the stage warmth is in its range, at the cardinal pace relative to the vial's warmth; above the top of the range it is stressed [R-438]
 - Swimmers of the dark (soil, silt, a vent, rock, a plume; no light-feeders) flee a bright spot; a spot on live light-feeders draws eaters after 10 s [R-438]
 - Spores, cysts and microcolonies are still (they only jiggle); a stressed kind, moving or still, acts where it is and ends still in its final form [Z-04]
+- The plates hold a spore, a cyst or a fossil lying on the slide still, as the microscope does (`panelSpecimen`) [B-503]
 - L or F again undoes it. M puts the magnet by the stage, turns it half round, takes it away. H types the stage warmth, Shift+H sets the vial's [R-435, R-436]
 - Each action's purpose is said as it is done; each kind in view is told once per slide as it answers, and its sheet keeps the answers (`answers`) [R-437]
 - New fields default to Z-02's plates (`life_look` unchanged); `step` 2 only at 3x-4x. Electron meshes are built on the pool, drawn in row bands [Z-04]
+- Under the electron the slide is kept while nothing that draws it moves (the mount, the view, the focus, what was done to it, the frame's size) [B-502]
 - The guide keeps a part of a species (`microbe` by `<body>/M<index>`) only when seen in its way, in focus and big enough; the sheet shows only that [Z-04]
 - The first sight of a form is said and logged (FORM). N names a species (`TEXT_SPECIES`), and P's photograph is the micrograph, captioned with the slide [Z-04]
 
@@ -36,3 +38,5 @@ log entries (`log/`); a replaced rule moves to `superseded.md`. Where life is: `
 [R-436]: log/7-1.5.0.md
 [R-437]: log/7-1.5.0.md
 [R-438]: log/7-1.5.0.md
+[B-502]: log/7-1.5.0.md
+[B-503]: log/7-1.5.0.md

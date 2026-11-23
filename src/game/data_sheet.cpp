@@ -108,7 +108,8 @@ void Game::renderDataSheet() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     int bi = state == GameState::DATA && surf.valid && returnState == GameState::SURFACE ? surf.site.body : ship.localTarget;
     int y = 10;
-    auto line = [&](const std::string& s, uint32_t c) { drawText(canvas, 10, y, s.c_str(), c); y += 9; };
+    auto line = [&](const std::string& s, uint32_t c) { drawText(canvas, 10, y, s.c_str(), c); dataSheetText.push_back(s); y += 9; };
+    dataSheetText.clear();
     drawText(canvas, UW - 10 - textWidth(epocFullString().c_str()), y, epocFullString().c_str(), HUD_DIM);
     if (bi < 0 && ship.targetBelt >= 0 && ship.targetBelt < (int)sys.belts.size() && !(surf.valid && returnState == GameState::SURFACE)) {
         // the belt's sheet
@@ -123,17 +124,25 @@ void Game::renderDataSheet() {
         double w = bl.outerKm - bl.innerKm, mid = 0.5 * (bl.innerKm + bl.outerKm);
         line(fmt("INNER EDGE  %s FROM STAR", distanceString(bl.innerKm).c_str()), HUD_GREEN);
         line(fmt("OUTER EDGE  %s   WIDTH %s", distanceString(bl.outerKm).c_str(), distanceString(w).c_str()), HUD_GREEN);
-        line(fmt("PERIOD      %.1f H AT INNER EDGE, %.1f H AT OUTER", bl.period / 3600, TAU / bl.rateAt(bl.outerKm) / 3600), HUD_GREEN);
+        line(fmt("PERIOD      %.1f H AT THE INNER EDGE", bl.period / 3600), HUD_GREEN);   // B-496: on one line it ran to 57 characters
+        line(fmt("            %.1f H AT THE OUTER", TAU / bl.rateAt(bl.outerKm) / 3600), HUD_GREEN);
         double cells = (w / BELT_CELL_KM) * (TAU * mid / BELT_CELL_KM) * std::max(1.0, 2 * 0.015 * mid / BELT_CELL_KM);
         double rocks = cells * 1.1;
-        line(fmt("ROCKS       ABOUT %s IN SUNLIT DUST", rocks > 1e6 ? fmt("%.1f MILLION", rocks / 1e6).c_str() : fmt("%.0f THOUSAND", rocks / 1e3).c_str()), HUD_GREEN);
+        // B-496: the count in the largest word that holds it (a wide belt's ran to "1303767348945.5 MILLION", past the frame)
+        const std::string count = rocks < 1e6 ? fmt("%.0f THOUSAND", rocks / 1e3) : rocks < 1e9 ? fmt("%.1f MILLION", rocks / 1e6)
+                                : rocks < 1e12 ? fmt("%.1f BILLION", rocks / 1e9) : fmt(rocks < 1e15 ? "%.1f TRILLION" : "%.0f TRILLION", rocks / 1e12);
+        const std::string rocksLine = "ROCKS       ABOUT " + count + " IN SUNLIT DUST";
+        if (rocksLine.size() <= 50) line(rocksLine, HUD_GREEN);
+        else { line("ROCKS       ABOUT " + count, HUD_GREEN); line("            IN SUNLIT DUST", HUD_GREEN); }
         line("LANDABLE    NO", HUD_RED);
         BeltRock rk;
         if (beltRockNow(rk))
             line(fmt("%s     A ROCK %.1f KM ACROSS, %s OFF", ship.parkedBelt >= 0 ? "PARKED " : "TARGET ", 2 * rk.radiusKm, distanceString(length(rk.pos - ship.pos)).c_str()),
                     HUD_CYAN);
         y += 3;
-        line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
+        const std::string star = "STAR        " + trunc(upper(starNameOf(sys.star)), 18) + ",";
+        if (star.size() + 1 + sys.classString().size() <= 50) line(star + " " + sys.classString(), HUD_CYAN);
+        else { line(star, HUD_CYAN); line("            " + sys.classString(), HUD_CYAN); }
         line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
         for (const std::string& ww : wrapText(upper(describeStar(sys.star)), 50)) line(ww, HUD_DIM);
         drawTextCentered(canvas, UW / 2, UH - 10, "T ALMANAC  ANY OTHER KEY CLOSES", HUD_DIM);
@@ -148,16 +157,34 @@ void Game::renderDataSheet() {
     std::vector<SheetLine> sheet; int sec = 0; bool gap = false;
     auto put = [&](const std::string& s, uint32_t c) { sheet.push_back({s, c, sec, gap}); gap = false; };
     auto section = [&](bool withGap) { sec++; gap = withGap; };
-    put(fmt("%s", upper(bodyNameOf(bi)).c_str()), HUD_AMBER);
+    // B-496: a line holds 50 characters (the sentence's wrap, 10 px clear of either edge): parts joined while they fit, the rest carried
+    // under the label's column; a long value wrapped there
+    auto fit = [&](const std::string& label, const std::vector<std::string>& parts, const std::string& sep, uint32_t c) {
+        std::string l = label;
+        bool first = true;
+        for (const std::string& p : parts) {
+            if (p.empty()) continue;
+            if (first) l += p;
+            else if (l.size() + sep.size() + p.size() <= 50) l += sep + p;
+            else { put(l, c); l = "            " + p; }
+            first = false;
+        }
+        put(l, c);
+    };
+    auto wrapped = [&](const std::string& label, const std::string& value, uint32_t c) {
+        bool first = true;
+        for (const std::string& w : wrapText(value, 38)) { put((first ? label : std::string("            ")) + w, c); first = false; }
+    };
+    put(trunc(upper(bodyNameOf(bi)), 24), HUD_AMBER);   // B-496: clear of the page's number and the clock (a name may run to 28)
     {   // the kind's line and its sentence; J-11: a made kind's ("FLESH WORLD, ONCE FELISIAN", wrapped where a moon's name runs on) and its own
         const MadeWorld& made = spaceR.genFor(b).made;
         const std::string mk = made.on() ? madeKindName(made) : std::string();
-        const std::string moon = b.parent >= 0 ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str()) : std::string();
-        if (mk.empty()) put(fmt("%s%s", KINDS[b.type].name, moon.c_str()), HUD_GREEN);
-        else for (const std::string& w : wrapText(mk + ", ONCE " + KINDS[b.type].name + moon, 50)) put(w, HUD_GREEN);
+        const std::string moon = bodyIsMoon(bi) ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str())
+                                                : (b.parent >= 0 ? std::string(" - PLANET OF THE 2ND SUN") : std::string());   // B-498
+        for (const std::string& w : wrapText((mk.empty() ? std::string() : mk + ", ONCE ") + KINDS[b.type].name + moon, 50)) put(w, HUD_GREEN);
         for (const std::string& w : wrapText(upper(mk.empty() ? std::string(KINDS[b.type].description) : madeKindSentence(made)), 50)) put(w, HUD_DIM);
     }
-    for (const std::string& w : wrapText(upper(describeBody(b, spaceR.genFor(b))), 50)) put(w, HUD_CYAN);
+    for (const std::string& w : wrapText(upper(describeBody(b, spaceR.genFor(b), b.parent >= 0 && !bodyIsMoon(bi))), 50)) put(w, HUD_CYAN);
     {   // the traits (Q-01: six slots, on two lines), and the facts read from the orbit and the spin on one
         const std::string tl = traitList(spaceR.genFor(b)), fl = factList(sys, bi);
         bool first = true;
@@ -168,35 +195,36 @@ void Game::renderDataSheet() {
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {
         int bio = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16)).biome;
         std::string sn = sys.sunless() ? std::string() : seasonName(surf.site.season, surf.site.lat0, b.axialTilt);   // no sun, no season
-        if (bio || !sn.empty()) put(fmt("HERE        %s%s%s", bio ? BIOME_NAMES[bio] : "", (bio && !sn.empty()) ? ", " : "", sn.c_str()), HUD_AMBER);
+        if (bio || !sn.empty()) wrapped("HERE        ", fmt("%s%s%s", bio ? BIOME_NAMES[bio] : "", (bio && !sn.empty()) ? ", " : "", sn.c_str()), HUD_AMBER);
     }
     section(true);
-    put(fmt("RADIUS      %.0f KM   MASS %.3f EARTHS   TILT %.1f%c", b.radiusKm, b.massEarths, b.axialTilt / DEG, CH_DEGREE), HUD_GREEN);
+    // B-496: the radius and mass, the gravity and tilt, the warmth on a line of its own (with the gravity it ran to 58 characters)
+    fit("RADIUS      ", {fmt("%.0f KM", b.radiusKm), fmt("MASS %.3f EARTHS", b.massEarths)}, "   ", HUD_GREEN);
+    fit("GRAVITY     ", {fmt("%.2f G (%.1f M/S2)", b.gravity / 9.8, b.gravity), fmt("TILT %.1f%c", b.axialTilt / DEG, CH_DEGREE)}, "   ", HUD_GREEN);
+    const std::string spin = fmt("ROTATION %.2f H%s", std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked && !sys.sunless() ? " (LOCKED)" : ""));
     if (sys.sunless()) {   // a drifter's worlds have no equilibrium (their warmth is their own) and the drifter no orbit
-        put(fmt("GRAVITY     %.2f G (%.1f M/S2)   OWN HEAT %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
+        put(fmt("OWN HEAT    %.0f K (%+.0f C)", b.tempK, b.tempK - 273.15), HUD_GREEN);
         if (b.parent < 0) put("ORBIT       NONE - ADRIFT BETWEEN STARS", HUD_GREEN);
         else put(fmt("ORBIT       %s FROM PLANET%s", distanceString(b.orbitRadiusKm).c_str(), b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
-        if (b.parent < 0) put(fmt("PERIOD      NONE   ROTATION %.2f H%s", std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
-        else put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
+        fit("PERIOD      ", {b.parent < 0 ? std::string("NONE") : fmt("%.1f H", std::fabs(b.orbitPeriod) / 3600), spin}, "   ", HUD_GREEN);
     } else {
-    put(fmt("GRAVITY     %.2f G (%.1f M/S2)   EQUILIBRIUM %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
-    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "2ND SUN" : "PLANET") : "STAR",
-                b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""),
-            HUD_GREEN);
-    put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked ? " (LOCKED)" : "")), HUD_GREEN);
+        put(fmt("EQUILIBRIUM %.0f K (%+.0f C)", b.tempK, b.tempK - 273.15), HUD_GREEN);
+        put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "2ND SUN" : "PLANET") : "STAR",
+                    b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""),
+                HUD_GREEN);
+        fit("PERIOD      ", {fmt("%.1f H", std::fabs(b.orbitPeriod) / 3600), spin}, "   ", HUD_GREEN);
     }
     if (b.type == PT_COMET) {   // where it is now on its plunge
         put(fmt("NOW         %s FROM STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
         put(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
-    put(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", b.moonCount, b.rings ? "   RINGS" : "",
-                KINDS[b.type].landable ? "YES" : "NO"),
-            KINDS[b.type].landable ? HUD_GREEN : HUD_RED);
+    fit("ATMOSPHERE  ", {KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", fmt(b.type == PT_COMPANION ? "PLANETS %d" : "MOONS %d", b.moonCount),   // B-498
+                         b.rings ? "RINGS" : "", KINDS[b.type].landable ? "LANDABLE YES" : "LANDABLE NO"}, "   ", KINDS[b.type].landable ? HUD_GREEN : HUD_RED);
     {   // the magnetic field and what it means for the nights (the star's class counts too)
         int mc = magneticClass(magneticField(b));
         double quiet = auroraPotentialAt(sys, b, 0), peak = auroraPotentialAt(sys, b, 1);
-        const char* hint = quiet > 0.15 ? "   AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "   AURORAE IN STORMS" : (peak > 0.12 ? "   A FAINT AURORA IN A GREAT STORM" : ""));
-        put(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
+        const char* hint = quiet > 0.15 ? "AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "AURORAE IN STORMS" : (peak > 0.12 ? "A FAINT AURORA IN A GREAT STORM" : ""));
+        fit("MAGNETIC    ", {MAGNETIC_CLASS_NAMES[mc], hint}, "   ", HUD_GREEN);
     }
     {   // Z-07: the microbes of this world seen under the microscope (the catalogue's rows of it; a friend's lent in no count), or its samples
         const std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi) + "/M";
@@ -206,7 +234,7 @@ void Game::renderDataSheet() {
             if (guide.names.count(it->first)) named++;
             if (it->second.seen & SEEN_KIN) read++;
         }
-        if (seen > 0) put(fmt("MICROBES    %d SPECIES SEEN%s%s", seen, named ? fmt(", %d NAMED", named).c_str() : "", read ? fmt(", %d SEQUENCED", read).c_str() : ""), HUD_GREEN);
+        if (seen > 0) fit("MICROBES    ", {fmt("%d SPECIES SEEN", seen), named ? fmt("%d NAMED", named) : "", read ? fmt("%d SEQUENCED", read) : ""}, ", ", HUD_GREEN);
         else if (guide.sampled.count(prefix.substr(0, prefix.size() - 2))) put("MICROBES    SAMPLED, NONE SEEN YET", HUD_GREEN);
     }
     {   // J-03: the lines let go on it (the latest three: its words, how long ago, DIED where it did) and what they made of it so far
@@ -218,8 +246,7 @@ void Game::renderDataSheet() {
             const std::string when = ago < 3600 ? fmt("%.0f MIN AGO", ago / 60) : fmt("%.1f H AGO", ago / 3600);
             const std::string deep = s.depthKm > 0 ? (s.verdict.place.where == AT_UNDER_ICE ? std::string(", UNDER ICE") : fmt(", %.0f KM DOWN", s.depthKm))   // J-13
                                                    : (s.verdict.place.aloft() ? fmt(", %.0f KM UP", -s.depthKm) : std::string());                     // J-14
-            put(fmt("%s%s, %s%s%s", first ? "SEEDED      " : "            ", trunc(seedLineWords(s.line), deep.empty() ? 22 : 15).c_str(), when.c_str(), deep.c_str(),
-                    s.verdict.takes() ? "" : ", DIED"),
+            fit(first ? "SEEDED      " : "            ", {trunc(seedLineWords(s.line), 22) + ",", when + deep + (s.verdict.takes() ? "" : ", DIED")}, " ",
                 s.verdict.takes() ? HUD_CYAN : HUD_DIM);
             first = false;
         }
@@ -228,7 +255,7 @@ void Game::renderDataSheet() {
         if (!made.empty()) for (const std::string& w : wrapText(made, 38)) { put(fmt("%s%s", firstMade ? "MADE        " : "            ", w.c_str()), HUD_CYAN); firstMade = false; }
         if (!ss.empty()) {   // J-04: its air as the made climate left it
             const std::string air = madeAirWords(madeNow(bi));
-            if (!air.empty()) put("AIR         " + air, HUD_CYAN);
+            if (!air.empty()) wrapped("AIR         ", air, HUD_CYAN);
         }
     }
     section(true);
@@ -252,11 +279,11 @@ void Game::renderDataSheet() {
         }
         auto hours = [&](double secs) { return secs < 0 ? std::string("-") : (secs > 48 * 3600 ? fmt("%.0f D", secs / 86400) : fmt("%.0f H", secs / 3600)); };
         if (sys.sunless()) put("SEASON      NONE - NO SUN, NO DAY", HUD_AMBER);
-        else if (b.axialTilt > 0.5 * DEG)
-            put(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
-        else line(fmt("SEASON      NONE (NO TILT)  %s", dayLen.c_str()), HUD_AMBER);
+        else if (b.axialTilt > 0.5 * DEG)   // B-496: it ran to 79 characters
+            fit("SEASON      ", {fmt("DECL %+.1f%c", dec / DEG, CH_DEGREE), dayLen, "EQUINOX IN " + hours(toEq), "SOLSTICE IN " + hours(toSol)}, "  ", HUD_AMBER);
+        else fit("SEASON      ", {"NONE (NO TILT)", dayLen}, "  ", HUD_AMBER);   // (it was drawn over the sheet's name, at its top)
         bool forecastShown = false;
-        { std::string fc = forecastLine(); if (!fc.empty()) { put(fmt("FORECAST    %s", fc.c_str()), HUD_AMBER); forecastShown = true; } }
+        { std::string fc = forecastLine(); if (!fc.empty()) { wrapped("FORECAST    ", fc, HUD_AMBER); forecastShown = true; } }
         std::string sky;
         int nsky = 0;
         Mat3 L = surf.site.localFrame(t);
@@ -274,8 +301,8 @@ void Game::renderDataSheet() {
         std::sort(up.begin(), up.end(), [](auto& a, auto& b2) { return a.first > b2.first; });
         for (auto& u : up) { if (nsky++ >= 2) break; sky += (sky.empty() ? "" : ", ") + u.second; }
         if (up.size() > 2) sky += fmt(" +%d", (int)up.size() - 2);
-        put(fmt("IN THE SKY  %s", sky.empty() ? "NOTHING ABOVE THE HORIZON" : sky.c_str()), HUD_AMBER);
-        if (surf.env.hasSun2) put(fmt("SECOND SUN  %s AT %+.0f%c", upper(bodyNameOf(sys.companion)).c_str(), surf.env.sun2.altitude / DEG, CH_DEGREE), HUD_AMBER);
+        wrapped("IN THE SKY  ", sky.empty() ? "NOTHING ABOVE THE HORIZON" : sky, HUD_AMBER);
+        if (surf.env.hasSun2) put(fmt("SECOND SUN  %s AT %+.0f%c", trunc(upper(bodyNameOf(sys.companion)), 18).c_str(), surf.env.sun2.altitude / DEG, CH_DEGREE), HUD_AMBER);
         if (!surf.bestiary.species.empty()) {   // J-07: the species the explorer saw here (the guide's record), named or by their words
             std::vector<std::string> seen;
             for (int i = 0; i < (int)surf.bestiary.species.size(); i++) {
@@ -296,7 +323,7 @@ void Game::renderDataSheet() {
                 std::string life;
                 for (size_t k = 0; k < shown; k++) life += (k ? ", " : "") + seen[k];
                 if (shown < seen.size()) life += fmt("%s+%d MORE", shown ? ", " : "", (int)(seen.size() - shown));
-                ws = wrapText("LIFE        " + (seen.empty() ? std::string("NONE SEEN YET") : life), 52);
+                ws = wrapText("LIFE        " + (seen.empty() ? std::string("NONE SEEN YET") : life), 50);
                 if (ws.size() <= rows || shown == 0) break;
             }
             for (size_t w = 0; w < ws.size() && w < rows; w++) put(ws[w], HUD_AMBER);
@@ -306,7 +333,7 @@ void Game::renderDataSheet() {
     if (settings.clockMode == 1) put("CLOCK       REAL TIME (UTC)", HUD_DIM);
     if (sys.sunless()) put("STAR        NONE", HUD_CYAN);   // the drifter's place is no star (its name is the world's)
     else {
-        put(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
+        fit("STAR        ", {trunc(upper(starNameOf(sys.star)), 18) + ",", sys.classString()}, " ", HUD_CYAN);
         put(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
     }
     for (const std::string& w : wrapText(upper(describeStar(sys.star)), 50)) put(w, HUD_DIM);
@@ -328,6 +355,7 @@ void Game::renderDataSheet() {
             ys[i] = yy; pg[i] = page; yy += 9;
         }
         dataSheetPages = page + 1;
+        for (const SheetLine& l : sheet) dataSheetText.push_back(l.s);
         const int show = std::min(dataPage, page);
         dataSheetBottom = top;
         for (size_t i = 0; i < sheet.size(); i++) {

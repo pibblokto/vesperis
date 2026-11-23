@@ -78,7 +78,7 @@ bool seedDesertLine(const std::vector<std::pair<int, int>>& wants, SeedAirCase& 
     const SeedLine wild = seedLineFor(ls, lb, lsp, {});
     if (!wild.valid) return false;
     for (const SeedCase& c : worlds) {
-        if (!madeGreens(c.sys.bodies[c.body].type)) continue;
+        if (c.sys.bodies[c.body].type != PT_DESERT) continue;   // (J-16: J-15's desert, the first; other bare worlds green too)
         std::vector<GeneEdit> e = seedTunedEdits(ls, lb, lsp, seedPlaceFacts(c.sys, c.body, c.lat, c.lon));
         for (const GeneEdit& x : seedGeneEdits(wild.genes, wants)) e.push_back(x);
         SeedLine line = seedLineFor(ls, lb, lsp, e);

@@ -345,6 +345,7 @@ bool Game::load(const std::string& path) {
         surf.site.made = madeNow(siteBody);   // J-02
         surf.init(&sys, siteBody, slat, slon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
+        deadToLanding();   // B-489
         surf.player.x = px; surf.player.z = pz; surf.player.yaw = pyaw; surf.player.pitch = ppitch;
         surf.player.y = surf.site.surfaceHeight(px, pz);
         surf.relocateCapsule(capx, capz);

@@ -35,7 +35,14 @@ their keys are in `rules-game.md`.
 ## Words
 - Player text is plain English (the `plain-english` skill): things named, not "ITS"; no "THE" in titles, labels, menus or hints [R-446]
 - Strings the code or the harness compares keep their words until both sides change together [R-446]
+- A line holds its frame: the data sheet's 50 characters (a part that does not fit carried under its label), the status line's 53 [B-496], [B-499]
+- An unnamed world is told apart by its place (its star's sector and its body, as the microscope's lists say it), never by a name [B-497]
+- A moon is a planet's: a planet of the second sun is a world on every screen and in its sheet's words (`bodyIsMoon`) [B-498]
 
+[B-496]: log/7-1.5.0.md
+[B-497]: log/7-1.5.0.md
+[B-498]: log/7-1.5.0.md
+[B-499]: log/7-1.5.0.md
 [E-06]: log/6-1.4.0.md
 [U-02]: log/6-1.4.0.md
 [U-03]: log/6-1.4.0.md

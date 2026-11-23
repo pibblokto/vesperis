@@ -11,7 +11,7 @@ entries (`log/`); a replaced rule moves to `superseded.md`. What the lines make 
 - CHARNEL WORLD: every animal gone (SILENCE) and the plants felled, dried or blighted all over, or none; it comes before the looks' kinds [J-11]
 - PURPLE WORLD, RUST WORLD, HAZE WORLD: purple seas under a sulphur air, rust under a new ozone, an orange haze, each look past 0.6 [J-11]
 - GREENED WORLD: a cool world (under 10 C as generated) made 2 C warmer, or a dry one rained on, where nothing was harmed [J-11], [B-455]
-- GREENED DESERT: a desert with half its land under a carpet's or a lichen's grass and shrubs, before an overgrown world; its carpet harms nothing [J-15]
+- GREENED DESERT: a bare world with air, half its land a carpet's or a lichen's grass and shrubs, before an overgrown world; harming nothing [J-15], [B-482]
 - A greened world's plants are lush, its animals thrive and its biomes follow its warmth or its rain; its heights and rivers stay [J-11], [B-452]
 - A made heat dries plants and kills animals by how warm the world now is too (none under 5 C, all from 15 C): a cold world warmed greens [J-11]
 - A made cold kills animals by how cold the world now is too (none over 15 C, all from 5 C): a hot world cooled to the temperate is spared [B-454]
@@ -38,3 +38,4 @@ entries (`log/`); a replaced rule moves to `superseded.md`. What the lines make 
 [B-455]: log/7-1.5.0.md
 [J-11]: log/7-1.5.0.md
 [J-15]: log/7-1.5.0.md
+[B-482]: log/7-1.5.0.md

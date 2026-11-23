@@ -241,6 +241,22 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - A gene is NOT KNOWN until seen to do something against its parent, kept by genesis for all kin; candidates said, NOTHING SEEN learned
   [Y-02], [Y-03]; replaced by [R-450] (known by its species once changed on the editor; its guide)
 - N names the animal under the crosshair and opens the map otherwise [J-07]; replaced by [R-452] (Shift+N names, N the map)
+- A line's answer is its gene's amount times its share of the world over 0.15 [J-04]; replaced by [B-475] (or of its room, where that is
+  less)
+  and [B-476] (its share read at its own warmth too)
+- Up in the clouds a line finds dead matter and light [J-14]; replaced by [B-480] (an acid's iron and sulphide too)
+- A carpet's or a lichen's grass and shrubs grow on a desert alone, in its free grass bank; GREENED DESERT a desert's [J-15]; replaced by
+  [B-482] (on any bare world with air, in its line's own bank)
+- The globe deals a disc's stain, waters, looks, then clouds [J-09], [B-458]; replaced by [B-494] (its clouds before its looks)
+- On the ground the ruins read the world now, the terrain the landing's [B-465]; replaced by [B-485] (the ground takes the world now too)
+- A settlement's cover takes the line whose cover lies at its middle [B-457]; replaced by [B-488] (each building its own place's)
+- Every world's animals seen follow with the marks the ground showed; an animal's sheet is in words alone [J-12]; replaced by [B-500]
+  (marked
+  by their world's record too, drawn on their sheet, by kin too)
+- A landing keeps its kills and falls on the body: a cell come back to has them dead [B-470]; replaced by [B-489] (the guide keeps them 64
+  steps, at any landing or load)
+- None of a flock or a shoal sprouts in the air or the water [B-469]; replaced by [B-490] (a sprouting flyer falls dead from the air, a
+  sprouting swimmer washes up dead)
 
 ## The harness and the proof
 
@@ -271,6 +287,11 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   [P-07], [Q-01]; replaced by [E-02]
 - `tour` opens every state as the game does, each from a fresh game, by its stop in `STOPS` (asserted: a new state needs one)
   [U-01]; replaced by [U-06]
+
+- The flow's game runs its stages before the stages that make games of their own [Y-02]; replaced by [B-507] (its game takes its own frame
+  size back, so a stage may follow one)
+- A budget set before its scene was finished is set again at 1.5x its median once it is [B-439]; replaced by [B-505] (or one that features
+  since brought near its time)
 
 ## Process and release
 
@@ -478,3 +499,18 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [B-473]: log/7-1.5.0.md
 [R-450]: log/7-1.5.0.md
 [R-452]: log/7-1.5.0.md
+[B-439]: log/7-1.5.0.md
+[B-475]: log/7-1.5.0.md
+[B-476]: log/7-1.5.0.md
+[B-480]: log/7-1.5.0.md
+[B-482]: log/7-1.5.0.md
+[B-485]: log/7-1.5.0.md
+[B-488]: log/7-1.5.0.md
+[B-494]: log/7-1.5.0.md
+[B-500]: log/7-1.5.0.md
+[B-505]: log/7-1.5.0.md
+[B-507]: log/7-1.5.0.md
+[J-14]: log/7-1.5.0.md
+[J-15]: log/7-1.5.0.md
+[B-489]: log/7-1.5.0.md
+[B-490]: log/7-1.5.0.md

@@ -989,8 +989,10 @@ void Bench::budgets() {
     budget("vimana 2x", vimana2x, 2.0);         // a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
     budget("telescope 2x", telescope2x, 13);    // the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
     budget("probe 2x", probe2x, 8.9);           // the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)
-    budget("surface 2x", surface2x, 2.8);       // 1.82 after F-10 (F-11: 16 -> 2.8)
-    budget("surface 4x", surface4x, 4.5);       // 2.97 after F-10
+    // B-505 (KI-444): the ground's two rows again at 1.5 times their medians, of 26 runs taken alone in 1.5.0 (the features since F-10 had
+    // brought their budgets down to 1.34 and 1.31 times them; a run beside other work took 1.43 times, and 4x went over)
+    budget("surface 2x", surface2x, 3.1);       // 1.82 after F-10 (F-11: 16 -> 2.8); 2.09 in 1.5.0 (2.04 to 2.28)
+    budget("surface 4x", surface4x, 5.2);       // 2.97 after F-10 (F-11: 4.5); 3.44 in 1.5.0 (3.38 to 3.79)
     // the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill,
     // the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
     budget("descent first", descentFirst, 26);

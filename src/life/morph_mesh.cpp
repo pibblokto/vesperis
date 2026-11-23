@@ -243,32 +243,78 @@ void drawElectron(Framebuffer& fb, const Slide& v, const std::vector<Shape>& sha
     V.ct = std::cos(v.tilt); V.st = std::sin(v.tilt); V.cr = std::cos(v.turn); V.sr = std::sin(v.turn);
     V.D = V.pz * FBW * 400;
     V.pj.f = V.D / V.pz; V.pj.cx = FBW * 0.5; V.pj.cy = FBH * 0.5;
-    // the stub: a filter's grey and its pores, on the tilted plane (its depth the plane's)
+    // the stub: a filter's grey and its pores, on the tilted plane (its depth the plane's). B-502 (KI-437): each pore's cell and each grain's
+    // corner hashed once a frame into a table over the view's span (a pixel's sums as they were, bit for bit), not nine and four times a pixel
     const int W = FBW, H = FBH;
     const double pz = V.pz;
+    const double gs = 1.1, gsz = std::max(0.15, pz * 3);
+    struct Pore { double px, py, rad; bool live; };
+    auto poreOf = [&](int64_t a, int64_t b) {
+        const uint64_t h = hash2i(a, b, v.seed ^ 0xF117E5ULL);
+        Pore p;
+        p.live = !(h01(h >> 3) < 0.35);
+        p.px = (a + h01(h)) * gs; p.py = (b + h01(h >> 17)) * gs;
+        p.rad = 0.1 + 0.12 * h01(h >> 29);
+        return p;
+    };
+    auto grainOf = [&](int64_t a, int64_t b) { return h01(hash2i(a, b, v.seed)); };
+    // the view's span on the slide: a point's X and Y are affine in its pixel, so the frame's corners bound them (the tables two cells wider)
+    double xlo = 1e300, xhi = -1e300, ylo = 1e300, yhi = -1e300;
+    for (int k = 0; k < 4; k++) {
+        const int x = (k & 1) ? W - 1 : 0, y = (k & 2) ? H - 1 : 0;
+        const double xv = (x + 0.5 - V.pj.cx) * pz, yv = -(y + 0.5 - V.pj.cy) * pz;
+        const double Y2 = -yv, Y1 = Y2 / std::max(0.2, V.ct), X1 = xv;
+        const double X = X1 * V.cr + Y1 * V.sr + v.cx, Y = -X1 * V.sr + Y1 * V.cr + v.cy;
+        xlo = std::min(xlo, X); xhi = std::max(xhi, X); ylo = std::min(ylo, Y); yhi = std::max(yhi, Y);
+    }
+    struct Table { int64_t a0 = 0, b0 = 0, na = 0, nb = 0; };
+    auto span = [&](double cell) {   // a table's cells over the span, none past a cell a pixel
+        Table T;
+        T.a0 = (int64_t)std::floor(xlo / cell) - 2; T.b0 = (int64_t)std::floor(ylo / cell) - 2;
+        T.na = (int64_t)std::floor(xhi / cell) + 3 - T.a0; T.nb = (int64_t)std::floor(yhi / cell) + 3 - T.b0;
+        if (T.na <= 0 || T.nb <= 0 || T.na * T.nb > (int64_t)W * H) T.na = T.nb = 0;
+        return T;
+    };
+    const Table PT = span(gs), GT = span(gsz);
+    thread_local std::vector<Pore> pores;
+    thread_local std::vector<double> grains;
+    pores.resize((size_t)(PT.na * PT.nb)); grains.resize((size_t)(GT.na * GT.nb));
+    Pore* pt = pores.data(); double* gt = grains.data();
+    parallelFor((int)PT.nb, 16, [&](int ja, int jb) {
+        for (int j = ja; j < jb; j++) for (int64_t i = 0; i < PT.na; i++) pt[j * PT.na + i] = poreOf(PT.a0 + i, PT.b0 + j);
+    });
+    parallelFor((int)GT.nb, 16, [&](int ja, int jb) {
+        for (int j = ja; j < jb; j++) for (int64_t i = 0; i < GT.na; i++) gt[j * GT.na + i] = grainOf(GT.a0 + i, GT.b0 + j);
+    });
+    auto pore = [&](int64_t a, int64_t b) {
+        const int64_t i = a - PT.a0, j = b - PT.b0;
+        return i >= 0 && j >= 0 && i < PT.na && j < PT.nb ? pt[j * PT.na + i] : poreOf(a, b);
+    };
+    auto grainAt = [&](int64_t a, int64_t b) {
+        const int64_t i = a - GT.a0, j = b - GT.b0;
+        return i >= 0 && j >= 0 && i < GT.na && j < GT.nb ? gt[j * GT.na + i] : grainOf(a, b);
+    };
     parallelFor(H, 16, [&](int ya, int yb) {
         for (int y = ya; y < yb; y++)
             for (int x = 0; x < W; x++) {
                 const double xv = (x + 0.5 - V.pj.cx) * pz, yv = -(y + 0.5 - V.pj.cy) * pz;
                 const double Y2 = -yv, Y1 = Y2 / std::max(0.2, V.ct), X1 = xv;
                 const double X = X1 * V.cr + Y1 * V.sr + v.cx, Y = -X1 * V.sr + Y1 * V.cr + v.cy;
-                const double gs = 1.1;
                 const int64_t ix = (int64_t)std::floor(X / gs), iy = (int64_t)std::floor(Y / gs);
                 double best = 1e9; double rad = 0.15;
                 for (int64_t a = ix - 1; a <= ix + 1; a++)
                     for (int64_t b = iy - 1; b <= iy + 1; b++) {
-                        const uint64_t h = hash2i(a, b, v.seed ^ 0xF117E5ULL);
-                        if (h01(h >> 3) < 0.35) continue;
-                        const double px = (a + h01(h)) * gs, py = (b + h01(h >> 17)) * gs;
+                        const Pore p = pore(a, b);
+                        if (!p.live) continue;
+                        const double px = p.px, py = p.py;
                         const double d = std::sqrt((px - X) * (px - X) + (py - Y) * (py - Y));
-                        if (d < best) { best = d; rad = 0.1 + 0.12 * h01(h >> 29); }
+                        if (d < best) { best = d; rad = p.rad; }
                     }
                 // the filter's grain, a smooth noise sized in screen pixels (no squares at any zoom)
-                const double gsz = std::max(0.15, pz * 3);
                 const double fx = X / gsz, fy = Y / gsz;
                 const int64_t qx = (int64_t)std::floor(fx), qy = (int64_t)std::floor(fy);
                 const double tx = fx - qx, ty = fy - qy, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
-                auto g = [&](int64_t a, int64_t b) { return h01(hash2i(a, b, v.seed)); };
+                auto g = [&](int64_t a, int64_t b) { return grainAt(a, b); };
                 const double grain = 3 * ((g(qx, qy) * (1 - sx) + g(qx + 1, qy) * sx) * (1 - sy) + (g(qx, qy + 1) * (1 - sx) + g(qx + 1, qy + 1) * sx) * sy);
                 double s = 13 + grain;
                 const double ring = std::max(pz, 0.03);

@@ -421,6 +421,7 @@ MadeWorld growthAtStep(double radiusKm, const Vec3& place, MadeGrowth G, int ste
     return growthLayer(radiusKm, place, G);
 }
 void growthLayerOn(SurfaceView& S, const MadeWorld& m) {
+    S.testWaitResample();   // (KI-491: a worker sampling the rings reads the layer)
     S.site.made = m; S.site.gen.made = m;
     for (TerrainCache* c : {&S.site.lodN, &S.site.lod0, &S.site.lod1, &S.site.lod2, &S.site.lod3}) c->invalidate(-3e5, -3e5, 3e5, 3e5);
     S.testRegrowRuins();

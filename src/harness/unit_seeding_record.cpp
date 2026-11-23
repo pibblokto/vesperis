@@ -77,6 +77,62 @@ void unitSeedingRecord(const Check& check) {
                   "as generated, %d after)", took, worlds.size(), beaten, died, how[PA_COMPETE], how[PA_CYCLE], how[PA_POISON], early, firstBad.c_str(), before, gone, after, kept,
                   there, elsewhere));
     }
+    {   // B-474 (KI-487): a native the line beat dies out only where none of its band of warmth is left it, the world's waters (for a water
+        // niche) and land (for any other) at the habitat's 96 points read as the line's band reads them; and a later line, let go at the same
+        // place once the first has covered the world, meets none of those the first drove out
+        const std::vector<SeedAirCase> worlds = seedAirCases(20);
+        int took = 0, died = 0, warmBad = 0, later = 0, laterMet = 0;
+        std::string firstBad;
+        for (const SeedAirCase& c : worlds) {
+            const Body& b = c.sys.bodies[c.body];
+            const BodyGen g = BodyGen::make(b);
+            const Biota& B = lifeOf(c.sys)->bodies[c.body];
+            for (const auto& wants : RECORD_EDITS) {
+                const SeedLine line = seedLineFor(c.sys, c.body, c.wild.kind.s.index, seedGeneEdits(c.wild.genes, wants));
+                const Seeding s = seedingFor(c.sys, c.body, line, c.lat, c.lon, 0);
+                if (!s.verdict.takes()) continue;
+                took++;
+                const CultureKind& K = s.wild.kind;
+                MadeWorld mw; mw.tempK = b.tempK; mw.sunless = c.sys.sunless();
+                mw.freezeC = K.chemistry == CH_HYDROCARBON ? -183 : (K.chemistry == CH_AMMONIA ? -97 : 0);
+                double wlo = 1e9, whi = -1e9, dlo = 1e9, dhi = -1e9;
+                for (int i = 0; i < 96; i++) {
+                    const double z = 1 - (2 * i + 1) / 96.0, r = std::sqrt(std::max(0.0, 1 - z * z)), phi = i * 2.399963229728653;
+                    const Vec3 u(r * std::cos(phi), r * std::sin(phi), z);
+                    const SurfaceSample smp = sampleSurface(g, u, 20000);
+                    if (smp.material == MAT_LAVA) continue;
+                    const bool wet = madeWetAt(smp);
+                    const double cc = madeMeanAt(g, mw, u, smp, wet, wet ? madeSaltAt(g, smp) : 0);
+                    (wet ? wlo : dlo) = std::min(wet ? wlo : dlo, cc); (wet ? whi : dhi) = std::max(wet ? whi : dhi, cc);
+                }
+                const double last = (MADE_STEPS * MADE_STEP_S + 1) / s.verdict.pace;
+                const std::vector<DiedOut> out = seedingDiedOut(B, s, last);
+                for (const DiedOut& d : out) {
+                    died++;
+                    const Microbe& m = B.species[d.species];
+                    bool left = false;   // (a part of its band the world has and the line's leaves out)
+                    for (int n = 0; n < NI_COUNT; n++) {
+                        if (!(m.niches & nicheBit(n))) continue;
+                        const double lo = std::max(m.tMin, wetNiche(n) ? wlo : dlo), hi = std::min(m.tMax, wetNiche(n) ? whi : dhi);
+                        left |= lo < hi - 0.5 && (lo < K.s.tMin - 0.5 || hi > K.s.tMax + 0.5);
+                    }
+                    if (left && ++warmBad == 1)
+                        firstBad = fmt("; native %d of a %s (%.0f to %.0f C) died out under a line of %.0f to %.0f C, the world's waters %.0f to %.0f C, its land %.0f to %.0f C",
+                                       d.species, KINDS[b.type].name, m.tMin, m.tMax, K.s.tMin, K.s.tMax, wlo, whi, dlo, dhi);
+                }
+                if (out.empty()) continue;
+                const std::vector<Seeding> before = {s};
+                const Seeding s2 = seedingFor(c.sys, c.body, line, c.lat, c.lon, last + 1, &before);
+                later++;
+                for (const DiedOut& d : out)
+                    laterMet += s2.verdict.native == d.species || std::count(s2.verdict.beaten.begin(), s2.verdict.beaten.end(), d.species) > 0;
+            }
+        }
+        check("seeding: a native the line beat dies out only where none of its warmth is left it, and a later line meets none of them (B-474)",
+              took > 100 && died > 50 && warmBad == 0 && later > 20 && laterMet == 0,
+              fmt("(%d seedings took, %d natives died out, %d of them with a part of their band the world has and the line's leaves out%s; %d later lines "
+                  "at the same place met %d of those the first drove out)", took, died, warmBad, firstBad.c_str(), later, laterMet));
+    }
     SeedRecordCase rc;
     if (!seedRecordCase(rc)) { check("seeding: a line found wild", false, "(no world where a poison line drives a native out)"); return; }
     TestGame g; Input in;

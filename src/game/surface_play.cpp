@@ -254,6 +254,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3);
     }
     animalsSeen();   // first sightings go to the log and the statistics; J-07: what the landing saw of each species to the guide
+    deadToGuide();   // B-489: and the animals seen to die
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
         if (surf.hasWaypoint) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3); }
         else if (surf.lastRange > 8) {   // the waypoint goes to the spot under the crosshair, however far
@@ -398,6 +399,42 @@ std::string Game::animalNameOf(int species) const {
     it = guide.inbox.find(k);
     if (it != guide.inbox.end()) return it->second;
     return surf.bestiary.words(species);
+}
+
+// B-489 (KI-494): the dead this world kept from the landings before (the guide's `dead` lines) into the landing, at a landing and a load: its
+// herds come without them and their remains lie where they fell, aged by the guide's clock since; those past DEAD_FORGET_S are forgotten
+void Game::deadToLanding() {
+    if (!sys.valid || surf.site.body < 0) return;
+    const auto it = guide.dead.find(Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body));
+    std::vector<SurfaceView::DeadKept> kept;
+    if (it != guide.dead.end()) {
+        std::vector<DeadRecord>& ds = it->second;
+        ds.erase(std::remove_if(ds.begin(), ds.end(), [&](const DeadRecord& d) { return guide.clock - d.died >= DEAD_FORGET_S; }), ds.end());
+        for (const DeadRecord& d : ds) {
+            SurfaceView::DeadKept k;
+            k.seed = d.seed; k.cell = d.cell; k.gLat = d.gLat; k.gLon = d.gLon; k.unit = Vec3(d.ux, d.uy, d.uz); k.species = d.species;
+            k.heading = d.heading; k.size = d.size; k.diedAt = d.died - guide.clock; k.eaten = d.eaten; k.stalks = d.stalks;   // (on the landing's clock)
+            kept.push_back(k);
+        }
+        if (ds.empty()) guide.dead.erase(it);
+    }
+    surf.deadIn(kept);
+}
+// B-489: this landing's dead into the guide as they die, with how long hunters fed at them: the guide's list for the world is the landing's
+// kept dead, in their order
+void Game::deadToGuide() {
+    if (surf.deadKept.empty() || !sys.valid) return;
+    std::vector<DeadRecord>& ds = guide.dead[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body)];
+    for (size_t i = 0; i < surf.deadKept.size(); i++) {
+        const SurfaceView::DeadKept& k = surf.deadKept[i];
+        if (i >= ds.size()) {
+            DeadRecord d;
+            d.seed = k.seed; d.cell = k.cell; d.gLat = k.gLat; d.gLon = k.gLon; d.ux = k.unit.x; d.uy = k.unit.y; d.uz = k.unit.z; d.species = k.species;
+            d.heading = k.heading; d.size = k.size; d.died = guide.clock - (surf.lifeClock - k.diedAt); d.stalks = k.stalks;
+            ds.push_back(d);
+        }
+        ds[i].eaten = k.eaten;
+    }
 }
 
 // a species first seen this landing: logged (SIGHTING) and counted when it is new to the guide, said on the status either way; what each

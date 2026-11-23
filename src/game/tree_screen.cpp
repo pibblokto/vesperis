@@ -65,6 +65,7 @@ std::vector<TreeLeaf> Game::treeLeaves(const std::string& with) {
         if (!line.valid) continue;
         TreeLeaf L; L.key = key; L.line = line; L.name = flaskSpeciesName(w);
         L.world = upper(nameOfKey(key.substr(0, key.rfind("/M"))));
+        if (L.world == "UNKNOWN") { TreePage P; P.kind = TP_WORLD; P.key = key.substr(0, key.rfind("/M")); L.where = treePageWhere(P); }   // B-497
         L.sx = w.sx; L.sy = w.sy; L.sz = w.sz; L.body = w.body;
         L.drifter = line.lx != line.wx || line.ly != line.wy || line.lz != line.wz;   // its line a star it left
         leaves.push_back(L);
@@ -114,12 +115,30 @@ std::string Game::treeWorldWords(const std::string& world) {
     return n + " - " + (made.empty() ? std::string(KINDS[it->second].name) : made);
 }
 
+// B-497: an unnamed world's page's place under its name, as the microscope's lists say it ("(+195 +0 +46 / 3)": its star's sector and its body):
+// two unnamed worlds of a kind read alike ("UNKNOWN - FELISIAN"), and a world has no name until the explorer gives it one
+std::string Game::treePageWhere(const TreePage& P) const {
+    if (P.kind != TP_WORLD || nameOfKey(P.key) != "UNKNOWN") return std::string();
+    const std::string w = labFolderWhere(P.key);
+    return w.substr(std::min(w.size(), w.find_first_not_of(' ')));
+}
+
 // a leaf's line: its name (or look), its world (`world`: not on a world's own page), a made one's or a drifter's tag; B-443: a long look
 // before its world; Y-01: a line indented by its depth
 std::string Game::treeLeafLine(const TreeLeaf& L, bool world) {
     const int w = UW - (TREE_X0 + TREE_W) - 14 - TWIG_DX * L.depth;
     const std::string tag = leafTag(L), whole = L.name + (world ? ", " + L.world : std::string()) + tag;
-    return textWidth(whole.c_str()) <= w ? whole : fitHead(L.name, tag, w);
+    if (world && !L.where.empty()) {   // B-497: an unnamed world by its place where it has room (else UNKNOWN, as before)
+        const std::string placed = L.name + ", " + L.where + tag;
+        if (textWidth(placed.c_str()) <= w) return placed;
+    }
+    if (textWidth(whole.c_str()) <= w) return whole;
+    // B-497: the number that tells two alike apart (" (2)") kept at the end of a look cut for room (it was cut with the look's end)
+    const size_t open = L.name.rfind(" (");
+    if (open == std::string::npos || L.name.back() != ')' || L.name.find_first_not_of("0123456789", open + 2) != L.name.size() - 1) return fitHead(L.name, tag, w);
+    const std::string head = L.name.substr(0, open), num = L.name.substr(open);
+    const std::string short_ = head + num + tag;
+    return textWidth(short_.c_str()) <= w ? short_ : fitText(head, w - textWidth(num.c_str()) - 1) + num;
 }
 
 // the tree: every species read and the ship's own, each two neighbours' common ancestor, the geneses counted (the LIFE page's); Y-01: its
@@ -226,6 +245,22 @@ void Game::treePage() {
         tree.shownJoin.push_back(last ? commonAncestorGyr(last->line, L.line) : -1.0);
         last = &L;
     }
+    // B-497: a folder's page holds every world's species together: two leaves that read alike there (their looks, their worlds left out for
+    // room or two unnamed worlds') take their colour and motion, then a number, as two of a world do (B-443)
+    if (P.kind == TP_FOLDER)
+        for (int pass = 0; pass < 2; pass++) {
+            std::map<std::string, std::vector<int>> alike;
+            for (int k = 0; k < (int)tree.shown.size(); k++)
+                if (tree.shown[k].depth == 0 && !tree.shown[k].lab && tree.shown[k].body >= 0) alike[treeLeafLine(tree.shown[k], true)].push_back(k);
+            for (const auto& kv : alike)
+                for (size_t j = 0; kv.second.size() > 1 && j < kv.second.size(); j++) {
+                    TreeLeaf& L = tree.shown[kv.second[j]];
+                    FlaskSpecies w;
+                    const Morph* form = pass == 0 && speciesOfKey(L.key, w) ? formOfKey(L.key) : nullptr;
+                    if (pass == 1) L.name += fmt(" (%d)", (int)j + 1);
+                    else if (form && L.name.find(formTraits(*form)) == std::string::npos) L.name += formTraits(*form);
+                }
+        }
     // Y-03: a gene moved in, a line from its donor's row (a species or a line) to the line's, where both are on the page
     tree.donors.clear();
     for (size_t k = 0; k < tree.shown.size(); k++) {
@@ -358,8 +393,12 @@ void Game::renderTree() {
         const int room = UW - 12 - textWidth("TREE OF KIN") - 12 - textWidth(("< " + of).c_str());
         const std::string head = "< " + fitText(P.name, room) + of;
         drawText(canvas, UW - 6 - textWidth(head.c_str()), 4, head.c_str(), HUD_WHITE);
-        if (tree.unread > 0)
-            drawText(canvas, 6, 13, (P.kind == TP_FOLDER ? fmt("%d IN IT NOT YET READ", tree.unread) : fmt("%d MORE SEEN HERE, NOT YET READ", tree.unread)).c_str(), HUD_DIM);
+        const std::string where = treePageWhere(P);   // B-497: an unnamed world's place, under its name
+        if (!where.empty()) drawText(canvas, UW - 6 - textWidth(where.c_str()), 13, where.c_str(), HUD_DIM);
+        if (tree.unread > 0) {
+            const std::string unread = P.kind == TP_FOLDER ? fmt("%d IN IT NOT YET READ", tree.unread) : fmt("%d MORE SEEN HERE, NOT YET READ", tree.unread);
+            drawText(canvas, 6, 13, fitText(unread, UW - 12 - (where.empty() ? 0 : textWidth(where.c_str()) + 8)).c_str(), HUD_DIM);
+        }
     }
     const int n = (int)tree.shown.size();
     // the rows: a genesis's head before its first leaf, then its leaves, each species' lines under it
@@ -481,7 +520,7 @@ void Game::renderTree() {
             if (k < 0) kin = "NO COMMON ANCESTOR WITH ANY LIFE SEQUENCED";
             else {
                 const TreeLeaf& K = tree.leaves[k];
-                kin = fitHead("NEAREST KIN: " + K.name, (K.body >= 0 ? " OF " : ", ") + K.world, UW - 12);
+                kin = fitHead("NEAREST KIN: " + K.name, (K.body >= 0 ? " OF " : ", ") + (K.where.empty() ? K.world : K.where), UW - 12);   // B-497
                 when = gyr < 1e-3 ? "ONE SPECIES, CARRIED APART " + yearsWords(std::max(gyr * 1e9, 1.0)) + " AGO" : "COMMON ANCESTOR " + yearsWords(gyr * 1e9) + " AGO";
             }
             drawText(canvas, 6, y, fitText(kin, UW - 12).c_str(), HUD_WHITE); y += 9;

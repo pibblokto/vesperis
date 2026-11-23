@@ -21,6 +21,15 @@ double barUm(double viewUm) {
 }
 std::string umText(double um) { return um < 1 ? fmt("%.1f UM", um) : (um >= 1000 ? fmt("%.0f MM", um / 1000) : fmt("%.0f UM", um)); }
 
+// a panel's specimen: its species in a form doing an act. B-503 (KI-438): a spore, a cyst or a fossil lying on the slide is held still, as
+// the microscope holds it (`Specimen::still`: its jiggle alone; a dormant species' spores do not swim)
+Specimen panelSpecimen(const Morph& m, int form, int act, uint64_t seed) {
+    Specimen s; s.m = &m; s.form = form; s.act = act; s.seed = seed; s.angle = (unitFromHash(mix64(seed >> 3)) - 0.5) * 1.2; s.t0 = 0;
+    if (act == AN_TO_FIELD) s.angle = 0.3;
+    s.still = act == AN_LIVE && (form == CF_SPORE || form == CF_CYST || form == CF_FOSSIL);
+    return s;
+}
+
 // a species on a slide in a way of seeing at a time: the specimen and, where it is small in the view, a few more of its kind; its scale bar
 // and its line; the mush as the scenes' (two passes). The view follows the specimen (`track`) or looks at a fixed place (`fixX`, `fixY`)
 Panel slidePanel(const Morph& m, int seeing, int form, int act, double t, double mag, uint64_t seed, const std::string& line, const Morph* other = nullptr,
@@ -30,8 +39,8 @@ Panel slidePanel(const Morph& m, int seeing, int form, int act, double t, double
     Slide v; v.seeing = seeing; v.umPerPx = umPerPxAt(mag); v.t = t; v.seed = seed;
     v.turn = 0.4 + unitFromHash(seed) * 1.2; v.tilt = 0.5; v.stage = 0.35 + unitFromHash(mix64(seed >> 7)) * 0.6;
     std::vector<Specimen> cells;
-    Specimen s; s.m = &m; s.form = form; s.act = act; s.seed = seed; s.angle = (unitFromHash(mix64(seed >> 3)) - 0.5) * 1.2; s.other = other; s.t0 = 0;
-    if (act == AN_TO_FIELD) s.angle = 0.3;
+    Specimen s = panelSpecimen(m, form, act, seed);
+    s.other = other;
     cells.push_back(s);
     double ang;
     if (track) specimenPlace(s, t, v.cx, v.cy, ang);   // the view follows it
@@ -124,6 +133,18 @@ int lifePlates(int n) {
     const double t0 = nowSec();
     const std::vector<WorldRef> worlds = livingWorlds(n);
     int k = 0;
+    // B-503 (KI-438): each spore, cyst and fossil a plate draws, and those held still there (its place at the panel's time within its jiggle of
+    // where it lies: a Brownian jiggle's reach, `poseAt`); one that moved fails the mode
+    int lying = 0, held = 0;
+    auto tally = [&](const Morph& m, int form, double t, uint64_t seed) {
+        if (form != CF_SPORE && form != CF_CYST && form != CF_FOSSIL) return;
+        const Specimen s = panelSpecimen(m, form, AN_LIVE, seed);
+        double x, y, a;
+        specimenPlace(s, t, x, y, a);
+        const double body = std::max(m.lengthUm, m.widthUm), jiggle = 0.06 + 0.25 / std::sqrt(std::max(0.2, body));
+        lying++;
+        held += std::hypot(x - s.x, y - s.y) <= jiggle * 1.5 ? 1 : 0;
+    };
     for (const WorldRef& w : worlds) {
         auto L = lifeOf(w.sys);
         const Biota& B = L->bodies[w.body];
@@ -136,6 +157,7 @@ int lifePlates(int n) {
             for (size_t j = 0; j < ways.size() && j < 2; j++) {
                 const double mag = panelMag(m, ways[j], form);
                 panels.push_back(slidePanel(m, ways[j], form, AN_LIVE, 1.3 + i * 0.7, mag, m.seed ^ (uint64_t)(j + 1), speciesLine(B.species[i], m)));
+                tally(m, form, 1.3 + i * 0.7, m.seed ^ (uint64_t)(j + 1));
             }
         }
         k++;
@@ -200,11 +222,13 @@ int lifePlates(int n) {
             const int form = f.s.state == SS_DORMANT ? CF_SPORE : (f.s.state == SS_FOSSIL ? CF_FOSSIL : CF_CELL);
             const int way = seeingsFor(f.m)[0];
             panels.push_back(slidePanel(f.m, way, form, AN_LIVE, 2.0 + i * 0.37, panelMag(f.m, way, form), f.m.seed ^ 0x9F, speciesLine(f.s, f.m)));
+            tally(f.m, form, 2.0 + i * 0.37, f.m.seed ^ 0x9F);
         }
         saveGrid(panels, 4, "life plates: " + wants[q].name, "shots/tests/life_plates_" + wants[q].name + ".png");
     }
-    printf("life plates: %zu worlds near home and %zu stages and chemistries (%.1f s)\n", worlds.size(), wants.size(), nowSec() - t0);
-    return 0;
+    printf("life plates: %zu worlds near home and %zu stages and chemistries; %d spores, cysts and fossils drawn, %d held still where they lie%s (%.1f s)\n",
+           worlds.size(), wants.size(), lying, held, held == lying ? "" : " - SOME MOVED", nowSec() - t0);
+    return held == lying ? 0 : 1;
 }
 
 // the species near home that can do an act (the ship's own first), of a plan or any, the plans unseen first

@@ -2,8 +2,9 @@
 // forty with its STOP cut and its BIND set (its SHELL and LIFT cut, as a player cuts them for a carpet) lays a carpet over the desert's land
 // that turns to grass and shrubs four steps behind its edge, thicker from twelve; the same line's carpet on a living world and a chalk line's
 // coral never green; the desert is a GREENED DESERT once the grass covers half its land, its carpet harming nothing, its map mostly grass;
-// its ground's grass and shrubs drawn in the grass bank in its pigment's green, nothing drawn before them; the editor's rule for what a line
-// overgrows as is the layer's
+// its ground's grass and shrubs drawn in its line's bank in its pigment's green, nothing drawn before them; the editor's rule for what a line
+// overgrows as is the layer's. B-482 (J-16): two lines of two colours green one desert each in its own, and a bare world with air that is no
+// desert greens too
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "life/seeding.h"
@@ -112,14 +113,15 @@ void unitSeedingDesert(const Check& check) {
         }
         const std::string name = madeKindName(end), shortName = madeKindShort(end), sentence = upper(madeKindSentence(end)), phrase = upper(madeKindPhrase(end));
         const bool named = name == "GREENED DESERT" && !shortName.empty() && shortName.size() <= 10 && sentence.find("GRASS AND SHRUBS") != std::string::npos &&
-                           phrase.find("GRASS AND SHRUBS") != std::string::npos && madeGreens(PT_DESERT) && !madeGreens(PT_FELISIAN) && !madeGreens(PT_SCORCHED_FELISIAN);
+                           phrase.find("GRASS AND SHRUBS") != std::string::npos && madeGreens(PT_DESERT) && madeGreens(PT_RUST) && madeGreens(PT_SCORCHED_FELISIAN) &&
+                           !madeGreens(PT_FELISIAN) && !madeGreens(PT_OCEAN);   // (B-482: any bare world with air, no plants or seas of its own)
         check("seeding: a desert greened, a kind of its own (J-15)",
               first > 0 && mismatched == 0 && harmed == 0 && unlivable == 0 && wordsOff == 0 && named && grass * 2 > land,
               fmt("(GREENED DESERT from step %d, the land green %.0f%% then, %.0f%% the step before; %d steps off their rule, %d harmed by its "
                   "carpet, %d not more livable, %d with GRASS AND SHRUBS off; \"%s\", \"%s\", \"%s\"; at its 48th step %d of %d map texels of land grass)",
                   first, 100 * at, 100 * before, mismatched, harmed, unlivable, wordsOff, name.c_str(), shortName.c_str(), sentence.c_str(), grass, land));
     }
-    {   // the ground: at its 48th step its place grass with shrubs and tufts drawn in the grass bank (its colour the pigment's green), none at its
+    {   // the ground: at its 48th step its place grass with shrubs and tufts drawn in its line's bank (B-482; its colour the pigment's green), none at its
         // 11th (the carpet alone) nor on the desert nobody seeded; the editor's rule for what a cut STOP overgrows as the layer's own
         auto ground = [&](const MadeWorld& m, int& flora, int& bank10, int& mat, RGB& lit) {
             StarSystem sys = D.sys;
@@ -131,10 +133,11 @@ void unitSeedingDesert(const Check& check) {
             for (int k = 0; k < 3; k++) { sv.update(1.0 / 30, in, 20000, false); Framebuffer fb0; sv.render(fb0, 20000, nb.stars, sr, 1.0); }
             Framebuffer fb; sv.render(fb, 20000, nb.stars, sr, 1.0);
             flora = sv.lastFloraPoints + sv.lastFloraPolys;
+            const int gb = sv.testGrowthLineBank(0) >= 0 ? sv.testGrowthLineBank(0) : 10;   // (B-482: its line's bank; the grass bank as generated)
             bank10 = 0;
-            for (size_t i = 0; i < fb.idx.size(); i++) bank10 += ((fb.idx[i] >> 11) & 31) == 10;
+            for (size_t i = 0; i < fb.idx.size(); i++) bank10 += ((fb.idx[i] >> 11) & 31) == gb;
             mat = sv.site.lod0.at(0, 0).material;
-            const uint8_t* p = &fb.pal[(10 * 64 + 47) * 3];
+            const uint8_t* p = &fb.pal[(gb * 64 + 47) * 3];
             lit = RGB(p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f);
         };
         int fe = 0, be = 0, me = 0, f11 = 0, b11 = 0, m11 = 0, f0 = 0, b0 = 0, m0 = 0;
@@ -147,9 +150,88 @@ void unitSeedingDesert(const Check& check) {
         const bool green = le.g > le.r * 1.2f && le.g > le.b * 1.2f;
         check("seeding: a greened desert's ground, grass and shrubs (J-15)",
               me == MAT_GRASS && fe > 50 && be > 500 && green && f11 == 0 && f0 == 0 && rule == end.spread[0].growth.type,
-              fmt("(its place %s at its 48th step: %d flora drawn, %d pixels in the grass bank, its lit colour %.2f %.2f %.2f; at its 11th %s, %d drawn; nobody's "
+              fmt("(its place %s at its 48th step: %d flora drawn, %d pixels in its line's bank, its lit colour %.2f %.2f %.2f; at its 11th %s, %d drawn; nobody's "
                   "%s, %d drawn; the editor's rule %s, the layer's %s)",
                   MATERIAL_NAMES[me], fe, be, le.r, le.g, le.b, MATERIAL_NAMES[m11], f11, MATERIAL_NAMES[m0], f0, MADE_GROWTH_NAMES[rule],
                   MADE_GROWTH_NAMES[end.spread[0].growth.type]));
+    }
+    {   // B-482 (KI-509, KI-510): a second carpet line of another colour (the first light-feeder of water on the forty with another pigment than
+        // green, tuned for the desert's far side and let go there with the first) greens the same desert in its own colour: on the ground each
+        // line's grass and shrubs in its own line's bank, in its own plants' colour, at their 24th step (each in its own half: where both lie the
+        // later's grass); and a bare world with air of the forty that is no desert (no plants or seas of its own) greens under the green line
+        // tuned for its place (most refuse it: too cold, or the ultraviolet)
+        StarSystem gs, ps; int gb = -1, gsp = -1, pb = -1, psp = -1;
+        for (const SeedCase& c : seedCases()) {
+            const auto life = lifeOf(c.sys);
+            if (life->bodies[c.body].chemistry != CH_WATER) continue;
+            for (const Microbe& mb : life->bodies[c.body].species) {
+                if (mb.state != SS_LIVING || mb.way != LW_LIGHT || mb.pigment == PG_NONE) continue;
+                if (mb.pigment == PG_GREEN && gsp < 0) { gs = c.sys; gb = c.body; gsp = mb.index; }
+                if (mb.pigment != PG_GREEN && psp < 0) { ps = c.sys; pb = c.body; psp = mb.index; }
+            }
+        }
+        const double la2 = -D.lat, lo2 = D.lon > 0 ? D.lon - PI : D.lon + PI;
+        bool two = false, own = false, apart = false;
+        int px1 = 0, px2 = 0, bank1 = -1, bank2 = -1;
+        RGB c1, c2, p1, p2;
+        std::string twoWords = "NO SECOND LINE";
+        if (psp >= 0) {
+            std::vector<GeneEdit> e2 = seedTunedEdits(ps, pb, psp, seedPlaceFacts(D.sys, D.body, la2, lo2));
+            for (const GeneEdit& x : seedGeneEdits(seedLineFor(ps, pb, psp, {}).genes, CARPET)) e2.push_back(x);
+            SeedLine line2 = seedLineFor(ps, pb, psp, e2); line2.key += "/S2";
+            const std::vector<Seeding> first = {sd};
+            const Seeding s2 = seedingFor(D.sys, D.body, line2, la2, lo2, 0, &first);
+            const MadeWorld m2 = madeWorldOf(D.sys, D.body, {sd, s2}, std::max(clockAt(sd, 24), clockAt(s2, 24)));   // (each its own half: where both lie, the later's)
+            two = s2.verdict.takes() && m2.lines == 2 && m2.spread[0].growth.greens && m2.spread[1].growth.greens;
+            twoWords = fmt("a %s line's %s", PIGMENT_NAMES[clampi(line2.kind.s.pigment, 0, PG_COUNT - 1)], seedVerdictWords(s2.verdict).c_str());
+            auto ground = [&](double la, double lo, int line, int& px, RGB& lit, int& bank) {
+                StarSystem sys = D.sys;
+                SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb;
+                sv.site.made = m2;
+                sv.init(&sys, D.body, la, lo, 20000);
+                nb.update(sv.site.worldPos(20000, 0, 0, 0));
+                Input in;
+                for (int k = 0; k < 3; k++) { sv.update(1.0 / 30, in, 20000, false); Framebuffer fb0; sv.render(fb0, 20000, nb.stars, sr, 1.0); }
+                Framebuffer fb; sv.render(fb, 20000, nb.stars, sr, 1.0);
+                bank = sv.testGrowthLineBank(line);
+                px = 0;
+                for (size_t i = 0; i < fb.idx.size() && bank >= 0; i++) px += bankOf(fb.idx[i]) == bank;
+                const uint8_t* q = &fb.pal[((bank >= 0 ? bank : 10) * 64 + 47) * 3];
+                lit = RGB(q[0] / 255.0f, q[1] / 255.0f, q[2] / 255.0f);
+            };
+            if (two) {
+                ground(D.lat, D.lon, 0, px1, c1, bank1);
+                ground(la2, lo2, 1, px2, c2, bank2);
+                p1 = m2.spread[0].growth.plants; p2 = m2.spread[1].growth.plants;
+                auto chroma = [](const RGB& c) { const float s = std::max(1e-3f, c.r + c.g + c.b); return RGB(c.r / s, c.g / s, c.b / s); };
+                auto far = [&](const RGB& a, const RGB& b) { const RGB x = chroma(a), y = chroma(b); return std::fabs(x.r - y.r) + std::fabs(x.g - y.g) + std::fabs(x.b - y.b); };
+                own = px1 > 500 && px2 > 500 && far(c1, p1) < far(c1, p2) && far(c2, p2) < far(c2, p1);
+                apart = bank1 >= 0 && bank2 >= 0 && bank1 != bank2 && far(p1, p2) > 0.1;
+            }
+        }
+        // the bare worlds with air of the forty that are no desert
+        int bare = 0, took = 0, greened = 0, named = 0;
+        std::string bareWords;
+        if (gsp >= 0)
+            for (const SeedCase& c : seedCases()) {
+                const int t = c.sys.bodies[c.body].type;
+                if (t == PT_DESERT || !KINDS[t].landable || !KINDS[t].atmosphere || kindHas(t, KT_FLORA) || kindHas(t, KT_SEA)) continue;
+                bare++;
+                std::vector<GeneEdit> e = seedTunedEdits(gs, gb, gsp, seedPlaceFacts(c.sys, c.body, c.lat, c.lon));
+                for (const GeneEdit& x : seedGeneEdits(seedLineFor(gs, gb, gsp, {}).genes, CARPET)) e.push_back(x);
+                SeedLine line = seedLineFor(gs, gb, gsp, e); line.key += "/S1";
+                const Seeding s = seedingFor(c.sys, c.body, line, c.lat, c.lon, 0);
+                if (!s.verdict.takes()) continue;
+                took++;
+                const MadeWorld m = madeWorldOf(c.sys, c.body, {s}, clockAt(s, 64));
+                greened += m.green > 0; named += m.kind == MDK_GREENED_DESERT;
+                bareWords += fmt("%s%s %s%s", bareWords.empty() ? "" : ", ", KINDS[t].name, m.green > 0 ? fmt("%.0f%% green", 100 * m.green).c_str() : "not green",
+                                 m.kind == MDK_GREENED_DESERT ? " GREENED DESERT" : "");
+            }
+        check("seeding: two lines green a desert each in its own colour, any bare world with air greens (B-482)",
+              two && own && apart && took > 0 && greened > 0,
+              fmt("(%s; at the first's place %d pixels in its bank %d, lit %.2f %.2f %.2f for its plants %.2f %.2f %.2f; at the second's %d in its bank %d, lit %.2f %.2f %.2f "
+                  "for %.2f %.2f %.2f; %d bare worlds with air that are no desert, %d took the green line, %d named GREENED DESERT: %s)",
+                  twoWords.c_str(), px1, bank1, c1.r, c1.g, c1.b, p1.r, p1.g, p1.b, px2, bank2, c2.r, c2.g, c2.b, p2.r, p2.g, p2.b, bare, took, named, bareWords.c_str()));
     }
 }

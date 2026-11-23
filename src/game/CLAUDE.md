@@ -17,11 +17,13 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
 - Flight and scenes: `autopilot` (SPACE), `scene_draw`, `hud`, `surface_play` (the capsule, the ground; R-434: Shift+O for the activity
   vision, `VISION_ACTIVITY`; J-07: the animals' record, `animalsSeen`, `animalKey`, `animalNameOf`, and N naming the one aimed at;
   J-08: the record's marks and REMAINS OF, the dusk insects quiet in silence; J-10: `lifeSoundsTo`, nothing living heard in silence,
-  a squelch on a wet cover, an overgrowth's sounds in `groundSoundsTo`),
+  a squelch on a wet cover, an overgrowth's sounds in `groundSoundsTo`; B-489: `deadToLanding`, at a landing and a load after
+  `syncShards`, and `deadToGuide`, each frame on the ground, keep the animals seen to die in the guide's `dead` lines),
   `sector_map`, `search` (Z-03: the kit's vials, the scoop, the cold store (any number since R-432), their save lines)
 - The laboratory (Z-04): `microscope` is the state `MICROSCOPE`: the vial list, a vial on the stage, the view, the four things done to a
   slide, tracking, what is seen (`microscopeSee`: the guide saves it as `microbe` lines), the sheet's lines, its pad. `microscope_draw`
-  draws the slide in the framebuffer, its HUD, the list and the sheet. `cabin_life`'s `drawStore` lights the cold store's door. Z-05:
+  draws the slide in the framebuffer (B-502: the electron's kept while the stage is still, `microscopeElectron`), its HUD, the list and
+  the sheet. `cabin_life`'s `drawStore` lights the cold store's door. Z-05:
   `incubator` is the state `INCUBATOR`: flasks and what goes in them, the medium's controls, the lab clock (`updateLab`, in the frame
   beside the drones' update), and save lines through its state row's hooks. `incubator_draw` draws its screen: flasks, a curve, the
   chooser. `cabin_life` has `drawIncubator` (B-459: a flask past the ship's banks in the nearest dealt colour's, `ShipBanks::bankNear`).
@@ -33,7 +35,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   makes its star the remote target. `cabin_life` has `drawTreeWall`. The decoder takes watermarks through `shardWatermarkAdd`. Z-07:
   `catalogue` is the state `CATALOGUE`, a row of the guide: every species with a sheet, and those on sheets a friend lent, by world or
   by kin, with a sheet beside its form drawn live. J-12: by world, a seeded world's head names its made kind, its natives a line drove out
-  read DIED OUT, the lines found wild there follow (`CR_WILD`), then any world's animals seen (`CR_ANIMAL`, a sheet in words). The
+  read DIED OUT, the lines found wild there follow (`CR_WILD`), then any world's animals seen (`CR_ANIMAL`; B-500: by kin too, marked by
+  their world's record, `animalFates`, and drawn on their sheet, `renderCatalogueBeast`). The
   statistics' LIFE page is in `guide_screens` (`renderStatsLife`; J-12: the seeded worlds, `catalogueCountsMake`). `lab_lists`
   (R-432, R-433) has the lists in folders: vials in a folder per world, culture folders, the choosers' folders with their keys and rows
   (R-441: the choosers' two tabs, `chooserTabs`; B-442: rows that look alike told apart, `apartRows`). It also has the culture
@@ -57,15 +60,17 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
 - The ship: `ship_plan` has I-01's rows. I-02: three decks and eight spaces (rooms, ways (the arches, the stair's landings, the lift),
   windows, fixtures, lamps and views), the mesh built once from them, the walk and the stair, the routes, the sight, dealing the banks.
   I-03: finishes, lamplight on the vertices, sun patches, the hull outside. I-04: the explorer's things. `cabin` draws and walks the
-  plan. `cabin_life` (I-04) fills in the explorer's things: the photographs' prints, the shelves' shards, the case's instruments, the
+  plan (B-501: `cabinMarks` reads which targets show through the glass, for the HUD). `cabin_life` (I-04) fills in the explorer's
+  things: the photographs' prints, the shelves' shards, the case's instruments, the
   deck, the garden (R-429: E trims a bed), the core, the capsule and its drop. `wall_screen` (R-428): the state `WALL`, the quarters'
   wall as the explorer hung it. `vehicles_draw` (R-427): the buggy and the drone on their platforms in the maintenance room, each in its
   ground shape, built from the bay drones' primitives.
 - Screens: `cabin` (with SHIPSCREEN, CONSOLE), `menus`, `data_sheet` (J-11: a made kind's line, "FLESH WORLD, ONCE FELISIAN", and
-  sentence), `guide_screens` (GUIDE, TEXT_ENTRY, LOG...), `star_map`,
+  sentence; B-496: `fit` and `wrapped`, a line 50 characters), `guide_screens` (GUIDE, TEXT_ENTRY, LOG...), `star_map`,
   `galaxy_chart`, `landing_map` + `landing_map_build`, `persistence` (saves, SLOTS), `pad` (the controller)
 - The guide: `guide` (guide.txt), `names` (`starNameOf`, `bodyNameOf`, `logEvent`, `noteVisit`; B-447: `kindNameNow`, `kindShortNow`,
-  `kindWordsNow`, a body's kind as it is now, its made kind's where it took one), `marks` (the scanner)
+  `kindWordsNow`, a body's kind as it is now, its made kind's where it took one; B-498: `bodyIsMoon`; B-499: the taken status lines
+  within 53 characters), `marks` (the scanner)
 - Devices: `radar` + `radar_camera`, `telescope`, `probe` + `probe_feed` + `probe_records`, `drones` + `drone_draw` + `seed_trip`
   (J-03: S on the bay, the state `SEEDING`: a culture alive in a flask, a place on the world's map, drone 1 sent; the culture let go at
   its place, the verdict its report; a world's seedings worked out once, `seedingsOf`; a vial's lines, `vialLines`; J-13: Page Down and

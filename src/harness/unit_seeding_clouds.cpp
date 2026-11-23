@@ -202,4 +202,98 @@ void unitSeedingClouds(const Check& check) {
                   report.c_str()));
         remove(g.guidePath.c_str()); remove(g.slotPath(1).c_str());
     }
+    {   // B-480 (KI-507): an acid's water carries dissolved iron and sulphur (acid mine waters: Colmer and Hinkle 1947), so every living chemical
+        // eater of an acid world finds its food at its own place, its clouds' too, and no cloud iron or sulphide eater's own line starves in its
+        // clouds at the height nearest its best warmth (a native there quicker than it may still outgrow it; the acid worlds of the scan region
+        // with life, 24 at most)
+        int worlds = 0, eaters = 0, hungry = 0, cloudEaters = 0, cloudHungry = 0, lines = 0, took = 0, starved = 0;
+        std::string first, line0;
+        for (auto& [x, z, st, sys] : scanSystems(150, 260, 20, 120, [&] { return worlds < 24; })) {
+            const auto L = lifeOf(sys);
+            for (const Body& b : sys.bodies) {
+                const Biota& B = L->bodies[b.index];
+                if (B.chemistry != CH_ACID || worlds >= 24) continue;
+                worlds++;
+                const int cls = sys.sunless() ? STAR_ROGUE : (sys.ofCompanion(b.index) ? sys.companionStar().cls : sys.star.cls);
+                const std::vector<Morph> forms = morphsOf(sys, b.index);
+                const std::vector<double> H = seedHeightsOf(sys, b.index);
+                for (const Microbe& m : B.species) {
+                    if (m.state != SS_LIVING || m.way != LW_CHEMICAL || m.index >= (int)forms.size()) continue;
+                    Microhabitat h; h.niche = m.niche; h.meanC = std::round(0.5 * (m.tMin + m.tMax)); h.salt = clampi(m.saltLo, 0, 2);
+                    h.place = mix64(b.seed ^ (uint64_t)(m.index + 11));
+                    const Medium md = mediumOfPlace(B, b.type, cls, h, h.meanC);
+                    const bool fed = growthIn(cultureKindOf(B, m.index, 2 * forms[m.index].bodyUm()), md).fit != GF_HUNGRY;
+                    eaters++; hungry += !fed;
+                    if (!fed && first.empty()) first = fmt("; a %s's %s eater of the %s hungry there", KINDS[b.type].name, SUBSTRATE_NAMES[m.substrate], NICHE_NAMES[m.niche]);
+                    if (m.niche != NI_CLOUD) continue;
+                    cloudEaters++; cloudHungry += !fed;
+                    if (H.empty() || lines >= 8 || (m.substrate != SU_IRON && m.substrate != SU_SULPHIDE)) continue;
+                    size_t best = 0; double miss = 1e9;   // (the height nearest its best warmth, at the equator)
+                    for (size_t k = 0; k < H.size(); k++) {
+                        const double d = std::fabs(seedPlaceFacts(sys, b.index, 0, 0, -H[k]).place.hab.meanC - m.tOpt);
+                        if (d < miss) { miss = d; best = k; }
+                    }
+                    const Seeding s = cloudSeeding(sys, b.index, seedLineFor(sys, b.index, m.index, {}), 0, 0, H[best]);
+                    lines++; took += s.verdict.takes(); starved += s.verdict.fate == SF_HUNGRY;
+                    if (line0.empty() || !s.verdict.takes())
+                        line0 += fmt("; a %s's %s eater %.0f km up: %s", KINDS[b.type].name, SUBSTRATE_NAMES[m.substrate], H[best], seedWhyWords(s.verdict, s.wild.kind).c_str());
+                }
+            }
+        }
+        check("seeding: an acid world's iron and sulphide eaters fed at home, its clouds' too (B-480)",
+              worlds >= 8 && eaters > 10 && hungry == 0 && cloudEaters > 5 && cloudHungry == 0 && lines > 2 && took > 0 && starved == 0,
+              fmt("(%d acid worlds: %d of %d living chemical eaters hungry at their own place, %d of %d of the clouds%s; %d of %d cloud iron or sulphide eaters' own "
+                  "lines grew in their clouds, %d starved there%s)", worlds, hungry, eaters, cloudHungry, cloudEaters, first.c_str(), took, lines, starved, line0.c_str()));
+    }
+    {   // B-481 (KI-508): on a deck world's ground the overcast takes a cloud line's dye by day and its glow at night (the test layer's made air,
+        // as the globe's check above): its sky redder by day than the world's own, and at night lit in patches in the made clouds' bank
+        MadeWorld m;
+        m.air = MA_DYE_CLOUDS | MA_GLOW_CLOUDS; m.cloudTintK = 0.6; m.cloudTint = RGB(0.75f, 0.12f, 0.10f); m.cloudGlow = 1; m.cloudGlowTint = RGB(0.30f, 0.86f, 0.80f);
+        const StarSystem& vs = venus->sys;
+        const int vb = venus->body;
+        const Vec3 at = StarSystem::bodyFromLatLon(venus->lat, venus->lon);
+        const double turn = std::max(3600.0, std::fabs(vs.bodies[vb].rotPeriod));
+        double tDay = 20000, tNight = 20000, hi = -2, lo = 2;   // (its sun highest and lowest over a turn)
+        for (int k = 0; k < 96; k++) {
+            const double tt = 20000 + turn * k / 96;
+            const StarSystem::Light L = vs.lightAt(vs.bodyPos(vb, tt), tt);
+            const double sun = dot(normalize(vs.bodyFrame(vb, tt) * (L.fromCompanion ? L.dir : normalize(vs.star.pos - vs.bodyPos(vb, tt)))), at);
+            if (sun > hi) { hi = sun; tDay = tt; }
+            if (sun < lo) { lo = sun; tNight = tt; }
+        }
+        struct Sky { int pixels = 0, made = 0; double r = 0, g = 0, b = 0, mr = 0, mg = 0, mb = 0; };
+        auto sky = [&](const MadeWorld* mw, double t) {   // (the top quarter of the frame: the overcast over a level view)
+            StarSystem sys = vs;
+            SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb;
+            if (mw) sv.site.made = *mw;
+            sv.init(&sys, vb, venus->lat, venus->lon, t);
+            nb.update(sv.site.worldPos(t, 0, 0, 0));
+            Input in;
+            for (int k = 0; k < 3; k++) { sv.update(1.0 / 30, in, t, false); Framebuffer fb0; sv.render(fb0, t, nb.stars, sr, 1.0); }
+            Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0);
+            std::vector<uint32_t> px(FBW * FBH);
+            fb.toRGB(px.data(), 1.0);
+            Sky S;
+            for (int y = 0; y < FBH / 4; y++)
+                for (int x = 0; x < FBW; x++) {
+                    const int bank = bankOf(fb.idx[y * FBW + x]);
+                    if (bank != 1 && bank != 23) continue;
+                    const uint32_t c = px[y * FBW + x];
+                    S.pixels++; S.made += bank == 23;
+                    S.r += c & 255; S.g += (c >> 8) & 255; S.b += (c >> 16) & 255;   // (the frame's red its low byte)
+                    if (bank == 23) { S.mr += c & 255; S.mg += (c >> 8) & 255; S.mb += (c >> 16) & 255; }
+                }
+            if (S.made) { S.mr /= S.made; S.mg /= S.made; S.mb /= S.made; }
+            if (S.pixels) { S.r /= S.pixels; S.g /= S.pixels; S.b /= S.pixels; }
+            return S;
+        };
+        const Sky d0 = sky(nullptr, tDay), d1 = sky(&m, tDay), n0 = sky(nullptr, tNight), n1 = sky(&m, tNight);
+        auto redness = [](double r, double g, double b) { return r / std::max(1.0, g + b); };
+        const bool day = d1.pixels > 1000 && d0.pixels == d1.pixels && redness(d1.r, d1.g, d1.b) > 1.12 * redness(d0.r, d0.g, d0.b) && d1.g < 0.9 * d0.g;
+        const bool night = n1.pixels > 1000 && n1.made * 20 > n1.pixels && n0.made == 0 && n1.mg + n1.mb > 1.5 * (n0.g + n0.b) && n1.g + n1.b > n0.g + n0.b;
+        check("seeding: a deck world's ground under a cloud line, its overcast dyed by day and glowing at night (B-481)", day && night && hi > 0.3 && lo < -0.3,
+              fmt("(the venusian world's sky by day, its sun %.2f up: %.0f %.0f %.0f, as generated %.0f %.0f %.0f; at night, %.2f: %d of %d pixels lit in the made clouds' "
+                  "bank, %.0f %.0f %.0f there, %.0f %.0f %.0f the sky's, as generated %d, %.0f %.0f %.0f)", hi, d1.r, d1.g, d1.b, d0.r, d0.g, d0.b, lo, n1.made, n1.pixels, n1.mr,
+                  n1.mg, n1.mb, n1.r, n1.g, n1.b, n0.made, n0.r, n0.g, n0.b));
+    }
 }

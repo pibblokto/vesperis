@@ -63,7 +63,8 @@ render at that resolution scale (tests default to 1x for speed; the game default
   within 30 m: five of a hunter's prey 30 m ahead, the hunters 35 m west sent stalking, played a second into the chase and seen from its
   side over clear ground), `creatures_flock` (a flock of the world's flyers sent 30 m over, the camera looking up at it) and
   `creatures_swimmers` (off a beach, the first swimmer at the surface or in a leap within 120 m in the next five minutes, seen from its
-  side): `setupWaysScene` stages them with the free camera and the explorer 400 m off, and `t` moves on to the moment; N4 adds `buggy_seat` (in the driver's seat,
+  side): `setupWaysScene` stages them with the free camera and the explorer 400 m off, and `t` moves on to the moment; N4 adds
+  `buggy_seat` (in the driver's seat,
   steering 12 deg; since N4-06 the nose camera's picture through `cameraFeed`) and `buggy_parked` (from 5 m behind and beside it)
   on open grassland; N5 adds `tundra_lowsun` (a cold site with the sun at 5 deg: the pillar) and
   `biome_<tropical|savanna|desert|temperate|grassland|taiga|tundra|wetland>` (a land site of that biome, with the same print plus
@@ -386,7 +387,8 @@ render at that resolution scale (tests default to 1x for speed; the game default
   the species' best with Shift and `-`/`+`, the lab's clock skipped twenty minutes (its hook), `incubator` with its line (the species, its
   medium, its stage, its cells and spores), five frames (the jars page's, gone with R-447, so the frames after keep their times), Esc;
   Z-06: the sequencer reads the first species, its tree with
-  Tab; Y-02, the flow's game's last stage (after the drones, before the stages with games of their own: KI-450): `E` at the gene editor,
+  Tab; Y-02, near the flow's game's end (after the drones, before the stages with games of their own, whose 4x its frames take back:
+  B-507): `E` at the gene editor,
   `editor_choose` its chooser, `Enter` twice puts flask 1's culture on it (`editor`), its map's first gene's letter changed by `Enter` and
   `Up` (`editor_letters`), `W` writes its line (`editor_writing` halfway on the lab's clock, `editor_written` past it: the line in flask
   2, its line printed)), sprint, jetpack, buggy (unfold, drive, `buggy_readings` a second after `buggy_drive` with `Tab`, chase view),
@@ -404,7 +406,9 @@ render at that resolution scale (tests default to 1x for speed; the game default
   ascent (Z-07: before the reloads `flow_auto_sample`, a game of its own landed 200 m inland of the flow's world's coast (`coastSite`),
   auto-explore begun on the ground with its water outing planned, its sample at the water's edge and its look over the water: its steps,
   the vial's line, the log's SAMPLE and the guide's count printed), then reloads: newest save (with the guide), and slot 2 which resumes
-  the descent and reaches the surface; M6: `attract` (the title tour), `credits`, `photo` and `photo_flight` (free camera),
+  the descent and reaches the surface (a stage that makes a game of its own leaves the process at that game's scale; the flow's game takes
+  its own back before its next frame, `Flow::own`, B-507); M6: `attract` (the title tour), `credits`, `photo` and `photo_flight` (free
+  camera),
   `flow_panorama.png`, three frames recorded to `movies/take_001`; N0-01: parks at the first comet near the start (`comet` with the HUD
   motion line, `comet_data`, `comet_list`); N3-03: stands 34 m from the first herd (`herd_approach`), walks in for four seconds and prints
   the herd's states before and after (`herd_flee`: alert, calls, fleeing); N4: after `buggy_seat` the buggy is moved to open ground when
@@ -487,9 +491,12 @@ render at that resolution scale (tests default to 1x for speed; the game default
   middles at one instant, each once the maps its view starts are made (B-439: budgeted again on the dressed ship; I-02: the bridge 8.6,
   the hall 3.6, the library 3.3, the laboratory 3.4, the dome 6.6; I-03: the bridge facing the sun 4.0, its disc in the great window and
   its patches on the floor, the ship turned to it and back; Z-04: the microscope 15.6, sixty frames at one instant of the densest slide,
-  `lab time`'s at its 5 s, in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms); Z-05:
+  `lab time`'s at its 5 s, in phase contrast at x100 (9.2 ms), then under the electron at x200, printed without a budget (38 ms; B-502:
+  the still stage's kept slide, about 2 ms); Z-05:
   the laboratory stocked (`labStock`) from its stern bench, every flask lit, the incubator, both screens and the window in view, `flasks
-  4x` 3.7), surface 2x 2.8 and 4x 4.5, forest 2x 8.2 and 4x 13 (J-09: the same forests under a flesh's overgrowth, `forest 2x` and `4x
+  4x` 3.7), surface 2x 3.1 and 4x 5.2 (B-505: again at 1.5 times their 1.5.0 medians), forest 2x 8.2 and 4x 13 (J-09: the same forests
+  under a flesh's
+  overgrowth, `forest 2x` and `4x
   overgrown`, held to them; a herd's grassland under a coral's, `open 2x overgrown` 7.5 and `open 4x overgrown` 10.3), herd draw 1x 0.6
   and herd remains 1x 0.6 (J-08: the same herd among twelve remains at every stage, `bench_herd_remains.png`), drone 2x 3.3 (R-403: 60
   frames at full thrust 200 m up with the camera tilted down 30
@@ -1112,7 +1119,7 @@ changes whenever a pixel changes, which is the point: run `./vesperis_test regre
 `bench check` prints the timings and fails when a budget is exceeded. Since F-11 a budget is about 1.5 times its row's median on
 the development Mac after F-10 and at least the median + 0.5 ms, so a change that gives a gain back fails: space 2x 3.1 ms and 4x
 9.5, the ship's bridge 8.2, hall 3.6, library 2.8, laboratory 2.9 and dome 6.0 at 4x (I-02), Z-04: the microscope 15.6, Z-05: the
-laboratory stocked from its stern bench 3.5 (`flasks 4x`: 2.31 ms, the median of three, every flask lit), surface 2x 2.8 and 4x 4.5,
+laboratory stocked from its stern bench 3.5 (`flasks 4x`: 2.31 ms, the median of three, every flask lit), surface 2x 3.1 and 4x 5.2 (B-505),
 forest 2x 8.2, 4x 13 and 12 at the game's 3x3, city 2x 5.7 and 4x 8.3, capital 2x 5.4 and 4x 8.3,
 the herd's draw 0.6, buggy 2x 6.1 and 4x 6.1, drone 2x 3.3, the belt 1.1, Vimana 2.0, the lamp 4x 7.0 (D-04: the `rogue_lamp`
 scene's thirty frames at 4x lit, against the same unlit: 4.7 ms either way), the telescope 2x 13 and 4x 28, probe 2x 8.9 and 4x
@@ -1230,7 +1237,9 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   two kilometres, the lamp on; a dark ocean's black sand four metres from its sea, facing the most water with lights in it within
   60 m (one with LIGHTS IN THE WATER first), the lamp on; each prints the drifter, its kind, size, heat and traits, the reading of
   its thermometer and air, and the lamp's light eight metres ahead (output: `shots/tests/scene_<name>.png`)
-* `rogues heard`: D-02: what the radar hears of the drifters (their own law, never at x1) from home, the three C-series worlds and
+* `rogues heard`: (B-506: it waits at each new place for every map of the system at its season, `testWaitMaps`, as `probe` and the
+  `traits` sheets' skies do: a globe drawn before its map is flat.) D-02: what the radar hears of the drifters (their own law, never at x1)
+  from home, the three C-series worlds and
   the six age worlds: the drifters heard at each of the six steps, the farthest, the first and the gain it needs; from home each
   one with the gain it needs and its step, its power, its strength at x32, its kind, radius and own heat, its sector. Then the
   radar in the game at home: the dial up, the nearest drifter heard locked at its own step (the seconds, the status, the log's
@@ -1290,7 +1299,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
 * `life plates [n]`: Z-02: a plate a world with life nearest home (4; home's first): each species in the ways of seeing that suit
   it (`seeingsFor`, two at most) at the magnification that holds its body, a scale bar and its line; then a plate a stage and a
   chemistry (prebiotic, simple, complex, colonial, dormant, fossil; water, acid, ammonia, hydrocarbon), sixteen species of it near
-  home, each plan and variant once first. `scale=2` for the plates to judge (output: `shots/tests/life_plate_<n>.png`,
+  home, each plan and variant once first. B-503: a spore, a cyst or a fossil lies still as on the microscope; the mode counts them and
+  exits 1 where one moved. `scale=2` for the plates to judge (output: `shots/tests/life_plate_<n>.png`,
   `life_plates_<stage|chemistry>.png`)
 * `life strips [plan]`: Z-02: each act (`AN_*`: life, division, budding, a colony's release, sporulation, waking, the cyst,
   lysis, engulfing, the bridge, the turns to light and to the field, the glow, the gathering, the fruiting, the colony's front, a
@@ -1341,8 +1351,9 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   is not found or a strip shows nothing of what it should (output: stdout, `shots/tests/lab_microscope_*.png`: 20)
 * `lab time`: Z-04: the densest slide (`labDenseVial`: the scan's first world with an abundant swimmer that turns to light, its
   large armoured cells in a crowd of small ones) in each way at x100 and x400 and under the electron at x200 and x1,000, ten frames
-  each, the frame's parts timed: the specimens made, the slide drawn, the mush, the whole frame (at 4x about 10 ms in phase contrast
-  at x100, 42-47 under the electron at x200) (output: stdout)
+  each, the frame's parts timed: the specimens made, the slide drawn (B-502: also by the threads' time together), the mush, the whole
+  frame (at 4x about 10 ms in phase contrast at x100; under the electron at x200 the slide drawn afresh about two thirds of its old
+  42-47 ms, the whole frame about 2 ms, the slide kept) (output: stdout)
 * `lab cultures` (`modes_cultures.cpp`): Z-05: twenty species of the scan region, each a kind of life (light, broth, hydrogen,
   sulphide, iron, methane, a grazer, a predator, the gathering amoebae, a luminous one, a spore former, an encyster, a colony, a
   halophile, a thermophile, a psychrophile, the acid's, the ammonia's, the hydrocarbon's, a dormant world's spores), each grown an hour
@@ -1387,7 +1398,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   best doubling at each); the editor beside a kin (`lab_genes_kin.png`: K's chooser, the map beside its kin, its kin's warmth moved in, a
   gene into a gap, the line on its world's tree from the kin's leaf); Y-04: the switches (`lab_genes_switch.png`: a luminous species' glow
   switched by S to IN THE DARK, its line glowing in a dark flask at 48 s beside its species not yet, a spore former's rest IN THE LIGHT,
-  starved (R-449: a full flask is fed), at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group holds (`geneLaws`, Y-03's gene moved in
+  starved (R-449: a full flask is fed), at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group
+  holds (`geneLaws`, Y-03's gene moved in
   and Y-04's own switches among them). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`,
   `lab_genes_kin.png`, `lab_genes_switch.png`)
 * `seed test` (`modes_seed.cpp`): J-02: the first desert world of the scan region, parked at, its landing site the test game's: the
@@ -1442,7 +1454,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   on four of a land species side on; a die-off's remains as the cells laid them, at the lit land nearest the place whose herd cell holds a
   dying species, twelve steps after the spread reached it, framed on the three nearest remains (the waters' dead alone: at the nearest lit
   coast out from the place along 24 rays whose cell has its shore within 150 m, framed on the swimmers washed up: `coastNear`); thriving
-  on its herds. The dyed hides' world's flyers too, a flock every member of it dyed, its nearest framed (`fates/fate_dyed_flock.png`). Then the five
+  on its herds. The dyed hides' world's flyers too, a flock every member of it dyed, its nearest framed (`fates/fate_dyed_flock.png`).
+  Then the five
   stages of remains in a row (`fates/remains.png`), remains of each kind (`fates/remains_kinds.png`), each change on a young with one born
   whole beside it (`fates/change_<name>.png`, all 42 in rows of seven in `fates/changes.png`), and a blood poison's die-off over its
   steps on the first world where a herd stands 0.8 m or more (`fates/steps_NN.png`, steps 0 to 48, the living and the remains by stage
@@ -1458,14 +1471,17 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   phrase. J-15: a tenth recipe, a greened desert: the first light-feeder of water with a green pigment on the forty worlds, tuned for
   the first desert's place (its warmth, DRY), its STOP, SHELL and LIFT cut and its BIND set (`seedDesertLine`, the unit's too), drawn
   on the sunniest grass of a moon that its place never sees its sun from (`kinds/desert_*.png`), with its place's ground and the land
-  green by its steps. Exit 1 when a recipe found no world (about 14 s)
+  green by its steps (J-16: the first desert still, though any bare world with air now greens). Since B-475 none of the 235 seedings
+  shows nothing: 57% harm, 19% change only the looks, 25% make the world more livable (KI-520). Exit 1 when a recipe found no world
+  (about 20 s)
 * `seed record` (`modes_seed_record.cpp`): J-12: a world's own sea line given a nerve poison (its STOP cut and its cells bound, so it
   overgrows; else the poison alone) let go on the first of `seed climate`'s worlds with plants and animals where it drives a native out
   and makes a made kind (`seedRecordCase`, the unit's too), in a game at its 64th step (`seedRecordGame`). The guide gets the explorer's
   sheets of the natives (those it beat among them), the line found wild and read there, and four animals seen (gone; dying and changed;
   named; plain). Prints the natives beaten and those died out, the catalogue's rows and the LIFE page's counts. Draws the catalogue by
-  world, a native's sheet that died out, the line's found wild, an animal's gone and the LIFE page (`record/<catalogue|died_out|
-  found_wild|animal_gone|life_page>.png`, all five in `record/record.png`), the system's maps made first. Exit 1 when a count is wrong
+  world, a native's sheet that died out, the line's found wild, an animal's gone (B-500: drawn), the catalogue by kin and the LIFE page
+  (`record/<catalogue|died_out|found_wild|animal_gone|catalogue_kin|life_page>.png`, all six in `record/record.png`), the system's maps
+  made first. Exit 1 when a count is wrong
   (about a second)
 * `seed cold` (`modes_seed_cold.cpp`): J-13: forty worlds (`seedCases`, `seed worlds`' places): each place's own warmth and its depths'
   (`seedDepthsOf`), then lines tuned as a player would (`seedTunedEdits`): the sea light-feeder, a hydrogen eater and a fermenter on the
@@ -1849,7 +1865,8 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   as strobes at 6.5 s, the screen descending and searching, the rack empty, every drone docked: two minutes searching each (its
   first place to its last), its finds what it wanted (2 to 8), none held before, none twice, the guide grown by them; R-414: the
   screen closed after the docks, the rack lists none of them (`screen_seen`), the guide's unchanged; no charge (R-449: sent again
-  the moment the first trip ends; the second trip none of the first's) watched on the decoder (open at the world's records as the drones dock: its list the guide's at once); a recall (the ship leaves
+  the moment the first trip ends; the second trip none of the first's) watched on the decoder (open at the world's records as the drones
+  dock: its list the guide's at once); a recall (the ship leaves
   the parking: what was found aboard, the rest not); a save in a trip loaded and docked; the case's worlds (a second world's
   instrument added: Enter opens the ship's world, Esc back, Esc out; an instrument of each of the ship's world's two peoples
   added: a folder each people, each opening its people's alone). `check`: the unit's (a world's items: every record of both

@@ -367,37 +367,41 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         // colour differs (each class's latest line's first, then the others'), the class's latest's where none is left
         for (int& mb : madeBanks) mb = -1;
         for (int c = 0; c < MC_COUNT; c++) for (int i = 0; i < MADE_LINES; i++) madeLineBank[c][i] = -1;
-        madeGlowPlants = 0; madeFoamBank = -1;
+        madeGlowPlants = 0; madeGlowLand = 0; madeFoamBank = -1;
         madeOnSea = false;
         for (int i = 0; i < mw.lines && i < MADE_LINES; i++) madeOnSea = madeOnSea || (mw.spread[i].looks && (mw.spread[i].waters & mw.spread[i].lookWaters & MADE_SEA));
         if (mw.on() && (mw.land.on || mw.snow.on || mw.plant.on || mw.foam > 0)) {
             auto lookRamp = [&](int bk, int cls, const MadeLook& ml, double glowK, const RGB& glowTint) {
                 const RGB c = (ml.tinted ? ml.tint : madeMatColour(site.gen, familyRep(site.gen.type, FAM_FOREST))) * lt;   // (an undyed glow: the forest's own by day)
                 matRamp(bk, c);
-                if (cls == MC_PLANTS && glowK > 0 && day < 0.5) {   // (fainter than the luminous flora's: a seeded glow in the leaves, the floor's dimmer)
+                if ((cls == MC_PLANTS || cls == MC_LAND) && glowK > 0 && day < 0.5) {   // (fainter than the luminous flora's: a seeded glow in the leaves, the
+                    // floor's dimmer; J-16: a deep line's cracks or seeps)
                     const double gk = 1 - day * 2;
-                    madeGlowPlants = std::max(madeGlowPlants, gk);
+                    if (cls == MC_PLANTS) madeGlowPlants = std::max(madeGlowPlants, gk); else madeGlowLand = std::max(madeGlowLand, gk);
                     const float k = (float)(0.7 * gk);
                     const RGB g3 = lerp(c, glowTint, 0.6f), gl = lerp(g3, white, 0.2f);
                     setRamp(fb.pal, bk, {{0, RGB(0, 0, 0)}, {14, lerp(c * 0.25f, g3 * 0.2f, k)}, {34, lerp(c * 0.6f, g3 * 0.6f, k)}, {47, lerp(c, gl, k)},
                                          {56, lerp(c, white, 0.5f)}, {63, white}});
                 }
             };
-            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || (cls == MC_PLANTS && glow > 0)); };
+            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || ((cls == MC_PLANTS || cls == MC_LAND) && glow > 0)); };
+            // J-16 (KI-506): a class's night light, the plants' (a glowing host's) or the land's (a deep line's cracks or seeps)
+            auto worldGlow = [&](int cls) { return cls == MC_PLANTS ? mw.plantGlow : (cls == MC_LAND ? mw.landGlow : 0.0); };
+            auto lineGlow = [&](int cls, int i) { return cls == MC_PLANTS ? mw.spread[i].plantsGlow() : (cls == MC_LAND ? mw.spread[i].landsGlow() : 0.0); };
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // each class's latest line's (`MadeWorld::lookOf`)
                 const MadeLook& ml = *mw.lookOf(cls);
-                if (!shows(cls, ml, mw.plantGlow)) continue;
+                if (!shows(cls, ml, worldGlow(cls))) continue;
                 const int bk = takeBank(MADE_ORDER, lentLooks);
                 if (bk < 0) break;
                 madeBanks[cls] = bk;
-                lookRamp(bk, cls, ml, mw.plantGlow, mw.plantGlowTint);
+                lookRamp(bk, cls, ml, worldGlow(cls), cls == MC_LAND ? mw.landGlowTint : mw.plantGlowTint);
             }
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // the lines of each class's latest colour
                 if (madeBanks[cls] < 0) continue;
                 const MadeLook& latest = *mw.lookOf(cls);
                 for (int i = 0; i < mw.lines && i < MADE_LINES; i++) {
                     const MadeLook& ml = mw.spread[i].look[cls];
-                    if (shows(cls, ml, mw.spread[i].plantsGlow()) && ml.tinted == latest.tinted && (!ml.tinted || same(ml.tint, latest.tint))) madeLineBank[cls][i] = madeBanks[cls];
+                    if (shows(cls, ml, lineGlow(cls, i)) && ml.tinted == latest.tinted && (!ml.tinted || same(ml.tint, latest.tint))) madeLineBank[cls][i] = madeBanks[cls];
                 }
             }
             if (mw.foam > 0) {   // the foam's colour last (else the snow's white)
@@ -437,28 +441,29 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             auto lookRamp = [&](int bk, int cls, const MadeLook& ml, double glowK, const RGB& glowTint) {
                 const RGB c = (ml.tinted ? ml.tint : madeMatColour(site.gen, familyRep(site.gen.type, FAM_FOREST))) * lt;
                 matRamp(bk, c);
-                if (cls == MC_PLANTS && glowK > 0 && day < 0.5) {
+                if ((cls == MC_PLANTS || cls == MC_LAND) && glowK > 0 && day < 0.5) {
                     const double gk = 1 - day * 2;
-                    madeGlowPlants = std::max(madeGlowPlants, gk);
+                    if (cls == MC_PLANTS) madeGlowPlants = std::max(madeGlowPlants, gk); else madeGlowLand = std::max(madeGlowLand, gk);
                     const float k = (float)(0.7 * gk);
                     const RGB g3 = lerp(c, glowTint, 0.6f), gl = lerp(g3, white, 0.2f);
                     setRamp(fb.pal, bk, {{0, RGB(0, 0, 0)}, {14, lerp(c * 0.25f, g3 * 0.2f, k)}, {34, lerp(c * 0.6f, g3 * 0.6f, k)}, {47, lerp(c, gl, k)},
                                          {56, lerp(c, white, 0.5f)}, {63, white}});
                 }
             };
-            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || (cls == MC_PLANTS && glow > 0)); };
+            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || ((cls == MC_PLANTS || cls == MC_LAND) && glow > 0)); };
+            auto lineGlow = [&](int cls, int i) { return cls == MC_PLANTS ? mw.spread[i].plantsGlow() : (cls == MC_LAND ? mw.spread[i].landsGlow() : 0.0); };   // (J-16)
             for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // each other line's own
                 if (madeBanks[cls] < 0) continue;
                 const MadeLook& latest = *mw.lookOf(cls);
                 for (int i = 0; i < mw.lines && i < MADE_LINES; i++) {
                     const MadeLook& ml = mw.spread[i].look[cls];
-                    if (!shows(cls, ml, mw.spread[i].plantsGlow())) continue;
+                    if (!shows(cls, ml, lineGlow(cls, i))) continue;
                     if (ml.tinted == latest.tinted && (!ml.tinted || same(ml.tint, latest.tint))) { madeLineBank[cls][i] = madeBanks[cls]; continue; }
                     for (int j = 0; j < i && madeLineBank[cls][i] < 0; j++)
                         if (madeLineBank[cls][j] >= 0 && mw.spread[j].look[cls].tinted == ml.tinted && same(mw.spread[j].look[cls].tint, ml.tint)) madeLineBank[cls][i] = madeLineBank[cls][j];
                     if (madeLineBank[cls][i] >= 0) continue;
                     madeLineBank[cls][i] = takeBank(MADE_ORDER, lentLooks);
-                    if (madeLineBank[cls][i] >= 0) lookRamp(madeLineBank[cls][i], cls, ml, mw.spread[i].plantsGlow(), mw.spread[i].glowTint);
+                    if (madeLineBank[cls][i] >= 0) lookRamp(madeLineBank[cls][i], cls, ml, lineGlow(cls, i), mw.spread[i].glowTint);
                     else madeLineBank[cls][i] = madeBanks[cls];
                 }
             }
@@ -495,7 +500,16 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     }
     // sky bank: zenith .. horizon .. glow .. sun/star white
     if (site.atmosphere) {
-        setRamp(fb.pal, 1, {{0, zen}, {40, hor}, {50, glow}, {56, lerp(glow, sunC, 0.6f)}, {63, sunC}});
+        // J-16 (KI-508): a deck world's sky is its deck's underside: a cloud line's dye colours it by day (its glow is drawn at night: `drawSky`)
+        // (its whole ramp: a thick deck's bright sky lies in its upper stops, and a deck shows no sun's disc)
+        const MadeWorld& dk = site.gen.made;
+        RGB sun1 = sunC;
+        if (hasOpaqueDeck(site.gen.type) && dk.cloudTintK > 0 && day >= 0.35) {
+            const RGB c = dk.cloudTint * starC;
+            const float k = (float)clampd(0.75 * dk.cloudTintK, 0, 1);
+            zen = lerp(zen, c * 0.8f, k); hor = lerp(hor, c, k); glow = lerp(glow, lerp(c, white, 0.3f), k); sun1 = lerp(sunC, lerp(c, white, 0.5f), k);
+        }
+        setRamp(fb.pal, 1, {{0, zen}, {40, hor}, {50, glow}, {56, lerp(glow, sun1, 0.6f)}, {63, sun1}});
         // at night the upper part must still serve stars: brighten toward white
         if (day < 0.5) {
             RGB starWhite = RGB(0.8f, 0.82f, 0.9f);

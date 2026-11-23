@@ -226,6 +226,10 @@ public:
     void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // the landing map's cursor
     int testDataSheetBottom() const { return dataSheetBottom; }   // the data sheet's lowest next line's top over its pages, as last drawn
     int testDataSheetPages() const { return dataSheetPages; }
+    const std::vector<std::string>& testDataSheetText() const { return dataSheetText; }   // B-496: its lines over its pages, as last drawn
+    void testRenderDataSheet() { renderDataSheet(); }   // B-496: the local target's sheet drawn over the canvas as it is
+    void testTelescopeName(int bi) { tele.target = bi; telescopeName(); }   // B-498: N through the telescope on a body (its text entry opened)
+    const std::string& testTextPrompt() const { return textPrompt; }
     void testLandCursorAt(double& latDeg, double& lonDeg, int& zoom) const { latDeg = landLat / DEG; lonDeg = landLon / DEG; zoom = landZoom; }
     void testSectorMapAt(double& x, double& z, int& zoom) const { x = mapCurX; z = mapCurZ; zoom = sectorZoom; }   // the sector map's cursor (local metres) and level
     void testStarMapAt(double& yaw, double& zoom, int& mask, int& level, int& galaxyMarks) const {
@@ -238,6 +242,7 @@ public:
     void testLandSite();   // the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     void testWaitMap();    // the landing map's world mapped before the test's next frame (the game's screen reads it on its thread; `testParkAt` waits)
     void testWaitMapOf(int bi);   // any body's map made before the test's next frame (`testParkAt` waits for a landable world's only)
+    void testWaitMaps();   // KI-446: every body's map made for the season at the clock, before the test's next frame (after a new place)
     bool testMapReadyNow() { return landBody >= 0 && landBody < (int)sys.bodies.size() && spaceR.mapIfReady(sys.bodies[landBody]) != nullptr; }
     int testLandableBody() const;
     // arrive at a star, park at a body, open the landing map (F-02: its world mapped first unless `waitMap` is false); J-04: the parking over the
@@ -246,6 +251,7 @@ public:
     void testParkAtBelt(const Star& s, int k);  // arrive at a star and park beside a rock of belt k at once
     // ---- the buggy, herds, the landing map's colours, fronts and shadows (game.cpp, landing_map.cpp, landing_map_build.cpp)
     bool testGotoHerd(double dist) { return surf.testGotoHerd(dist); }
+    uint64_t testKillCritter(int i) { return surf.testKillCritter(i); }   // B-489: a herd's member caught as a hunt catches it (its seed)
     double testBuggySpeed() const { return std::fabs(surf.buggy.speed); }
     bool testBuggyAirborne() const { return surf.buggy.airborne; }
     const double* testRenderMs() const { return surf.lastRenderMs; }   // B-310: the surface render's section times
@@ -365,6 +371,7 @@ public:
     std::string testGeneKey(const FlaskSpecies& w, int place) const { return geneKey(w, place); }
     // Y-01: a page of the tree shown (its rows made again), a species' page, the page's years
     void testTreePage(int p) { tree.page = p; tree.sel = tree.top = 0; treePage(); }
+    std::string testTreePageWhere(int p) const { return p >= 0 && p < (int)tree.pages.size() ? treePageWhere(tree.pages[p]) : std::string(); }   // B-497
     void testTreeShow(const std::string& key) { treeShow(key); }
     bool testSpeciesOfKey(const std::string& key, FlaskSpecies& w) const { return speciesOfKey(key, w); }
     double testTreeYears() const { return treeYears(); }
@@ -579,6 +586,7 @@ public:
     bool testBodyScreen(int body, double& sx, double& sy, double& rpx) const;   // where the last frame drew a body (framebuffer pixels); false when behind
     int testParkedBody() const { return ship.parkedBody; }
     int testLocalTarget() const { return ship.localTarget; }   // D-02: the drifter targeted on arrival
+    void testSetLocalTarget(int b) { ship.localTarget = b; ship.targetBelt = -1; }   // B-501: a body of the system the local target
     double testBodyRadiusKm(int body) const { return sys.valid && body >= 0 && body < (int)sys.bodies.size() ? sys.bodies[body].radiusKm : 0; }
     int testTelescopePick() const;                                   // the body with the widest disc from the ship, the parked one left out (-1 none)
     void testAimAtSun() { if (sys.valid) { Vec3 f = normalize(sys.star.pos - ship.pos); ship.yaw = std::atan2(f.x, f.z); ship.pitch = std::asin(clampd(f.y, -1, 1)); } }

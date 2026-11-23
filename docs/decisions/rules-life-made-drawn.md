@@ -12,12 +12,15 @@ looks' colours, one line per rule with its log entries (`log/`); a replaced rule
 - A dyed rain falls in the dyed waters' bank, else one of its own, else its clouds'; puddles near the explorer; spores by day [J-04], [B-456]
 - A fog on the seas lies from the sea's level to 22-40 m (a runaway's steam to 70 m), as the fog seas' fog lies [J-04]
 - Each made colour takes a bank the world leaves free (lent 28-25, 24, 20, 13, 12, 11, 21) and a ramp a line on the maps [J-05], [B-456]
-- The globe gives a disc's stain, waters, looks and clouds each a bank by line (25, 27, 29, 21, 23, 31; 26, 28, 30, 22, 24) [J-09], [B-458]
+- The globe gives a disc's stain, waters, clouds, then looks each a bank by line (25, 27, 29, 21, 23, 31; 26, 28, 30, 22, 24) [J-09], [B-458], [B-494]
 - The world's own colours turn through `madeMatColour` and `madeLifeTint` in every view; the tide's flooded flats take their sea's [J-05]
 - On the ground: foam on its waters' edges, bubbles on boiling seas, glints, pits, a dark ice's meltwater, galls, slow jelly waves [J-05]
 - A line's glow lights its waters, and its plants only where they are a glowing host's (`plantsGlow`): its blight stays dark [J-05], [B-457]
 - A deck world's globe: a cloud line's dye in streaks along the latitudes to the middle ones, drifting with the deck; its glow on the night side [J-14]
 - Each in a bank of its own, the whole night side in the glow's: the frame's smoothing keeps a pixel's bank, so a dark one would turn the deck's [J-14]
+- On its ground the deck's underside is the sky: a cloud line's dye moves the sky bank's whole ramp by day, its glow lights it in its form at night [B-481]
+- A carpet's grass and shrubs are drawn in its line's own growth bank on the ground, the globe and the maps, its carpet in its grass's colour [B-482]
+- A deep line's cracks or seeps glow at night in their look's bank (`landsGlow`), on the ground and on the globe's night side [B-479]
 
 [B-456]: log/7-1.5.0.md
 [B-457]: log/7-1.5.0.md
@@ -26,3 +29,7 @@ looks' colours, one line per rule with its log entries (`log/`); a replaced rule
 [J-05]: log/7-1.5.0.md
 [J-09]: log/7-1.5.0.md
 [J-14]: log/7-1.5.0.md
+[B-479]: log/7-1.5.0.md
+[B-481]: log/7-1.5.0.md
+[B-482]: log/7-1.5.0.md
+[B-494]: log/7-1.5.0.md

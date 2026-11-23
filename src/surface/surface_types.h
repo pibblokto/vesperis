@@ -171,6 +171,8 @@ struct Flock {
     // as a herd's), its young born changed (their share, the size a giant's or a dwarf's change gives them)
     int sickness = 0;
     double sick = 0, changed = 0, changedK = 1;
+    // B-490: its fate's age where it flies (steps: a sprouting one's fall, as a herd's), and the landing's clock its falls were read to
+    double fateAge = 0, fallsTo = 0;
 };
 // N3 creature behaviour states. J-07: the ways' (a browser's neck up in a tree, a hunter stalking and chasing, a scavenger trailing a
 // hunter, a burrower under the ground, a climber up a trunk, one on its ground facing the explorer and charging)

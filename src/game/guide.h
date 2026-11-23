@@ -128,6 +128,16 @@ bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after i
 // J-07: an animal species seen: its doings' bits, the nearest and the most at once; J-08: the marks it was seen with (surface_types.h's
 // `AnimalMark` bits: dying, gone, changed), written only when there is one
 struct AnimalRecord { uint32_t doing = 0; int nearest = 0, most = 0; uint32_t marks = 0; };
+// B-489 (KI-494): an animal a landing saw die (a hunt's kill, a sprouting one fallen), kept by its world so that at any later landing its herd
+// comes without it and its remains lie where it fell: its seed, its herd's cell (`cell` false: a landing's own herd), where it lies (a unit
+// vector on the body), its species, heading and size, its death on the guide's clock, how long hunters fed at it, with stalks. `dead` lines
+// (with the `clock` line), a world's in the order they died; forgotten DEAD_FORGET_S after the death, when its herd has young again. A loan
+// carries none
+struct DeadRecord {
+    uint64_t seed = 0; bool cell = false; int gLat = 0, gLon = 0; double ux = 0, uy = 0, uz = 0;
+    int species = -1; double heading = 0, size = 1, died = 0, eaten = 0; bool stalks = false;
+};
+constexpr double DEAD_FORGET_S = 64 * 75.0;   // 64 of a seeded world's steps (galaxy/made.h's MADE_STEP_S): 80 minutes
 
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
@@ -152,6 +162,7 @@ struct Guide {
     std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a species does ("<body key>/M<index>/G<number>": `gene` lines; R-450)
     std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
     std::map<std::string, AnimalRecord> animals;  // J-07: "<body key>/A<index>" of every animal species seen (`animal` lines)
+    std::map<std::string, std::vector<DeadRecord>> dead;   // B-489: "<body key>" -> the animals seen to die there (`dead` lines)
     // J-02: the worlds seeded (`seeded` lines) and the guide's clock, the seconds the game ran across its saves and expeditions on real time
     // (the warp never hurries it: `clock`), which the spreads read; both written once a world is seeded, so a guide without them is as before
     std::vector<SeedRecord> seeded;

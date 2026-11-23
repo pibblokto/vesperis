@@ -102,8 +102,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     if (wrapped)   // (the cells round it laid as the drawing lays them, what the landing lays not tested: a tree by a road's structure stays out of it)
         for (int dz = -1; dz <= 1; dz++)
             for (int dx = -1; dx <= 1; dx++) {
-                if (!growthCellHolds(cx + dx, cz + dz)) continue;
-                for (const GrowthInst& S : growthsOwned(cx + dx, cz + dz)) {
+                for (const GrowthInst& S : growthsOwned(cx + dx, cz + dz)) {   // (KI-490: a world cell's the cover holds)
                     const double r = growthReachOf(S) + 1.0, ox = std::max({cx * cs - S.x, 0.0, S.x - (cx + 1) * cs}), oz = std::max({cz * cs - S.z, 0.0, S.z - (cz + 1) * cs});
                     if (nGrows < 32 && ox * ox + oz * oz < r * r) grows[nGrows++] = S;
                 }
@@ -809,7 +808,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0BULL);
             bool underwater = tv.water > -1e8f && tv.h < tv.water + 0.5;
             const bool madeCell = madeBanks[MC_PLANTS] >= 0 && site.gen.made.plant.on && tv.mtint > 127 && (tv.material == MAT_GRASS || tv.material == MAT_FOREST);   // J-05
-            const bool greenCell = greenedAt(tv);   // J-15: a carpet's grass and shrubs, in the grass bank (their colour: `madeMatColour`)
+            const bool greenCell = greenedAt(tv);   // J-15: a carpet's grass and shrubs; J-16 (KI-509): in their line's bank (`greenBank`)
+            const int greenBank = greenCell && growthBankOf(tv.mline - 1) >= 0 ? growthBankOf(tv.mline - 1) : 10;
             if (!ownFlora && !greenCell) continue;
             // ---- fallen logs (B-315): a six-sided trunk along its heading, sunk a third into the ground, bark-textured,
             // the faces toward the camera and the sky drawn with their own light, a cut end toward the camera (pale wood
@@ -957,7 +957,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     if (gy < site.waterAt(bx, bz) + 0.3) continue;
                     int bbank = hash01(mix64(hb + 5)) < 0.2 ? 10 : (hash01(mix64(hb + 9)) < 0.25 ? 5 : 3);
                     if (madeCell) bbank = plantsBankOf(tv.mline - 1);   // J-05: a made plants' look (KI-460: its line's)
-                    if (greenCell) bbank = 10;
+                    if (greenCell) bbank = greenBank;
                     double tone = greenCell ? 0.7 : (tv.biome == BIO_DESERT ? 0.75 : 0.95);   // (J-15: a carpet's shrubs darker than its grass)
                     cluster(hb, bx, gy + bh * 0.5, bz, bh * 0.55, bh * 0.45, dist, bbank, tone, 0.5 + 0.35 * sunUp * clampd(sd.y, 0, 1), 1.1);
                     if (bh > 1.4 && dist < 120) cluster(mix64(hb + 11), bx + bh * 0.35, gy + bh * 0.42, bz + bh * 0.2, bh * 0.4, bh * 0.35, dist, bbank, tone * 0.92, 0.45 + 0.3 * sunUp, 1.2);
@@ -989,7 +989,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             }
             // ---- meadows: tall swaying grass and flowers close by (J-05: in a made plants' look's bank where it lies)
             if ((tv.material == MAT_GRASS || tv.material == MAT_FOREST) && cellDist < 120 && tv.veg > 0.3 && (tv.biome != BIO_DESERT || greenCell)) {
-                const int gb = madeCell && !greenCell ? plantsBankOf(tv.mline - 1) : 10;
+                const int gb = greenCell ? greenBank : (madeCell ? plantsBankOf(tv.mline - 1) : 10);
                 bool tall = tv.material == MAT_GRASS && tv.veg > 0.45 && cellDist < 45;
                 int nt = tall ? 8 + (int)(tv.veg * 8) : (cellDist < 60 ? 5 + (int)(tv.veg * 8) : 3 + (int)(tv.veg * 4));   // R-306: fewer, farther
                 if (tv.material == MAT_FOREST) nt /= 2;

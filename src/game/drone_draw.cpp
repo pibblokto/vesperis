@@ -426,6 +426,8 @@ void Game::buildDroneMap(int body) {
     const PlanetMap& m = *mp;
     MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
+    const BodyGen& bg = spaceR.genFor(b);
+    const bool greened = bg.made.green > 0 && madeGreens(bg.type);   // J-16 (KI-509): its grass a carpet's, each texel its own line's
     const int W = 376, H = 188;   // twice the screen's box: crisp at 2x and over
     bay.map.assign((size_t)W * H, 0);
     auto hAt = [&](double lon, double lat) { return m.heightAt(lon, lat); };
@@ -444,7 +446,8 @@ void Game::buildDroneMap(int body) {
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1, m.madeTintAt(i), m.madeLineAt(i));
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1,
+                                    greened && m.material[i] == MAT_GRASS ? 1.0 : m.madeTintAt(i), m.madeLineAt(i));
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);

@@ -21,6 +21,27 @@ std::string barWords(double um) { return um < 1 ? fmt("%g UM", um) : (um >= 1000
 const char* const WAY_WORDS[WS_COUNT] = {"BRIGHT", "PHASE", "DARK", "GLOW", "ELECTRON", "SECTION"};
 }   // namespace
 
+// B-502 (KI-437): under the electron the stage is still (its clock stopped under the beam): the slide drawn is kept and laid again while
+// nothing that draws it has moved (the mount staged, the view, the focus, the things done to it, the frame's size), as the catalogue keeps
+// its form; a turn, a tilt, a zoom or the stage moved draws it again. A large cell's meshes are most of its frame at 4x
+void Game::microscopeElectron(const Slide& v) {
+    MicroscopeState::ElectronKept k;
+    k.staged = scope.staged; k.seed = v.seed; k.events = scope.events.size();
+    k.cx = v.cx; k.cy = v.cy; k.um = v.umPerPx; k.t = v.t; k.turn = v.turn; k.tilt = v.tilt; k.focus = scope.focus;
+    k.w = FBW; k.h = FBH; k.step = v.step;
+    const MicroscopeState::ElectronKept& o = scope.keptAt;
+    const bool same = o.staged == k.staged && o.seed == k.seed && o.events == k.events && o.cx == k.cx && o.cy == k.cy && o.um == k.um && o.t == k.t &&
+                      o.turn == k.turn && o.tilt == k.tilt && o.focus == k.focus && o.w == k.w && o.h == k.h && o.step == k.step;
+    if (same && scope.keptIdx.size() == fb.idx.size() && scope.keptInvz.size() == fb.invz.size()) {
+        std::copy(scope.keptIdx.begin(), scope.keptIdx.end(), fb.idx.begin());
+        std::copy(scope.keptInvz.begin(), scope.keptInvz.end(), fb.invz.begin());
+        return;
+    }
+    drawSlide(fb, v, scope.shown);
+    scope.keptIdx = fb.idx; scope.keptInvz = fb.invz;
+    scope.keptAt = k;
+}
+
 void Game::renderMicroscope() {
     const bool slide = scope.page == 1 && ((scope.vial >= 0 && scope.vial < (int)coldStore.size()) || scope.flask >= 0 || (scope.kept >= 0 && scope.kept < (int)lab.kept.size()));
     Slide v;
@@ -35,7 +56,8 @@ void Game::renderMicroscope() {
         if (st.spot) { v.spotX = st.spotX; v.spotY = st.spotY; v.spotR = st.spotR; }
     }
     slidePalette(fb.pal, v.seeing, v.lamp);
-    if (slide) drawSlide(fb, v, scope.shown); else drawSlide(fb, v, {});
+    if (slide && v.seeing == WS_ELECTRON) microscopeElectron(v);
+    else if (slide) drawSlide(fb, v, scope.shown); else drawSlide(fb, v, {});
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0, settings.dither);
     if (!slide) renderMicroscopeList();

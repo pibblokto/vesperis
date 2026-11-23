@@ -158,6 +158,18 @@ void TestGame::testWaitMapOf(int bi) {   // a wait on the map's thread, not one 
     while (!spaceR.mapIfReady(sys.bodies[bi])) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
+// KI-446 (J-16): a body drawn before its map is made is drawn flat, so a scene that shot a frame soon after reaching a place drew its globes
+// whole or flat by how fast their threads ran (the radar's lock over the home world, a drifter's disc, a giant's clouds from the probe).
+// This makes every map of the system at one instant, for the season the next frame draws (set first: a map made at another season is
+// made again by the frame's own `setSeason`, B-438), the cache held large enough for all of them
+void TestGame::testWaitMaps() {
+    if (!sys.valid) return;
+    spaceR.mapCacheCap = std::max(spaceR.mapCacheCap, (int)sys.bodies.size() + 1);
+    spaceR.setSeason(sys, t);
+    for (const Body& b : sys.bodies)
+        if (b.type != PT_COMPANION) while (!spaceR.mapIfReady(b)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}
+
 std::string TestGame::testBeltDraw() const {
     int n3 = 0, x0 = 1 << 30, x1 = -1, y0 = 1 << 30, y1 = -1;
     for (int y = 0; y < FBH; y++)

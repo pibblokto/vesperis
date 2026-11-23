@@ -175,6 +175,10 @@ static void qualityFrame(const StarSystem& sys, int bi, double lat, double lon, 
     if (alt >= 0) { sv.cameraOverrideAlt = alt; sv.cameraOverridePitch = pitch; }
     nb.update(sv.site.worldPos(t, 0, 0, 0));
     Input in; sv.update(0.016, in, t, false);
+    // KI-446 (J-16): the sky's other bodies are drawn from their maps, flat until made, so a sheet drew a moon whole or flat by its thread's
+    // pace (`trait_fog_seas`): each made first, at the season the renderer holds for it (the sky sets none)
+    sr.mapCacheCap = std::max(sr.mapCacheCap, (int)sys.bodies.size() + 1);
+    for (const Body& ob : sys.bodies) if (ob.index != bi && ob.type != PT_COMPANION) sr.mapFor(ob);
     Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0);
     fb.mush(2);
     out.px.resize((size_t)FBW * FBH); fb.toRGB(out.px.data(), 1.0);

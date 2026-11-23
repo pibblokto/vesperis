@@ -72,7 +72,9 @@ edited lower is lifted whole as far as its own (or a moved-in donor's) went. A b
 editor's warmth, salt and frost guides (letters open) say how cold the line can go and what it lacks for -45 C (`coldGuideWords`).
 
 Down a drill hole: the seed page's Page Down takes the drone down the rock's eight depths, 1, 2, 3, 5, 8, 12, 20 and 30 km
-(`SEED_DEPTH_KM`). The rock's pores hold water there, sea-salt (brine colder than -20 C), at the ground's warmth (never colder than its
+(`SEED_DEPTH_KM`). On a small cold world, whose rock warms slowly down, they stretch to the depth where its rock is 10 C warm under its
+mean, 120 km at most (B-478: `deepestKm`; a 767 km rocky world's eight reach 54 km). The rock's pores hold water there, sea-salt (brine
+colder than -20 C), at the ground's warmth (never colder than its
 reading) plus the world's inner heat: 30 C a kilometre on an Earth, by the radius as a world's heat flow goes, half again with plates or
 vents or as a giant's moon (`deepGradientC`). It is dark, its food the rock's hydrogen (the deep biosphere's: Stevens and McKinley 1995),
 with no oxygen, pH 8 and the rock's own radioactivity alone, whatever the world's liquid. A world with a sea under its ice (europan, brine
@@ -80,16 +82,19 @@ dwarf, grooved ice, tiger-striped) has that sea alone, at the ice's foot, 3 to 2
 1 to 4 C, salt (a brine dwarf's brine). A furnace stays closed at any depth. Its natives are the rock's or the plumes' that live in water.
 
 A deep line (`MadeSpread::deep`) lives in no water and on no land of the surface, grows over nothing and touches no animal; its gases
-seep up to the air at half its share (`DEEP_GAS_SHARE`; its share the points whose depths hold its band of warmth). Under the ice its dye
-colours the bare ground its sea comes up through, the lineae and cracks (RED CRACKS). It is found in a plume's vial alone (a sea under
+seep up to the air at half its share (`DEEP_GAS_SHARE`; its share the points whose depths hold its band of warmth). Under the ice its
+dye colours the bare ground its sea comes up through, the lineae and cracks (RED CRACKS). In the rock its dye stains the bare rock in
+patches of a few hundred metres where its water seeps up (B-479: RED SEEPS, `MGT_COLOURED_SEEPS`, in an ochre seep's colour under the
+dye's); a glowing deep line's cracks or seeps glow at night (GLOWING CRACKS, GLOWING SEEPS: `landsGlow`), in their own stain's colour
+where it has no dye. It is found in a plume's vial alone (a sea under
 the ice); a native it beat dies out if it lives in the deep's niche alone. A `seeded` line ends with its depth (km) when it went down
 (`bayseeddepth` in a save while the drone is out); the data sheet's SEEDED line says `5 KM DOWN` or `UNDER ICE`.
 
 `seed cold` sends lines tuned as a player would tune them (`seedTunedEdits`: the warmth's best nearest the place's, brine and the frost
 cut where only a brine stays liquid, DRY where the ground is dry, SHIELD where the dose asks): of forty worlds the wild sea light-feeder
 takes on 4; tuned, a light-feeder, a hydrogen eater or a fermenter takes on the ground of 24 and in the deep of 6 more. Venus is too hot
-at every depth (its clouds are J-14's), and the two smallest cold worlds (a rocky world of 767 km, a carbon one of 903) are still about
--75 C at 30 km. The furnaces (7) stay closed.
+at every depth (its clouds are J-14's). The two smallest cold worlds (a rocky world of 767 km, a carbon one of 903), still about -75 C
+at 30 km in J-13, open 41 and 50 km down (B-478). The furnaces (7) stay closed.
 
 ## The clouds (J-14)
 
@@ -100,9 +105,10 @@ a cool acid world, whose air is under 0 C there, has its base alone (`seedHeight
 The seed page's Page Up climbs into them, a height a press ("THE CLOUDS 47 KM UP"), refused past the highest (AS HIGH AS THE CLOUDS GO);
 its footer says PGUP CLOUDS on such a world. A height's place: the ground's warmth at its level and the made warmth, 8 C colder a
 kilometre up; acid droplets whatever the world's life (Venus's are sulphuric acid: Seager et al. 2021), lit by the star, fresh, dead
-matter (the scoop's vial of the clouds holds the same), the air's dose, never dry; its natives the clouds' (the scoop's own cubic metre,
+matter, iron and sulphide (the scoop's vial of the clouds holds the same; B-480: an acid's water carries both), the air's dose, never
+dry; its natives the clouds' (the scoop's own cubic metre,
 a kilometre's layer). Acid life brought from such a world lives there; water life never does (WRONG LIQUID: no gene changes a line's
-liquid). A cloud species that burns a food (iron, sulphide) finds none there (KI-507).
+liquid). A cloud species that burns iron or sulphide finds its food there, as in any acid medium (B-480: `acidFeeds`).
 
 A cloud line (`MadeSpread::deep` `MADE_CLOUDS`) lives in no water and on no land of the surface, grows over nothing and touches no
 animal. Its share is the deck's round the world, wherever its band of warmth lies between the deck's lowest and highest heights over a
@@ -112,7 +118,8 @@ its band finds it; a native it beat dies out if it lived in the clouds alone. A 
 save's `bayseeddepth` too); the data sheet's SEEDED line says `47 KM UP`. From orbit a venusian world's deck takes the dye in dark
 streaks along the latitudes, drifting with the deck, from the equator to the middle latitudes (Venus's own: Limaye et al. 2018), and the
 glow over its night side, brightest where the deck is thickest (`02-rendering.md`); an acid world's clouds take J-04's made clouds. On a
-venusian world's ground the sky shows neither (KI-508).
+venusian world's ground the deck's underside is the sky: by day the dye moves the sky bank's whole ramp toward its colour, and at night
+the glow lights the deck in its form, 12 km over the ground, in the made clouds' bank (B-481).
 
 `seed clouds` prints the heights of the first venusian worlds and the first acid world and what each gives, a venusian cloud
 light-feeder wild and tuned at each and the sea light-feeder of `seed worlds` refused at each (WRONG LIQUID), and lets the light-feeder,
@@ -141,7 +148,11 @@ A layer that draws nothing (lines that only spread, or died) has key 0, so no ma
 
 What the lines that took give a world's air (`madeAirOf`, with the layer): each gas by its gene's amount, times
 the share of the world its line lives on over 0.15 (`SeedVerdict::share`, read at 96 points over the sphere: its waters, its land and the
-plants a host of plants or a wood rotter lives in), rising from the line's step 6 to its step 24, so the air changes after the looks.
+plants a host of plants or a wood rotter lives in), or of its room where that is less (B-475: `SeedVerdict::room`, its kind of place's
+share at any warmth: its waters of its salts, its land, its plants; a terminator world's ring of seas a hundredth of it), rising from
+the line's step 6 to its step 24, so the air changes after the looks. A line that took lives at least at the point it went down. Its
+share is read again at the warmth its own gas makes with the lines before it, and kept where that is more (B-476): a line that opens its
+world to itself spreads and gives off more, one whose warmth drives it back keeps the air it made.
 The world answers by what it is, a gas leaving an airless one. CO2 warms (20 C
 at its full times the world's own sensitivity, 0.6 to 1.5, less where its seas take it up: THICK AIR). Methane warms 24 C where no oxygen
 burns it, 3 C where it does, and past a third of its amount an orange haze builds that cools the ground (ORANGE HAZE: tan, orange, brown
@@ -166,7 +177,9 @@ The layer's warmth (`MadeWorld::warmC`) and pressure (`pressureK`) are the world
 move the caps' edge (1.6 degrees of latitude a degree: a thin air's, an ocean's floes, a steam world's polar seas, an eyeball's pupil, a
 dry ice world's caps), the snow and frost lines (154 m a degree) and the frost fields; on a living world the ice and the frozen lakes and
 rivers too, and an endless rain on a cold world snows it over. A living world's ice sheets keep their domes: where the warmth moved the
-caps, the snow line and the ice's edge off one, its snow melts to bare ice; a glacier's tongue lifted over 2 C melts back to its bed. A
+caps, the snow line and the ice's edge off one, its snow melts to bare ice, and its margin melts dark (B-493: the dark zone of a warm
+summer's Greenland, out to where the ice is 8% of its dome a degree thick, 80% at most), so the white ice draws back; a glacier's tongue
+lifted over 2 C melts back to its bed. A
 biome moves only across the ice's edge (a greened world's follow its warmth or its rain, below), and the ground's heights and rivers stay
 the world as generated (the reefs and the alpine belt read the cap and the snow line as generated). Its heat dries the plants toward straw
 from 5 C over, all of them at 18 C or in a runaway (`madeMatColour`), and kills up to seven trees in ten on the ground. The HUD's TEMP
@@ -187,7 +200,8 @@ SEAS); a chalk shell turns them milky (MILK SEAS); a rust shell turns its fresh 
 their shores (FOAM SEAS: white, yellow or pink). A dye's colour wins over a milk's or a rust's. The land: a line of the waters lays mats
 on its shores and flats within 8 m over the water (MATS), stromatolites where it slimes on a chalk shell (STROMATOLITES); a line of the
 land (DRY, or of snow and ice) lays sulphur crusts, chalk, glass sands that glint, rust, crusts where its cells bind (CRUSTS: in
-polygons, ripples or rosettes, each drawn in its own texture) or slime on the rocks (SLIME); a stone rotter pits the rock (PITTED
+polygons, ripples or rosettes, each drawn in its own texture, a world's own crust beside it in its own: B-487) or slime on the rocks
+(SLIME); a stone rotter pits the rock (PITTED
 STONE). The snow: a dye colours a line's snow (RED SNOW and the rest), a dark one
 darkens and melts its ice (DARK ICE, 1.5 C warmer). The plants: a host of plants (HOST) lights the forests at night with its glow
 (GLOWING FORESTS; a glowing line's other plants' looks, a blight or a frost burn, stay dark: `plantsGlow`), gives them its dye (RED
@@ -223,7 +237,8 @@ fate (`madeFateAt`) joins the air's and each line's by its spread's share there,
 spread reached it. The data sheet's MADE line names the animals' traits last: DIE-OFF, WASTING, MELTING, GROWTHS, SPROUTING, BLOATED,
 STONE SKIN, CRAZED, CHANGED YOUNG, GLOWING ANIMALS, a dyed hide by its dye (RED HIDES), THRIVING, SILENCE. The surface turns a point's
 fate into each species' (`06-surface.md`): a herd's, a flock's and a shoal's members sick and changed alike where the line meets their class
-(a sprouting one's climb and fall the land's alone), their remains staged by the landing's clock and a kill's kept for the landing.
+(B-490: a sprouting flyer falls dead from the air and a sprouting swimmer washes up dead), their remains staged by the landing's clock,
+and a kill's or a fall's kept by the guide for 64 steps (B-489).
 
 ## The overgrowth (J-09)
 
@@ -281,21 +296,24 @@ harm, a fifth change the looks alone, a fifth make a world more livable).
 
 ## Greening a desert (J-15)
 
-On a desert a light-feeder's carpet or lichen grows grass and shrubs where it lies (`MadeGrowth::greens`, set in `madeWorldOf`). A
-desert is `madeGreens`: a dry world with no plants of its own whose grass bank is free, so the desert kind (the scorched felisian lends
-its grass bank to its clay: KI-510). The plants begin where the carpet's edge passed four steps before (`MADE_GREEN_AFTER`) and stand
+On a desert, or any bare world with air, a light-feeder's carpet or lichen grows grass and shrubs where it lies (`MadeGrowth::greens`,
+set in `madeWorldOf`). Such a world is `madeGreens`: landable, with air, no plants and no seas of its own (B-482: a desert, a rust, a
+salt, a thin-aired world, a scorched felisian and the rest; J-15 had the desert alone). The plants begin where the carpet's edge passed
+four steps before (`MADE_GREEN_AFTER`) and stand
 thick from twelve (`MADE_GREEN_THICK`): two reaches behind its edge (`greenReach`, `thickReach`) read with the edge's own lobes and
 fingers (`madeGreenAt`), so the grass follows the carpet out at its pace. The planet function's last pass lays GRASS there, its density
 0.32 rising to 0.65, over any land look (a crust lies under it). Their colour is the line's pigment's, a dye's over it
-(`MadeGrowth::plants`), in the desert's own grass bank in every view (`madeMatColour` of grass): green from a green pigment, purple from
-a purple one. Two lines of different colours share it (KI-509). On the ground the flora draws them as a steppe's: tufts, and shrubs a
+(`MadeGrowth::plants`; its carpet takes it too), in its line's own overgrowth bank in every view (B-482: the ground, the flora, the
+globe's stain bank, each map's line ramp): green from a green pigment, purple from a purple one. Two lines of different colours each
+show their own where their grass lies, the later's where both do. On the ground the flora draws them as a steppe's: tufts, and shrubs a
 shade darker than the grass; no trees, flowers or berries (`06-surface.md`). The land green (`MadeWorld::green`: the green reach's share
 of the sphere times the share of the land the carpet can lie on) names GRASS AND SHRUBS on the data sheet's MADE line, and GREENED
 DESERT past a half, before an overgrown world ("A CARPET OF CELLS HAS GROWN INTO GRASS AND SHRUBS OVER MOST OF ITS BARE LAND."; a
 lichen's names its lichen). A greening carpet harms nothing; the desert counts as more livable unless the line harms it otherwise (a
 soup in its springs does, as anywhere).
 
-A carpet is a light-feeder's with DRY, its STOP cut, its BIND set and no SHELL or LIFT: a chalk shell makes coral, glass a sponge, lift
+A carpet is a light-feeder's with DRY, its STOP cut, its BIND set and no SHELL or LIFT (on most bare worlds the line refuses for the
+cold or the ultraviolet unless tuned for them): a chalk shell makes coral, glass a sponge, lift
 bladders, flagella hair, none of which green. With a SHIELD as well it is a lichen, which greens too. The gene editor says which: with
 STOP cut its line reads "CUT OUT: OVERGROWS AS CARPETS, GREENS A DESERT" (`overgrowthTypeOf`, the rule the layer uses). `seed kinds`
 lets a green light-feeder tuned for the first desert of the forty go there: its place is grass from its 12th step, the desert a GREENED
@@ -306,14 +324,18 @@ DESERT from its 27th.
 The guide keeps each seeding as a `seeded` line: the world, the place, the line's key and a copy of its edits (a strain's
 number is the guide's own), the flask's medium, the generation, and the guide's clock when it went down. The guide's clock (`clock`)
 counts the real seconds the game has run, across saves and expeditions; the warp never hurries it. With them, `madeseen` keeps what each
-world showed at its last landing. They are written only once a world is seeded, so a guide without a seeding saves as before. A loan
+world showed at its last landing. They are written only once a world is seeded (the clock also once an animal is kept dead, B-489), so a
+guide without either saves as before. A loan
 carries none of them. The game works out a world's seedings once (`Game::seedingsAt`: each line read from its key as a flask reads it),
 again only when the guide's `seeded` lines change.
 
 **Natives died out (J-12).** At its place a line beats some natives: it outgrows them, eats them or poisons them (`SeedVerdict::beaten`
 and `beatenHow`). Once its spread covers the world, at its 24th step, those that live only in niches and salts the line lives in die out
 (`seedingDiedOut`): each water the native lives in must hold a salt among the line's waters, and any other niche needs a line that lives
-on the land. From then no vial of the world holds them, wherever it is taken. A native the line beat that also lives where the line
+on the land; and none of its own band of warmth may lie outside the line's where the world has that warmth, its waters' for a water
+niche and its land's for any other (B-474: the world's range read over the habitat's 96 points, `SeedVerdict::wetLoC` and the rest). A
+later line meets none of the natives the lines before it drove out by the time it goes down (`seedVerdictOf`'s `gone`). From then no
+vial of the world holds them, wherever it is taken. A native the line beat that also lives where the line
 cannot does not die out: where the line spread, a vial holds a hundredth of what it held.
 
 **Found wild (J-12).** A line seen under the microscope in a vial of the world it went down on is found wild: the guide keeps a `wild` line
@@ -324,8 +346,11 @@ read (the save's `seqwildkey`), and the KIN line says what the wild changed in i
 DIED OUT, and its sheet says which line did it and how (`DIED OUT: POISONED BY` and the line's words). The lines found wild follow the
 world's species, each SEEDED. A line's sheet is its species' sheet with the line's form as the wild left it, when it went down, and
 what the wild changed once the sequencer read it there: UNCHANGED IN THE WILD, CHANGED IN THE WILD: GENES 23, 29, else NOT YET SEQUENCED
-FROM THE WILD. The animals seen on any world come last, with the marks the ground showed: GONE, DYING, CHANGED. An animal's sheet is in
-words alone: its way, what it was seen doing, the nearest it came and the most seen at once, its fate. A species gone from its world is
+FROM THE WILD. The animals seen on any world come last, with their marks: GONE, DYING, CHANGED, those the ground showed and (B-500) those
+their world's record holds at the guide's clock, the fate of each species over its world (`animalFates`: 128 points, where it lives). An
+animal's sheet draws it as the ground does (its body posed by `poseAnimal` and `emitAnimal`, its world's two hides, a scale bar in metres)
+beside its way, what it was seen doing, the nearest it came and the most seen at once, its fate. By kin the animals follow their world's
+genesis once one of its own species was read, else those not yet sequenced. A species gone from its world is
 drawn dim. The LIFE page adds WORLDS SEEDED (and how many lines took), MADE (the made kinds now, each name once) and DIED OUT (the
 explorer's species seen that died out, the catalogue's rows, and the animals seen gone), worked out as the page opens
 (`catalogueCountsMake`). A friend's lent sheet of a native that died out is marked, never counted.

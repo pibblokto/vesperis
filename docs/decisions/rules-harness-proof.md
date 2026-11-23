@@ -1,8 +1,7 @@
 # Rules: the harness and the proof: the battery and the bench
 
-Rules in force for vesperis_test, its checks and the proof that a change changes nothing, one line per rule with its log entries
-(`log/`, by release). A milestone that sets or changes a rule edits its line here; a replaced rule moves to `superseded.md`
-(`docs/CLAUDE.md`). The harness itself: `rules-harness.md`.
+Rules in force for the proof that a change changes nothing, one line per rule with its log entries (`log/`). A changed
+rule edits its line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). The harness itself: `rules-harness.md`.
 
 ## The regress
 - Regress hashes match exactly, never within a tolerance, with the maps warmed first; each platform is gated by its own `-O2` bless (KI-014) [M7-04], [F-09]
@@ -36,7 +35,7 @@ Rules in force for vesperis_test, its checks and the proof that a change changes
 ## The bench
 - `bench check`'s 46 budgets hold at every close, each about 1.5x the row's median on the dev Mac with the workers, at least median + 0.5 ms [F-11], [E-03]
 - A row's budget falls with its time when a change makes it faster, so a later change that gives the gain back fails [F-03], [F-11]
-- A budget set before its scene was finished is set again at 1.5x its median once it is [B-439]
+- A budget set before its scene was done, or one that features since brought near its time, is set again at 1.5x the median [B-439], [B-505]
 - A row is budgeted once it holds within a few percent over runs, never a recorded frame, an arrival's first frame or a 1x or 3x row [F-01], [F-11]
 - `bench check <factor>` multiplies every limit: another machine or one thread passes its own factor [F-11]
 - Budgeted: the densest scene at the default scale (`forest 4x`) and the descent's first frame; surface rows print their bands [B-310], [O6-03..O6-07], [F-01]
@@ -86,3 +85,4 @@ Rules in force for vesperis_test, its checks and the proof that a change changes
 [E-03]: log/6-1.4.0.md
 [E-05]: log/6-1.4.0.md
 [U-01]: log/6-1.4.0.md
+[B-505]: log/7-1.5.0.md

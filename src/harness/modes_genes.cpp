@@ -315,7 +315,9 @@ GeneLaws geneLaws() {
     {   // J-01: the cell's genes as generation 17's genes drew them, by the digest the code before J-01 gave (c9e98be)
         int n = 0, e = 0;
         const uint64_t d = cellGenesDigest(n, e);
-        R.cellAsBefore = {d == 0xe58ae38013b383cdULL && n == 349 && e == 7702, fmt("digest %016llx over %d species and %d edits (before J-01: e58ae38013b383cd, 349, 7702)",
+        // (B-504, J-16: a hot world of a dead star or a brown dwarf stays the kind it was drawn as, so one of the first forty living worlds is
+        // another: e58ae38013b383cd over 349 species and 7702 edits with the old chemotroph, as before J-01)
+        R.cellAsBefore = {d == 0x2f19f43bd44b6acbULL && n == 347 && e == 7626, fmt("digest %016llx over %d species and %d edits (B-504's worlds: 2f19f43bd44b6acb, 347, 7626)",
                                                                                      (unsigned long long)d, n, e)};
     }
     std::string shares = fmt("gas %d (", works[GN_GAS]);

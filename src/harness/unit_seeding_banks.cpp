@@ -109,6 +109,31 @@ void unitSeedingBanks(const Check& check) {
               fmt("(a glowing line's blight in bank %d, %s at night; a glowing host's in bank %d, %s)", pb0, dm.lookGlow[MC_PLANTS][0] ? "LIT" : "dark", pb1,
                   dm.lookGlow[MC_PLANTS][1] ? "lit" : "DARK"));
     }
+    {   // B-494 (KI-502): a disc deals its made clouds a bank before its looks (they cover it), so the second disc's five banks hold the overgrowth,
+        // the waters and the clouds of a world with every class's look too (the looks past the pool their nearest's)
+        SpaceRenderer& R = G.testSpaceR();
+        Framebuffer fb;
+        int other = -1;
+        for (int k = 0; k < (int)S.bodies.size() && other < 0; k++) if (k != bi) other = k;
+        MadeWorld w = m;
+        const RGB tints[3] = {RGB(0.8f, 0.7f, 0.2f), RGB(0.3f, 0.7f, 0.3f), RGB(0.9f, 0.4f, 0.6f)};
+        for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {
+            MadeLook& L = w.spread[1].look[cls]; L.on = L.tinted = true; L.kind = cls == MC_LAND ? MGT_CRUSTS : (cls == MC_PLANTS ? MP_NEW_LEAVES : MGT_COLOURED_SNOW);
+            L.tint = tints[cls == MC_LAND ? 0 : (cls == MC_PLANTS ? 1 : 2)];
+            w.spread[1].makes |= 1 << cls;
+        }
+        w.land = w.spread[1].look[MC_LAND]; w.plant = w.spread[1].look[MC_PLANTS]; w.snow = w.spread[1].look[MC_SNOW];
+        w.air |= MA_DYE_CLOUDS; w.cloudTintK = 0.6; w.cloudTint = RGB(0.75f, 0.12f, 0.10f);
+        w.key = madeKey(w);
+        G.testMadeSet(bi, w);
+        R.setupPalette(fb, &S, other, bi, 1.0);   // (the world as the second disc)
+        const SpaceRenderer::DiscMade& dm = R.discMade[1];
+        const bool kept = other >= 0 && dm.cloud >= 0 && dm.stain[1] >= 0 && dm.water[1] >= 0 && dm.look[MC_LAND][1] >= 0;
+        check("seeding: a disc's made clouds dealt before its looks (B-494)", kept,
+              fmt("(the second disc's five banks: the stain %d, the waters %d, the clouds %d, the land's look %d, the plants' %d, the snow's %d)", dm.stain[1], dm.water[1],
+                  dm.cloud, dm.look[MC_LAND][1], dm.look[MC_PLANTS][1], dm.look[MC_SNOW][1]));
+        G.testMadeSet(bi, m);
+    }
     {   // KI-455: past the ship's pool a flask borrows the dealt bank nearest its colour (within a fifth of the cube's diagonal), else dims
         std::vector<ShipBankAsk> asks;
         for (int k = 0; k < 16; k++) {   // eight colours, each asked twice a shade apart, the second farther

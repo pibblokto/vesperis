@@ -2,7 +2,8 @@
 // STOP cut and its cells bound, so it overgrows too) let go on one of `seed climate`'s worlds with plants and animals, its 64th step reached:
 // the explorer's sheets of the natives (those the line beat among them), the line found in the wild and read by the sequencer, four of its
 // animals seen with the marks the ground would show (gone; dying and changed; named; plain). Drawn: the catalogue by world (the made kind on
-// the world's head, DIED OUT, SEEDED, GONE), a native's sheet that died out, the line's, an animal's, the statistics' LIFE page: `record/`
+// the world's head, DIED OUT, SEEDED, GONE), a native's sheet that died out, the line's, an animal's, the catalogue by kin (B-500: its animals
+// under their world's genesis), the statistics' LIFE page: `record/`
 #include "harness/harness.h"
 #include "life/seeding.h"
 #include "test_game.h"
@@ -125,6 +126,9 @@ int seedRecord() {
     sheetOf("died_out", [&](const CatalogueRow& r) { return r.kind == CR_SPECIES && g.testCatLine(r).find("DIED OUT") != std::string::npos; });
     sheetOf("found_wild", [&](const CatalogueRow& r) { return r.kind == CR_WILD; });
     sheetOf("animal_gone", [&](const CatalogueRow& r) { return r.kind == CR_ANIMAL && g.testCatLine(r).find("GONE") != std::string::npos; });
+    pressKey(g, in, KEY_TAB);   // B-500: by kin, the animals under their world's genesis
+    grab("catalogue_kin");
+    pressKey(g, in, KEY_TAB);
     pressKey(g, in, KEY_ESCAPE);
     g.openScreen(GameState::STATS); g.frame(in, 1.0 / 30); in.newFrame();
     pressKey(g, in, KEY_L);
@@ -141,6 +145,6 @@ int seedRecord() {
     printf("seed record: %zu frames in shots/tests/record/ (%s; record.png) (%.1f s)\n", names.size(), [&] { std::string s; for (const std::string& n : names) s += (s.empty() ? "" : ", ") + n; return s; }().c_str(),
            nowSec() - t0);
     remove(g.guidePath.c_str());
-    const bool ok = row && died == (int)gone.size() && wildRows == 1 && goneRows == 1 && N.worlds == 1 && N.diedOut == (int)gone.size() && N.gone == 1 && names.size() == 5;
+    const bool ok = row && died == (int)gone.size() && wildRows == 1 && goneRows == 1 && N.worlds == 1 && N.diedOut == (int)gone.size() && N.gone == 1 && names.size() == 6;
     return ok ? 0 : 1;
 }

@@ -141,7 +141,7 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
             if (text.empty() || !sys.valid || textBody < 0 || textBody >= (int)sys.bodies.size()) return;
             guide.names[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, textBody)] = text; guide.save(guidePath);
             const Body& b = sys.bodies[textBody];   // the telescope names moons, comets and the second sun too
-            const char* what = b.type == PT_COMPANION ? "SECOND SUN" : (b.type == PT_COMET ? "COMET" : (b.parent >= 0 ? "MOON" : "WORLD"));
+            const char* what = b.type == PT_COMPANION ? "SECOND SUN" : (b.type == PT_COMET ? "COMET" : (bodyIsMoon(textBody) ? "MOON" : "WORLD"));   // B-498
             status(fmt("THE %s IS NOW CALLED %s", what, text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A %s %s", what, text.c_str()));
             break;

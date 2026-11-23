@@ -147,12 +147,18 @@ void unitKinds(const Check& check) {
     // first world of each kind in the scan region, sampled on its map's grid, has its ground
     {
         int made = 0, bad = 0, perKind[PT_COUNT] = {0}; std::string why;
+        int chemoHot = 0; double chemoMax = -1e9; std::string chemoWorst;   // B-504 (KI-436): a chemotroph is a cool world warmed from within
         const uint32_t dead = (1u << STAR_WHITE_DWARF) | (1u << STAR_PULSAR) | (1u << STAR_NEUTRON);
         int firstOf[PT_COUNT]; int64_t fx[PT_COUNT], fz[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) firstOf[k] = -1;
         for (auto& [x, z, st, sys] : scanSystems(150, 260, 20, 120)) {
             for (const Body& B : sys.bodies) {
                 if (B.type < PT_EYEBALL || B.type > PT_CHEMOTROPH) continue;
                 made++; perKind[B.type]++;
+                if (B.type == PT_CHEMOTROPH) {
+                    const double c = biotaMeanC(sys, B);
+                    chemoHot += c > 60;
+                    if (c > chemoMax) { chemoMax = c; chemoWorst = B.name; }
+                }
                 if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
                 const int d = drawnKind(B), pd = B.parent >= 0 ? drawnKind(sys.bodies[B.parent]) : -1;
                 const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;   // a companion's world by its own sun (P-01's facts)
@@ -172,6 +178,8 @@ void unitKinds(const Check& check) {
         for (int k = PT_EYEBALL; k <= PT_CHEMOTROPH; k++) counts += fmt("%s%s %d", k > PT_EYEBALL ? ", " : "", KINDS[k].name, perKind[k]);
         check("locked and deep kinds: from their sources, the locked ones locked and untilted, none half of a double planet (P-03)", bad == 0 && made > 400,
               fmt("%d made (%s)%s", made, counts.c_str(), why.empty() ? "" : (": " + why).c_str()));
+        check("locked and deep kinds: a chemotroph a cool world warmed from within, its mean under 60 C (B-504)", chemoHot == 0 && perKind[PT_CHEMOTROPH] > 20,
+              fmt("%d of %d over 60 C, the warmest %s at %.0f C", chemoHot, perKind[PT_CHEMOTROPH], chemoWorst.c_str(), chemoMax));
         struct Pin { int64_t sx, sz; const char* name; int type; };
         static const Pin PINS[] = {{150, 58, "Feeyeithis II", PT_FELISIAN}, {150, 58, "Feeyeithis III", PT_FELISIAN}, {150, 58, "Feeyeithis IV", PT_FELISIAN},
                                    {150, 36, "Wyariothmai I", PT_FELISIAN}, {150, 36, "Wyariothmai II", PT_OCEAN}, {150, 36, "Wyariothmai III", PT_OCEAN}};
@@ -918,7 +926,8 @@ void unitTraits(const Check& check) {
                 if (b.type == PT_ACIDIC && g.hasTrait(TR_KARST) && !acidKarst.s.seed) { acidKarst.s = st; acidKarst.bi = bi; }
             }
         }
-        check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0xee430ab584b04f72ULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
+        // (B-504, J-16: a hot world of a dead star or a brown dwarf stays the kind it was drawn as, its traits that kind's: ee430ab584b04f72 before)
+        check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0x739a4b8e37618bebULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
         std::string missing;
         // the dark's own are the drifters' (`rogues dark`)
         for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (!carried[t] && TRAITS[t].kind != TK_DARK) missing += std::string(" ") + TRAITS[t].name;

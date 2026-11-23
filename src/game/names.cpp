@@ -57,6 +57,13 @@ std::string Game::bodyNameOf(int bi) const {
 
 std::string Game::beltNameOf(int k) const { (void)k; return UNNAMED_LABEL; }   // belts cannot be named yet
 
+// B-498: a moon of a planet; a body of the second sun is one of its worlds (its parent a star), as the analyzer's ORBIT line says
+bool Game::bodyIsMoon(int i) const {
+    if (!sys.valid || i < 0 || i >= (int)sys.bodies.size()) return false;
+    const int p = sys.bodies[i].parent;
+    return p >= 0 && p < (int)sys.bodies.size() && sys.bodies[p].type != PT_COMPANION;
+}
+
 // the local target's line: the display name and what it is
 std::string Game::bodyLabelOf(int i) const {
     if (!sys.valid || i < 0 || i >= (int)sys.bodies.size()) return "";
@@ -140,6 +147,20 @@ void Game::syncShards() {
 std::string Game::instrumentKey(int id) const {
     return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.valid ? surf.site.body : ship.localTarget) + "/I" + std::to_string(id);
 }
+// B-499: what the status line says as a record is taken (its object, then its count on the world or that the radar caught it) and as an
+// instrument is: "OF THE OLD PEOPLE" left out where the line would run past the 53 characters the status holds (it is centred: past them both
+// its ends were cut, "SOMETHING THAT HUMS OF THE OLD PEOPLE - 103 OF 200 ON THIS WORLD"); the log keeps the whole
+constexpr size_t STATUS_CHARS = 53;
+std::string Game::shardTakenStatus(const std::string& what, int here, int total, bool caught) {
+    const std::string tail = caught ? fmt("CAUGHT BY RADAR (%d OF %d)", here, total) : fmt("%d OF %d ON THIS WORLD", here, total);
+    const std::string whole = what + " OF THE OLD PEOPLE - " + tail;
+    return whole.size() <= STATUS_CHARS ? whole : what + " - " + tail;
+}
+std::string Game::instrumentTakenStatus(const std::string& what) {
+    const std::string whole = what + " OF THE OLD PEOPLE - TO THE CASE";
+    return whole.size() <= STATUS_CHARS ? whole : what + " - TO THE CASE";
+}
+
 // C-11: the instrument within reach into the guide and the cabin's case
 void Game::takeInstrument() {
     const SurfaceView::NearInstrument ni = surf.nearInstrument;
@@ -150,7 +171,7 @@ void Game::takeInstrument() {
     int here = 0; const std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/I";
     for (const std::string& k : guide.instruments) if (k.compare(0, prefix.size(), prefix) == 0) here++;
     logEvent("INSTRUMENT", fmt("%s OF THE OLD PEOPLE TAKEN ON %s, TO THE CABIN'S CASE (%d FROM THIS WORLD)", what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here));
-    status(fmt("%s OF THE OLD PEOPLE - TO THE CASE", what.c_str()), 5);
+    status(instrumentTakenStatus(what), 5);
     audio.beep = BEEP_LOCK;
 }
 // C-03: E at a shard: the guide, the log, the status
@@ -174,9 +195,7 @@ void Game::takeShard() {
             fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM",
                     ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place), where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here,
                     total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
-    status(caught ? fmt("%s OF THE OLD PEOPLE - CAUGHT BY RADAR (%d OF %d)", what.c_str(), here, total)
-                  : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total),
-            5);
+    status(shardTakenStatus(what, here, total, caught), 5);
     audio.beep = BEEP_LOCK;
 }
 

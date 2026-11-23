@@ -297,9 +297,10 @@ AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes
     a.dead = h >= 0.95 ? 1.0 : clampd(h * frail, 0, 1);
     a.death = a.dead > 0 ? f.death : 0;
     // B-469: a flyer's and a swimmer's survivors sick and their young changed too where the line meets them: its class harmed, or a host on
-    // the skin (a glow, a dye), which meets every animal; a sprouting one's climb to the high ground is the land's alone
+    // the skin (a glow, a dye), which meets every animal. B-490: a sprouting one in the air or the water too (it falls dead from the air, it
+    // washes up dead on the shore)
     const bool meets = land || h > 0 || f.sickness == MF_GLOWING || f.sickness == MF_DYED;
-    if (meets && !a.gone() && f.sickness && f.sick > 0 && (land || f.sickness != MF_SPROUTING)) { a.sickness = f.sickness; a.sick = f.sick; }
+    if (meets && !a.gone() && f.sickness && f.sick > 0) { a.sickness = f.sickness; a.sick = f.sick; }
     if (meets && !a.gone() && f.changed > 0 && nChanges > 0) {
         a.changed = f.changed;
         a.nChanges = std::min(nChanges, 3);
@@ -313,14 +314,17 @@ AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes
 
 namespace {
 // whether a change fits a species' body and ways, and whether two clash. B-469: a flyer's or a swimmer's young take the body's and the hide's
-// changes alone (the ways are a herd's members'), a swimmer's no leg's nor wool
+// changes, a swimmer's no leg's nor wool. B-490: and the ways a flock's or a shoal's member can show on its own: it circles or limps (trails its
+// place), a flyer stumbles in the air or flies on by night; none fits that a flock or a shoal never does (calm, bold, climbing, swarming, joined)
 bool changeFits(const Species& sp, int ch) {
     const AnimalBody& b = sp.body;
     const bool legs = b.pairs > 0;
     if (planFlies(sp.plan) || planSwims(sp.plan))
         switch (ch) {
-            case CHG_CALM: case CHG_BOLD: case CHG_NIGHT: case CHG_CIRCLES: case CHG_STUMBLES: case CHG_CLIMBS: case CHG_SWARMS: case CHG_LIMPS: case CHG_JOINED:
-                return false;
+            case CHG_CALM: case CHG_BOLD: case CHG_CLIMBS: case CHG_SWARMS: case CHG_JOINED: return false;
+            case CHG_CIRCLES: case CHG_LIMPS: return true;
+            case CHG_STUMBLES: return planFlies(sp.plan);
+            case CHG_NIGHT: return planFlies(sp.plan) && sp.activity != ACT_NIGHT;
             case CHG_EXTRA_LEG: case CHG_MISSING_LEG: case CHG_SHORT_LEGS: case CHG_LONG_LEGS: case CHG_WOOLLY:
                 if (planSwims(sp.plan)) return false;
                 break;

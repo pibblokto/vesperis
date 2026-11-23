@@ -151,6 +151,10 @@ struct CabinFrame {
     // bank (the decoder's, dealt; -1 none)
     double drive = 0, drop = -1;
     int shardBank = -1;
+    // B-501 (KI-435): whether the frame was drawn aboard, the glass's box sunk (`cabinDeal`), and whether the local target's, a belt's rock's and
+    // the remote star's point shows through the glass there (`cabinMarks`, once the cabin is drawn): the HUD marks them only where it does
+    bool aboard = false, localOut = true, rockOut = true, remoteOut = true;
+    int outX0 = 0, outY0 = 0, outX1 = 0, outY1 = 0;
 };
 // I-03: the light aboard, a surface's shade: CABIN_SHADE_FULL x its factors x (CABIN_AMBIENT + the lamps' light at its vertex x the
 // light's level + the orb's x its pulse); I-04: U's night keeps the glows' share (`SHIP_NIGHT_GLOW`)

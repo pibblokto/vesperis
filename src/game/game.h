@@ -119,6 +119,10 @@ public:
     bool bodyNamed(int bi) const;
     std::string beltNameOf(int k) const;
     std::string bodyLabelOf(int i) const;
+    bool bodyIsMoon(int i) const;      // B-498: a moon of a planet (a planet of the second sun is a world: its parent is a star)
+    // B-499: the status line as a record or an instrument is taken, 53 characters at most (it is centred: past them both its ends were cut)
+    static std::string shardTakenStatus(const std::string& what, int here, int total, bool caught);
+    static std::string instrumentTakenStatus(const std::string& what);
     // KI-482: a body's kind as it is now, a seeded world's made kind (the layer the space view holds) where it took one: its name
     // ("FLESH WORLD"), its short name (the analyzer's and the telescope's ten characters) and the log's words ("FLESH WORLD, ONCE FELISIAN")
     std::string kindNameNow(int bi) const;
@@ -129,6 +133,7 @@ public:
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
     int dataSheetBottom = 0;           // Q-01: the data sheet's lowest next line's top over its pages, as last drawn (`testDataSheetBottom`)
     int dataSheetPages = 1;            // the body's sheet's pages, as last drawn (RIGHT and LEFT step through them, then the probes' profiles)
+    std::vector<std::string> dataSheetText;   // B-496: the body's sheet's lines over its pages, as last drawn (`testDataSheetText`)
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
     // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
@@ -163,6 +168,8 @@ public:
     // ---- what the ground holds, taken: shards, instruments, roads, graves (names.cpp, shards_screen.cpp)
     std::string shardKey(int index) const;
     void syncShards();
+    void deadToLanding();   // B-489: the world's kept dead (the guide's `dead` lines) into the landing, at a landing and a load
+    void deadToGuide();     // B-489: this landing's dead into the guide as they die
     std::string instrumentKey(int id) const;
     void takeInstrument();
     std::set<uint64_t> roadsMet;                               // C-09: the old roads met on this landing (a status and a log line the first time on each)
@@ -391,6 +398,7 @@ protected:
     void cabinPalette();
     void updateCabin(const Input& in, double realDt);
     void drawCabin();
+    void cabinMarks();   // B-501: which targets' points show through the glass, once the cabin is drawn
     void drawCabinPieces(CabinFrame& f);
     void renderCabinHUD();
     void shipScreenEnter(); void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen(); void shipScreenPad(PadMenu& m) const; void consolePad(PadMenu& m) const;
@@ -827,6 +835,7 @@ protected:
     static std::string formsSeenWords(uint32_t forms);                   // "CELLS, SPORES" (`CycleForm`'s bits)
     static std::string stagesSeenWords(uint32_t stages, bool largeCell);   // "ASLEEP, WAKING" (`LifeCycle`'s bits)
     void renderMicroscopeList(); void renderMicroscopeHUD(); void renderMicroscopeSheet();
+    void microscopeElectron(const Slide& v);   // B-502: the electron's slide kept while the stage is still
     bool microscopeStageFlask(int flask);   // Z-05: a flask's drop on the stage, its culture as it is
     void microscopeView();                  // a new mount's first look
     // ---- the incubator (incubator.cpp, incubator_draw.cpp, lab_state.h; Z-05): the laboratory's second device, a screen over the room: twelve
@@ -942,6 +951,7 @@ protected:
     void treeTakeOff(); void treePickOpen(); void treePickKeys(const Input& in);
     std::string treeWorldWords(const std::string& world); std::string treeLineWords(const std::string& key);
     std::string treeTwigWords(const std::string& key);   // Y-01: a twig's (its strain's name or number, its move)
+    std::string treePageWhere(const TreePage& P) const;  // B-497: an unnamed world's page's place under its name ("" for any other page)
     void drawTreeWall(CabinFrame& f, const ShipFixture& F, const CabinDraw& d);   // cabin_life.cpp: its lines over the screen in the room
     // the decoder's watermarks (shards_screen.cpp): a made species' sequenced, read beside its people's records, its language theirs
     void shardWatermarkAdd();
@@ -968,6 +978,7 @@ protected:
     void catalogueCountsMake();   // the LIFE page's seeded worlds (`cat.counts`), as it opens
     bool catalogueGone(const CatalogueRow& r);
     void renderCatalogueAnimal();
+    double renderCatalogueBeast(const CatalogueAnimal& A, uint64_t seed);   // B-500: an animal drawn on its sheet as the ground draws it (its size, m)
     void renderCatalogueSheet();
     double renderCatalogueForm(const Morph& m, const MicrobeSheet& seen, uint64_t seed);
     void renderStatsLife();

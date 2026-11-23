@@ -64,7 +64,7 @@ void Game::renderSpace() {
     // oculus or dome in view the space view is not drawn (the frame cleared under the ship's walls, the bodies' places on the screen kept
     // for the HUD, the flight's band kept building)
     const bool aboard = settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on;
-    if (aboard) cabinSight();
+    if (aboard) cabinSight(); else cabinFrame.aboard = false;   // B-501: the HUD's marks kept to the glass aboard alone
     if (!aboard || cabinFrame.sight.seesOut) spaceR.render(fb, c);
     else { fb.clear(0); fb.clearDepth(); spaceR.bodiesOnScreen(c); keepFlightBand(); }
     if (aboard) { cabinDeal(); cabinPalette(); if (cabinFrame.sight.seesOut) drawDroneLights(); drawCabin(); }

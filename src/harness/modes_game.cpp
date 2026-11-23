@@ -7,12 +7,18 @@ struct Flow {
     TestGame game;
     Input in;
     double t0 = 0;
+    // KI-450 (J-16): the frame's size (FBW, FBH and the mush) is the process's, set by the last game whose settings were applied: the games
+    // a stage makes of its own (auto-explore's samples, the reload's two) leave their 4x, and the flow's game, at 1x, drew its next frames
+    // past its buffers (the cabin's fill read past the depth). Its frames take its own size back first
+    void own() { if (game.fb.idx.size() != (size_t)FBW * FBH) game.applySettings(); }
     void run(double seconds) {
+        own();
         int n = (int)(seconds * 30);
         for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); if (game.recording) game.recordFrame(); in.newFrame(); }
     }
-    void press(int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; }
+    void press(int key) { own(); in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; }
     void shot(const char* name) {
+        own();
         std::string fn = std::string("shots/tests/flow_") + name + ".png";
         writePNG(fn.c_str(), game.output(), FBW, FBH);
         printf("%-14s state=%d status='%s'  (%.1f s)\n", name, (int)game.state, game.testStatus().c_str(), nowSec() - t0);
@@ -889,8 +895,8 @@ void Flow::reload() {
     printf("flow done in %.1f s\n", nowSec() - t0);
 }
 
-// Y-02: the gene editor, near the flow's game's end (after the drones; before the games of its own the stages after it make, whose ends
-// leave its frames unsafe: KI-450; J-03's seeding follows it): E at it, Enter (the chooser: the cultures), Enter (THE
+// Y-02: the gene editor, near the flow's game's end (after the drones, before the stages that make games of their own; J-03's seeding
+// follows it): E at it, Enter (the chooser: the cultures), Enter (THE
 // FLASKS), Enter (flask 1's culture, read on the sequencer); its map's first gene, Enter (its letters), Up (a letter changed), Enter (the
 // map), W (R-445: UNSORTED chosen, then its parent's name kept), its clock skipped past the writing (the skip hook): the line in an empty
 // flask; Esc. J-01: Page Down (the world genes' page) and its first gene's letter changed too before W
@@ -922,8 +928,8 @@ void Flow::genes() {
     press(KEY_ESCAPE); run(0.1);
 }
 
-// J-03: a world seeded from the drone bay, the flow's game's last stage (after the gene editor: nothing of its own after it moves in time,
-// and before the games of their own the stages after it make, KI-450): the dye line (`seed worlds`', a strain the explorer wrote) grown
+// J-03: a world seeded from the drone bay, the flow's game's last stage (after the gene editor: nothing of its own after it moves in
+// time): the dye line (`seed worlds`', a strain the explorer wrote) grown
 // full in an empty flask, the ship parked at its world, E at the bay, S (the seed page), its sea's first place where the line takes,
 // Enter; the bay's clock on past the culture let go and the dock, the guide's on half an hour: the report, the log, the data sheet's lines
 void Flow::seed() {
@@ -977,7 +983,7 @@ void runGameFlow() {
     f.probe();
     f.roads();
     f.genes();   // Y-02
-    f.seed();    // J-03: the flow's game's last (nothing of its after it moves in time; before the other games: KI-450)
+    f.seed();    // J-03: the flow's game's last (nothing of its after it moves in time)
     f.autoSamples();
     f.reload();
 }

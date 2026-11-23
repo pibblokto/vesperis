@@ -24,13 +24,27 @@ const GrainTexture* SurfaceView::mesoFor(int material) {
 // a sponge's pores, a lichen's knobs, a plated tissue's plates, a bony one's knobs), -1 the hashed look
 int SurfaceView::growthTexture(int material) const {
     const MadeWorld& m = site.gen.made;
-    if (material == MAT_CRUST) return m.on() && m.land.on && m.land.kind == MGT_CRUSTS ? m.land.variant : -1;   // KI-463: a made crust's form
-    if (!madeGrowthMaterial(material) || m.growthLine < 0 || m.growthLine >= MADE_LINES) return -1;
+    if (!madeGrowthMaterial(material) || m.growthLine < 0 || m.growthLine >= MADE_LINES) return -1;   // (KI-493: a crust's own; a made one's `tileOf`)
     const MadeGrowth& G = m.spread[m.growthLine].growth;
     if (material != MAT_HARD) return G.texture;
     if (G.type == OG_CORAL || G.type == OG_SPONGE) return G.texture == OGT_COILED ? 3 : 0;
     if (G.type == OG_LICHEN) return 2;
     return G.hard >= 3 ? 2 : 1;
+}
+
+// KI-463, KI-493: a made crust's form where a crust line's crust lies (its look's share over a half, so its cover: the vertex's made tint), by
+// the look of the line whose look lies there; a world's own crust keeps its own tile
+int SurfaceView::madeCrustForm(const TerrainVertex& tv) const {
+    if (tv.material != MAT_CRUST || tv.mtint < 128) return -1;
+    const MadeWorld& m = site.gen.made;
+    const int line = tv.mline - 1;
+    const MadeLook& L = line >= 0 && line < MADE_LINES && m.spread[line].look[MC_LAND].on ? m.spread[line].look[MC_LAND] : m.land;
+    return L.on && L.kind == MGT_CRUSTS ? clampi(L.variant, 0, 2) : -1;
+}
+
+const GrainTexture* SurfaceView::tileOf(const TerrainVertex& tv) {
+    const int f = madeCrustForm(tv);
+    return f >= 0 && madeCrustBuilt[f] ? &madeCrustTiles[f] : mesoFor(tv.material);
 }
 
 // Fraction of direct sunlight reaching a vertex (M10-06): march toward the sun over the
@@ -196,6 +210,11 @@ void SurfaceView::drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) co
 void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const {
     albedo = v.albedo;
     bank = 0;
+    if (greenedAt(v) && growthBankOf(v.mline - 1) >= 0) {   // J-16 (KI-509): a carpet's grass in its line's bank, its colour (two lines two colours)
+        bank = (uint8_t)growthBankOf(v.mline - 1);
+        albedo = 0.36 + 0.2 * v.veg;
+        return;
+    }
     if (growthBank >= 0 && madeGrowthMaterial(v.material)) {   // J-09: an overgrowth's cover in its own bank (KI-473: its line's)
         const int ln = v.mline - 1;
         bank = (uint8_t)(ln >= 0 && ln < MADE_LINES && growthLineBank[ln] >= 0 ? growthLineBank[ln] : growthBank);
@@ -379,6 +398,13 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
                 shade -= 5 * vein * (1 - gGlow);
                 if (gGlow > 0.02) shade = std::max(shade, (14 + 36 * vein) * gGlow);
             }
+        }
+        // J-16 (KI-506): a glowing deep line's cracks or seeps lit at night, in patches of a few tens of metres
+        if (madeGlowLand > 0.02 && tv.mtint > 127 && !growth && madeClassOf(site.gen, tv.material, false) == MC_LAND) {
+            const int ln = tv.mline - 1;
+            const MadeWorld& mw = site.gen.made;
+            const double g = ln >= 0 && ln < mw.lines && ln < MADE_LINES ? mw.spread[ln].landsGlow() : mw.landGlow;
+            if (g > 0.02) shade = std::max(shade, (20 + 14 * (0.5 + 0.5 * gnoise2(x / 25.0, z / 25.0, site.gen.seed ^ 0x6E0E70ULL))) * g * madeGlowLand);
         }
         // the broad tone tile (patches of 23-85 m, +-4 shades; a texel is two metres, or a cell for the far rings),
         // sampled per vertex: the cells are smaller than its patches, so the gradient carries it across them
@@ -633,8 +659,16 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
     if (misses > FILL_SERIAL_MAX)
         parallelFor(misses, 16, [&](int b, int e) { for (int k = b; k < e; k++) cache.at(fillMisses[k].first, fillMisses[k].second); });
     uint32_t want = 0;
-    forDisc([&](int cx, int cz) { const int m = cache.at(cx, cz).material; if (m < MAT_COUNT && !mesoBuilt[m]) want |= 1u << m; });
+    int crusts = 0;   // KI-493: a crust line's forms
+    forDisc([&](int cx, int cz) {
+        const TerrainVertex& tv = cache.at(cx, cz);
+        const int m = tv.material;
+        if (m < MAT_COUNT && !mesoBuilt[m]) want |= 1u << m;
+        const int f = madeCrustForm(tv);
+        if (f >= 0 && !madeCrustBuilt[f]) crusts |= 1 << f;
+    });
     if (want) buildMesoTiles(want);
+    for (int f = 0; f < 3; f++) if ((crusts >> f) & 1) buildMadeCrust(f);
     auto t1 = std::chrono::steady_clock::now();
     // then the vertices, the four corners of every cell the draw can reach, in parallel by rows of vertices (F-04: the thread of
     // vertex row vz warms the corners on it of the cells either side, cell rows vz - 1 and vz, so every vertex is written by one
@@ -860,18 +894,19 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
             // mush filter give the surface its grain and soften the steps (M10-12: or a quantised gradient)
             double flat, w[4] = {1, 1, 1, 1};
             if (bank2 < 0) {
-                rp.grain2 = mesoFor(cache.at(cx, cz).material);
+                rp.grain2 = tileOf(cache.at(cx, cz));
                 flat = 0.25 * (v00.shade + v10.shade + v01.shade + v11.shade);
             } else {
-                int matA = -1, matB = -1, nA = 0, nB = 0; double sA = 0, sB = 0;
+                const TerrainVertex *tA = nullptr, *tB = nullptr;
+                int nA = 0, nB = 0; double sA = 0, sB = 0;
                 for (int k = 0; k < 4; k++) {
                     const TerrainVertex& tk = cache.at(cx + (k & 1), cz + (k >> 1));
-                    if (bks[k] == bank) { w[k] = 1; sA += vs[k]->shade; nA++; if (matA < 0) matA = tk.material; }
-                    else { w[k] = 0; sB += vs[k]->shade; nB++; if (matB < 0 || bks[k] == bank2) matB = tk.material; }
+                    if (bks[k] == bank) { w[k] = 1; sA += vs[k]->shade; nA++; if (!tA) tA = &tk; }
+                    else { w[k] = 0; sB += vs[k]->shade; nB++; if (!tB || bks[k] == bank2) tB = &tk; }
                 }
                 flat = sA / nA;
                 if (shadingMode == 0) rp.shade2 = sB / nB - flat;   // the gradient modes carry each corner's own shade
-                rp.grain2 = mesoFor(matA); rp.grain2b = mesoFor(matB);
+                rp.grain2 = tA ? tileOf(*tA) : nullptr; rp.grain2b = tB ? tileOf(*tB) : nullptr;
                 rp.edgeScale = 4.0 / cs;   // four texels of wobble per cell
             }
             // a cell that straddles a water's edge is cut along it (`shoreSplitTriangle`), the cut at the water level:

@@ -227,6 +227,7 @@ void Game::updateCabin(const Input& in, double realDt) {
 // outside are), dealt once the outside is drawn (`cabinDeal`)
 void Game::cabinSight() {
     CabinFrame& f = cabinFrame;
+    f.aboard = true;
     const Cabin c = cabinSeen();   // I-04: the explorer's eye, or the hatch's drop's camera
     f.look = cameraBasis(c.yaw, c.pitch);
     f.eye = Vec3(c.x, c.eyeY(), c.z);
@@ -293,6 +294,7 @@ void Game::cabinDeal() {
                 for (int x = x0; x < x1; x++) fb.idx[(size_t)y * FBW + x] = pix(SPACE_BANKS[((x + y) / FB_SCALE) % 18], 40);
         }
         if (x1 > x0 && y1 > y0) { outside = fb.sinkUnder(BANK_SPACE, x0, y0, x1, y1); sunk = true; }
+        f.outX0 = x0; f.outY0 = y0; f.outX1 = x1; f.outY1 = y1;
     }
     f.outsideBanks = outside;
     f.sunk = sunk;
@@ -376,6 +378,42 @@ void Game::drawCabin() {
         RVert p; p.x = v.x; p.y = v.y; p.z = v.z;
         p.shade = 20 + 43 * (L.kind == LAMP_GLOW ? lit + (1 - lit) * SHIP_NIGHT_GLOW : lit);
         rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 2);
+    }
+    cabinMarks();
+}
+
+// B-501 (KI-435): aboard, a target is marked only where its point shows through the glass. Read once the cabin is drawn, before the outside's
+// banks are raised: in the glass's box the panes keep the space view's pixels in its bank (BANK_SPACE, or its black, 0), the walls and what
+// stands in the rooms cover the rest. A body by its centre, four points round it or its point nearest the frame's middle; the remote star by
+// its point
+void Game::cabinMarks() {
+    CabinFrame& f = cabinFrame;
+    auto out = [&](double x, double y) {
+        const int ix = (int)std::floor(x), iy = (int)std::floor(y);
+        if (!f.sunk || ix < f.outX0 || iy < f.outY0 || ix >= f.outX1 || iy >= f.outY1) return false;
+        const unsigned b = fb.at(ix, iy) >> BANK_SHIFT;
+        return b == BANK_SPACE || b == 0;
+    };
+    auto disc = [&](double x, double y, double r) {   // its centre, four points round it, its point nearest the frame's middle
+        const double k = 0.6 * r;
+        if (out(x, y) || (k >= 1 && (out(x - k, y) || out(x + k, y) || out(x, y - k) || out(x, y + k)))) return true;
+        const double dx = FBW * 0.5 - x, dy = FBH * 0.5 - y, d = std::hypot(dx, dy), s = d > 0 ? std::min(1.0, 0.9 * r / d) : 0;
+        return s > 0 && out(x + dx * s, y + dy * s);
+    };
+    const Mat3 cam = viewBasis();
+    f.localOut = f.rockOut = f.remoteOut = false;
+    if (ship.localTarget >= 0 && ship.localTarget < (int)spaceR.bodyInfo.size()) {
+        const BodyScreenInfo& bi = spaceR.bodyInfo[ship.localTarget];
+        f.localOut = bi.inFront && disc(bi.sx, bi.sy, bi.radiusPx);
+    }
+    BeltRock rk;
+    if (sys.valid && ship.targetBelt >= 0 && ship.targetBelt < (int)sys.belts.size() && beltRockNow(rk)) {
+        const Vec3 v = cam * (rk.pos - ship.pos);
+        if (v.z > 0) f.rockOut = disc(FBW * 0.5 + spaceR.proj.f * v.x / v.z, FBH * 0.5 - spaceR.proj.f * v.y / v.z, spaceR.proj.f * rk.radiusKm / v.z);
+    }
+    if (ship.hasRemote) {
+        const Vec3 v = cam * (ship.remote.pos - ship.pos);
+        if (v.z > 0) f.remoteOut = out(FBW * 0.5 + spaceR.proj.f * v.x / v.z, FBH * 0.5 - spaceR.proj.f * v.y / v.z);
     }
 }
 

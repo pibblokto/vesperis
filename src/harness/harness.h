@@ -414,6 +414,7 @@ bool waysSite(StarSystem& sys, int bi, int need, bool night, double& lat, double
 void waysShot(SurfaceView& sv, StarNeighborhood& nb, SpaceRenderer& sr, double t, const std::string& fn);
 void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_t seed);
 int seedFates();   // J-08: `seed fates` (modes_seed_fates.cpp)
+bool sproutingWorld(int nth, StarSystem& sys, int& body, double& lat, double& lon, MadeWorld& m, int steps);   // B-490: one whose flyers sprout
 int seedKinds();   // J-11: `seed kinds` (modes_seed_kinds.cpp): the made kinds of forty worlds and six lines, the shares, each kind drawn
 int seedRecord();  // J-12: `seed record` (modes_seed_record.cpp): a seeded world's record in the catalogue and on the LIFE page, `record/`
 int seedCold();    // J-13: `seed cold` (modes_seed_cold.cpp): forty worlds' warmth on the ground and down, lines tuned for each on the ground and deep

@@ -610,6 +610,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     const bool discMadeOn = !c.skyMode && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck && bgen.made.on();
     const DiscMade& dm = discMade[bank == 3 ? 1 : 0];
     const bool madeGrowth = discMadeOn && madeGlobeGrowth(bgen.made) && dm.of(dm.stain, -1) >= 0;
+    const bool greening = madeGrowth && bgen.made.green > 0 && madeGreens(b.type);   // J-16 (KI-509): a carpet's grass in its line's bank
     const bool madeOnWater = bgen.made.tintOn == MADE_ON_WATER;
     const bool madeLooks = discMadeOn && (bgen.made.tinted || bgen.made.land.on || bgen.made.plant.on || bgen.made.snow.on);
     int madeClassOfMat[MAT_COUNT];
@@ -680,7 +681,8 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (milkyGlow || waterLights) glowW = map.waterTintAt(ti);
                 }
                 const int mln = madeGrowth || madeLooks ? (ph.ok ? plateMadeLine(ph) : (haveMap ? map.madeLineAt(map.texelIndex(lon, lat)) : -1)) : -1;
-                if (madeGrowth && madeGrowthMaterial(mat)) {   // J-09: the cover itself is the stain; its veins a ridge of noise, broad enough to
+                if (greening && mat == MAT_GRASS && mln >= 0 && mln < bgen.made.lines && bgen.made.spread[mln].growth.greens) tintPb = dm.of(dm.stain, mln);
+                else if (madeGrowth && madeGrowthMaterial(mat)) {   // J-09: the cover itself is the stain; its veins a ridge of noise, broad enough to
                     // keep their light through the frame's smoothing (a pixel-wide line is averaged into the dark round it)
                     tintPb = dm.of(dm.stain, mln);
                     if (dm.glowOf(dm.stain, dm.stainGlow, mln)) glowW = 0.8 * smoothstep(0.24, 0.06, std::fabs(fbm3(StarSystem::bodyFromLatLon(lat, lon) * 12.0, b.seed ^ 0x6E0E30ULL, 3)));

@@ -7,7 +7,9 @@ fates in `rules-surface-animals.md`.
 
 ## The made air and its climate
 - A world's made air is the layer's (its warmth, pressure, traits and looks), worked out in `life/seeding` from the lines that took [J-04]
-- A line's answer: its gene's amount, times its share of the world over 0.15, rising from its step 6 to its step 24 (after the looks) [J-04]
+- A line's answer: its gene's amount, times its share of the world over 0.15 (or of its room), rising from its step 6 to its step 24 [J-04], [B-475]
+- Its room is its kind of place's share at any warmth (its waters of its salts, its land, its plants); a line lives where it went down [B-475]
+- Its share is read again at the warmth its gas makes with the lines before it, kept where more: one that drives itself back keeps its air [B-476]
 - Each gas answers by its world: air or none (a gas leaves an airless one), oxygen and methane in it, seas, its pressure, three hashes [J-04]
 - CO2 warms, less where seas take it up; methane warms, a little where oxygen burns it, and hazes orange without; ammonia warms the cold [J-04]
 - Hydrogen warms a thick air only; nitrous oxide and hydrogen sulphide thin an oxygen air's ozone; oxygen forms one where there was none [J-04]
@@ -17,6 +19,7 @@ fates in `rules-surface-animals.md`.
 - Each look is 0 below the share its trait is named at: what is drawn is what the data sheet says [J-04]
 - The made climate moves every kind's caps (1.6 degrees a degree), snow and frost lines (154 m), ice and frozen waters [J-04], [B-448]
 - Warmed, a living world's ice sheets melt to bare ice and its glaciers back to their beds, their heights as generated [B-448]
+- A warmed sheet's margin melts dark (Greenland's dark zone) inward to 8% of its dome a degree, 80% at most: the white ice draws back [B-493]
 - It never moves a height or a river; a biome moves only across the ice's edge; the reefs and the alpine belt read them as generated [J-04]
 - Its heat dries the plants toward straw in every view (`madeMatColour`), kills a share of the trees, by how warm the world now is [J-04], [J-11]
 - The HUD's TEMP takes the made warmth where there is air, ATM its pressure; the data sheet's AIR line says what moved [J-04]
@@ -36,7 +39,7 @@ fates in `rules-surface-animals.md`.
 - A host of plants: its glow lights the forests at night, its dye new leaves, its frost burns them where frosts come, galls [J-05]
 - Galls where a host never stops or passes its genes on; a wood rotter blights in spots, stands or all, past 0.6 fells the forests [J-05]
 - A new ozone or an endless rain makes the plants lush (up to 1.6 times the trees), a thin ozone bleaches them [J-05], [B-460]
-- A crust is drawn in its form's texture (polygons, ripples, rosettes); a world's own crust stays rosettes [B-460]
+- A crust line's crust is drawn in its form's texture (polygons, ripples, rosettes), a tile a form; a world's own crust keeps its own [B-460], [B-487]
 - A trait is named only where its look can show: plants' on a world with plants, snow's on a line that lives under freezing [J-05]
 - A cover is laid at a share over a half on land alone; no height moves; each share lies on its own class's ground [J-05]
 - A sea under the ice's line colours the bare ground its water comes up through (the lineae, the cracks): RED CRACKS by its dye [J-13]
@@ -55,3 +58,6 @@ fates in `rules-surface-animals.md`.
 [J-11]: log/7-1.5.0.md
 [J-13]: log/7-1.5.0.md
 [J-14]: log/7-1.5.0.md
+[B-475]: log/7-1.5.0.md
+[B-476]: log/7-1.5.0.md
+[B-493]: log/7-1.5.0.md

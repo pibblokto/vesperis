@@ -7,7 +7,9 @@
 // says what the wild changed once the sequencer read one there), then its animals seen (GONE, DYING, CHANGED as the ground showed them)
 #include "game.h"
 #include "ui.h"
+#include "surface/animal_mesh.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <set>
@@ -52,6 +54,38 @@ double barUm(double widthUm) {
     return b;
 }
 uint64_t keySeed(const std::string& key) { uint64_t h = 1469598103934665603ULL; for (char c : key) h = (h ^ (uint8_t)c) * 1099511628211ULL; return mix64(h); }
+// B-500 (KI-488): each animal's fate over its world as the world's record holds it at the guide's clock (its made layer): on 128 points spread
+// over the world, where it lives (the land, the air over all, the waters as generated), GONE where it died out at every one, DYING where any
+// died, CHANGED where young were born changed (`AnimalMark` bits; none on a world nobody seeded). Before, its marks were only what the ground
+// showed the explorer
+void animalFates(const Body& b, const MadeWorld& m, std::vector<CatalogueAnimal>& animals) {
+    for (CatalogueAnimal& a : animals) a.fate = 0;
+    if (!m.on() || !m.fated() || animals.empty()) return;
+    const BodyGen g = BodyGen::make(b);
+    int steer = m.fate.steer;
+    for (int i = 0; i < m.lines && i < MADE_LINES; i++) steer |= m.spread[i].fate.steer;
+    const size_t n = animals.size();
+    std::vector<int> nc(n), where(n, 0), gone(n, 0);
+    std::vector<std::array<int, 3>> ch(n);
+    for (size_t k = 0; k < n; k++) { ch[k] = {-1, -1, -1}; nc[k] = animalChangesOf(animals[k].sp, steer, ch[k].data()); }
+    constexpr int POINTS = 128;
+    for (int p = 0; p < POINTS; p++) {
+        const double z = 1 - 2 * (p + 0.5) / POINTS, r = std::sqrt(std::max(0.0, 1 - z * z)), a = p * 2.399963229728653;   // (the golden angle)
+        const Vec3 u(r * std::cos(a), z, r * std::sin(a));
+        const bool wet = madeWetAt(sampleSurface(g, u, 50000));
+        const MadeFate f = madeFateAt(m, u, g.seed);
+        for (size_t k = 0; k < n; k++) {
+            CatalogueAnimal& A = animals[k];
+            if ((A.lives == 0 && wet) || (A.lives == 2 && !wet)) continue;
+            const AnimalFate af = animalFateOf(A.sp, f, ch[k].data(), nc[k]);
+            where[k]++;
+            if (af.gone()) gone[k]++;
+            else if (af.dead > 0) A.fate |= AM_DYING;
+            if (af.changed > 0) A.fate |= AM_CHANGED;
+        }
+    }
+    for (size_t k = 0; k < n; k++) if (where[k] > 0 && gone[k] == where[k]) animals[k].fate = (animals[k].fate & ~(uint32_t)AM_DYING) | AM_GONE;
+}
 }   // namespace
 
 // its sheet: the explorer's own, else a friend's lent (none: empty)
@@ -94,13 +128,22 @@ CatalogueWorld& Game::catalogueWorld(const std::string& w, LabSystems& systems, 
     if (animals && !W.animalsMade) {   // (the bestiary reads the world as generated: a species' index is the record's)
         const Body& b = S->bodies[body];
         const Bestiary B = Bestiary::make(b, BodyGen::make(b));
-        for (int i = 0; i < (int)B.species.size(); i++) { CatalogueAnimal a; a.words = B.words(i); a.way = B.species[i].way; a.social = B.species[i].social; W.animals.push_back(a); }
+        for (int i = 0; i < (int)B.species.size(); i++) {
+            CatalogueAnimal a; a.words = B.words(i); a.way = B.species[i].way; a.social = B.species[i].social;
+            a.sp = B.species[i]; a.hide[0] = B.style.colour[0]; a.hide[1] = B.style.colour[1];   // B-500: drawn on its sheet
+            a.lives = i < B.landCount ? 0 : (i < B.landCount + B.flyerCount ? 1 : 2);
+            W.animals.push_back(a);
+        }
+        W.genesis = lifeOf(*S)->bodies[body].genesis;   // B-500: its animals' kin
         W.animalsMade = true;
     }
     W.made.clear(); W.diedOut.clear(); W.took = 0;
+    for (CatalogueAnimal& a : W.animals) a.fate = 0;
     const std::vector<Seeding>& ss = seedingsAt(*S, body);
     if (!ss.empty()) {
-        W.made = madeKindName(madeWorldOf(*S, body, ss, guide.clock));
+        const MadeWorld mw = madeWorldOf(*S, body, ss, guide.clock);
+        W.made = madeKindName(mw);
+        animalFates(S->bodies[body], mw, W.animals);   // B-500
         for (const Seeding& s : ss) W.took += s.verdict.takes();
         const Biota& B = lifeOf(*S)->bodies[body];
         for (const Seeding& s : ss)   // (the first line to drive one out did it)
@@ -186,14 +229,33 @@ void Game::catalogueBuild() {
             rest.push_back(k);
         }
         std::stable_sort(read.begin(), read.end(), [](const std::pair<Lineage, std::string>& a, const std::pair<Lineage, std::string>& b) { return treeBefore(a.first, b.first); });
+        // B-500 (KI-488): each animal seen under its world's genesis once a species of that world descended from it was read (its kin known),
+        // after that genesis's species; else with those not yet sequenced
+        std::set<std::pair<std::string, uint64_t>> readOf;
+        for (const auto& [L, k] : read) readOf.insert({worldOfKey(k), L.genesis.id});
+        std::map<uint64_t, std::vector<std::string>> beasts;
+        std::vector<std::string> beastsUnread;
+        for (const std::string& a : animals) {
+            const CatalogueWorld& W = C.worlds[worldOfAnimal(a)];
+            if (readOf.count({worldOfAnimal(a), W.genesis.id})) beasts[W.genesis.id].push_back(a);
+            else beastsUnread.push_back(a);
+        }
+        auto beastRows = [&](uint64_t id) {
+            const auto it = beasts.find(id);
+            if (it == beasts.end()) return;
+            for (const std::string& a : it->second) { CatalogueRow r; r.kind = CR_ANIMAL; r.key = a; r.genesis = id; C.rows.push_back(r); }
+            beasts.erase(it);
+        };
         for (size_t i = 0; i < read.size(); i++) {
             const Genesis& g = read[i].first.genesis;
             if (i == 0 || g.id != read[i - 1].first.genesis.id) { CatalogueRow h; h.head = true; h.genesis = g.id; h.line = genesisWords(g); C.rows.push_back(h); }
             species(read[i].second, g.id);
+            if (i + 1 == read.size() || read[i + 1].first.genesis.id != g.id) beastRows(g.id);
         }
-        if (!rest.empty()) {
+        if (!rest.empty() || !beastsUnread.empty()) {
             CatalogueRow h; h.head = true; h.line = "NOT YET SEQUENCED"; C.rows.push_back(h);
             for (const std::string& k : rest) species(k, 0);
+            for (const std::string& a : beastsUnread) { CatalogueRow r; r.kind = CR_ANIMAL; r.key = a; C.rows.push_back(r); }   // B-500
         }
     }
     C.sel = -1;
@@ -287,7 +349,10 @@ std::string Game::catalogueAnimalName(const std::string& key) const {
 }
 std::string Game::catalogueAnimalMarks(const std::string& key) const {
     const auto it = guide.animals.find(key);
-    const uint32_t mk = it != guide.animals.end() ? it->second.marks : 0;
+    uint32_t mk = it != guide.animals.end() ? it->second.marks : 0;
+    const auto w = cat.worlds.find(worldOfAnimal(key));   // B-500: and its world's record's
+    const int i = indexOfAnimal(key);
+    if (w != cat.worlds.end() && i >= 0 && i < (int)w->second.animals.size()) mk |= w->second.animals[i].fate;
     std::string s = (mk & AM_GONE) ? "GONE" : ((mk & AM_DYING) ? "DYING" : "");
     if (mk & AM_CHANGED) s += s.empty() ? "CHANGED" : ", CHANGED";
     return s;
@@ -301,14 +366,20 @@ std::string Game::catalogueLine(const CatalogueRow& R, bool world) {
         if (!R.line.empty()) return R.line;
         const auto it = cat.worlds.find(R.key);
         const std::string kind = it == cat.worlds.end() ? "" : (!it->second.made.empty() ? it->second.made : std::string(KINDS[it->second.kind].name));
-        return upper(nameOfKey(R.key)) + (kind.empty() ? "" : " - " + kind);
+        const std::string name = upper(nameOfKey(R.key)), head = name + (kind.empty() ? "" : " - " + kind);
+        if (name != "UNKNOWN") return head;
+        // B-497 (KI-449): an unnamed world's place after its kind, as the microscope's lists say it (its kind left out where both run past the row)
+        const std::string where = labFolderWhere(R.key);
+        return (head + where).size() <= 50 ? head + where : name + where;
     }
     if (R.kind == CR_ANIMAL) {
         const CatalogueWorld& W = cat.worlds[worldOfAnimal(R.key)];
         const int i = indexOfAnimal(R.key);
         const std::string words = i >= 0 && i < (int)W.animals.size() ? W.animals[i].words : std::string("ANIMAL");
         const std::string named = catalogueAnimalName(R.key), marks = catalogueAnimalMarks(R.key);
-        return (named.empty() ? words : named + " - " + words) + (marks.empty() ? "" : " - " + marks);
+        std::string s = (named.empty() ? words : named + " - " + words) + (marks.empty() ? "" : " - " + marks);
+        if (cat.order == 1 && world) s += ", " + upper(nameOfKey(worldOfAnimal(R.key)));   // B-500: by kin, its world where it has room
+        return s;
     }
     if (R.kind == CR_WILD) {
         const auto it = cat.wilds.find(R.wild);
@@ -345,13 +416,15 @@ void Game::catalogueCountsMake() {
         const auto it = worlds.count(worldOfKey(kv.first)) ? cat.worlds.find(worldOfKey(kv.first)) : cat.worlds.end();
         N.diedOut += it != cat.worlds.end() && it->second.diedOut.count(indexOfKey(kv.first));
     }
-    for (const auto& kv : guide.animals) N.gone += (kv.second.marks & AM_GONE) != 0;
+    std::set<std::string> beastWorlds;   // B-500: the animals seen gone, the ground's or their world's record's
+    for (const auto& kv : guide.animals) if (beastWorlds.insert(worldOfAnimal(kv.first)).second) catalogueWorld(worldOfAnimal(kv.first), systems, true);
+    for (const auto& kv : guide.animals) N.gone += catalogueAnimalMarks(kv.first).compare(0, 4, "GONE") == 0;
 }
 
 // J-12: whether a row's species is gone from its world (a native a line drove out, an animal the ground showed GONE): drawn dim
 bool Game::catalogueGone(const CatalogueRow& R) {
     if (R.head || R.kind == CR_WILD) return false;
-    if (R.kind == CR_ANIMAL) { const auto it = guide.animals.find(R.key); return it != guide.animals.end() && (it->second.marks & AM_GONE); }
+    if (R.kind == CR_ANIMAL) return catalogueAnimalMarks(R.key).compare(0, 4, "GONE") == 0;   // B-500: the ground's or the record's
     const auto it = cat.worlds.find(worldOfKey(R.key));
     return it != cat.worlds.end() && it->second.diedOut.count(indexOfKey(R.key));
 }
@@ -442,20 +515,37 @@ void Game::renderCatalogueSheet() {
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN NEXT  V SEEING  N NAME  ESC LIST", HUD_DIM);
 }
 
-// J-12: an animal species' sheet, in words alone (the ground shows its body): its name, its world, its words, its way, what it was seen doing,
-// the nearest it came and the most seen at once, its fate as the ground showed it
+// J-12: an animal species' sheet: its name, its world, its words, its way, what it was seen doing, the nearest it came and the most seen at once,
+// its fate. B-500 (KI-488): its picture beside them, in the box a microbe's form takes (`renderCatalogueBeast`), its fate its world's record's too
 void Game::renderCatalogueAnimal() {
     const CatalogueRow& R = cat.rows[cat.sel];
     const CatalogueWorld& W = cat.worlds[worldOfAnimal(R.key)];
     const int i = indexOfAnimal(R.key);
     if (i < 0 || i >= (int)W.animals.size()) return;
     const CatalogueAnimal& A = W.animals[i];
+    {   // B-500: the animal drawn, its scale bar in metres
+        const double viewM = renderCatalogueBeast(A, keySeed(R.key));
+        drawRectRGB(canvas, FORM_X - 1, FORM_Y - 1, FORM_X + FORM_W, FORM_Y + FORM_H, nameIsForeign(R.key) ? HUD_CYAN : HUD_DIM);
+        static const double STEPS[] = {0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50};
+        const double widthM = viewM * FORM_W / FORM_H;
+        double bar = STEPS[0];
+        for (double s : STEPS) if (s <= widthM * 0.3) bar = s;
+        const int bx = FORM_X + 6, by = FORM_Y + FORM_H - 8, bw = std::max(2, (int)std::lround(bar / widthM * FORM_W));
+        fillRectRGB(canvas, bx - 1, by - 1, bx + bw + 1, by + 2, rgb(0, 0, 0));
+        fillRectRGB(canvas, bx, by, bx + bw, by + 1, rgb(255, 255, 255));
+        drawText(canvas, bx + bw + 4, by - 3, bar < 1 ? fmt("%.0f CM", bar * 100).c_str() : fmt("%.0f M", bar).c_str(), HUD_WHITE);
+    }
     const auto rec = guide.animals.find(R.key);
     const AnimalRecord r = rec != guide.animals.end() ? rec->second : AnimalRecord();
     const std::string named = catalogueAnimalName(R.key), marks = catalogueAnimalMarks(R.key);
     std::vector<std::pair<std::string, uint32_t>> lines;
     lines.push_back({named.empty() ? A.words : named, nameIsForeign(R.key) ? HUD_CYAN : HUD_WHITE});
-    lines.push_back({"FROM " + upper(nameOfKey(worldOfAnimal(R.key))), HUD_DIM});
+    const std::string from = upper(nameOfKey(worldOfAnimal(R.key)));
+    lines.push_back({"FROM " + from, HUD_DIM});
+    if (from == "UNKNOWN") {   // B-497: an unnamed world by its place, a line of its own
+        const std::string w = labFolderWhere(worldOfAnimal(R.key));
+        lines.push_back({w.substr(std::min(w.size(), w.find_first_not_of(' '))), HUD_DIM});
+    }
     if (!named.empty()) lines.push_back({A.words, HUD_GREEN});
     lines.push_back({std::string("WAY: ") + ANIMAL_WAY_NAMES[clampi(A.way, 0, WAY_COUNT - 1)] + ", " + SOCIAL_NAMES[clampi(A.social, 0, SOCIAL_COUNT - 1)], HUD_GREEN});
     std::string doing;
@@ -464,13 +554,82 @@ void Game::renderCatalogueAnimal() {
     if (r.most > 0) lines.push_back({fmt("NEAREST %d M, %d SEEN AT ONCE", r.nearest, r.most), HUD_GREEN});
     if (!marks.empty()) lines.push_back({"FATE: " + marks, HUD_RED});
     int y = FORM_Y;
+    const int x0 = FORM_X + FORM_W + 8, wrap = (UW - 6 - x0) / 6;   // (beside its picture, as a microbe's sheet)
     for (const auto& [s, c] : lines)
-        for (const std::string& w : wrapText(s, (size_t)((UW - 12) / 6))) {
+        for (const std::string& w : wrapText(s, (size_t)wrap)) {
             if (y > UH - 22) break;
-            drawText(canvas, FORM_X, y, w.c_str(), c);
-            y += 9;
+            drawText(canvas, x0, y, w.c_str(), c);
+            y += 8;
         }
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN NEXT  N NAME  ESC LIST", HUD_DIM);
+}
+
+// B-500 (KI-488): an animal on its sheet as the ground draws it: its body posed and made into shapes by the ground's own code (`poseAnimal`,
+// `emitAnimal`) standing three quarters on (a flyer on the wing, a swimmer afloat), turning a little, its world's two hide colours on a grey
+// ground, lit from over the viewer's left, smoothed as the ground's frames are; the box a microbe's form takes. Its height in view (metres)
+double Game::renderCatalogueBeast(const CatalogueAnimal& A, uint64_t seed) {
+    CatalogueState& C = cat;
+    if (!C.fb || C.fb->idx.size() != (size_t)FBW * FBH) C.fb = std::make_unique<Framebuffer>();
+    C.still = 0;   // (a microbe's still is drawn again after it)
+    Framebuffer& fb = *C.fb;
+    const RGB white(1, 1, 1);
+    auto ramp = [&](int bank, RGB c) { setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, c * 0.3f}, {34, c * 0.65f}, {47, c}, {56, lerp(c, white, 0.5f)}, {63, white}}); };
+    ramp(1, RGB(0.34f, 0.35f, 0.38f));                   // the ground behind it
+    ramp(2, A.hide[0]); ramp(3, A.hide[1]);              // its world's hides
+    ramp(29, RGB(0.86f, 0.83f, 0.74f)); ramp(30, RGB(0.13f, 0.11f, 0.1f)); ramp(8, RGB(0.95f, 0.95f, 0.9f)); ramp(31, RGB(0.62f, 0.28f, 0.2f));
+    fb.clear(pix(1, 10)); fb.clearDepth();
+    const int how = planFlies(A.sp.plan) ? 1 : (planSwims(A.sp.plan) ? 2 : 0);
+    const AnimalRig R = rigOf(A.sp.body);
+    const double tt = std::max(0.0, realTime - C.t0);
+    AnimalPoseIn in;
+    in.heading = PI / 2 - 0.45; in.seed = seed; in.gait = A.sp.gait; in.aloft = how == 1; in.afloat = how == 2;
+    AnimalPose P;
+    in.flap = how == 1 ? 0.85 : 0;
+    poseAnimal(R, in, P);   // (held still first: the box it is framed by, so a wing's beat never moves the camera)
+    Vec3 lo(1e9, 1e9, 1e9), hi(-1e9, -1e9, -1e9);
+    auto grow = [&](const Vec3& p, double r) {
+        lo = Vec3(std::min(lo.x, p.x - r), std::min(lo.y, p.y - r), std::min(lo.z, p.z - r));
+        hi = Vec3(std::max(hi.x, p.x + r), std::max(hi.y, p.y + r), std::max(hi.z, p.z + r));
+    };
+    for (int k = 0; k < P.rings && k < RIG_RINGS; k++) grow(P.ringC[k], std::max(P.ringW[k], P.ringH[k]));
+    for (int k = 0; k <= P.neckN && k <= RIG_CHAIN; k++) grow(P.neckP[k], P.neckR[k]);
+    for (int k = 0; k <= P.tailN && k <= RIG_CHAIN; k++) grow(P.tailP[k], P.tailR[k]);
+    grow(P.head0, 0.5 * std::max(P.headW, P.headH)); grow(P.head0 + P.headDir * P.headLen, 0.5 * std::max(P.headW, P.headH));
+    for (int l = 0; l < P.legs && l < RIG_LEGS; l++) for (int j = 0; j < P.joints && j < RIG_JOINTS; j++) grow(P.leg[l][j], P.legR);
+    for (int w = 0; w < P.wings && w < 4; w++) for (int j = 0; j < P.wingPts && j < 6; j++) grow(P.wing[w][j], 0);
+    const Vec3 mid = (lo + hi) * 0.5;
+    const double radius = std::max(0.05, 0.5 * length(hi - lo));
+    in.t = tt; in.heading += 0.3 * std::sin(0.35 * tt);
+    if (how == 1) in.flap = std::sin(4.0 * tt);
+    poseAnimal(R, in, P);
+    struct BeastView final : AnimalView {
+        double ca = 1, sa = 0;   // looking down a little
+        Vec3 view(const Vec3& p) const override { const Vec3 d = p - eye; return Vec3(d.x, d.y * ca + d.z * sa, -d.y * sa + d.z * ca); }
+        double light(const Vec3&, const Vec3& n) const override {
+            return 52 * std::pow(0.22 + 0.78 * std::max(0.0, dot(n, normalize(Vec3(-0.45, 0.8, -0.4)))), 0.65);
+        }
+    } V;
+    const double a = 0.32, D = 3.2 * radius;
+    V.ca = std::cos(a); V.sa = std::sin(a);
+    V.eye = mid - Vec3(0, -std::sin(a), std::cos(a)) * D;
+    Proj pj;
+    pj.f = 0.42 * FORM_H * FB_SCALE * D / radius;   // its radius 0.42 of the box's height
+    V.pxPerM = pj.f / D; V.fbScale = FB_SCALE; V.hide[0] = 2; V.hide[1] = 3; V.seed = seed;
+    ShapeList L;
+    L.begin(pj);
+    emitAnimal(R, P, V, 2, L);
+    setRasterBand(0, 1 << 30);
+    L.fill(fb);
+    fb.mush(2);
+    const int S = FB_SCALE, ox = (FBW - FORM_W * S) / 2, oy = (FBH - FORM_H * S) / 2;
+    C.animalPx = 0;
+    for (int y = oy; y < oy + FORM_H * S; y++)
+        for (int x = ox; x < ox + FORM_W * S; x++) { const int bk = bankOf(fb.idx[(size_t)y * FBW + x]); C.animalPx += bk == 2 || bk == 3; }
+    C.rgb.resize((size_t)FBW * FBH);
+    fb.toRGB(C.rgb.data(), 1.0);
+    for (int y = 0; y < FORM_H * S; y++)
+        std::memcpy(&canvas.px[(size_t)(FORM_Y * S + y) * FBW + FORM_X * S], &C.rgb[(size_t)(oy + y) * FBW + ox], (size_t)FORM_W * S * sizeof(uint32_t));
+    return FORM_H * S / V.pxPerM;
 }
 
 // its form live: one specimen in the way chosen, the view following it, drawn in the catalogue's framebuffer (every bank its way's) and its

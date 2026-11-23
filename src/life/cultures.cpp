@@ -159,14 +159,14 @@ struct SwitchCtx {
 };
 // J-01: a growth in a flask another's ice froze: what would live there waits in the ice (what dies there dies)
 void iced(Growth& g) { if (g.fit == GF_GROWS || g.fit == GF_COLD || g.fit == GF_HUNGRY || g.fit == GF_DARK) { g = Growth(); g.fit = GF_FROZEN; } }
-// its state from its numbers: crowded past its quorum's share, starving where the line as written would not grow (its crowd's food spent, nothing
-// it eats or no light, its medium killing it) but for the cold, which it waits out: judged of the line as written, so no switch turns it on itself
+// its state from its numbers: crowded past its quorum's share, starving where the line as written would not grow (nothing it eats or no light,
+// its medium killing it) but for the cold, which it waits out: judged of the line as written, so no switch turns it on itself. B-477: at its
+// crowd it is FULL, not starving: the incubator feeds it for good (R-449)
 uint32_t stateNow(const SwitchCtx& x, const SpState& S) {
     uint32_t st = x.fixed;
     if (S.N > 0 && S.N >= x.Nq) st |= CST_CROWDED;
     const Growth& g = x.gBase;
-    const bool grows = g.fit == GF_GROWS && !S.spent && (S.N <= 0 || S.N < 0.9 * std::pow(10.0, g.crowdLog));
-    if (!grows && g.fit != GF_COLD && g.fit != GF_FROZEN) st |= CST_STARVING;   // (J-01: frozen, it waits as in the cold)
+    if (g.fit != GF_GROWS && g.fit != GF_COLD && g.fit != GF_FROZEN) st |= CST_STARVING;   // (J-01: frozen, it waits as in the cold)
     return st;
 }
 
@@ -445,7 +445,7 @@ Growth growthIn(const CultureKind& k, const Medium& m, bool fed) {
             fE = LIGHT_FIT[clampi(s.pigment, 0, PG_COUNT - 1)][clampi(m.light, 0, CL_COUNT - 1)]; yield = -0.5;
             break;
         case LW_CHEMICAL:
-            if (m.energy != s.substrate && !fed) { g.fit = GF_HUNGRY; return g; }
+            if (m.energy != s.substrate && !fed && !acidFeeds(m, s.substrate)) { g.fit = GF_HUNGRY; return g; }
             yield = SUBSTRATE_YIELD[clampi(s.substrate, 0, SU_COUNT - 1)];
             break;
         case LW_DEAD:

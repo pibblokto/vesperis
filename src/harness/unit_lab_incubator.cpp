@@ -5,6 +5,7 @@
 #include "harness/harness.h"
 #include "harness/test_game.h"
 #include "life/cultures.h"
+#include "life/seeding.h"
 #include <map>
 #include <set>
 
@@ -314,6 +315,155 @@ void unitLabIncubator(const Check& check) {
                   "kept together, the flask growing on %s; C copied into IRON, twice refused %s; a pair kept each way round one at a load %s",
                   under ? "yes" : "NO", sp, alone ? "yes" : "NO", twice ? "yes" : "NO", folder ? "yes" : "NO", both ? "yes" : "NO", copied ? "yes" : "NO",
                   merged ? "yes" : "NO"));
+    }
+    {   // B-497 (KI-448, KI-449): unnamed worlds told apart by their place, never named. The scan region's first forty living worlds a vial each,
+        // every species seen and read and kept in the collection's UNSORTED folder: the tree's world pages (an unnamed world's name and kind,
+        // its place under them), the catalogue's world heads and the microscope's world folders each read apart from every other; on the
+        // folder's page (every world's species together) no two leaves alike as drawn
+        TestGame g; Input in;
+        labGame(g);
+        const int vials = stockVials(g, 40);
+        for (auto& kv : g.guide.microbes) {
+            kv.second.seen |= SEEN_KIN;
+            FlaskSpecies w;
+            if (!g.testSpeciesOfKey(kv.first, w)) continue;
+            KeptCulture K; K.who = w; K.folder = 0; g.testLab().kept.push_back(K);
+        }
+        auto alikeOf = [](const std::vector<std::string>& lines, std::string& example) {   // the lines that read as another does
+            std::map<std::string, int> n;
+            for (const std::string& l : lines) n[l]++;
+            int alike = 0;
+            for (const auto& kv : n) if (kv.second > 1) { alike += kv.second; if (example.empty()) example = kv.first; }
+            return alike;
+        };
+        std::vector<std::string> pages, leaves, heads, folders;
+        int folderPage = -1;
+        {
+            const TreeState& T = g.testTree();
+            for (int p = 0; p < (int)T.pages.size(); p++) {
+                if (T.pages[p].kind == TP_FOLDER && folderPage < 0) folderPage = p;
+                if (T.pages[p].kind == TP_WORLD) pages.push_back(T.pages[p].name + " | " + g.testTreePageWhere(p));
+            }
+        }
+        if (folderPage >= 0) {
+            g.testTreePage(folderPage);
+            for (const TreeLeaf& L : g.testTree().shown) if (L.depth == 0 && !L.lab && L.body >= 0) leaves.push_back(TestGame::testTreeLine(L, true));
+        }
+        g.openScreen(GameState::CATALOGUE);
+        for (const CatalogueRow& r : g.testCat().rows) if (r.head && !r.key.empty()) heads.push_back(g.testCatLine(r));
+        g.closeScreen();
+        for (const LabFolder& f : g.testVialFolders()) folders.push_back(f.name + labFolderWhere(f.key));
+        std::string pe, le, he, fe;
+        const int pageAlike = alikeOf(pages, pe), leafAlike = alikeOf(leaves, le), headAlike = alikeOf(heads, he), folderAlike = alikeOf(folders, fe);
+        int unnamedPages = 0;
+        for (const std::string& p : pages) unnamedPages += p.compare(0, 7, "UNKNOWN") == 0;
+        check("incubator: unnamed worlds told apart by their place: the tree's pages and a folder's leaves, the catalogue's heads, the microscope's folders (B-497)",
+              vials == 40 && unnamedPages >= 30 && folderPage >= 0 && leaves.size() > 100 && pageAlike == 0 && leafAlike == 0 && headAlike == 0 && folderAlike == 0,
+              fmt("%d vials; the tree: %zu world pages (%d unnamed), %d alike%s; the folder's page: %zu leaves, %d alike%s; the catalogue: %zu world heads, %d alike%s; "
+                  "the microscope: %zu world folders, %d alike%s",
+                  vials, pages.size(), unnamedPages, pageAlike, pe.empty() ? "" : (" ('" + pe + "')").c_str(), leaves.size(), leafAlike,
+                  le.empty() ? "" : (" ('" + le + "')").c_str(), heads.size(), headAlike, he.empty() ? "" : (" ('" + he + "')").c_str(), folders.size(),
+                  folderAlike, fe.empty() ? "" : (" ('" + fe + "')").c_str()));
+    }
+    {   // B-500 (KI-488): the catalogue's animals as the record holds them. `seed record`'s world (a nerve poison's line at its 64th step), every
+        // animal of its bestiary seen and none marked on the ground: by world their fates read from the world's record (some DYING or GONE), the
+        // same animals with the line not yet let go marked nothing; by kin every animal listed too, with those not yet sequenced, then under its
+        // world's genesis once one of the world's own species was read; each animal's sheet drawing it (its picture's pixels)
+        SeedRecordCase rc;
+        const bool found = seedRecordCase(rc);
+        int seen = 0, marked = 0, before = 0, kinRows = 0, unread = 0, headedFirst = 0, rowsRead = 0, underHead = 0, unreadAfter = 0, worldRows = 0, sheets = 0,
+            drawn = 0, fewest = 1 << 30;
+        std::string example;
+        if (found) {
+            TestGame g; Input in;
+            seedRecordGame(g, rc, "unit_b500");
+            const StarSystem& S = rc.c.sys;
+            const int bi = rc.c.body;
+            const std::string world = Guide::bodyKey(S.star.sx, S.star.sy, S.star.sz, bi);
+            const Bestiary A = Bestiary::make(S.bodies[bi], BodyGen::make(S.bodies[bi]));
+            for (int i = 0; i < (int)A.species.size(); i++) {
+                AnimalRecord& r = g.guide.animals[world + "/A" + std::to_string(i)];
+                r.doing = 1u << CS_WALK; r.nearest = 20; r.most = 2;
+                seen++;
+            }
+            auto marks = [&](int& n) {   // the animal rows by world that read a fate
+                n = 0;
+                g.openScreen(GameState::CATALOGUE);
+                for (const CatalogueRow& r : g.testCat().rows) {
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    const std::string l = g.testCatLine(r);
+                    if (l.find(" - GONE") != std::string::npos || l.find(" - DYING") != std::string::npos || l.find(" - CHANGED") != std::string::npos) {
+                        n++;
+                        if (example.empty()) example = l;
+                    }
+                }
+                g.closeScreen();
+            };
+            marks(marked);
+            {   // by kin: each animal a row, with those not yet sequenced; one of the world's own species read, under its genesis's head
+                const Biota& B = lifeOf(S)->bodies[bi];
+                auto kinPage = [&](int& rows, int& headed, int& notRead) {
+                    rows = headed = notRead = 0;
+                    g.openScreen(GameState::CATALOGUE);
+                    pressKey(g, in, KEY_TAB);
+                    uint64_t head = 0; bool unreadHead = false;
+                    for (const CatalogueRow& r : g.testCat().rows) {
+                        if (r.head) { head = r.genesis; unreadHead = r.line == "NOT YET SEQUENCED"; continue; }
+                        if (r.kind != CR_ANIMAL) continue;
+                        rows++;
+                        headed += head != 0 && head == B.genesis.id;
+                        notRead += unreadHead;
+                    }
+                    pressKey(g, in, KEY_TAB);   // (by world again)
+                    g.closeScreen();
+                };
+                kinPage(kinRows, headedFirst, unread);
+                for (const Microbe& m : B.species)   // the world's first species of its own genesis, read
+                    if (m.genesis == B.genesis.id && m.state == SS_LIVING) {
+                        g.guide.microbes[world + "/M" + std::to_string(m.index)].seen |= SEEN_FORM | SEEN_KIN;
+                        break;
+                    }
+                kinPage(rowsRead, underHead, unreadAfter);
+                g.openScreen(GameState::CATALOGUE);
+                // each animal's sheet: Enter on its row, a frame, the picture's pixels
+                for (int k = 0; k < (int)g.testCat().rows.size(); k++) {
+                    const CatalogueRow& r = g.testCat().rows[k];
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    worldRows++;
+                    g.testCat().sel = k; g.testCat().page = 1;
+                    g.frame(in, 1.0 / 30); in.newFrame();
+                    sheets++;
+                    const int px = g.testCat().animalPx;
+                    drawn += px > 0;
+                    fewest = std::min(fewest, px);
+                    g.testCat().page = 0;
+                }
+                g.closeScreen();
+            }
+            {   // the line not yet let go: the guide's clock back to its seeding's
+                TestGame p;
+                seedRecordGame(p, rc, "unit_b500_before");
+                p.testClockSkip(-rc.end);
+                p.guide.animals = g.guide.animals;
+                p.openScreen(GameState::CATALOGUE);
+                for (const CatalogueRow& r : p.testCat().rows) {
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    const std::string l = p.testCatLine(r);
+                    before += l.find(" - GONE") != std::string::npos || l.find(" - DYING") != std::string::npos || l.find(" - CHANGED") != std::string::npos;
+                }
+                p.closeScreen();
+                remove(p.guidePath.c_str());
+            }
+            remove(g.guidePath.c_str());
+        }
+        check("incubator: the catalogue's animals: their fates as the world's record holds them, by kin too, each drawn on its sheet (B-500)",
+              found && seen >= 3 && marked > 0 && before == 0 && kinRows == seen && unread == seen && headedFirst == 0 && rowsRead == seen && underHead == seen &&
+                  unreadAfter == 0 && worldRows == seen && sheets == seen && drawn == seen,
+              fmt("%s; %d animals seen, none marked on the ground: by world %d read a fate (%s), %d with the line not yet let go; by kin %d rows, %d with "
+                  "those not yet sequenced (%d under its genesis); one of its species read: %d rows, %d under its world's genesis (%d not); %d sheets, %d "
+                  "drawn (the fewest pixels %d)",
+                  found ? "seed record's world" : "NO WORLD", seen, marked, example.empty() ? "none" : example.c_str(), before, kinRows, unread, headedFirst,
+                  rowsRead, underHead, unreadAfter, sheets, drawn, fewest == (1 << 30) ? 0 : fewest));
     }
     remove(GUIDE);   // (the group's guide, removed after it)
 }

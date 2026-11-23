@@ -119,9 +119,44 @@ void unitSeedingCold(const Check& check) {
                   deepOk ? "dark rock with hydrogen" : "NOT THE DEEP'S", U.place.name.c_str(), U.place.hab.meanC, sea ? "" : " NOT ITS SEA",
                   seedVerdictWords(M).c_str(), seedVerdictWords(deep).c_str(), seedVerdictWords(ground).c_str()));
     }
-    {   // a deep line's spread: a red hydrogen eater in the rock colours nothing of the surface and its gases reach the air at part of its share; under
-        // the europan world's ice it reddens the cracks (RED CRACKS) and is found in a plume's vial, never in its sea's or the rock's; a deep line that
-        // never stops and binds grows over nothing; a `seeded` line keeps its depth, a line on the ground reads as before
+    {   // B-478 (KI-505): a small cold world's drill goes down to where its rock is 10 C warm (120 km at most), so no world of the forty that is
+        // no furnace (a sea under its ice aside) is closed for the cold of its rock: a hydrogen eater tuned for a depth takes at one, the worlds
+        // under 1,000 km too (a world whose rock is too hot from its first kilometre stays closed, as a furnace's ground)
+        int worlds = 0, open = 0, small = 0, smallOpen = 0, coldShut = 0;
+        std::string smalls, hot;
+        for (const SeedCase& k : cases) {
+            const Body& b = k.sys.bodies[k.body];
+            if (seedPlaceFacts(k.sys, k.body, k.lat, k.lon).fate == SF_FURNACE || iceShellKm(b) > 0) continue;
+            const std::vector<double> d = seedDepthsOf(k.sys, k.body);
+            if (d.size() < 2) continue;
+            worlds++;
+            const bool isSmall = b.radiusKm < 1000;
+            small += isSmall;
+            bool took = false;
+            double at = 0, deepestC = -1e9;
+            for (size_t i = 1; i < d.size() && !took; i++) {
+                const SeedVerdict D = seedPlaceFacts(k.sys, k.body, k.lat, k.lon, d[i]);
+                deepestC = D.place.hab.meanC;
+                if (D.fate == SF_FURNACE || D.place.hab.meanC < BRINE_COLDEST_C) continue;
+                const SeedLine t = seedLineFor(*hs, hb, hsp, seedTunedEdits(*hs, hb, hsp, D));
+                took = seedVerdictOf(k.sys, k.body, t, k.lat, k.lon, d[i]).takes();
+                at = d[i];
+            }
+            open += took; smallOpen += took && isSmall;
+            coldShut += !took && deepestC < BRINE_COLDEST_C;
+            if (isSmall)
+                smalls += fmt("%s%s of %.0f km %s", smalls.empty() ? "" : ", ", KINDS[b.type].name, b.radiusKm,
+                              took ? fmt("open %.0f km down", at).c_str() : fmt("closed, %.0f C at %.0f km", deepestC, d.back()).c_str());
+            if (!took && deepestC >= BRINE_COLDEST_C) hot += fmt("%s%s of %.0f km", hot.empty() ? "" : ", ", KINDS[b.type].name, b.radiusKm);
+        }
+        check("seeding: a small cold world's drill goes deeper, no world's rock closed for its cold (B-478)", worlds > 20 && coldShut == 0 && small >= 2 && smallOpen == small,
+              fmt("(%d of %d worlds' rock open to a tuned hydrogen eater, %d closed for its cold; under 1,000 km: %s; closed for its heat: %s)", open, worlds, coldShut,
+                  smalls.c_str(), hot.empty() ? "none" : hot.c_str()));
+    }
+    {   // a deep line's spread: a red hydrogen eater in the rock colours no water or other ground (its seeps on the bare rock alone, B-479) and its
+        // gases reach the air at part of its share; under the europan world's ice it reddens the cracks (RED CRACKS) and is found in a plume's vial,
+        // never in its sea's or the rock's; a deep line that never stops and binds grows over nothing; a `seeded` line keeps its depth, a line on
+        // the ground reads as before
         std::vector<GeneEdit> dye = seedLineEdits(hwild.genes, SL_DYE);
         const SeedVerdict D5 = seedPlaceFacts(thin->sys, thin->body, thin->lat, thin->lon, 5);
         std::vector<GeneEdit> e = seedTunedEdits(*hs, hb, hsp, D5);
@@ -130,8 +165,9 @@ void unitSeedingCold(const Check& check) {
         const Seeding rock = deepSeeding(thin->sys, thin->body, red, thin->lat, thin->lon, 5);
         const double end = (MADE_STEPS * MADE_STEP_S + 1) / std::max(0.05, rock.verdict.pace);
         const MadeWorld mr = madeWorldOf(thin->sys, thin->body, {rock}, end);
-        const bool rockNone = rock.verdict.takes() && red.kind.world.dyes() && mr.lines == 1 && mr.spread[0].deep == MADE_DEEP_ROCK && !mr.tinted && !mr.land.on && !mr.snow.on &&
-                              mr.grounds == 0 && rock.verdict.share > 0 && rock.verdict.share <= DEEP_GAS_SHARE;
+        const bool rockNone = rock.verdict.takes() && red.kind.world.dyes() && mr.lines == 1 && mr.spread[0].deep == MADE_DEEP_ROCK && !mr.tinted && !mr.snow.on &&
+                              mr.land.kind == MGT_COLOURED_SEEPS && mr.grounds == MGT_COLOURED_SEEPS && rock.verdict.share > 0 &&
+                              rock.verdict.share <= DEEP_GAS_SHARE;   // (B-479: its seeps alone, on its bare rock)
         const double shell = iceShellKm(europan->sys.bodies[europan->body]);
         std::vector<GeneEdit> eu = seedTunedEdits(*hs, hb, hsp, seedPlaceFacts(europan->sys, europan->body, europan->lat, europan->lon, shell));
         for (const GeneEdit& x : dye) eu.push_back(x);
@@ -161,9 +197,76 @@ void unitSeedingCold(const Check& check) {
                           seededLine(ground).find(" 12") == seededLine(ground).size() - 3;
         check("seeding: a deep line's spread (J-13)", rockNone && cracks && vials && noGrowth && kept,
               fmt("(a red line 5 km down: %s, %s, its gases' share %.2f; under the europan ice: %s, MADE %s; vials %s; never stopping 5 km down: %s; the `seeded` line '%s' %s)",
-                  seedVerdictWords(rock.verdict).c_str(), rockNone ? "nothing on the surface" : "SEEN ON THE SURFACE", rock.verdict.share, seedVerdictWords(under.verdict).c_str(),
+                  seedVerdictWords(rock.verdict).c_str(), rockNone ? "its seeps alone on the surface" : "MORE THAN ITS SEEPS ON THE SURFACE", rock.verdict.share, seedVerdictWords(under.verdict).c_str(),
                   words.empty() ? "NOTHING" : words.c_str(), vials ? "a plume's alone" : "WRONG", noGrowth ? "no overgrowth" : "OVERGROWN OR NOT A GROWER", line.c_str(),
                   kept ? "read back" : "NOT READ BACK"));
+    }
+    {   // B-479 (KI-506): a deep line shows where its water comes up: a red one 5 km down in the thin-aired world's rock stains its bare rock in
+        // patches (RED SEEPS), no other ground; a glowing one under the europan world's ice lights its cracks at night (GLOWING CRACKS): on the
+        // ground at night its land look's bank brighter than a red line's cracks there
+        const std::vector<GeneEdit> dye = seedLineEdits(hwild.genes, SL_DYE);
+        std::vector<GeneEdit> e = seedTunedEdits(*hs, hb, hsp, seedPlaceFacts(thin->sys, thin->body, thin->lat, thin->lon, 5));
+        for (const GeneEdit& x : dye) e.push_back(x);
+        SeedLine red = seedLineFor(*hs, hb, hsp, e); red.key = hwild.key + "/S1";
+        const Seeding rock = deepSeeding(thin->sys, thin->body, red, thin->lat, thin->lon, 5);
+        const MadeWorld mr = madeWorldOf(thin->sys, thin->body, {rock}, (MADE_STEPS * MADE_STEP_S + 1) / std::max(0.05, rock.verdict.pace));
+        auto wordsOf = [](const MadeWorld& m) { std::string w; for (const std::string& t : madeTraitWords(m, false)) w += (w.empty() ? "" : ", ") + t; return w; };
+        const std::string rockWords = wordsOf(mr);
+        BodyGen g = BodyGen::make(thin->sys.bodies[thin->body]); g.made = mr;
+        int rockN = 0, stained = 0, otherStained = 0;
+        for (int j = 0; j < 18; j++)
+            for (int i = 0; i < 36; i++) {
+                const SurfaceSample z = sampleSurface(g, StarSystem::bodyFromLatLon((j + 0.5) / 18 * PI - PI / 2, (i + 0.5) / 36 * TAU - PI), 2000);
+                const bool isRock = z.material == MAT_ROCK || z.material == MAT_BASALT || z.material == MAT_GRAPHITE || z.material == MAT_METAL || z.material == MAT_QUARTZ;
+                rockN += isRock;
+                if (z.madeTint > 0.5) (isRock ? stained : otherStained)++;
+            }
+        const bool seeps = rock.verdict.takes() && rockWords.find("RED SEEPS") != std::string::npos && stained > 0 && stained * 10 < rockN * 9 && otherStained == 0;
+        // under the ice: a glowing line's cracks and a red one's, on the ground at the europan world's night
+        const double shell = iceShellKm(europan->sys.bodies[europan->body]);
+        const std::vector<GeneEdit> tunedU = seedTunedEdits(*hs, hb, hsp, seedPlaceFacts(europan->sys, europan->body, europan->lat, europan->lon, shell));
+        GeneEdit glow;
+        const bool donor = seedGlowDonor(glow);
+        std::vector<GeneEdit> eg = tunedU, er = tunedU;
+        if (donor) eg.push_back(glow);
+        for (const GeneEdit& x : dye) er.push_back(x);
+        SeedLine lit = seedLineFor(*hs, hb, hsp, eg), redU = seedLineFor(*hs, hb, hsp, er);
+        lit.key = hwild.key + "/S4"; redU.key = hwild.key + "/S2";
+        const Seeding ug = deepSeeding(europan->sys, europan->body, lit, europan->lat, europan->lon, shell), ur = deepSeeding(europan->sys, europan->body, redU, europan->lat, europan->lon, shell);
+        const MadeWorld mg = madeWorldOf(europan->sys, europan->body, {ug}, (MADE_STEPS * MADE_STEP_S + 1) / std::max(0.05, ug.verdict.pace));
+        const MadeWorld mrU = madeWorldOf(europan->sys, europan->body, {ur}, (MADE_STEPS * MADE_STEP_S + 1) / std::max(0.05, ur.verdict.pace));
+        const std::string glowWords = wordsOf(mg);
+        const StarSystem& es = europan->sys;
+        const int eb = europan->body;
+        const Vec3 at = StarSystem::bodyFromLatLon(europan->lat, europan->lon);
+        const double turn = std::max(3600.0, std::fabs(es.bodies[eb].rotPeriod));
+        double tNight = 20000, lo = 2;
+        for (int k = 0; k < 96; k++) {
+            const double tt = 20000 + turn * k / 96;
+            const StarSystem::Light L = es.lightAt(es.bodyPos(eb, tt), tt);
+            const double sun = dot(normalize(es.bodyFrame(eb, tt) * (L.fromCompanion ? L.dir : normalize(es.star.pos - es.bodyPos(eb, tt)))), at);
+            if (sun < lo) { lo = sun; tNight = tt; }
+        }
+        auto nightLand = [&](const MadeWorld& m) {   // (the land look's bank's lit stop at night: -1 with no land look)
+            StarSystem sys = es;
+            SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb;
+            sv.site.made = m;
+            sv.init(&sys, eb, europan->lat, europan->lon, tNight);
+            nb.update(sv.site.worldPos(tNight, 0, 0, 0));
+            Input in;
+            for (int k = 0; k < 2; k++) { sv.update(1.0 / 30, in, tNight, false); Framebuffer fb0; sv.render(fb0, tNight, nb.stars, sr, 1.0); }
+            Framebuffer fb; sv.render(fb, tNight, nb.stars, sr, 1.0);
+            const int bank = sv.testMadeBank(MC_LAND);
+            if (bank < 0) return -1.0;
+            const uint8_t* q = &fb.pal[(bank * 64 + 47) * 3];
+            return 0.2126 * q[0] + 0.7152 * q[1] + 0.0722 * q[2];
+        };
+        const double litY = nightLand(mg), redY = nightLand(mrU);
+        const bool cracks = donor && ug.verdict.takes() && glowWords.find("GLOWING CRACKS") != std::string::npos && litY > 0 && redY >= 0 && litY > redY + 20;
+        check("seeding: a deep line seen where its water comes up, red seeps and glowing cracks (B-479)", seeps && cracks && lo < -0.2,
+              fmt("(a red line 5 km down: MADE %s, %d of %d rock points of the thin-aired world stained, %d of the rest; a glowing line under the europan ice: MADE %s, "
+                  "its cracks' lit stop at night %.0f, a red line's %.0f, the sun %.2f)", rockWords.empty() ? "NOTHING" : rockWords.c_str(), stained, rockN, otherStained,
+                  glowWords.empty() ? "NOTHING" : glowWords.c_str(), litY, redY, lo));
     }
     {   // the seed page: Page Down takes it down the thin-aired world's levels (its THERE the deep's), refused past the last and above the ground;
         // Enter sends the drone with its depth, kept in a save, let go as a `seeded` line with it; the data sheet says how deep

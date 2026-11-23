@@ -42,7 +42,9 @@ nobody seeded is drawn as before. J-10 (still 18): a seeded world's ruins overgr
 draws its ruins and plays its sounds as before. J-11 (still 18): a seeded world's made kind (the data sheet's line, sentence and phrase; a
 made hothouse's or snowball's dead cover over its own ground); a world nobody seeded is drawn and named as before. J-12 (still 18): a
 seeded world's record (the natives a line drove out gone from its vials, a line found wild, the catalogue's rows and the LIFE page's); a
-world nobody seeded is drawn and sampled as before.
+world nobody seeded is drawn and sampled as before. B-504 in J-16 (still 18): a chemotroph is made only from a world under 300 K as drawn
+(its mean under 50 C), so a hot tectonic or rocky world of a dead star or a brown dwarf stays as drawn: 65 chemotrophs of 20,004 bodies
+near the start are 48.
 
 ## 17
 

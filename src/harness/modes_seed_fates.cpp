@@ -330,6 +330,28 @@ std::vector<uint32_t> frameOf(FateView& V) {
 std::string lowerTag(const char* s) { std::string t; for (const char* p = s; *p; p++) t += *p == ' ' || *p == '-' ? '_' : (char)std::tolower((unsigned char)*p); return t; }
 }   // namespace
 
+// B-490: the sprouting recipe's line on the `nth` of the fates' worlds where it makes its flyers sprout and the world has swimmers, the layer
+// `steps` on (the unit's)
+bool sproutingWorld(int nth, StarSystem& sys, int& body, double& lat, double& lon, MadeWorld& m, int steps) {
+    const std::vector<FateRecipe> recipes = fateRecipes();
+    FateRecipe sprouting = recipes[0];
+    for (const FateRecipe& R : recipes) if (R.trait == MF_SPROUTING) sprouting = R;
+    for (const SeedAirCase& c : fateCases()) {
+        SeedLine line;
+        Seeding sd;
+        if (!fateLine(c, sprouting, line) || !fateLayer(c, line, sd, m, steps)) continue;
+        const Body& b = c.sys.bodies[c.body];
+        const Bestiary B = Bestiary::make(b, BodyGen::make(b));
+        if (!B.flyerCount || !B.swimmerCount) continue;
+        const MadeFate here = madeFateAt(m, StarSystem::bodyFromLatLon(sd.lat, sd.lon), b.seed);
+        int ch[3] = {-1, -1, -1};
+        if (animalFateOf(B.species[B.firstFlyer()], here, ch, 0).sickness != MF_SPROUTING || nth-- > 0) continue;
+        sys = c.sys; body = c.body; lat = sd.lat; lon = sd.lon;
+        return true;
+    }
+    return false;
+}
+
 // a sheet of cells side by side (each a frame halved: the mean of four), `cols` to a row
 void writeSheet(const std::vector<std::vector<uint32_t>>& cells, int w, int h, int cols, const std::string& fn) {
     if (cells.empty()) return;

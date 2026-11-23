@@ -55,7 +55,9 @@ void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
             r = madeGrowthMaterial(mm) ? ramps[mm] : ramps[MAP_MADE + mm];
             if (ln >= g.made.lines || mm == MAT_LAVA || (g.made.tinted && (g.made.tintOn & MADE_ON_LAND))) continue;
             const MadeSpread& sp = g.made.spread[ln];
-            if (madeGrowthMaterial(mm)) { if (sp.growth.on()) r = materialRamp(madeMatColour(g, mm, ln) * lightC, hasSky ? &skyL : nullptr, 1.0); }
+            if (madeGrowthMaterial(mm) || (mm == MAT_GRASS && sp.growth.greens)) {   // (J-16, KI-509: a carpet's grass its line's)
+                if (sp.growth.on()) r = materialRamp(madeMatColour(g, mm, ln) * lightC, hasSky ? &skyL : nullptr, 1.0);
+            }
             else if (mm == MAT_WATER) { if (g.made.tinted && sp.waterTinted) r = materialRamp(sp.waterTint * lightC, hasSky ? &skyL : nullptr, 1.0); }
             else if (sp.look[madeClassOf(g, mm, false)].on && sp.look[madeClassOf(g, mm, false)].tinted)
                 r = materialRamp(sp.look[madeClassOf(g, mm, false)].tint * lightC, hasSky ? &skyL : nullptr, 1.0);
@@ -111,6 +113,7 @@ void Game::buildLandingMapBase() {
         for (int x = 0; x < W; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
     double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
     const bool survey = sys.sunless();   // D-02: the altimeter's map (no clouds: it reads the ground)
+    const bool greened = g.made.green > 0 && madeGreens(g.type);   // J-16 (KI-509): its grass a carpet's, each texel its own line's
     double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++)
         for (int x = 0; x < W; x++) {
@@ -118,7 +121,8 @@ void Game::buildLandingMapBase() {
             int mat = m.material[i];
             double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
             double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);   // light from the north-west
-            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1, m.madeTintAt(i), m.madeLineAt(i));
+            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1,
+                                     greened && mat == MAT_GRASS ? 1.0 : m.madeTintAt(i), m.madeLineAt(i));
             double r = base & 255, gg = (base >> 8) & 255, bl = (base >> 16) & 255;
             if (mat == MAT_LAVA) mapEmissive[i] = 1;
             if (mapClouds && atmo && !survey) {

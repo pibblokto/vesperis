@@ -26,7 +26,8 @@ Rules in force for vesperis_test, its checks and the proof that a change changes
 - Unit checks about giants read every giant (made classes too), not just the gas giant type [P-07]
 - The flow only reports: a landing in the sea or a buggy at 0 km/h still exits 0, so read its status lines [G-04]
 - The flow lands by `testLandSite` (lit, level, dry, from the body's seed) and drives only briefly: `drive` is the long-drive test [G-04], [S-01], [N4-02]
-- The flow's game runs its stages before the stages that make games of their own (KI-450); a new stage goes where no later frame moves [Y-02]
+- A game made beside the flow's sets the process's frame size: the flow's game takes its own back before its frames, so a stage may follow one [Y-02], [B-507]
+- A new stage of the flow goes where no later frame moves [Y-02]
 - `descent` holds B-307's bar (grade 0.45, nothing airborne; checked every 2 m, 3 m clear of colliders) at the mountain pin (KI-343: it fails) [G-04], [S-01]
 - `tour` opens each stop's state as the game does, then every row by `openScreen` or a named setup, and runs the stop's commands [U-01], [U-06]
 - A new screen needs no harness edit: the tour's rows and `unit states` read the table, and a scene or a world set up first is a stop [U-06]
@@ -34,6 +35,7 @@ Rules in force for vesperis_test, its checks and the proof that a change changes
 
 ## Frames that repeat
 - A harness frame that draws a body first waits for its map (`testWaitMapOf`, `mapIfReady`); without the wait, code placement can flip it [E-02], [E-03]
+- At each new place a scene waits for every map of the system, made for the season its frames draw (`testWaitMaps`): a globe without one is flat [B-506]
 - A test waits for a thread at one instant (dt 0: `testWaitMap`, `testPlayerWaiting`), so a faster binary moves no clock [F-02], [F-05], [F-07]
 - A render sets the renderer's season before warming a map (`warmMaps` takes its t); `testParkAt` does both (`waitMap` false: no wait) [P-01], [F-02], [B-438]
 - `bothways` and the unit draw a frame at one instant (`frame(in, 0)`) twice with the workers, then on one thread: any difference fails [F-01], [B-423]
@@ -72,3 +74,5 @@ Rules in force for vesperis_test, its checks and the proof that a change changes
 [B-438]: log/7-1.5.0.md
 [B-440]: log/7-1.5.0.md
 [Y-02]: log/7-1.5.0.md
+[B-506]: log/7-1.5.0.md
+[B-507]: log/7-1.5.0.md

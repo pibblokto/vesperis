@@ -1,8 +1,7 @@
 # Rules: the ship: its plan, its rooms, the light, the walk, the sight, life aboard
 
-Rules in force for the Stardrifter's interior: its plan, how a room is drawn and lit, the walk and where the explorer stands, one
-line per rule with its log entries (`log/`). A milestone that sets or changes a rule edits its line here; a replaced rule moves to
-`superseded.md`. Devices: `rules-game-devices.md`; a device's row: `rules-game-screens.md`.
+Rules for the Stardrifter's interior, one line per rule with its log entries (`log/`); a replaced rule moves to `superseded.md`.
+Devices: `rules-game-devices.md`; a device's row: `rules-game-screens.md`.
 
 ## The plan
 - The ship is its plan's rows (`game/ship_plan`): rooms, ways, windows, fixtures, lamps, views; a device is a `cabinDevices` row in a room [I-01], [I-02]
@@ -18,10 +17,11 @@ line per rule with its log entries (`log/`). A milestone that sets or changes a 
 - A seen room's pieces are projected once a frame, in order (`ShapeList`), left out off its box and filled only in its rows [I-01], [I-02]
 - A window's glass is written to depth only (no room behind it drawn through it); lamp glows after the bands [I-01], [I-02]
 - No window, oculus or dome in view and the hull polarised: no space view (the frame cleared, bodies' places kept) [I-02]
-- Skipping and clipping leave the same pixels (`ship rooms` draws each unclipped, with the space view: none differ) [I-02]
+- Skipping and clipping leave the same pixels (`ship rooms` draws each unclipped: none differ) [I-02]
 - Banks are dealt once the outside is drawn (`cabinDeal`): nearest asks first, to their homes, else free banks; the rest dim or grey [I-03], [B-435]
 - A device behind the eye asks no bank; each device has its own home (a home asked twice keeps one colour: 30 is the drones') [Z-06]
 - The pool: every bank but 0, 8, 10 and, looking out, 7 (the outside in the glass's box, in its own palette); no bank holds two hues [I-03], [B-437]
+- Aboard, a target is marked only where the glass shows its point (the outside's bank there, the cabin drawn) [B-501]
 
 ## The light
 - A room's lamps light its vertices once with the mesh (surfaces and boxes cut to a 1 m grid give pools); the frame scales them by U's level [I-03]
@@ -62,6 +62,7 @@ line per rule with its log entries (`log/`). A milestone that sets or changes a 
 [B-434]: log/7-1.5.0.md
 [B-435]: log/7-1.5.0.md
 [B-437]: log/7-1.5.0.md
+[B-501]: log/7-1.5.0.md
 [R-427]: log/7-1.5.0.md
 [R-428]: log/7-1.5.0.md
 [R-429]: log/7-1.5.0.md

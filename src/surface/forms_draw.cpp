@@ -143,6 +143,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
         const int i0 = cell.groups[L][b], i1 = cell.groups[L][b + 1];
         if (i0 >= i1) continue;
         const bool grownOn = cell.climb.size() == (size_t)nb + 1 && cell.climb[b] >= 0;   // J-10: an overgrowth's cover on it
+        const int gline = b < (int)cell.lines.size() ? cell.lines[b] : cell.growthLine;   // KI-501: the line whose cover lies at it
         for (int i = i0; i < i1; i++) {
             const Form& e = el[i];
             if (e.part == FORM_PART_GROWTH && growthBank < 0) continue;   // (no bank for it this frame)
@@ -158,7 +159,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
             if (e.absolute) {   // heights over the reference level (a dam's wall, an aqueduct's arches): where they are, whatever the ground does
                 const double fog = 1 - std::exp(-d / env.fogDistance);
                 if (lod == 3 && fog > 0.985) continue;
-                formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people, climb, cell.growthLine});
+                formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people, climb, gline});
                 continue;
             }
             const bool big = bigForm(e);
@@ -167,7 +168,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 double skirt;
                 if (!pieceFootNear(e, ex, ez, gy, skirt)) continue;
                 const double fog = 1 - std::exp(-d / env.fogDistance);
-                formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb, cell.growthLine});
+                formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb, gline});
                 continue;
             } else {   // the ring that draws the ground there, read once while that ring does
                 std::vector<FootCache>& fc = cell.foot[L];
@@ -198,7 +199,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // earth on the lowest (`pieceFootNear`)
                 if (lod > 0 && !c01) skirt += 0.004 * d;   // the far rings' ground is coarser than the 64 m samples
             }
-            formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb, cell.growthLine});
+            formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people, climb, gline});
         }
     }
 }
@@ -209,6 +210,8 @@ inline int formPlainRp(int people, int slot) { return 41 + people * 4 + clampi(s
 // J-10: an overgrowth's cover: [58, 116) each of the people's with the cover in its second bank, then the cover alone, a drape, a membrane;
 // KI-477 and on: the cover plain (the far silhouettes), a torn membrane, and the cover alone over each people's windows grown shut
 constexpr int RP_COVER = 116, RP_DRAPE = 117, RP_MEMBRANE = 118, RP_COVER_FAR = 119, RP_TORN = 120, RP_COVER_WIN = 121;
+// KI-501: [58, 129) again for each other growing line (its bank, its tile, its night light), from RP_LINE0: a building takes its own line's
+constexpr int RP_LINE0 = RP_COVER_WIN + 8, RP_LINE_N = RP_LINE0 - 58;
 }
 
 void SurfaceView::drawFormItems(Framebuffer& fb) {
@@ -217,7 +220,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     // the raster parameters: [0] the drifts' sand; [1, 41) a people's slot with its windows (0 none, k the people's k-th); [41, 49)
     // a people's slot plain (the silhouettes: no grain far off, where it would only shimmer); [49] A-03's earth (a mound, a bank, a
     // spoil heap): the ground's own soil, the grass of a living world or a desert's sand
-    formRps.assign(RP_COVER_WIN + 8, RasterParams());
+    formRps.assign(RP_LINE0 + MADE_LINES * RP_LINE_N, RasterParams());
     const bool frozen = deadCoverOf(site.gen) == DC_FROZEN;   // a frozen world's drifts are snow, its earthworks under frost
     formRps[0].bank = frozen ? 8 : 9;
     formRps[49].bank = frozen ? 8 : (kindHas(site.gen.type, KT_FLORA) ? 10 : 9);
@@ -263,38 +266,45 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     }
     // J-10: a seeded overgrowth's cover in its bank and tile: [58, 116) each of the above with the cover in its second bank under an item's climb
     // (its edge wobbled by the ground's edge noise, the windows on it grown shut); [116] the cover alone (a face wholly under the climb, a
-    // nodule), lit as the cover on the ground is, its glowing patches at night in its second bank; [117] a drape, cut out under its ragged foot;
-    // [118] a membrane, its veins broader; [119] the cover plain (the silhouettes far off); [120] a torn membrane, slit up its middle and
-    // ragged; [121, 129) the cover alone over each people's windows, grown shut
+    // nodule), lit as the cover on the ground is, at night lit dimly all over and brightly in its veins (KI-492: the ground's, its second bank
+    // under the veins' tile); [117] a drape, cut out under its ragged foot; [118] a membrane, its veins broader; [119] the cover plain (the
+    // silhouettes far off); [120] a torn membrane, slit up its middle and ragged; [121, 129) the cover alone over each people's windows, grown
+    // shut. KI-501: the latest growing line's, then each other's from RP_LINE0
     const MadeWorld& gm = site.gen.made;
     const bool grown = growthBank >= 0 && gm.grown() && gm.growthLine >= 0 && gm.growthLine < MADE_LINES;
     // the weight a metre up a face over the climb; the edge's wobble (weight units: metres); the cover's edge a little darker than its wall (its
-    // foot in the wall's shade); the weight its glowing patches are drawn under
+    // foot in the wall's shade, where the face's own light is not read); the weight its veins' light is drawn under
     constexpr double GROWN_W = 1.0, GROWN_EDGE = 0.8, GROWN_DARK = 2.0, GLOW_W = 0.75;
-    const bool glowing = grown && growthGlow > 0.02;
+    auto lineGlowOf = [&](int l) { return l >= 0 && l < MADE_LINES && growthLineBank[l] >= 0 ? growthLineGlow[l] : growthGlow; };
+    auto lineBlock = [&](int l) { return grown && l >= 0 && l < MADE_LINES && l != gm.growthLine && gm.spread[l].growth.on() ? RP_LINE0 + l * RP_LINE_N : -1; };
     if (grown) {
-        const GrainTexture* tile = mesoFor(gm.spread[gm.growthLine].growth.material);
-        for (int i = 0; i < 58; i++) {
-            RasterParams& o = formRps[58 + i];
-            o = formRps[i];
-            o.bank2 = growthBank; o.grain2b = tile; o.grain2Scale = 3.0; o.edge = &grainEdge; o.edgeScale = 1.3; o.edgeAmp = GROWN_EDGE; o.patternAbove = true;
-            o.shade2 = -GROWN_DARK;
-            if (o.pattern) o.patternShut = 1;
-        }
-        RasterParams& all = formRps[RP_COVER];
-        all.bank = growthBank; all.grain2 = tile; all.grain2Scale = 3.0;
-        RasterParams& drape = formRps[RP_DRAPE];
-        drape = all; drape.cutout = true; drape.edge = &grainEdge; drape.edgeScale = 2.5; drape.edgeAmp = 0.45;
-        RasterParams& membrane = formRps[RP_MEMBRANE];   // its veins broader
-        membrane = all; membrane.grain2Scale = 1.4;
-        RasterParams& torn = formRps[RP_TORN];   // (its weight by how far across from its middle: under a half, where the explorer went through, none)
-        torn = membrane; torn.cutout = true; torn.edge = &grainEdge; torn.edgeScale = 3.0; torn.edgeAmp = 0.3;
-        formRps[RP_COVER_FAR].bank = growthBank;
-        if (glowing) {   // its veins' light in patches over it (the second bank where the edge noise falls under the weight), lifted into the ramp's glow
-            all.bank2 = growthBank; all.grain2b = tile; all.edge = &grainEdge; all.edgeScale = 0.9; all.edgeAmp = 0.45; all.shade2 = 38 * growthGlow;
-        }
-        for (int p = 0; p < 2; p++)
-            for (int w = 0; w < 4; w++) { RasterParams& o = formRps[RP_COVER_WIN + p * 4 + w]; o = all; o.pattern = &formPatterns[p][w]; o.patternShut = 2; }
+        auto coverRps = [&](int base, int bank, const GrainTexture* tile, double glow) {
+            for (int i = 0; i < 58; i++) {
+                RasterParams& o = formRps[base + i];
+                o = formRps[i];
+                o.bank2 = bank; o.grain2b = tile; o.grain2Scale = 3.0; o.edge = &grainEdge; o.edgeScale = 1.3; o.edgeAmp = GROWN_EDGE; o.patternAbove = true;
+                o.shade2 = -GROWN_DARK;
+                if (o.pattern) o.patternShut = 1;
+            }
+            RasterParams& all = formRps[base + RP_COVER - 58];
+            all.bank = bank; all.grain2 = tile; all.grain2Scale = 3.0;
+            RasterParams& drape = formRps[base + RP_DRAPE - 58];
+            drape = all; drape.cutout = true; drape.edge = &grainEdge; drape.edgeScale = 2.5; drape.edgeAmp = 0.45;
+            RasterParams& membrane = formRps[base + RP_MEMBRANE - 58];   // its veins broader
+            membrane = all; membrane.grain2Scale = 1.4;
+            RasterParams& torn = formRps[base + RP_TORN - 58];   // (its weight by how far across from its middle: under a half, where the explorer went through, none)
+            torn = membrane; torn.cutout = true; torn.edge = &grainEdge; torn.edgeScale = 3.0; torn.edgeAmp = 0.3;
+            formRps[base + RP_COVER_FAR - 58].bank = bank;
+            if (glow > 0.02) {   // its veins lit (the second bank where the veins' tile falls under the weight), lifted into the ramp's glow as the ground's
+                buildGrowthVeins();   // (once a landing, here on the main thread)
+                all.bank2 = bank; all.grain2b = tile; all.edge = &growthVeins; all.edgeScale = GROWTH_VEIN_SCALE; all.edgeAmp = 0.45; all.shade2 = 36 * glow;
+            }
+            for (int p = 0; p < 2; p++)
+                for (int w = 0; w < 4; w++) { RasterParams& o = formRps[base + RP_COVER_WIN - 58 + p * 4 + w]; o = all; o.pattern = &formPatterns[p][w]; o.patternShut = 2; }
+        };
+        coverRps(58, growthBank, mesoFor(gm.spread[gm.growthLine].growth.material), growthGlow);
+        for (int l = 0; l < MADE_LINES; l++)
+            if (lineBlock(l) >= 0) coverRps(lineBlock(l), growthBankOf(l), mesoFor(gm.spread[l].growth.material), lineGlowOf(l));
     }
     const Vec3& sd = env.sun.dirLocal;
     const double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
@@ -348,6 +358,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     // KI-477: under its climb in the cover's bank (a slice its climb crosses split there), so a taken town stays taken far off
                     const bool coverFar = grown && I.climb >= 0 && !lit && e.part != FORM_PART_GROWTH;
                     const double coverTop = I.foot.y + (e.absolute ? e.y0 : 0.0) + I.climb;
+                    const int farRp = lineBlock(I.gline) >= 0 ? lineBlock(I.gline) + RP_COVER_FAR - 58 : RP_COVER_FAR;   // (KI-501: its building's line's)
                     for (int k = 0; k < Kp; k++) {
                         double t0 = (double)k / Kp, t1 = (double)(k + 1) / Kp;
                         double w0 = hw * formProfile(e, t0), w1 = hw * formProfile(e, t1);
@@ -363,10 +374,10 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                         };
                         const int own = formPlainRp(I.people, slot);
                         if (!coverFar || coverTop <= ya) slice(ya, ybb, w0, w1, own);
-                        else if (coverTop >= ybb) slice(ya, ybb, w0, w1, RP_COVER_FAR);
+                        else if (coverTop >= ybb) slice(ya, ybb, w0, w1, farRp);
                         else {
                             const double f = (coverTop - ya) / std::max(1e-6, ybb - ya), wm = w0 + (w1 - w0) * f;
-                            slice(ya, coverTop, w0, wm, RP_COVER_FAR); slice(coverTop, ybb, wm, w1, own);
+                            slice(ya, coverTop, w0, wm, farRp); slice(coverTop, ybb, wm, w1, own);
                         }
                     }
                     if (leftOn && e.kind != FK_TRUSS) {   // its lit windows from afar, a point of light for every eight metres of its height
@@ -412,9 +423,11 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                 const uint64_t pieceHash = mix64((uint64_t)e.seed ^ 0x6E0E90ULL);
                 const double ech = std::cos(e.heading), esh = std::sin(e.heading);   // (a membrane's across: its slit by how far from its middle)
                 int polyNo = 0;
+                const int block = lineBlock(I.gline);   // KI-501: its building's own line's cover
+                const double nightFloor = 14 * lineGlowOf(I.gline);   // KI-492: the cover's dim light all over at night, as the ground's
                 auto coverShade = [&](const Vec3& p, const Vec3& nn) {
                     const Vec3 half = normalize(normalize(camPos - p) + sd);
-                    const double s0 = std::min(62.0, growthShade(p, nn, half, ambient, sunUp, lf, 0, I.gline));
+                    const double s0 = std::min(62.0, std::max(growthShade(p, nn, half, ambient, sunUp, lf, 0, I.gline), nightFloor > 0.28 ? nightFloor : 0.0));
                     return s0 + (63 - s0) * I.fog;
                 };
                 for (const FormMesh::Poly& P : mesh.polys) {
@@ -437,13 +450,23 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     }
                     int rp = (P.flags & FormMesh::PATTERN) ? rpPat : rpBase;
                     bool coverLit = growthPiece && grown;
+                    float across = 1e9f;   // KI-492: a face across the cover's edge: its cover's light less the face's own (the second bank's offset)
                     if (covered) {   // wholly under its climb: the cover alone (its windows grown shut); its edge across the face: the second bank under it
                         double wlo = 1e18, whi = -1e18;
                         for (int k = 0; k < P.n; k++) { q[k].w = 0.5 + (vs[k].p.y - coverBase) * GROWN_W; wlo = std::min(wlo, q[k].w); whi = std::max(whi, q[k].w); }
                         if (whi < 0.5 - GROWN_EDGE) {
                             rp = (P.flags & FormMesh::PATTERN) && e.pattern > 0 ? RP_COVER_WIN + I.people * 4 + clampi(e.pattern - 1, 0, 3) : RP_COVER;
                             coverLit = true;
-                        } else if (wlo < 0.5 + GROWN_EDGE) rp += 58;
+                        } else if (wlo < 0.5 + GROWN_EDGE) {
+                            rp += 58;
+                            if (!lit) {   // (its gloss and its night light at the face's middle, as a face wholly under it has them)
+                                Vec3 mid(0, 0, 0); double own = 0;
+                                for (int k = 0; k < P.n; k++) { mid = mid + vs[k].p; own += q[k].shade; }
+                                mid = mid * (1.0 / P.n); own /= P.n;
+                                const double cov = std::max(coverShade(mid, n * sgn), growthGlowShade(pieceHash + (uint64_t)polyNo, lastT, I.gline));
+                                across = (float)(cov - own);
+                            }
+                        }
                     } else if (e.growth == FG_DRAPE)
                         for (int k = 0; k < P.n; k++) q[k].w = (vs[k].p.y - I.foot.y - e.y0) / std::max(0.1, e.y1 - e.y0);
                     else if (torn)   // a slit up its middle as high as the explorer went through, its sheet whole over it
@@ -462,8 +485,8 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     }
                     polyNo++;
                     int y0, y1; rowsOf(q, P.n, y0, y1);
-                    ch.polys.push_back({(int)ch.v.size(), P.n, rp, y0, y1});
-                    if (I.gline >= 0 && growthBankOf(I.gline) != growthBank) ch.polys.back().gb = growthBankOf(I.gline);   // (KI-473: its line's bank)
+                    ch.polys.push_back({(int)ch.v.size(), P.n, block >= 0 && rp >= 58 && rp < RP_LINE0 ? block + rp - 58 : rp, y0, y1});   // (KI-473, KI-501)
+                    ch.polys.back().s2 = across;
                     for (int k = 0; k < P.n; k++) ch.v.push_back(q[k]);
                 }
                 if (!mesh.lines.empty()) {   // members and cables: lines a pixel or more thick; under a fifth of a pixel only the legs, chords and cables
@@ -515,10 +538,9 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             const FormChunk& ch = formChunks[c];
             for (const FormPolyOut& P : ch.polys) {
                 if (P.y1 < yb || P.y0 >= ye) continue;
-                if (P.gb < 0) { rasterPolygon(fb, &ch.v[P.first], P.n, formRps[P.rp], proj); continue; }
-                RasterParams r = formRps[P.rp];   // (KI-473: a settlement's cover in its own line's bank)
-                if (r.bank == growthBank) r.bank = P.gb;
-                if (r.bank2 == growthBank) r.bank2 = P.gb;
+                if (P.s2 > 1e8f) { rasterPolygon(fb, &ch.v[P.first], P.n, formRps[P.rp], proj); continue; }
+                RasterParams r = formRps[P.rp];   // (KI-492: a face across the cover's edge, its cover in its own light)
+                r.shade2 = P.s2;
                 rasterPolygon(fb, &ch.v[P.first], P.n, r, proj);
             }
         }
@@ -528,14 +550,28 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     }, std::max(8, FBH / 64));
 }
 
+void SurfaceView::testCoverLight(int& whole, int& wholeVeined, int& other, int& otherVeined, int& across, int& acrossLit) const {
+    whole = wholeVeined = other = otherVeined = across = acrossLit = 0;
+    for (const FormChunk& ch : formChunks)
+        for (const FormPolyOut& P : ch.polys) {
+            if (P.rp < 58 || P.rp >= (int)formRps.size()) continue;
+            const bool own = P.rp < RP_LINE0;
+            const int rp = own ? P.rp : 58 + (P.rp - RP_LINE0) % RP_LINE_N;
+            const bool veined = formRps[P.rp].bank2 >= 0 && formRps[P.rp].edge == &growthVeins;
+            if (rp == RP_COVER || rp >= RP_COVER_WIN) { (own ? whole : other)++; (own ? wholeVeined : otherVeined) += veined; }
+            else if (rp < RP_COVER) { across++; acrossLit += P.s2 < 1e8f; }
+        }
+}
+
 void SurfaceView::testCoverFaces(int& covered, int& shut, int& lit) const {
     covered = shut = lit = 0;
     for (const FormChunk& ch : formChunks)
         for (const FormPolyOut& P : ch.polys) {
             if (P.rp < 0 || P.rp >= (int)formRps.size()) continue;
-            const bool whole = P.rp == RP_COVER || P.rp >= RP_COVER_WIN, piece = P.rp >= RP_COVER && P.rp <= RP_TORN;
+            const int rp = P.rp >= RP_LINE0 ? 58 + (P.rp - RP_LINE0) % RP_LINE_N : P.rp;   // (KI-501: another line's as the latest's)
+            const bool whole = rp == RP_COVER || (rp >= RP_COVER_WIN && rp < RP_LINE0), piece = rp >= RP_COVER && rp <= RP_TORN;
             covered += whole;
-            shut += P.rp >= RP_COVER_WIN || (P.rp >= 58 && P.rp < RP_COVER && formRps[P.rp].patternShut == 1);
+            shut += (rp >= RP_COVER_WIN && rp < RP_LINE0) || (rp >= 58 && rp < RP_COVER && formRps[P.rp].patternShut == 1);
             if (whole || piece) { bool up = false; for (int k = 0; k < P.n; k++) up = up || ch.v[P.first + k].shade >= 45; lit += up; }
         }
 }

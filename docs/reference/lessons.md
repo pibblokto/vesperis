@@ -157,7 +157,8 @@ Contents:
 - A frame with bodies in view waits for every map first (`testWaitMapOf`, or `SpaceRenderer::mapIfReady` on a view's own
   renderer): the maps are made on their thread at the binary's own pace (F-07), so without the wait a frame moves between runs
   by a faint disc or a dim background (E-02 found the data sheets, the surface sweep, the unit's lent piece and the rogues'
-  radar lock).
+  radar lock). A wait before the first frame sets the season is undone by that frame, which makes the map again for its season:
+  `rogues heard` waited so, and its lock frame still moved (B-506). At a new place, wait with `testWaitMaps` (the season set first).
 - A race can resolve the same way in every run of one binary and the other way in a binary whose code moved: E-02's radar lock
   frame lost the parked world's map in three relinks of the base engine and won it in the final one, though the code that draws
   it was the same instructions. A twice-run cannot see it; a move or split (which shifts every later address) shows it. Prove
@@ -196,8 +197,9 @@ Contents:
   first editor frames: no culture in it, the chooser empty). The harness's `putIn` does so.
 - A check's name is a literal (`tools/unitchecks.py` reads the source): a group of laws returns its verdicts (`GeneLaws`) and the unit's
   function calls `check` on each by name, not a callback that names them.
-- A scripted game's stages run before the stages that make games of their own: the flow's game, run on after the reload's two were
-  made and destroyed, broke its heap within frames (KI-450: Y-02's step, put last, crashed the flow at its end five runs in five).
+- The frame's size is the process's (`FBW`, `FBH`, the mush), set by the last game whose settings were applied: the flow's game at 1x,
+  drawn after the reload's two at 4x, read past its depth buffer (KI-450; an address-sanitised build found it, B-507). A game drawn after
+  another's takes its own size back first (`Flow::own`).
 - A field that means "by its rule" until set (`Microbe::flees` -1, the niche's flight) turns 0 or 1 at the first edit near it: a check
   compares what it does (`fleesLight`), not the field (Y-03's copy of a sense read as a change till then).
 - A stage of animals turns the habitat cells off (`habitatT` far ahead): their herds come in with the first update, and `critters.back()`
@@ -231,6 +233,12 @@ Contents:
   `seed kinds` sends each world's own sea line with six edits. A search for a look picks past a pale flesh on pale ground.
 - A mode's case and the unit's are one search (`seedRecordCase`), asked for everything the frames must show (a native driven out and a
   made kind), so the pictures and the checks see the same world.
+
+- A check pinned to a digest over a set of worlds moves with any change to which worlds exist, not only with what it guards: B-504 made a
+  few hot chemotrophs their drawn kinds again, and the traits' and the cell genes' digests over the first worlds moved. Prove it by
+  building once with the change undone (both digests came back bit for bit), then pin the new values with the reason beside them.
+- In zsh, `path` is the array tied to `PATH`: `while read -r st path` in a script empties the command path and every command after it fails
+  as "not found". Name such a variable anything else (`f`).
 
 ## Pixels and the look
 

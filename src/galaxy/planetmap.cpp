@@ -315,6 +315,8 @@ static void madeGround(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
         const Vec3 p = unit * g.R;
         k *= own->variant == 0 ? smoothstep(0.2, 0.3, fbm3(p / 0.12, g.sG + 351, 2)) : smoothstep(-0.05, 0.05, fbm3(p / 1.5, g.sG + 352, 3));
     }
+    if (k > 0 && cls == MC_LAND && own->kind == MGT_COLOURED_SEEPS)   // J-16 (KI-506): a rock line's seeps in patches of a few hundred metres
+        k *= smoothstep(0.08, 0.2, fbm3(unit * g.R / 0.35, g.sG + 353, 3));
     if (k <= 0) return;
     s.madeTint = k; s.madeLine = best;
     if (k < 0.5) return;

@@ -39,6 +39,9 @@ constexpr int SEED_DEPTHS = 8;
 constexpr double SEED_DEPTH_KM[SEED_DEPTHS] = {1, 2, 3, 5, 8, 12, 20, 30};
 constexpr double DEEP_GAS_SHARE = 0.5;
 double deepGradientC(const StarSystem& sys, int body);
+// J-16 (KI-505): the drill's deepest on a world: where its rock is 10 C warm under its mean (`biotaMeanC`), 30 km at least and 120 at most, so
+// a small cold world's slow gradient still reaches a line's warmth; its levels are `SEED_DEPTH_KM`'s stretched to it (an Earth's as they were)
+double deepestKm(const StarSystem& sys, int body);
 double iceShellKm(const Body& b);                                  // 0: no sea under its ice
 std::vector<double> seedDepthsOf(const StarSystem& sys, int body);  // the page's depths: 0 (the surface), then the rock's or the sea's
 // J-14 (R-454): on a world with a cloud deck life lives in (a venusian world's, an acid world's: their biota's cloud niche), the drone lets a
@@ -94,13 +97,21 @@ struct SeedVerdict {
     RGB forest;
     bool reefs = false;
     double growLand = 0;   // J-11: the share of its land an overgrowth of its line could lie on (not snow or ice, within its band of warmth)
+    // J-16 (KI-487): the warmth of the world's waters and of its land at the habitat's points, as its band reads them: a native it beat dies out
+    // only where none of its own band lies outside the line's there
+    double wetLoC = 1e9, wetHiC = -1e9, dryLoC = 1e9, dryHiC = -1e9;
+    // J-16 (KI-498): the share of the world its kind of place covers at any warmth (its waters of its salts, its land, its plants; a deep or a
+    // cloud line's all of it): its gas answers by the share of that room it fills (`livedOf`)
+    double room = 1;
     bool takes() const { return fate == SF_GROWS; }
 };
 // the verdict: the furnace and the solvent, the medium (`growthIn`, its food a native it eats or one that feeds it), oxygen, pH and the dose,
 // the land, the natives (`pairOf`: a competitor a tenth quicker there outgrows it, its genes' price paid; its poison beats them), its drift
 // KI-457: `before`, the layer the lines before it had made when it went down: its place, its ground and its warmth are read as they left them
 // J-13: the place read at its own warmth (a flask's cell's range never holds it), its water brine colder than WATER_COLDEST_C; `depthKm` under it
-SeedVerdict seedVerdictOf(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double depthKm = 0, const MadeWorld& before = MadeWorld());
+// J-16 (KI-487): `gone`, the natives the lines before it drove out by the time it goes down: it meets none of them
+SeedVerdict seedVerdictOf(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double depthKm = 0, const MadeWorld& before = MadeWorld(),
+                          const std::vector<int>* gone = nullptr);
 // R-451: what a place gives a culture let go there, before any line is judged (its place, medium, oxygen, pH and dose: the verdict's first part)
 SeedVerdict seedPlaceFacts(const StarSystem& sys, int body, double lat, double lon, double depthKm = 0, const MadeWorld& before = MadeWorld());
 // "CULTURE GROWS", "CULTURE DIED, TOO COLD"
@@ -132,12 +143,16 @@ struct Seeding {
 // KI-457: `earlier`, the world's seedings before it (run already, in the guide's order): its verdict and its share read the world as they left it
 void seedingRun(const StarSystem& sys, int body, Seeding& s, const std::vector<Seeding>* earlier = nullptr);
 
+// J-16 (KI-499): the share of the world a seeding's line lives on (`SeedVerdict::share`), were the world `warmC` warmer than as generated
+double seedShareAt(const StarSystem& sys, int body, const Seeding& s, double warmC);
+
 // the step a seeding has come to at the clock: 0 as it is let go, one more each MADE_STEP_S at its pace (`SeedVerdict::pace`), MADE_STEPS at
 // most; -1 before it went down
 int seedingStep(const Seeding& s, double clock);
 // J-12: the natives a line beat at its place that died out by the clock (each with how it beat them: `SeedVerdict::beatenHow`). They die out
 // once its spread covers the world (its last step), each that lives only in niches and salts the line lives in too: a water's salts among
-// the line's waters, any other niche only where the line lives on the land. From then no vial of the world holds them
+// the line's waters, any other niche only where the line lives on the land; J-16 (KI-487): and within its band of warmth, where the world's
+// waters (for a water niche) and land (for any other) have places of its warmth. From then no vial of the world holds them
 struct DiedOut { int species = -1, how = PA_NONE; };
 std::vector<DiedOut> seedingDiedOut(const Biota& B, const Seeding& s, double clock);
 // J-12: "OUTGROWN BY", "EATEN BY", "POISONED BY"

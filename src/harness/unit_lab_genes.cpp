@@ -1043,8 +1043,8 @@ void unitLabGenes(const Check& check) {
         // quorum share and 1/0.97 as slow past it; IN THE DARK, its species' rate lit and paying in the dark; NEVER, its species' rate lit and dark
         // (the price listed, never paid). Its vital gene IN THE LIGHT: it grows lit, lyses at once in the dark. A spore former's rest WHEN COLD
         // (the warmth against its best), starved (R-449: a flask at its crowd is fed for good): spores at its end 3 C under its best, none 1 C
-        // over it (its species' there). A luminous one's glow WHEN
-        // STARVING: dark as it grows past its quorum share (its species aglow there), glowing at its crowd
+        // over it (its species' there). A luminous one's glow WHEN STARVING: dark as it grows past its quorum share (its species aglow there),
+        // dark at its crowd (B-477: FULL, fed for good, not starving), glowing in a broth with nothing it eats (HUNGRY, starving)
         TestGame g;
         labGame(g);
         GeneWorld W[6];
@@ -1123,9 +1123,15 @@ void unitLabGenes(const Check& check) {
                     if (tc < 0 && b.stage == SG_CROWD) tc = t;
                 }
                 const CultureOne lg = cultureAt(fl, rl, tg).one[0], lc = cultureAt(fl, rl, tc + 1).one[0];
-                starving = tg >= 0 && tc >= 0 && !lg.glowing && (lg.stage == SG_GROWING || lg.stage == SG_COLONY) && lc.glowing && (lc.state & CST_STARVING) && kg.glowAny;
-                detail += fmt("; M%d's glow WHEN STARVING: %s at %.0f s as it grows (its species aglow), %s at its crowd %s", G.w.species, lg.glowing ? "GLOWING" : "dark", tg,
-                              lc.glowing ? "glowing" : "DARK", starving ? "ok" : "WRONG");
+                Medium none = bestOf(G.k);
+                none.energy = CE_NONE;   // nothing it eats: its hold, starving
+                const FlaskCulture fh = aloneIn(kg, none);
+                const CultureOne lh = cultureAt(fh, runCulture(fh), 20).one[0];
+                starving = tg >= 0 && tc >= 0 && !lg.glowing && (lg.stage == SG_GROWING || lg.stage == SG_COLONY) && !lc.glowing && lc.state >= 0 &&
+                           !(lc.state & CST_STARVING) && lh.glowing && lh.stage == SG_HUNGRY && lh.state >= 0 && (lh.state & CST_STARVING) && kg.glowAny;
+                detail += fmt("; M%d's glow WHEN STARVING: %s at %.0f s as it grows (its species aglow), %s at its crowd (state %d), %s with nothing to eat (%s, state %d) %s",
+                              G.w.species, lg.glowing ? "GLOWING" : "dark", tg, lc.glowing ? "GLOWING" : "dark", lc.state, lh.glowing ? "glowing" : "DARK",
+                              CULTURE_STAGE_NAMES[lh.stage], lh.state, starving ? "ok" : "WRONG");
             } else detail += "; NO LUMINOUS ONE";
         }
         check("genes: a switch's condition in the culture's segments: the light, the warmth against its best, starving, its crowd's share (Y-04)",
@@ -1135,7 +1141,7 @@ void unitLabGenes(const Check& check) {
     }
     {   // Y-04: S on the editor and a switched line's drop as its flask has it. A swimmer of the six worlds, read, its motion gene switched by S
         // five times (ALWAYS, NEVER, IN THE LIGHT, IN THE DARK, WHEN CROWDED: WHEN STARVING), kept over a save and a load, written into a flask:
-        // its drop as it grows still, at its crowd swimming (its state starving)
+        // its drop as it grows still, at its crowd still (B-477: fed for good, not starving), in a broth with nothing it eats swimming (starving)
         const std::string SAVE = "shots/tests/unit_genes_save_2.txt";
         TestGame g; Input in;
         labGame(g);
@@ -1186,11 +1192,19 @@ void unitLabGenes(const Check& check) {
                 if (sCrowd < 0 && o.stage == SG_CROWD && g.testScopeStageFlask(at)) { sCrowd = g.testScope().lineState[0]; mCrowd = g.testScope().species[0].motion; }
                 g.testLabSkip(10);
             }
-            still = sGrow >= 0 && !(sGrow & CST_STARVING) && mGrow == MO_NONE;
-            swims = sCrowd >= 0 && (sCrowd & CST_STARVING) && mCrowd == X->k.s.motion;
+            int sHungry = -1, mHungry = -1;
+            if (at >= 0 && sCrowd >= 0) {   // its broth changed to one with nothing it eats: its hold, starving
+                Medium none = bestOf(X->k);
+                none.energy = CE_NONE;
+                g.testFlaskSet(at, none);
+                g.testLabSkip(10);
+                if (g.testFlaskNow(at).one[0].stage == SG_HUNGRY && g.testScopeStageFlask(at)) { sHungry = g.testScope().lineState[0]; mHungry = g.testScope().species[0].motion; }
+            }
+            still = sGrow >= 0 && !(sGrow & CST_STARVING) && mGrow == MO_NONE && sCrowd >= 0 && !(sCrowd & CST_STARVING) && mCrowd == MO_NONE;
+            swims = sHungry >= 0 && (sHungry & CST_STARVING) && mHungry == X->k.s.motion;
             detail = fmt("M%d's gene %d (its motion) by S five times: %s %s; over a save and a load %s; written into flask %d: its drop growing %s (state %d), at its crowd %s "
-                         "(state %d)", X->w.species, pm + 1, text.c_str(), keyed ? "WHEN STARVING" : "WRONG", kept ? "kept" : "LOST", at + 1, mGrow == MO_NONE ? "still" : "MOVING",
-                         sGrow, mCrowd == X->k.s.motion ? "swimming" : "STILL", sCrowd);
+                         "(state %d), with nothing to eat %s (state %d)", X->w.species, pm + 1, text.c_str(), keyed ? "WHEN STARVING" : "WRONG", kept ? "kept" : "LOST", at + 1,
+                         mGrow == MO_NONE ? "still" : "MOVING", sGrow, mCrowd == MO_NONE ? "still" : "SWIMMING", sCrowd, mHungry == X->k.s.motion ? "swimming" : "STILL", sHungry);
         }
         check("genes: S sets a gene's switch on the editor, kept over a save; a switched line's drop as its flask has it (Y-04)", keyed && kept && still && swims, detail);
         remove(GUIDE); remove(SAVE.c_str());

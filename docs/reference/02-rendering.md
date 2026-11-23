@@ -14,25 +14,63 @@ Contents:
 
 ## Framebuffer and palette (M10-01/03)
 
-* Logical size 320x200 (`UW`, `UH`) times a runtime scale `FB_SCALE` 1..4 (`FBW`, `FBH`, set by `setFramebufferScale`; the settings item "render scale", default 4 = 1280x800 since B-310 on 2026-09-27, one framebuffer pixel per pixel of the default window; it was 2 = 640x400 before). Every `Framebuffer` is re-created after a scale change (`Game::applySettings`). `Framebuffer::idx` holds 16-bit pixels (`Pix`); `invz` holds 1/z per pixel (0 = infinitely far, larger = closer).
+* Logical size 320x200 (`UW`, `UH`) times a runtime scale `FB_SCALE` 1..4 (`FBW`, `FBH`, set by `setFramebufferScale`; the settings item
+  "render scale", default 4 = 1280x800 since B-310 on 2026-09-27, one framebuffer pixel per pixel of the default window; it was 2 =
+  640x400 before). Every `Framebuffer` is re-created after a scale change (`Game::applySettings`). `Framebuffer::idx` holds 16-bit
+  pixels (`Pix`); `invz` holds 1/z per pixel (0 = infinitely far, larger = closer).
 * Pixel format: **32 banks x 11-bit intensity** (`BANKS`, `BANK_SHIFT`, `INTEN_MASK`): bank = `p >> 11`, intensity = `p & 2047`;
-  32 intensity units per classic shade (`INTEN_PER_SHADE`), so writers still think in shades 0..63 (`pix(bank, shade)` keeps fractions; `pixI(bank, inten)`, `bankOf`, `intenOf`, `shadeOf`, `toInten`). Bank arguments everywhere are plain indices (0..31), never pre-shifted.
-* Palette: 64 colour stops per bank (`pal[BANKS*64*3]`); `setRamp(pal, bank, {{pos, RGB}, ...})` defines a bank as a piecewise linear ramp through stops at positions 0..63; `scalePalette` fades all banks. `toRGB(out, gain)` interpolates the 64 stops to 256 steps per bank and looks pixels up by `intensity >> 3`, so smooth gradients (sky, glow) no longer show 64-step banding.
-* `Framebuffer::mush(passes)` is Noctis' `psmooth_64` generalised: for each pixel, keep the bank of the pixel one row below and replace the intensity by the average of the k x k block starting one row below. `g_mushKernel` = scale + 1 in the "classic" setting (2x2 at 1x, 3x3 at 2x, 4x4 at 3x, 5x5 at 4x; "soft" = scale + 2, "sharp" = max(2, scale), and since B-310 "fine" = max(2, scale - 1), the default: 3x3 at 4x, so two passes span five pixels, 1.25 logical pixels, and leaves, trunks and ridges resolve while the edges still melt); two passes everywhere. k = 2 keeps the original inner loop; larger boxes use separable running sums (windows clamped at the right edge). F-07: a pass reads the frame and writes `back`, the two swapped after it (no copy); its rows go to the pool, k = 2's too (the last two rows copied as they were); a larger box slides the column sums of its k rows down a band of rows one row at a time and a k-wide window along them, the row under the pixel giving the bank and leaving the sums in one read, and the quotient is a multiply and a shift (`(sum x m) >> 32`, `m = 2^32 / divisor + 1`: exact while sum x divisor < 2^32, every k to 38), the same pixels as the two passes over a 4 MB buffer it replaced. Consequences: colours never bleed across banks, edges melt, single-pixel points soften (stars and far bodies are therefore drawn as 2x2 logical blocks with a halo), the image shifts up by about one logical row per pass.
-* `glowDisc(cx, cy, radius, coreRadius, maxAddShades, bankIfEmpty)` adds intensity inside a disc (sun glow, flares); `bankIfEmpty` -1 keeps the existing bank. F-05: nothing at all when `maxAddShades` is 0 or less (every add would be 0: a dim veil walked its 0.9 M pixels at 4x), and the rows on the pool (a disc under 64 rows stays on the caller); every caller is on the main thread outside a pool job.
-* The layer under the banks (B-437): `sinkUnder(bank, box)` moves a box's pixels of every bank but 0 into one bank, each pixel's own bank kept
+  32 intensity units per classic shade (`INTEN_PER_SHADE`), so writers still think in shades 0..63 (`pix(bank, shade)` keeps fractions;
+  `pixI(bank, inten)`, `bankOf`, `intenOf`, `shadeOf`, `toInten`). Bank arguments everywhere are plain indices (0..31), never
+  pre-shifted.
+* Palette: 64 colour stops per bank (`pal[BANKS*64*3]`); `setRamp(pal, bank, {{pos, RGB}, ...})` defines a bank as a piecewise linear
+  ramp through stops at positions 0..63; `scalePalette` fades all banks. `toRGB(out, gain)` interpolates the 64 stops to 256 steps per
+  bank and looks pixels up by `intensity >> 3`, so smooth gradients (sky, glow) no longer show 64-step banding.
+* `Framebuffer::mush(passes)` is Noctis' `psmooth_64` generalised: for each pixel, keep the bank of the pixel one row below and replace
+  the intensity by the average of the k x k block starting one row below. `g_mushKernel` = scale + 1 in the "classic" setting (2x2 at
+  1x, 3x3 at 2x, 4x4 at 3x, 5x5 at 4x; "soft" = scale + 2, "sharp" = max(2, scale), and since B-310 "fine" = max(2, scale - 1), the
+  default: 3x3 at 4x, so two passes span five pixels, 1.25 logical pixels, and leaves, trunks and ridges resolve while the edges still
+  melt); two passes everywhere. k = 2 keeps the original inner loop; larger boxes use separable running sums (windows clamped at the
+  right edge). F-07: a pass reads the frame and writes `back`, the two swapped after it (no copy); its rows go to the pool, k = 2's too
+  (the last two rows copied as they were); a larger box slides the column sums of its k rows down a band of rows one row at a time and a
+  k-wide window along them, the row under the pixel giving the bank and leaving the sums in one read, and the quotient is a multiply and
+  a shift (`(sum x m) >> 32`, `m = 2^32 / divisor + 1`: exact while sum x divisor < 2^32, every k to 38), the same pixels as the two
+  passes over a 4 MB buffer it replaced. Consequences: colours never bleed across banks, edges melt, single-pixel points soften (stars
+  and far bodies are therefore drawn as 2x2 logical blocks with a halo), the image shifts up by about one logical row per pass.
+* `glowDisc(cx, cy, radius, coreRadius, maxAddShades, bankIfEmpty)` adds intensity inside a disc (sun glow, flares); `bankIfEmpty` -1
+  keeps the existing bank. F-05: nothing at all when `maxAddShades` is 0 or less (every add would be 0: a dim veil walked its 0.9 M
+  pixels at 4x), and the rows on the pool (a disc under 64 rows stays on the caller); every caller is on the main thread outside a pool
+  job.
+* The layer under the banks (B-437): `sinkUnder(bank, box)` moves a box's pixels of every bank but 0 into one bank, each pixel's own
+  bank kept
   in `under` (a byte a pixel) and the palette in `underPal`. The mush counts its passes, and a pixel of that bank whose bank came from
   the box (`underRow`: each pass takes a row's banks from the row below, the last two rows kept by the 2x2 kernel, the last one by the
   box) is read by `toRGB` through `underPal` at its own bank, the table made again only when that palette changes; `raiseUnder` puts
   the banks back and ends the layer. Aboard, the outside under the ship is one (bank 7, "The ship's light").
-* Sizes in scale units (M10-15): line thickness, point size, star dots, the far-body point, the sun's minimum corona and the Vimana streak length are multiplied by `FB_SCALE`; the terrain grain scale too, so the grain keeps its on-screen size; the sky cloud grid cell is `4 * FB_SCALE` pixels; at 3x and 4x the sky is evaluated at half resolution.
+* Sizes in scale units (M10-15): line thickness, point size, star dots, the far-body point, the sun's minimum corona and the Vimana
+  streak length are multiplied by `FB_SCALE`; the terrain grain scale too, so the grain keeps its on-screen size; the sky cloud grid
+  cell is `4 * FB_SCALE` pixels; at 3x and 4x the sky is evaluated at half resolution.
 
 ## Rasteriser (`core/raster.*`)
 
-* View space: x right, y up, z forward. `Proj::fromHFov(70)` gives focal `f = 160 / tan(35 deg) ~ 228.5` px; screen `sx = cx + f*x/z`, `sy = cy - f*y/z`. W-06 (2026-10-06): the telescope multiplies `f` by its power (`Game::telescopeProj`, x2..x1024, set on `SpaceRenderer::proj` every space frame), so the space renderer draws a field of 0.08 degrees as it draws 70: every body by angle from its direction and radius (`drawGlobe`, `drawSun`), the stars by position, the globe's box by the exact projection (B-312); `bodyInfo`'s radii scale exactly with the power (the harness checks it).
-* Near plane `NEAR_Z = 0.05`; polygons are clipped with Sutherland-Hodgman before projection (`rasterPolygon`), triangles fully in front skip clipping.
-* Scanline fill with linear interpolation of 1/z, shade, and grain coordinates u,v (stored as u/z, v/z so they are perspective correct; a per-pixel divide recovers them). B-311: a texel of a world-mapped tile that spans more than about two and a half pixels on screen is read bilinearly (`GrainTexture::atLerp`, integer arithmetic), nearest beyond; the ground within a few metres used to be a mosaic of texel squares the mush could not melt. F-07: a span at one depth (`diz == 0`: a leaf cluster, a lily pad, a blob shadow) divides once; a polygon or triangle with no row in the thread's band returns before its fan, and one wholly in front projects its first 15 vertices in place (the clip keeps 15); the opaque replace is written inline and the other blends and the quantized shade out of line (`emitPixelRare`), the textured loop not testing a pixel's depth twice (its float test passing, the double one would).
-* Two-material cells (B-311): `RVert::w` is a per-corner weight (1 at the corners of the cell's majority material, 0 at the others), interpolated like the grain coordinates; where `RasterParams::bank2` is set, each pixel's weight is wobbled by the world-mapped `edge` noise (`edgeScale` texels per unit, `edgeAmp` weight units per full amplitude) and the pixel goes to `bank`/`grain2`/the shade or to `bank2`/`grain2b`/the shade plus `shade2` on either side of the half-way contour: the boundary is an irregular line through the cell instead of its square edge.
+* View space: x right, y up, z forward. `Proj::fromHFov(70)` gives focal `f = 160 / tan(35 deg) ~ 228.5` px; screen `sx = cx + f*x/z`,
+  `sy = cy - f*y/z`. W-06 (2026-10-06): the telescope multiplies `f` by its power (`Game::telescopeProj`, x2..x1024, set on
+  `SpaceRenderer::proj` every space frame), so the space renderer draws a field of 0.08 degrees as it draws 70: every body by angle from
+  its direction and radius (`drawGlobe`, `drawSun`), the stars by position, the globe's box by the exact projection (B-312);
+  `bodyInfo`'s radii scale exactly with the power (the harness checks it).
+* Near plane `NEAR_Z = 0.05`; polygons are clipped with Sutherland-Hodgman before projection (`rasterPolygon`), triangles fully in front
+  skip clipping.
+* Scanline fill with linear interpolation of 1/z, shade, and grain coordinates u,v (stored as u/z, v/z so they are perspective correct;
+  a per-pixel divide recovers them). B-311: a texel of a world-mapped tile that spans more than about two and a half pixels on screen is
+  read bilinearly (`GrainTexture::atLerp`, integer arithmetic), nearest beyond; the ground within a few metres used to be a mosaic of
+  texel squares the mush could not melt. F-07: a span at one depth (`diz == 0`: a leaf cluster, a lily pad, a blob shadow) divides once;
+  a polygon or triangle with no row in the thread's band returns before its fan, and one wholly in front projects its first 15 vertices
+  in place (the clip keeps 15); the opaque replace is written inline and the other blends and the quantized shade out of line
+  (`emitPixelRare`), the textured loop not testing a pixel's depth twice (its float test passing, the double one would).
+* Two-material cells (B-311): `RVert::w` is a per-corner weight (1 at the corners of the cell's majority material, 0 at the others),
+  interpolated like the grain coordinates; where `RasterParams::bank2` is set, each pixel's weight is wobbled by the world-mapped `edge`
+  noise (`edgeScale` texels per unit, `edgeAmp` weight units per full amplitude) and the pixel goes to `bank`/`grain2`/the shade or to
+  `bank2`/`grain2b`/the shade plus `shade2` on either side of the half-way contour: the boundary is an irregular line through the cell
+  instead of its square edge.
 * Band-parallel drawing (B-310): `setRasterBand(y0, y1)` clips every fill of the calling thread (triangles, lines, points) to
   those rows; the surface draws the terrain rings and the flora in bands of rows on the worker threads (`core/parallel.h`:
   `parallelFor` on a persistent pool, since a frame dispatches a dozen regions and threads created per region cost more than a
@@ -61,9 +99,19 @@ Contents:
   at 1x-3x and lost 0.1-0.4 on the space frames) and stay at eight (ten on the M4's ten cores starved the recorder's PNG writer).
   Every pass is row-pure or band-pinned, so the picture is the same whatever the thread count: the unit draws six scenes at 4x
   with one, two, four, six and eight threads.
-* B-313/B-315 (2026-09-28): `RasterParams::zbias` multiplies the depth tested and written (a coarser terrain ring is pushed back 0.1% so the finer ring wins where the two coincide at a morphed edge); `RasterParams::cutout` drops every pixel whose wobbled weight falls under a half instead of sending it to a second material (the ragged rim and the holes of a leaf cluster, the serrations of a frond: the fan's centre vertex weighs 1.1 and the rim 0.3); the depth test comes before the texel reads, so a hidden pixel costs nothing more; the polygon clipper takes 16 vertices (a leaf cluster is a fan of up to 12).
-* `RasterParams`: `bank` (already shifted, e.g. `2 << 6`), optional `grain` (64x64 signed texture added to the shade, `grainScale` texels per unit), `ztest`, `zwrite`, blend mode (`BLEND_REPLACE`, `BLEND_ADD`, `BLEND_MAX`), shade clamp.
-* A-02: `RasterParams::pattern` (`FacePattern`), windows on a face by its own u and v in metres (along it, up it): a cell a bay wide and a storey high, the window within it (a rectangle, an arched head, a slit, round, a band), `dark` shades under the wall, from `fromV` up. Where a cell spans under two 1x pixels (`proj.f * min(bay, storey) / z / FB_SCALE`) the pattern is its mean (`meanShare * dark`), from four whole; a lit window (`litBank`) is drawn in that bank at `litShade` where the pattern is resolved. A-04: two shapes more (5 a triangle, 6 a keyhole), `group` lights to a window split by mullions (a pair, three or four: the people's rhythm), `scatter` the share of cells left blank by a hash of the cell; the far mean counts them.
+* B-313/B-315 (2026-09-28): `RasterParams::zbias` multiplies the depth tested and written (a coarser terrain ring is pushed back 0.1% so
+  the finer ring wins where the two coincide at a morphed edge); `RasterParams::cutout` drops every pixel whose wobbled weight falls
+  under a half instead of sending it to a second material (the ragged rim and the holes of a leaf cluster, the serrations of a frond:
+  the fan's centre vertex weighs 1.1 and the rim 0.3); the depth test comes before the texel reads, so a hidden pixel costs nothing
+  more; the polygon clipper takes 16 vertices (a leaf cluster is a fan of up to 12).
+* `RasterParams`: `bank` (already shifted, e.g. `2 << 6`), optional `grain` (64x64 signed texture added to the shade, `grainScale`
+  texels per unit), `ztest`, `zwrite`, blend mode (`BLEND_REPLACE`, `BLEND_ADD`, `BLEND_MAX`), shade clamp.
+* A-02: `RasterParams::pattern` (`FacePattern`), windows on a face by its own u and v in metres (along it, up it): a cell a bay wide and
+  a storey high, the window within it (a rectangle, an arched head, a slit, round, a band), `dark` shades under the wall, from `fromV`
+  up. Where a cell spans under two 1x pixels (`proj.f * min(bay, storey) / z / FB_SCALE`) the pattern is its mean (`meanShare * dark`),
+  from four whole; a lit window (`litBank`) is drawn in that bank at `litShade` where the pattern is resolved. A-04: two shapes more (5
+  a triangle, 6 a keyhole), `group` lights to a window split by mullions (a pair, three or four: the people's rhythm), `scatter` the
+  share of cells left blank by a hash of the cell; the far mean counts them.
 * Lines (`rasterLine3`, with thickness) and points (`rasterPoint3`, size) are depth tested.
 
 ## Bank assignment per scene
@@ -96,9 +144,19 @@ Space (`SpaceRenderer::setupPalette`):
 | 30 | in space, the bay's drones' paint (C-18: a light warm grey under the cabin's light, `cabinPalette`) |
 | 31 | Z-04: the microscope's screen's home key (teal; dealt as the cabin's banks are, a free one of the pool looking out). Body A's water trait colour (Q-02, 2026-10-22: a bloom's, a reef's lagoon's, else a pink lake's, from its map's `ltint`/`wtint`; body B's water stays its own: the cabin holds the other banks). X-01 drew the probe's rain and entry plasma in 30 and 31; since X-02 the probe's picture is composited in RGB from `ShadeRamp`s and uses no bank of its own. A milky sea's glow on body A's night side is drawn in its water's own ramp (its pale upper stops) |
 
-The pixel (O0-02, 2026-09-27): `Pix` is still 16 bits, but the top 5 bits are the bank (32 banks, `BANK_MASK 0xF800`) and the low 11 bits the intensity (`INTEN_PER_SHADE` 32 units per classic shade, 0..2047). The mush, the glow discs, the rasteriser's blends and the RGB conversion work in those units through the constants; the ordered dither nudges by 12 units (1.5/16 of a stop, as before). The regression frames were re-blessed.
+The pixel (O0-02, 2026-09-27): `Pix` is still 16 bits, but the top 5 bits are the bank (32 banks, `BANK_MASK 0xF800`) and the low 11
+bits the intensity (`INTEN_PER_SHADE` 32 units per classic shade, 0..2047). The mush, the glow discs, the rasteriser's blends and the
+RGB conversion work in those units through the constants; the ordered dither nudges by 12 units (1.5/16 of a stop, as before). The
+regression frames were re-blessed.
 
-Body ramps (N1-02): banks 2/3 carry the rock family's representative material colour (`familyRep(type, FAM_ROCK)`: basalt on molten, venusian, volcanic and cratered worlds, metal, graphite, gas, else rock) from `BodyGen::matColor` times `lerp(starColour, white, 0.5)`, through the shared `materialRamp` (stops {0 black, 14 dark, 34 mid, 47 c, 56 c->white 50%, 63 white}; `dark` = 0.25c, or the body's noon sky light blended in on atmosphere worlds, `mid` = lerp(dark, c, 0.55)); molten and volcanic bodies keep the lava ramp (basalt in its dark part, lava at 50+), substellar bodies their glow ramp, venusian bodies the cloud colour. `SpaceRenderer::globeBank(bodyBank, material)` picks the pixel's bank by `matFamily` (A: 6, 11, 13, 14, 15; B: 7, 16, 17, 18, 19); gas giants, venusian and substellar bodies stay in one bank. The globe's value is `exposureStop(albedo, shade, atmosphere)` (`05-planet-function.md`), the same rule as the ground; the old `63 albedo^0.6 shade 1.1` is gone.
+Body ramps (N1-02): banks 2/3 carry the rock family's representative material colour (`familyRep(type, FAM_ROCK)`: basalt on molten,
+venusian, volcanic and cratered worlds, metal, graphite, gas, else rock) from `BodyGen::matColor` times `lerp(starColour, white, 0.5)`,
+through the shared `materialRamp` (stops {0 black, 14 dark, 34 mid, 47 c, 56 c->white 50%, 63 white}; `dark` = 0.25c, or the body's noon
+sky light blended in on atmosphere worlds, `mid` = lerp(dark, c, 0.55)); molten and volcanic bodies keep the lava ramp (basalt in its
+dark part, lava at 50+), substellar bodies their glow ramp, venusian bodies the cloud colour.
+`SpaceRenderer::globeBank(bodyBank, material)` picks the pixel's bank by `matFamily` (A: 6, 11, 13, 14, 15; B: 7, 16, 17, 18, 19); gas
+giants, venusian and substellar bodies stay in one bank. The globe's value is `exposureStop(albedo, shade, atmosphere)`
+(`05-planet-function.md`), the same rule as the ground; the old `63 albedo^0.6 shade 1.1` is gone.
 
 A system with no sun (D-02, `StarSystem::sunless()`): no side of a globe faces a sun (the shadows, the relief's slope term and the limb's
 light are off), and the floor of 0.05-0.10 gives way to the galactic band's own light. `galaxyBandLight` takes the parked band (its tone's
@@ -141,7 +199,12 @@ Surface (`SurfaceView::setupPalette`, colours from `lookFor(gen, star)`):
 | 21 | the aurora's tops (R-402): the high part of the curtains' profile in the world's second colour, the same ramp shape as bank 11; B-456: where no aurora can show, a made colour's or a hide's bank |
 | 22 | the galactic band and the nebula patches (G-03): from the night sky's colour (black on an airless world) to a pale star-grey at 40, toward a protostar's cloud tone under one (S-04). B-408: an airless sky lies in it all over and its sun is drawn in it, so the ramp keeps the star-grey under 20, turns to the sun's colour above it at the grey's light and takes the sky bank's sun stops from 55 (a protostar's sky keeps the cloud's ramp). Q-02: the noctilucent clouds and the moon's ice halo drawn in it (the sky's colour to a pale silver, where the night sky's own ramp is darker in its middle than at its ends: they had dark outlines in bank 1) |
 
-`SurfaceView::materialLook` maps `matFamily(material)` to these banks; a terrain quad takes the majority bank of its four corners (vote over 16 banks); the far floor ring uses the type's dominant family (water, ice on icy worlds, sand on cratered/thin-atmosphere/quartz/volcanic worlds, else rock). Objects: rocks bank 3 (bank 0 on living worlds, so they are rock-coloured and not forest-coloured), quartz crystals bank 2, trees/bushes/grass bank 3, birds bank 1 (dark silhouettes), grazers bank 3, capsule bank 1, rain bank 1. Lightning adds a flash to the whole palette. All colours come from `BodyGen::matColor` (N1); `lookFor` only chooses sky, fog, night and cloud parameters per type.
+`SurfaceView::materialLook` maps `matFamily(material)` to these banks; a terrain quad takes the majority bank of its four corners (vote
+over 16 banks); the far floor ring uses the type's dominant family (water, ice on icy worlds, sand on
+cratered/thin-atmosphere/quartz/volcanic worlds, else rock). Objects: rocks bank 3 (bank 0 on living worlds, so they are rock-coloured
+and not forest-coloured), quartz crystals bank 2, trees/bushes/grass bank 3, birds bank 1 (dark silhouettes), grazers bank 3, capsule
+bank 1, rain bank 1. Lightning adds a flash to the whole palette. All colours come from `BodyGen::matColor` (N1); `lookFor` only chooses
+sky, fog, night and cloud parameters per type.
 
 Distance fog is expressed inside the ramp: shade moves toward 63 (the fog colour) with `1 - exp(-dist / fogDistance)`.
 
@@ -179,9 +242,14 @@ up to three quarters; a fog on the seas pales them. The maps keep a ramp for eve
 line's dye in its deck's colour toward the dye's, drawn in dark streaks along the latitudes (a noise stretched east and west at the
 deck's drift, with the deck's own pattern, to the middle latitudes, 0.85 of the deck's value) on the lit side; and its glow (`deckGlow`)
 over the night side, 38 to 48 of its ramp, brightest where the deck is thickest. The whole night side lies in the glow's bank: the frame's
-smoothing keeps a pixel's bank, and a dark pixel of the deck's own among glowing ones came out in the deck's colour. J-15: a desert's
-grass and shrubs, grown from a carpet, take its own grass family's banks in every view (free on a desert: `madeMatColour` of grass is the
-line's pigment's colour), its land look hidden under them; two lines' share the latest's colour (KI-509).
+smoothing keeps a pixel's bank, and a dark pixel of the deck's own among glowing ones came out in the deck's colour. J-15: a bare
+world's grass and shrubs, grown from a carpet, take their line's own overgrowth bank in every view (B-482: the ground's `materialLook`
+and the flora, the globe's stain bank, each map's line ramp read at a greened texel; the line's pigment's colour, its carpet's too), its
+land look hidden under them; two lines' each their own colour, the later's where both lie. B-494: a disc deals its made clouds before
+its class looks, so dyed or glowing clouds keep their colour on a disc with every look (a look past the pool takes its nearest's).
+B-481: on a deck world's ground the sky bank's whole ramp moves toward a cloud line's dye by day, and at night its glow lights the
+deck's underside in its form in the made clouds' bank 23; B-479: a deep line's cracks or seeps glow at night in their look's bank, on
+the ground and the globe.
 
 ## Draw order
 
@@ -268,7 +336,8 @@ drones' paint and lamps theirs while the rack or the drones are seen, by nearnes
 the lab's tones (the pigments', a
 crowd's glow, the incubator's red and blue lights, a broth's cloud: `cabin_life.cpp`), which have no bank of
 their own and take a free one, asked only for a flask drawn in front of the eye, 1.5 m farther than they stand (Z-06: 46 the
-tree of kin's screen, 47 the sequencer's: a device's home is never another's, 30 the drones' paint, for a home asked twice keeps one colour);
+tree of kin's screen, 47 the sequencer's: a device's home is never another's, 30 the drones' paint, for a home asked twice keeps one
+colour);
 one asked of a bank not in the pool takes a free one, past the pool a screen dims to the hull's grey; the pool is every bank but 0, 8
 and 10 and, looking out, 7 (I-03: the pool's nearest asks dealt, the rest dimmed; B-435: the deal comes once the outside is drawn,
 `cabinDeal`; B-437: the space view's pixels in the panes' box, the whole frame in the hatch's drop, are sunk into bank 7, a layer read
@@ -308,7 +377,8 @@ the reading, bedside and picture lamps leave pools when the bulbs are out. The p
 fiftieth is white) as the polygon's grain, its offset `(tone / 79) x` the print's mean shade, so a print darkens with the light on it;
 a thread reads the last twelve `screenshot_<n>.png` when the quarters are seen after a photograph. The garden's leaves are clusters,
 each a seven-sided disc facing the eye (jittered), in the PLANT and PLANT2 finishes coloured as the home world's flora
-(`Game::finishColour`) with a grain of their own; its trunks four tapering faces. The shelves' shards are tablets in the decoder's dealt bank, their shade by
+(`Game::finishColour`) with a grain of their own; its trunks four tapering faces. The shelves' shards are tablets in the decoder's dealt
+bank, their shade by
 the world's count; the core's ring and heart, the drive's ring's inner face (`MAT_GLOW`, 20 + 14 x the pulse + 26 x the drive) and the
 orb rise with the drive's level; the floor glass over the core darkens to 0.82 and catches no sheen (a sheen over the pit's grain
 mottled it). The capsule is `SurfaceView::drawCapsule`'s dome and ring in bank 10, lit by the hangar's lamps; in the hatch's drop its
@@ -419,7 +489,15 @@ deck whatever its height (at 0.3 bar it had shown inside the holes). Costs at 2x
 of 16, 3.8 between the decks; the frames of `probe giants` 4-15 ms, the aurora's grid under a millisecond, a hole's floor and wall
 a second top read where a hole is).
 
-X-04 (2026-10-07) keeps what the probe saw by drawing it again. The descent is a function of the probe's numbers, so a recording is the record's numbers put into a `ProbeState` and drawn by `renderProbeFeed` at the recording's clock and the game time the record's clock track gives, the camera the record's track plus the viewer's look (`Game::renderRecording`): the record's probe, and for a giant of another star its `StarSystem` and its `StarNeighborhood` (the sky's stars round that star), are swapped into the game's for the call (`Game::asRecording`; the space renderer's caches are keyed by the bodies' seeds, so nothing it holds is mixed up). A frame of the recording equals the live frame of that clock (the unit compares them: under 2 levels a pixel on the mean). The final image is the end's frame drawn at the end (`probeKeep`), written beside the photographs and held on the screen; a lent recording's is drawn when the gallery shows it. The recording's depth bar and the data sheet's profile chart are drawn with the HUD's lines and fills at the logical resolution (the chart's grid dotted, the layers' strip in their colours: a deck its cloud's, the deep dark red, a hole cyan).
+X-04 (2026-10-07) keeps what the probe saw by drawing it again. The descent is a function of the probe's numbers, so a recording is the
+record's numbers put into a `ProbeState` and drawn by `renderProbeFeed` at the recording's clock and the game time the record's clock
+track gives, the camera the record's track plus the viewer's look (`Game::renderRecording`): the record's probe, and for a giant of
+another star its `StarSystem` and its `StarNeighborhood` (the sky's stars round that star), are swapped into the game's for the call
+(`Game::asRecording`; the space renderer's caches are keyed by the bodies' seeds, so nothing it holds is mixed up). A frame of the
+recording equals the live frame of that clock (the unit compares them: under 2 levels a pixel on the mean). The final image is the end's
+frame drawn at the end (`probeKeep`), written beside the photographs and held on the screen; a lent recording's is drawn when the
+gallery shows it. The recording's depth bar and the data sheet's profile chart are drawn with the HUD's lines and fills at the logical
+resolution (the chart's grid dotted, the layers' strip in their colours: a deck its cloud's, the deep dark red, a hole cyan).
 
 P-07 (2026-10-22) gives the made giants their class's looks (`KindDef::giantClass`). On the globe (`drawGlobe`, its ramp in
 `setupPalette`'s `bodyRamp`): the water-cloud and the azure giants through the material ramp of their white and their deep blue;
@@ -477,26 +555,53 @@ like the terrain, every band walking the same polygons in order; `surface/forms_
 their own drawing gone) -> the shards (C-03) -> the buggy and the drone -> life -> capsule -> weather -> the veiling glare round
 the sun (B-309, `drawVeil`) -> `mush(2)` (3 on venusian worlds) -> `toRGB` -> HUD in RGB.
 
-Terrain quads are shaded by the smooth gradient of their corner shades since B-311 (`shadingMode` 2, the default; the 4 m near ring had made the flat cells a mosaic); the flat cells of the original's `polymap` (average of the four corner shades, mode 0) and the 12-step gradient (mode 1, M10-12) remain in the settings. The grain texture (amplitude 9, 3 texels per metre at LOD0), the material meso tiles, the broad tone tile of the vertex shade and the mush provide the texture.
+Terrain quads are shaded by the smooth gradient of their corner shades since B-311 (`shadingMode` 2, the default; the 4 m near ring had
+made the flat cells a mosaic); the flat cells of the original's `polymap` (average of the four corner shades, mode 0) and the 12-step
+gradient (mode 1, M10-12) remain in the settings. The grain texture (amplitude 9, 3 texels per metre at LOD0), the material meso tiles,
+the broad tone tile of the vertex shade and the mush provide the texture.
 
 ## HUD (M10-04)
 
-Drawn after the mush in the RGB buffer with the 5x7 font (`core/font.*`): glyphs for ASCII 32..95 plus `CH_DEGREE`, arrows, block, dot. Lowercase maps to uppercase. Colours are constants in `game/ui.h` (`HUD_GREEN`, `HUD_AMBER`, ...). The HUD code lays everything out in logical 320x200 units (`UW`, `UH`); `RGBCanvas::scale` multiplies coordinates, glyphs, lines and rectangles by the resolution scale, so the HUD looks identical at every scale. Screen positions that come from the projection (`BodyScreenInfo`, `proj.f`) are framebuffer pixels and are divided by `FB_SCALE` before use in the HUD; pick radii (14 px stars, 18 px bodies) are multiplied by it. The landing map fits the 512x256 map into a 256x128 logical frame: one texel per pixel at 2x, every second texel at 1x.
+Drawn after the mush in the RGB buffer with the 5x7 font (`core/font.*`): glyphs for ASCII 32..95 plus `CH_DEGREE`, arrows, block, dot.
+Lowercase maps to uppercase. Colours are constants in `game/ui.h` (`HUD_GREEN`, `HUD_AMBER`, ...). The HUD code lays everything out in
+logical 320x200 units (`UW`, `UH`); `RGBCanvas::scale` multiplies coordinates, glyphs, lines and rectangles by the resolution scale, so
+the HUD looks identical at every scale. Screen positions that come from the projection (`BodyScreenInfo`, `proj.f`) are framebuffer
+pixels and are divided by `FB_SCALE` before use in the HUD; pick radii (14 px stars, 18 px bodies) are multiplied by it. The landing map
+fits the 512x256 map into a 256x128 logical frame: one texel per pixel at 2x, every second texel at 1x.
 
 ## M5 additions (2026-09-26)
 
-* Bank 12 is the companion star's ramp (space `setupPalette` when `sys.companion >= 0`; the surface when `env.hasSun2`), bank 13 the substellar glow ramp in a moon's sky. Space `bodyRamp` gives substellar bodies their own red ramp instead of the star-tinted one.
-* `drawGlobe` draws a `PT_COMPANION` body with `drawSun` (depth-tested, bank 12) and returns; in sky mode the surface draws it itself. Every other globe is lit by `sys.lightAt(pos, t)`: the brighter of the two suns. Substellar globes take `shade = max(shade, selfGlow (0.3 + 0.7 albedo))`.
-* N5-01 nebula patches (G-03: of the star-forming complexes within 42 ly): the backdrop loop of `SpaceRenderer::render` asks `nebulaPatches(obs)` for the patches and paints `nebulaGlow` (0..1) as bank 4 (blue), 5 (red) or 0 (white) at up to 17 shades where it beats the band. N5-03: gas giant globes read the storm term from the map's veg channel and replace the baked storm with `storm x (0.55 + 0.45 sin(t / 86400 x 0.9 + 4 lat + seed))`, so storms grow and fade over about a day, band by band.
-* `drawCometTail` (called before the nucleus point or globe): activity `clamp((1.6 ref / d_star)^2)` with `ref` the first planet's orbit; a coma of 60,000 km and 36 tail discs widening to 960,000 km along the anti-star direction, `glowDisc` adds 30 and `18 (1 - f)^2` scaled by activity and `skyDark`. N0-01 (B-201) animates it without touching the orbit: the coma breathes (`1 + 0.1 sin(1.7t) sin(0.61t + 1.3) + 0.05 sin(3.1t)`), five knots (`cometKnot(k, t)`: `k/5 + jitter + t/40`, wrapped, Gaussian width 0.06 along the tail) modulate the ion tail by 0.82-1.18, and a dust tail of 24 discs (`0.55 lenKm g` along the anti-star direction plus `0.28 lenKm g^2` along `-velocity` projected off it, 100,000-1,200,000 km wide, adds `9 (1 - g)^2`) curves back along the orbit. When the nucleus is at least 3 px across, `2 + seed % 3` jets vent from the sunlit hemisphere (directions hashed from the seed, pushed toward the star when they face away), each 14 discs from 1.02 to 4 radii bending `2.2 R s^2` anti-starward, radius `0.1-0.45 R`, three knots per jet streaming out every 8 s; they turn with the nucleus frame.
+* Bank 12 is the companion star's ramp (space `setupPalette` when `sys.companion >= 0`; the surface when `env.hasSun2`), bank 13 the
+  substellar glow ramp in a moon's sky. Space `bodyRamp` gives substellar bodies their own red ramp instead of the star-tinted one.
+* `drawGlobe` draws a `PT_COMPANION` body with `drawSun` (depth-tested, bank 12) and returns; in sky mode the surface draws it itself.
+  Every other globe is lit by `sys.lightAt(pos, t)`: the brighter of the two suns. Substellar globes take
+  `shade = max(shade, selfGlow (0.3 + 0.7 albedo))`.
+* N5-01 nebula patches (G-03: of the star-forming complexes within 42 ly): the backdrop loop of `SpaceRenderer::render` asks
+  `nebulaPatches(obs)` for the patches and paints `nebulaGlow` (0..1) as bank 4 (blue), 5 (red) or 0 (white) at up to 17 shades where it
+  beats the band. N5-03: gas giant globes read the storm term from the map's veg channel and replace the baked storm with
+  `storm x (0.55 + 0.45 sin(t / 86400 x 0.9 + 4 lat + seed))`, so storms grow and fade over about a day, band by band.
+* `drawCometTail` (called before the nucleus point or globe): activity `clamp((1.6 ref / d_star)^2)` with `ref` the first planet's
+  orbit; a coma of 60,000 km and 36 tail discs widening to 960,000 km along the anti-star direction, `glowDisc` adds 30 and
+  `18 (1 - f)^2` scaled by activity and `skyDark`. N0-01 (B-201) animates it without touching the orbit: the coma breathes
+  (`1 + 0.1 sin(1.7t) sin(0.61t + 1.3) + 0.05 sin(3.1t)`), five knots (`cometKnot(k, t)`: `k/5 + jitter + t/40`, wrapped, Gaussian width
+  0.06 along the tail) modulate the ion tail by 0.82-1.18, and a dust tail of 24 discs (`0.55 lenKm g` along the anti-star direction
+  plus `0.28 lenKm g^2` along `-velocity` projected off it, 100,000-1,200,000 km wide, adds `9 (1 - g)^2`) curves back along the orbit.
+  When the nucleus is at least 3 px across, `2 + seed % 3` jets vent from the sunlit hemisphere (directions hashed from the seed, pushed
+  toward the star when they face away), each 14 discs from 1.02 to 4 radii bending `2.2 R s^2` anti-starward, radius `0.1-0.45 R`, three
+  knots per jet streaming out every 8 s; they turn with the nucleus frame.
 
 ## Presentation options (M6-01)
 
-`Framebuffer::toRGB(out, gain, dither)`: with `dither` the 11-bit intensity is nudged by a 2x2 Bayer pattern (-12, +4, +12, -4 in intensity units, 32 a stop, one cell per logical pixel) and snapped to whole palette stops, so ramps show the original's chequered steps instead of the 256-entry interpolation. `platformPresent(..., aspect)`: aspect 1 scales the picture 1.2x vertically inside the window (letterboxed), the way 320x200 filled a 4:3 monitor; scanlines and the CRT shader follow the drawn rectangle.
+`Framebuffer::toRGB(out, gain, dither)`: with `dither` the 11-bit intensity is nudged by a 2x2 Bayer pattern (-12, +4, +12, -4 in
+intensity units, 32 a stop, one cell per logical pixel) and snapped to whole palette stops, so ramps show the original's chequered steps
+instead of the 256-entry interpolation. `platformPresent(..., aspect)`: aspect 1 scales the picture 1.2x vertically inside the window
+(letterboxed), the way 320x200 filled a 4:3 monitor; scanlines and the CRT shader follow the drawn rectangle.
 
 ## Map cache (M7-02)
 
-`SpaceRenderer` keeps at most `mapCacheCap` (24) planet maps, about 19 MB: `mapIfReady` stamps every use, `startMap` evicts the least recently used map that is not being generated before adding one. `mapStats` counts generated maps, hits and evictions; `genMicros` sums the worker generation time (`bench` prints the average: about 113 ms per 512x256 map on an M4).
+`SpaceRenderer` keeps at most `mapCacheCap` (24) planet maps, about 19 MB: `mapIfReady` stamps every use, `startMap` evicts the least
+recently used map that is not being generated before adding one. `mapStats` counts generated maps, hits and evictions; `genMicros` sums
+the worker generation time (`bench` prints the average: about 113 ms per 512x256 map on an M4).
 
 T-01 (2026-10-09): the world's plan on the maps (`peoples/plan.h`). The landing zoom (`Game::buildLandingZoom`) draws the plan's ways
 through the window as texel lines by their kind (a path fainter, a railway darker, a highway and a maglev pale, a canal blue-dark; the

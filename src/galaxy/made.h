@@ -34,8 +34,9 @@ enum MadeSeaTrait { MS_PURPLE = 1, MS_BLACK = 2, MS_MILK = 4, MS_FOAM = 8, MS_JE
 constexpr int MADE_SEA_TRAITS = 9;
 // J-13 (R-454): a sea under the ice's line colouring the cracks and stains its water comes up through (named by its dye: RED CRACKS), appended
 enum MadeGroundTrait { MGT_COLOURED_SNOW = 1, MGT_DARK_ICE = 2, MGT_CRUSTS = 4, MGT_MATS = 8, MGT_STROMATOLITES = 16, MGT_RUST = 32, MGT_CHALK = 64,
-                       MGT_GLASS = 128, MGT_SULPHUR = 256, MGT_PITTED = 512, MGT_SLIME = 1024, MGT_COLOURED_CRACKS = 2048 };
-constexpr int MADE_GROUND_TRAITS = 12;
+                       MGT_GLASS = 128, MGT_SULPHUR = 256, MGT_PITTED = 512, MGT_SLIME = 1024, MGT_COLOURED_CRACKS = 2048,
+                       MGT_COLOURED_SEEPS = 4096 };   // J-16 (KI-506): a dyed line in the rock staining the bare rock where its water seeps up
+constexpr int MADE_GROUND_TRAITS = 13;
 // J-13: where a spread's line lives under the ground (`MadeSpread::deep`): none (on its surface), the rock's pores, a sea under the ice; J-14:
 // or over it, in the clouds (appended)
 enum MadeDeep { MADE_SURFACE = 0, MADE_DEEP_ROCK, MADE_UNDER_ICE, MADE_CLOUDS };
@@ -172,6 +173,10 @@ struct MadeSpread {
     MadeLook look[MC_COUNT];
     double glow = 0; RGB glowTint;   // its own night light in its waters (a glowing line's) and its plants' (a glowing host's)
     double plantsGlow() const { return look[MC_PLANTS].on && look[MC_PLANTS].kind == MP_GLOWING ? glow : 0; }   // (its plants' alone: a glowing host's)
+    // J-16 (KI-506): a deep line's night light in the cracks or seeps its water comes up through (a glowing line's under the ice or in the rock)
+    double landsGlow() const {
+        return look[MC_LAND].on && (look[MC_LAND].kind == MGT_COLOURED_CRACKS || look[MC_LAND].kind == MGT_COLOURED_SEEPS) ? glow : 0;
+    }
     bool j05() const { return makes != 0 || plants || landOn != 0 || lookWaters != MADE_ALL_WATERS || cover >= 0 || coldC < 1e8; }
 };
 
@@ -232,6 +237,7 @@ struct MadeWorld {
     double sour = 0;
     MadeLook land, snow, plant;
     double plantShare = 1, plantGlow = 0; RGB plantGlowTint;
+    double landGlow = 0; RGB landGlowTint;   // J-16 (KI-506): the land look's night light (a deep line's cracks or seeps), the latest line's
     double galls = 0, rot = 0;
     double rustGround = 0, lush = 0, bleached = 0;
     // J-08: the animals' fates: the air's over the whole world (`fate`; a line's where it reached is its spread's), every trait named of all of

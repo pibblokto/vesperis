@@ -315,7 +315,8 @@ magnet is taken away. A kind whose warmth passes its top (+2 C) going up, or is 
 (`Specimen::still`: the jiggle alone, the beat stopped). The depth's blur (`Specimen::blurUm`: past half the depth of field,
 `depthOfField(mag)`: 25 um at x40, about one at x1,000) spreads a cell's edges and fades it; a copy whose own extent (its wander placed)
 misses the view is left out; past 3,000 of a kind in a view an even share of its copies is drawn. Under the electron the slide's clock
-stops (a fixed sample).
+stops (a fixed sample), and the microscope keeps the slide it drew until a turn, a tilt, a zoom or the stage moves it (B-502,
+`microscopeElectron`).
 
 **What it answered** (R-437, `slideAnswer`: a kind's bits at a time): what each thing done is for is said as it is done ("A SPOT OF LIGHT
 - A LIGHT-FEEDER SWIMS INTO IT"); each kind in view is told once a slide as it answers (into the light, out of it, to the food, round
@@ -332,7 +333,8 @@ rests meanwhile, the arrows let it go). The slide is
 drawn with `Slide::lod` (a cell under 2.5 of the view's 1x pixels a speck: its body's size and look, `speckOf`) and, at 3x and 4x,
 `Slide::step` 2 (the light ways evaluate a pixel in four, each its 2 x 2 block's, under a mush that spans more; the electron's mesh
 half as fine); the electron builds its bodies' meshes on the pool and draws them in row bands, each mesh row skipped where it misses a
-band. Off the microscope, every new field's default draws as Z-02's plates (the battery's `life_look`).
+band. Its filter's pores and grain are hashed once a frame into tables over the view (B-502). Off the microscope, every new field's
+default draws as Z-02's plates (the battery's `life_look`).
 
 **The record:** what is seen of a species (a cell in the view's middle, in focus, 5 of the view's 1x pixels across) is kept in the
 guide by its key `<body>/M<index>` (`MicrobeSheet`: its form on any slide and the forms of its life seen; on a cell, its motion on a
@@ -357,7 +359,9 @@ its warmth; its light, dark, white, red, blue or ultraviolet (J-01: UV); its ene
 the lab's clock
 (`CultureEvent`: started, the medium changed, a fresh broth, a second added, a strain) and AS ITS WORLD (`mediumOfPlace`: the vial's
 chemistry's cell, the warmth read at the take, the sun's light where it reached the place, the place's energy, a spring's sulphide, a
-plume's hydrogen, a rust world's iron, else the broth; its salt), the first guess a species goes in at. Enter puts in a species seen in a
+plume's hydrogen, a rust world's iron, else the broth; its salt), the first guess a species goes in at. An acid medium carries iron and
+sulphur besides, so an iron or a sulphide eater feeds in it whatever its energy (B-480: `acidFeeds`, the acid waters' and a venusian
+deck's); the seed page says an acid place gives DEAD MATTER, IRON, SULPHIDE. Enter puts in a species seen in a
 vial (only what the microscope showed of it: never a fossil or a protocell), a flask's culture or a kept one; on a culture a second. The
 chooser (R-432's folders) has two tabs (R-441): THE VIALS, the raw samples by world, and THE CULTURES, the flasks and the collection's
 folders; Tab between them, the chooser opening on the one last shown (the sequencer's alike, each species once among the vials and once
@@ -468,7 +472,8 @@ ITS KIN ON THE TREE` and lists THE SEQUENCER among the ways to more.
 
 **The tree of kin** (the state `TREE`, E at its screen on the port wall, or Tab from the sequencer on the page of what it read; leaf
 green, home 46): Y-01 (R-444), a tree a page and no tree of everything, Left and Right between them (`TreeState::pages`): THE SHIP (its
-own three, home's life), each world with a species read (its name, else UNKNOWN and its kind), each of the collection's folders holding a
+own three, home's life), each world with a species read (its name, else UNKNOWN and its kind, and under them its place, `(+195 +0 +46 /
+3)`, as the microscope's lists say it: B-497), each of the collection's folders holding a
 culture (UNSORTED, then the explorer's). Every species read stays in `tree.leaves` in the tree's order (`treeBefore`: home's genesis
 first, then by genesis, deep branch, a kin cell's boxes, the line's star, the world, its comb), the geneses counted there (the LIFE page's
 `LIFE BEGAN AT LEAST 3 TIMES`); a page shows its own (`treePage`: `tree.shown`), each two neighbours' common ancestor drawn as the tree
@@ -479,7 +484,9 @@ today's edge under their parents, a strain's strain under it; a line goes on as 
 a chooser (the guide's `treeoff` lines), a world's own species staying. A folder's page is what it holds (a pair two leaves, a strain kept
 without its species a leaf in the species' place, those not read counted), sorted on the microscope's lists. A species with no name is its
 look and size (B-443, `treeLeaves`: its form kept with its lineage, `formOfKey`), two of a world alike told apart as B-442's rows are, and
-a line too long for its row leaves out its world ("AN ARMOURED CELL, 65 UM ACROSS"; on a world's own page none is said); the sequencer
+a line too long for its row leaves out its world ("AN ARMOURED CELL, 65 UM ACROSS"; on a world's own page none is said); a leaf of an
+unnamed world says its place where it has room, else UNKNOWN, and on a folder's page two leaves that read alike take their colour and
+motion, then a number kept at the end of a look cut for room (B-497); the sequencer
 says a species in its words on the tree (`treeWords`: its title, its kin, the log's KIN). Up and Down choose a leaf: its nearest kin read
 anywhere and their common ancestor below (a drifter's the star it left's), a line's species and its move; Enter sets the remote target to
 its world's star. In the room the screen shows a tree of every leaf read (`drawTreeWall`).
@@ -612,16 +619,18 @@ LIGHT, IN THE DARK, WHEN CROWDED, WHEN STARVING, WHEN COLD (`GeneSwitch`; the pa
 `16~DARK`, or after its letters `5=ACCG~COLD`). A gene's own is its kind's (`geneOwnSwitch`): a glow's WHEN CROWDED (its quorum), a rest's
 WHEN STARVING (its ALWAYS works as its own: it rests only as it ends), the rest ALWAYS; it is kept down its lines, a moved gene keeping its
 donor's, a copy its gene's. Off (its condition failing, or NEVER) a gene loses its work as one cut and pays no price; its letters and its
-switch stay. The conditions: its flask lit; colder than its best; starving, where the line as written cannot grow (its crowd's food spent,
-nothing it eats, no light, its medium killing it) but in the cold, which it waits out; its crowd past its quorum's share (its glow's, else
+switch stay. The conditions: its flask lit; colder than its best; starving, where the line as written cannot grow (nothing it eats, no
+light, its medium killing it; a full flask is fed for good, so a culture at its crowd is not starving, B-477) but in the cold, which it
+waits out; its crowd past its quorum's share (its glow's, else
 3%). A switched line's culture (`CultureKind::switches`: each switched gene's condition, its work lost off, its price) is laid out by its
 state as every culture is, closed-form: a stretch's light and cold fixed by its medium, a law ending where its crowd crosses its quorum's
 share, starving judged of the line as written so that no switch turns itself on (`switchedKind`); its rate there is the incubator's DOUBLING
 IN. A glow lit by its switch, not its crowd, glows with its first cells while on (`glowAny`: GLOWING: SWITCHED ON). A size, a shape, a
 motion or a sense switched show in its drop alone (who eats whom by its genes all on). Its drop is as its flask's state has it when taken
 (`switchedLine`, `MicroscopeState::lineState`; a kept culture's as a young culture of it). So a switch is the clever edit: a glow IN THE
-DARK lights a dark flask from its first cells, a moved gene WHEN CROWDED pays its price only past its quorum, a costly motion WHEN STARVING
-grows at its species' rate and swims at its crowd, a vital gene IN THE LIGHT dies in the dark (a kill switch), a rest IN THE LIGHT rests lit
+DARK lights a dark flask from its first cells, a moved gene WHEN CROWDED pays its price only past its quorum, a costly motion WHEN
+STARVING grows at its species' rate and swims once its broth feeds it nothing, a vital gene IN THE LIGHT dies in the dark (a kill
+switch), a rest IN THE LIGHT rests lit
 and dies in the dark.
 
 **Knowing a gene** (R-450; the guide's `gene` lines, `<species key>/G<number>`): a gene is known for its species, and its lines with it, the
@@ -654,9 +663,11 @@ years its spores slept before a flask woke them), the explorer's names (`name`: 
 clock (`clock`). The save keeps what runs aboard (the kit, the cold store, the flasks, the sequencer, the gene editor).
 
 **The catalogue** (the state `CATALOGUE`, the guide's THE CATALOGUE; anywhere, as the log): every species with a sheet, the explorer's and a
-friend's lent, by world (a world's head, its name or UNKNOWN and its kind; its species by index, each its name or UNNAMED and its form in
+friend's lent, by world (a world's head, its name or UNKNOWN and its kind, an unnamed world's place after them, B-497; its species by
+index, each its name or UNNAMED and its form in
 the sheet's words: its plan, SPORES, CYSTS or FOSSILS, MADE where it was read so) or, Tab, by kin (the sequenced in the tree's order, each
-genesis's head in its colour and words as the tree's; then NOT YET SEQUENCED). Enter shows a species' sheet (the microscope's lines,
+genesis's head in its colour and words as the tree's, B-500: the animals seen after their world's genesis's species once one of the
+world's own species was read; then NOT YET SEQUENCED, the other animals last). Enter shows a species' sheet (the microscope's lines,
 `sheetLinesOf`) beside its form drawn live: one specimen in a framebuffer of its own (every bank its way's), the view following it, still
 but for its jiggle where its motion was never seen, a scale bar under it. V the next way it was seen in (the light ways on any slide, the
 dark field its flagella, the glow its DNA, the electron its wall; a fossil's the section), Up and Down the next species; N names the one

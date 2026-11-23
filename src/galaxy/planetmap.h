@@ -274,8 +274,8 @@ double iceSheetIn(const BodyGen& g, const Vec3& unit);
 // R-307: the zenith and horizon colours of a type's sky by day (false: no sky); the surface, the globe's hemisphere light
 // and the landing map read the same pair
 bool typeSky(const BodyGen& g, RGB& zenith, RGB& horizon);
-// M9-14: one generated sentence about a body or a star.
-std::string describeBody(const Body& b, const BodyGen& g);
+// M9-14: one generated sentence about a body or a star. B-498: `ofSecondSun`, a world of a system's second sun (its parent a star: no moon)
+std::string describeBody(const Body& b, const BodyGen& g, bool ofSecondSun = false);
 std::string describeStar(const Star& s);
 // Q-01: the facts of a body, read from its orbit and its spin (no draw): SIDEWAYS SPIN (a tilt over 60 degrees), RETROGRADE SPIN, RACING DAY (a
 // day under half an hour of the game's clock: its days are 20 minutes to 4 hours, the fastest twelfth), LOCKED FACE (one face to its sun),

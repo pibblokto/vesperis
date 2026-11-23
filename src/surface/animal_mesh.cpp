@@ -83,9 +83,10 @@ void shiftPose(AnimalPose& P, const Vec3& d) {
     for (int w = 0; w < P.wings; w++) for (int j = 0; j < P.wingPts; j++) P.wing[w][j] += d;
 }
 // J-07: a pose made at the origin facing +z on level ground, turned so its up is `n` (a trunk's level normal) and its forward is up, then
-// put at `at`: its feet on the trunk, its belly to it
-void turnPose(AnimalPose& P, const Vec3& at, const Vec3& n) {
-    const Vec3 F(0, 1, 0), S = cross(F, n);
+// put at `at`: its feet on the trunk, its belly to it. B-491: its forward along the trunk's axis `axis` (a leaning trunk's), its up the
+// normal square to that axis
+void turnPose(AnimalPose& P, const Vec3& at, const Vec3& n0, const Vec3& axis) {
+    const Vec3 F = normalize(axis), n = normalize(n0 - F * dot(n0, F)), S = cross(F, n);
     auto dir = [&](const Vec3& v) { return S * (-v.x) + n * v.y + F * v.z; };   // the pose's side (-x), up and forward to S, n and F
     auto pt = [&](Vec3& p) { p = at + dir(p); };
     auto vec = [&](Vec3& v) { v = dir(v); };
@@ -229,7 +230,7 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
         lv.climbing = false; lv.at = Vec3(0, 0, 0); lv.heading = 0; lv.aloft = lv.afloat = false; lv.sink = 0;
         for (auto& row : lv.ground) for (double& g : row) g = 0;
         poseAnimal(R, lv, P);
-        turnPose(P, in.at, in.wall);
+        turnPose(P, in.at, in.wall, in.axis);
         return;
     }
     const AnimalBody& b = R.b;

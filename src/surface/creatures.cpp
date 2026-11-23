@@ -97,6 +97,7 @@ void SurfaceView::planFlocks(const SurfaceSite& s, const Bestiary& B, Rng& r, in
             if (f.n <= 0) continue;
             f.sickness = af.sick > 0 ? af.sickness : 0; f.sick = af.sick; f.changed = af.changed;
             f.changedK = af.has(CHG_GIANT) ? 1.6 : (af.has(CHG_DWARF) ? 0.55 : 1.0);
+            f.fateAge = af.age;   // B-490
         }
         flocks.push_back(f);
     }
@@ -161,6 +162,7 @@ void SurfaceView::spawnLife(double lat, double lon) {
     speciesChanges.assign(bestiary.species.size(), SpeciesChanges());
     changedRigs.clear(); remains.clear(); silence = false;
     deadKept.clear(); lifeClock = 0; shallowsPaths.clear();   // B-470: the landing's clock and its dead; B-467: the shallows' places
+    flockFalls.clear(); swimmersSunk.clear();   // B-490
     const MadeWorld& mw = site.gen.made;
     if (mw.on() && mw.fated()) {
         const int steer = steerOf(mw);
@@ -316,12 +318,39 @@ void SurfaceView::updateHabitat() {
         remains.push_back(r);
         d.shown = true;
     }
+    // B-490: the sprouting swimmers past their fall within reach, washed up dead on the nearest dry ground within 60 m of where they were (one
+    // with none so near sank), kept
+    if (site.hasWater && bestiary.swimmerCount > 0 && ((site.gen.made.on() && site.gen.made.fated()) || testSwimmerFate.on())) {
+        std::vector<SwimmerAt> alive, dead;
+        swimmersNear(px, pz, lastT, alive, &dead);
+        for (const SwimmerAt& w : dead) {
+            if (keptDead(w.seed) || std::find(swimmersSunk.begin(), swimmersSunk.end(), w.seed) != swimmersSunk.end()) continue;
+            double bx = 0, bz = 0, best = 1e9;
+            for (int a = 0; a < 16; a++)
+                for (double d = 2; d <= 60 && d < best; d += 2) {
+                    const double qx = w.x + std::sin(a * TAU / 16) * d, qz = w.z + std::cos(a * TAU / 16) * d;
+                    const TerrainVertex v = site.sampleAt(qx, qz, 16);
+                    if (!(v.material == MAT_WATER || (v.water > -1e8f && v.h < v.water + 0.3))) { best = d; bx = qx; bz = qz; }
+                }
+            if (best < 1e9) keepDead(w.species, bx, bz, w.heading, bestiary.species[w.species].size * w.sizeK, w.seed, w.fellAt);   // (aged since its fall)
+            else swimmersSunk.push_back(w.seed);
+        }
+    }
     restageRemains();
 }
 
 bool SurfaceView::keptDead(uint64_t seed) const {
     for (const DeadKept& d : deadKept) if (d.seed == seed) return true;
     return false;
+}
+
+// B-489: the dead its world kept from the landings before (the guide's), at the landing: a landing's own herds were planned already, so their
+// members among them go; the cells come without theirs, and their remains lie where they fell once the explorer is within reach
+void SurfaceView::deadIn(const std::vector<DeadKept>& kept) {
+    deadKept = kept;
+    for (DeadKept& d : deadKept) d.shown = false;
+    critters.erase(std::remove_if(critters.begin(), critters.end(), [&](const Critter& c) { return keptDead(c.seed); }), critters.end());
+    habitatT = -1e9;
 }
 
 // B-470: every remains' stage by the clock now: a cell's dead by their fate's age where they lie and the time since the landing, a kill's or a
@@ -341,10 +370,11 @@ void SurfaceView::lifeAnchored(double lat, double lon) {
         if (r.diedAt > -1e17) for (DeadKept& d : deadKept) if (d.seed == r.seed) d.eaten = r.eaten;
     for (DeadKept& d : deadKept) d.shown = false;
     remains.clear(); critters.clear(); herds.clear(); flocks.clear(); habitatT = -1e9;
-    shallowsPaths.clear();
+    shallowsPaths.clear(); flockFalls.clear();   // (B-490: one falling then is gone with the old frame)
     if (!kindHas(site.gen.type, KT_FAUNA)) return;
     Rng r(site.gen.seed ^ (uint64_t)(lat * 1e6) ^ ((uint64_t)(lon * 1e6) << 20));
     planFlocks(site, bestiary, r, site.sampleAt(0, 0, 16).biome, flocks);
+    for (Flock& f : flocks) f.fallsTo = lifeClock;   // (B-490: those fallen before now fell out of sight)
 }
 
 void SurfaceView::cellMembers(const Herd& hd, int spi, int n, uint64_t hs, std::vector<Critter>& out) const {
@@ -522,6 +552,19 @@ Remains SurfaceView::killCritter(Critter& q, bool fell) {
     return r;
 }
 
+// B-490: an animal fallen dead where no herd holds it (a sprouting flyer fallen from its flock, a sprouting swimmer washed up): its remains
+// where it lies, staged by its death on the landing's clock, its stalks up, kept on the body as a kill is (B-470)
+Remains SurfaceView::keepDead(int species, double x, double z, double heading, double size, uint64_t seed, double diedAt) {
+    Remains r;
+    r.species = species; r.x = x; r.z = z; r.heading = heading; r.size = size; r.seed = seed;
+    r.cell = false; r.stalks = true; r.diedAt = diedAt; r.stage = remainsStageAfter((lifeClock - diedAt) / MADE_STEP_S);
+    DeadKept d;
+    d.seed = seed; d.unit = site.unitAt(x, z); d.species = species; d.heading = heading; d.size = size; d.diedAt = diedAt; d.stalks = true; d.shown = true;
+    deadKept.push_back(d);
+    remains.push_back(r);
+    return r;
+}
+
 uint64_t SurfaceView::testKillCritter(int i) {
     if (i < 0 || i >= (int)critters.size()) return 0;
     const uint64_t seed = critters[i].seed;
@@ -569,6 +612,35 @@ double SurfaceView::climbSide(size_t self, double want, const Species& sp, doubl
     return want;
 }
 
+// B-491: a climber's trunk: the nearest live tree within 25 m whose trunk as drawn is as thick as its body is wide at the most it climbs to
+// (`upATree`'s top; a thinner one it would hug as a pole), false when there is none
+bool SurfaceView::climbTreeNear(double x, double z, const Species& sp, double k, TreeInst& out) {
+    constexpr double radius = 25;
+    double best = radius * radius;
+    bool found = false;
+    const int c0x = (int)std::floor((x - radius) / 16), c1x = (int)std::floor((x + radius) / 16);
+    const int c0z = (int)std::floor((z - radius) / 16), c1z = (int)std::floor((z + radius) / 16);
+    for (int cz = c0z; cz <= c1z; cz++)
+        for (int cx = c0x; cx <= c1x; cx++)
+            forTrees(cx, cz, [&](const TreeInst& T) {
+                if (T.dead || T.stump) return;
+                const double dx = T.x - x, dz = T.z - z, d2 = dx * dx + dz * dz;
+                if (d2 >= best) return;
+                double r0, r1, top, lx, lz;
+                trunkOf(T, r0, r1, top, lx, lz);
+                const double y = clampd(std::min(T.cy - 0.5 * T.r, 0.45 * T.h), 1.0, 6.0), f = clampd((y + 0.2) / std::max(0.2, top + 0.2), 0, 1);
+                if (2 * std::max(0.02, r0 + (r1 - r0) * f) < sp.body.width * k) return;
+                best = d2; out = T; found = true;
+            });
+    return found;
+}
+// B-468, B-491: a climber on its trunk: its feet on the bark round the girth where it clings, its belly to its side, its body along the trunk's
+// axis there (from 0.2 m under the ground to the top, leaning with it)
+void SurfaceView::climbPose(const Critter& c, AnimalPoseIn& in) const {
+    in.climbing = true; in.wall = Vec3(std::sin(c.treeA), 0, std::cos(c.treeA));
+    in.trunkR = trunkRadius(c, c.climbY);
+    in.axis = normalize(Vec3(c.trunkLx, c.trunkTopY + 0.2, c.trunkLz));
+}
 // J-07: the nearest live tree within `radius` of a point (a browser's, a climber's; `any`: a dead one or a stump too), false when none
 bool SurfaceView::treeNear(double x, double z, double radius, TreeInst& out, bool any) {
     double best = radius * radius;
@@ -666,6 +738,33 @@ void SurfaceView::updateLife(double dt, double t) {
             }
         }
     }
+    // B-490: a sprouting flock member falls dead at its time from where it flies (none fell before the landing in sight); it falls, and its
+    // remains are kept where it comes down (in the water it sinks)
+    std::vector<FlockMember> members;
+    for (Flock& f : flocks) {
+        if (f.sickness != MF_SPROUTING || f.sick <= 0 || lifeClock <= f.fallsTo) { f.fallsTo = std::max(f.fallsTo, lifeClock); continue; }
+        flockMembers(f, t, members);
+        AnimalFate af;
+        af.age = f.fateAge;
+        for (const FlockMember& m : members) {
+            if (m.sick != MF_SPROUTING || keptDead(m.seed)) continue;
+            const double at = sproutFallOf(m.seed, MF_SPROUTING, af);
+            if (at <= f.fallsTo || at > lifeClock) continue;
+            FlockFall F;
+            F.species = f.species; F.x = m.x; F.y = m.y; F.z = m.z; F.heading = m.ph; F.seed = m.seed; F.sick = m.sick; F.changed = m.changed;
+            F.size = (speciesOf(f.species) ? speciesOf(f.species)->size : 0.5) * (m.changed ? f.changedK : 1.0);
+            flockFalls.push_back(F);
+        }
+        f.fallsTo = lifeClock;
+    }
+    for (size_t k = 0; k < flockFalls.size();) {
+        FlockFall& F = flockFalls[k];
+        F.vy -= g * dt; F.y += F.vy * dt; F.heading += 2.5 * dt;   // (turning over as it falls)
+        const double gy = site.groundHeight(F.x, F.z), wy = site.waterAt(F.x, F.z);
+        if (F.y > std::max(gy, wy)) { k++; continue; }
+        if (wy <= gy) keepDead(F.species, F.x, F.z, F.heading, F.size, F.seed, lifeClock);
+        flockFalls.erase(flockFalls.begin() + (long)k);
+    }
     // ---- herds
     double localTime = env.localTime;
     double hoof = 0;
@@ -718,7 +817,7 @@ void SurfaceView::updateLife(double dt, double t) {
         auto underGround = [&](double secs) { c.state = CS_UNDER; c.timer = secs; c.speed = 0; c.homeX = c.x; c.homeZ = c.z; c.lift = 0; };
         auto upATree = [&](double secs) {   // to the nearest trunk within 25 m and up it, false when there is none (B-468: the trunk as drawn)
             TreeInst T;
-            if (!treeNear(c.x, c.z, 25, T)) return false;
+            if (!climbTreeNear(c.x, c.z, sp, k, T)) return false;
             c.state = CS_CLIMB; c.timer = secs; c.climbY = 0; c.lift = 0;
             c.treeX = T.x; c.treeZ = T.z; c.treeGy = T.gy;
             trunkOf(T, c.trunkR0, c.trunkR1, c.trunkTopY, c.trunkLx, c.trunkLz);
@@ -786,7 +885,13 @@ void SurfaceView::updateLife(double dt, double t) {
                 const double stand = 0.45 * sp.body.length * k + 0.35 * f->size + 0.2;
                 c.heading = std::atan2(fx, fz);
                 if (fd > stand + 0.4) c.speed = sp.walkSpeed * (fd > 20 ? 1.6 : 1.0);
-                else { c.speed = 0; if (f->kill) f->eaten += dt; }
+                else {
+                    c.speed = 0;
+                    if (f->kill) {
+                        f->eaten += dt;
+                        for (DeadKept& d : deadKept) if (d.seed == f->seed) d.eaten = f->eaten;   // (B-489: kept as it goes, for the guide)
+                    }
+                }
                 if (c.timer <= 0) {
                     c.state = CS_REST; c.timer = 15 + 10 * hash01(c.seed ^ (uint64_t)(t * 3)); c.speed = 0; c.food = 0;
                     c.hungerT = 120 + 60 * hash01(c.seed ^ (uint64_t)(t * 13));
@@ -1052,7 +1157,8 @@ void SurfaceView::updateLife(double dt, double t) {
 // 1.5 m it keeps to) it swims along, read on the 16 m ground and the mean water (`groundHeightCoarse`, `waterAt`: the same from anywhere at the
 // landing, whatever the tide). From the first of the cell's eight hashed places that deep, halved toward the first of them shallower (dry ground
 // too: the depth runs through 0.9 m between); with none shallower, the shallowest of them over 0.3 m, under 3 m; with all eight dry, the same
-// in a grid of 7 by 7 over the cell; then up to three points 4 m apart either way along the line of that depth
+// in a grid of 7 by 7 over the cell; then up to three points 4 m apart either way along the line of that depth (B-492: each step along the
+// line where the last point lies, its chord within the band)
 const SurfaceView::ShallowsPath& SurfaceView::shallowsPathOf(int ccx, int ccz, uint64_t hs) {
     const uint64_t key = (uint64_t)(uint32_t)ccx << 32 | (uint32_t)ccz;
     const auto it = shallowsPaths.find(key);
@@ -1103,20 +1209,46 @@ const SurfaceView::ShallowsPath& SurfaceView::shallowsPathOf(int ccx, int ccz, u
             sx = ccx * 100.0 + 11 + 13 * bi; sz = ccz * 100.0 + 11 + 13 * bj;
         }
     }
-    double gx = depth(sx + 2, sz) - depth(sx - 2, sz), gz = depth(sx, sz + 2) - depth(sx, sz - 2), gl = std::hypot(gx, gz);
-    if (gl < 1e-6) { gx = 1; gz = 0; gl = 1; }
-    gx /= gl; gz /= gl;   // toward the deeper water
+    // B-492: each point's own slope (toward the deeper water), so the stretch bends with a curving shore; a step whose chord leaves the 0.3 to
+    // 1.5 m band is tried again at half its length, then the stretch ends there
+    auto slopeAt = [&](double x, double z, double& ux, double& uz) {
+        const double gx = depth(x + 2, z) - depth(x - 2, z), gz = depth(x, z + 2) - depth(x, z - 2), gl = std::hypot(gx, gz);
+        if (gl < 1e-6) return false;
+        ux = gx / gl; uz = gz / gl;
+        return true;
+    };
+    auto inBand = [&](double x, double z) { const double d = depth(x, z); return d >= 0.3 && d <= 1.5; };
+    double gx = 1, gz = 0;
+    slopeAt(sx, sz, gx, gz);
     double xs[7], zs[7];
     xs[3] = sx; zs[3] = sz;
     int lo = 3, hi = 3;
-    for (int side = -1; side <= 1; side += 2)
+    for (int side = -1; side <= 1; side += 2) {
+        double tx = -gz * side, tz = gx * side;   // the way along the line this side goes (the last step's)
         for (int j = 1; j <= 3; j++) {
             const int at = 3 + side * j, from = at - side;
-            const double qx = xs[from] - gz * 4 * side, qz = zs[from] + gx * 4 * side;   // along the line, then back onto the depth across it
-            if (depth(qx + gx * 8, qz + gz * 8) < WANT || depth(qx - gx * 8, qz - gz * 8) >= WANT) break;
-            onDepth(qx + gx * 8, qz + gz * 8, qx - gx * 8, qz - gz * 8, xs[at], zs[at]);
+            double ux, uz;
+            if (!slopeAt(xs[from], zs[from], ux, uz)) break;
+            double nx = -uz, nz = ux;   // along the line there, the way it was going
+            if (nx * tx + nz * tz < 0) { nx = -nx; nz = -nz; }
+            bool ok = false;
+            for (double step = 4; step >= 2 && !ok; step -= 2) {
+                const double qx = xs[from] + nx * step, qz = zs[from] + nz * step;   // along the line, then back onto the depth across it
+                if (depth(qx + ux * 8, qz + uz * 8) < WANT || depth(qx - ux * 8, qz - uz * 8) >= WANT) continue;
+                double px2, pz2;
+                onDepth(qx + ux * 8, qz + uz * 8, qx - ux * 8, qz - uz * 8, px2, pz2);
+                const double cl = std::hypot(px2 - xs[from], pz2 - zs[from]);
+                if (cl < 0.5) continue;
+                bool chord = true;
+                for (double u = 0.25; u < cl && chord; u += 0.25) chord = inBand(xs[from] + (px2 - xs[from]) * u / cl, zs[from] + (pz2 - zs[from]) * u / cl);
+                if (!chord) continue;
+                xs[at] = px2; zs[at] = pz2; tx = (px2 - xs[from]) / cl; tz = (pz2 - zs[from]) / cl;
+                ok = true;
+            }
+            if (!ok) break;
             if (side < 0) lo = at; else hi = at;
         }
+    }
     P.n = hi - lo + 1;
     for (int q = 0; q < P.n; q++) { P.x[q] = xs[lo + q]; P.z[q] = zs[lo + q]; }
     P.ok = true;
@@ -1131,13 +1263,15 @@ bool SurfaceView::shallowsSpot(int ccx, int ccz, uint64_t hs, double& cx, double
 bool SurfaceView::testShallowsSpot(int ccx, int ccz, double& x, double& z) {
     return shallowsSpot(ccx, ccz, hash2i(ccx, ccz, site.gen.seed ^ 0xF1A), x, z);
 }
+const SurfaceView::ShallowsPath& SurfaceView::testShallowsPath(int ccx, int ccz) { return shallowsPathOf(ccx, ccz, hash2i(ccx, ccz, site.gen.seed ^ 0xF1A)); }
 
 // the world's swimmers within two 100 m cells of a point at a time, those at the surface or in a leap: each cell's spot (a hash's third of
 // them) holds one of its swimmer species circling, where the water is deep enough for it (J-07: a shoal's three in line; one of the shallows
 // round the first of eight places of its cell where the water is 0.3 to 1.5 m deep, its back always up; a leaper under 2 m of water at
 // least, out in an arc every 7 to 13 s)
-void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<SwimmerAt>& out) {
+void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<SwimmerAt>& out, std::vector<SwimmerAt>* dead) {
     out.clear();
+    if (dead) dead->clear();
     if (!site.hasWater || !kindHas(site.gen.type, KT_FAUNA) || bestiary.swimmerCount <= 0) return;
     const int ccx = (int)std::floor(px / 100), ccz = (int)std::floor(pz / 100);
     const bool fated = site.gen.made.on() && site.gen.made.fated();
@@ -1154,10 +1288,14 @@ void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<Swimm
             if (path) { cx = path->x[path->n / 2]; cz = path->z[path->n / 2]; }
             if (silence) continue;   // J-08: none where every animal is gone, the dead's share of the rest gone from their spots
             AnimalFate af;
-            if (fated) {
+            if (testSwimmerFate.on()) af = testSwimmerFate;
+            else if (fated) {
                 af = fateOn(site, bestiary, spi, cx, cz);
                 if (af.dead > 0 && hash01(mix64(hs + 77)) < af.dead) continue;
             }
+            bool circles = false, limps = false;   // B-490: a changed young's ways in the water (a circler round on its own, a limper at half pace)
+            if (af.changed > 0 && spi < (int)speciesChanges.size())
+                for (int q = 0; q < speciesChanges[spi].n; q++) { circles |= speciesChanges[spi].changes[q] == CHG_CIRCLES; limps |= speciesChanges[spi].changes[q] == CHG_LIMPS; }
             for (int m = 0; m < members; m++) {
                 const uint64_t hm = m ? mix64(hs + 101 * m) : hs;
                 SwimmerAt w;
@@ -1168,7 +1306,7 @@ void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<Swimm
                     w.changed = af.changed > 0 && hash01(mix64(hm ^ 0xC4A6ULL)) < af.changed;
                     if (w.changed) w.sizeK = af.has(CHG_GIANT) ? 1.6 : (af.has(CHG_DWARF) ? 0.55 : 1.0);
                 }
-                const double crazed = w.sick == MF_CRAZED ? 2.2 : 1.0;
+                const double crazed = (w.sick == MF_CRAZED ? 2.2 : 1.0) * (w.changed && limps ? 0.5 : 1.0);   // (its pace)
                 if (path) {   // B-467: along its stretch of the shallows and back, its back up
                     double len = 0;
                     for (int q = 1; q < path->n; q++) len += std::hypot(path->x[q] - path->x[q - 1], path->z[q] - path->z[q - 1]);
@@ -1195,6 +1333,14 @@ void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<Swimm
                     w.x = cx + std::cos(a) * (circ + 2.0 * m); w.z = cz + std::sin(a) * (circ + 2.0 * m);
                     w.hx = -std::sin(a); w.hz = std::cos(a);   // the circle's tangent
                 }
+                if (w.changed && circles) {   // B-490: round on its own, two metres about its place
+                    const double ca = t * 1.3 + hash01(mix64(hm + 11)) * TAU;
+                    w.x += 2 * std::cos(ca); w.z += 2 * std::sin(ca); w.hx = -std::sin(ca); w.hz = std::cos(ca);
+                }
+                if (w.sick == MF_SPROUTING && (w.fellAt = sproutFallOf(hm, w.sick, af)) <= lifeClock) {   // B-490: past its fall, gone from the water
+                    if (dead) { w.heading = std::atan2(w.hx, w.hz); dead->push_back(w); }
+                    continue;
+                }
                 w.water = site.waterNowAt(w.x, w.z);
                 if (w.water < -1e8) continue;
                 const double depthM = w.water - site.groundHeight(w.x, w.z);
@@ -1209,6 +1355,78 @@ void SurfaceView::swimmersNear(double px, double pz, double t, std::vector<Swimm
                 if (w.leap < 1.0 || w.surf >= (way == WAY_LEAPER ? 0.6 : 0.2)) out.push_back(w);
             }
         }
+}
+
+// B-490: a flock's members where they fly at `t` (drawLife's, and the update's for a sprouting one's fall): each one's place in the flock from
+// the flock's own draws in their order (as J-07 drew them), its sickness and changed young by its own hash (B-469), and what they make of its
+// flight: a crazed one falls to the ground in some of its four seconds' windows (as a land one's falls), lies there a moment and flies up again,
+// a stumbler drops a few metres and catches itself; a changed young circles on its own, limps (trailing its place, bobbing) or, born to the
+// night, flies on over its resting flock after dark; a sprouting one past its fall is gone (B-490: `flockFalls`)
+void SurfaceView::flockMembers(const Flock& f, double t, std::vector<FlockMember>& out) {
+    out.clear();
+    const Species* sp = f.species >= 0 && f.species < (int)bestiary.species.size() ? &bestiary.species[f.species] : nullptr;
+    const int way = sp ? sp->way : WAY_FLOCK;
+    const bool swarm = way == WAY_SWARM;
+    const double a = f.phase + t * f.speed;
+    const double fcx = f.cx + std::cos(a) * f.radius, fcz = f.cz + std::sin(a) * f.radius;
+    const double ground = site.groundHeight(fcx, fcz);
+    const double base = std::max(ground, site.waterAt(fcx, fcz)) + f.alt;
+    const bool down = f.landed > 0 && f.alt < 3;
+    const double course = std::atan2(-std::sin(a) * (f.speed >= 0 ? 1 : -1), std::cos(a) * (f.speed >= 0 ? 1 : -1));
+    auto changedTo = [&](int ch) {
+        if (f.species < 0 || f.species >= (int)speciesChanges.size()) return false;
+        const SpeciesChanges& sc = speciesChanges[f.species];
+        for (int q = 0; q < sc.n; q++) if (sc.changes[q] == ch) return true;
+        return false;
+    };
+    const bool circles = changedTo(CHG_CIRCLES), limps = changedTo(CHG_LIMPS), stumbles = changedTo(CHG_STUMBLES), night = changedTo(CHG_NIGHT);
+    AnimalFate af;
+    af.age = f.fateAge;
+    Rng r(f.seed);
+    for (int i = 0; i < f.n; i++) {
+        FlockMember m;
+        const double ox = r.sym(18), oz = r.sym(18), oy = r.sym(6);
+        m.ph = r.range(0, TAU); m.wf = 6 + 4 * r.uni();
+        const double ph = m.ph;
+        const uint64_t ms = f.seed + i;
+        m.seed = ms;
+        m.sick = f.sick > 0 && hash01(mix64(ms ^ 0x51C4ULL)) < f.sick ? f.sickness : 0;
+        m.changed = f.changed > 0 && hash01(mix64(ms ^ 0xC4A6ULL)) < f.changed;
+        m.aloft = !down;
+        if (down && f.perched) { double pa = ph, pr = f.perchR * 0.8 * (0.3 + 0.7 * r.uni()); m.x = f.perchX + std::cos(pa) * pr; m.z = f.perchZ + std::sin(pa) * pr; m.y = f.perchY + r.sym(0.4); }
+        else if (swarm) {   // a cloud a few metres across, each member darting about its place
+            const double cr = 0.25 * (2 + f.radius);
+            m.x = fcx + ox / 18 * cr + 0.5 * std::sin(t * (3.1 + m.wf * 0.3) + ph); m.z = fcz + oz / 18 * cr + 0.5 * std::cos(t * (2.7 + m.wf * 0.25) + ph);
+            m.y = (down ? ground + 0.15 + 0.1 * std::fabs(oy) / 6 : base + oy / 6 * 0.8 + 0.3 * std::sin(t * 4.3 + ph));
+            m.wf = 30;
+        } else { m.x = fcx + ox + 3 * std::sin(t * 0.7 + ph); m.z = fcz + oz + 3 * std::cos(t * 0.5 + ph); m.y = base + oy + 1.5 * std::sin(t * 0.9 + ph); }
+        if (m.sick == MF_CRAZED && !down) { m.x += 2.5 * std::sin(t * 3.7 + ph); m.z += 2.5 * std::cos(t * 4.3 + ph); m.y += 1.2 * std::sin(t * 5.9 + ph); }   // (erratic)
+        if (m.changed) {   // B-490: a changed young's ways in the air
+            if (night && down && env.skyBrightness < 0.3) {   // on over its flock resting after dark
+                const double cx = f.perched ? f.perchX : fcx, cz = f.perched ? f.perchZ : fcz, cy = f.perched ? f.perchY : ground;
+                m.aloft = true;
+                m.x = cx + 8 * std::cos(t * 0.45 + ph); m.z = cz + 8 * std::sin(t * 0.45 + ph); m.y = cy + 6 + 2 * std::sin(t * 0.7 + ph);
+            }
+            if (m.aloft && circles) { m.x += 3 * std::cos(t * 1.6 + ph); m.z += 3 * std::sin(t * 1.6 + ph); }
+            if (m.aloft && limps) { m.x -= 5 * std::sin(course); m.z -= 5 * std::cos(course); m.y += 0.8 * std::sin(t * 2.2 + ph); }
+        }
+        if (m.aloft && (m.sick == MF_CRAZED || (m.changed && stumbles))) {   // B-490: a fall in some of its four seconds' windows
+            const bool crazed = m.sick == MF_CRAZED;
+            const double u0 = t + 4 * hash01(mix64(ms ^ 0xFA11ULL));
+            const int64_t win = (int64_t)std::floor(u0 / 4.0);
+            if (hash01(mix64(ms ^ (uint64_t)win ^ 0xFA12ULL)) < (crazed ? 0.35 : 0.15)) {
+                const double u = u0 - 4.0 * (double)win;
+                if (crazed) {   // down to the ground, a moment there, up again
+                    const double gy = std::max(site.groundHeight(m.x, m.z), site.waterAt(m.x, m.z)), h = std::max(0.0, m.y - gy);
+                    if (u < 1.0) m.y = gy + h * (1 - u * u);
+                    else if (u < 2.6) { m.y = gy; m.lying = true; }
+                    else m.y = gy + h * smoothstep(2.6, 4.0, u);
+                } else m.y -= 3 * (u < 0.5 ? u / 0.5 : std::max(0.0, 1 - (u - 0.5)));   // a drop, then caught
+            }
+        }
+        if (m.sick == MF_SPROUTING && sproutFallOf(ms, MF_SPROUTING, af) <= lifeClock) m.gone = true;
+        out.push_back(m);
+    }
 }
 
 void SurfaceView::drawLife(Framebuffer& fb, double t) {
@@ -1265,7 +1483,8 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         return lifeJobs.back();
     };
     // ---- flyers: bodies near, a point and two strokes farther, perched with folded wings (J-07: a swarm in a cloud low over the ground, its
-    // members darting; a soarer mostly gliding)
+    // members darting; a soarer mostly gliding; B-490: each member where `flockMembers` puts it, a crazed one fallen lying on the ground)
+    std::vector<FlockMember> members;
     for (const Flock& f : flocks) {
         const Species* sp = speciesAt(f.species);
         double bsize = sp ? sp->size : 0.5;
@@ -1274,42 +1493,33 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         const bool swarm = way == WAY_SWARM;
         double a = f.phase + t * f.speed;
         double fcx = f.cx + std::cos(a) * f.radius, fcz = f.cz + std::sin(a) * f.radius;
-        double ground = site.groundHeight(fcx, fcz);
-        double base = std::max(ground, site.waterAt(fcx, fcz)) + f.alt;
         double dist = std::sqrt((fcx - camPos.x) * (fcx - camPos.x) + (fcz - camPos.z) * (fcz - camPos.z));
         if (dist > 900) continue;
-        Rng r(f.seed);
-        bool down = f.landed > 0 && f.alt < 3;
+        const bool flockDown = f.landed > 0 && f.alt < 3;
         const double course = std::atan2(-std::sin(a) * (f.speed >= 0 ? 1 : -1), std::cos(a) * (f.speed >= 0 ? 1 : -1));
-        const int doing = sp && sp->plan == PLAN_FLOATER ? DO_DRIFTING : (down ? DO_PERCHED : (swarm ? DO_SWARMING : (way == WAY_SOARER ? DO_SOARING : DO_FLYING)));
-        for (int i = 0; i < f.n; i++) {
-            double ox = r.sym(18), oz = r.sym(18), oy = r.sym(6);
-            double ph = r.range(0, TAU), wf = 6 + 4 * r.uni();
-            double bx, by, bz;
-            // B-469: sick among the rest and born changed as a herd's members are, by its own hash
-            const uint64_t ms = f.seed + i;
-            const int sick = f.sick > 0 && hash01(mix64(ms ^ 0x51C4ULL)) < f.sick ? f.sickness : 0;
-            const bool changed = f.changed > 0 && hash01(mix64(ms ^ 0xC4A6ULL)) < f.changed;
-            if (down && f.perched) { double pa = ph, pr = f.perchR * 0.8 * (0.3 + 0.7 * r.uni()); bx = f.perchX + std::cos(pa) * pr; bz = f.perchZ + std::sin(pa) * pr; by = f.perchY + r.sym(0.4); }
-            else if (swarm) {   // a cloud a few metres across, each member darting about its place
-                const double cr = 0.25 * (2 + f.radius);
-                bx = fcx + ox / 18 * cr + 0.5 * std::sin(t * (3.1 + wf * 0.3) + ph); bz = fcz + oz / 18 * cr + 0.5 * std::cos(t * (2.7 + wf * 0.25) + ph);
-                by = (down ? ground + 0.15 + 0.1 * std::fabs(oy) / 6 : base + oy / 6 * 0.8 + 0.3 * std::sin(t * 4.3 + ph));
-                wf = 30;
-            } else { bx = fcx + ox + 3 * std::sin(t * 0.7 + ph); bz = fcz + oz + 3 * std::cos(t * 0.5 + ph); by = base + oy + 1.5 * std::sin(t * 0.9 + ph); }
-            if (sick == MF_CRAZED && !down) { bx += 2.5 * std::sin(t * 3.7 + ph); bz += 2.5 * std::cos(t * 4.3 + ph); by += 1.2 * std::sin(t * 5.9 + ph); }   // (erratic)
+        const int doing = sp && sp->plan == PLAN_FLOATER ? DO_DRIFTING : (flockDown ? DO_PERCHED : (swarm ? DO_SWARMING : (way == WAY_SOARER ? DO_SOARING : DO_FLYING)));
+        flockMembers(f, t, members);
+        for (const FlockMember& m : members) {
+            if (m.gone) continue;
+            const double bx = m.x, by = m.y, bz = m.z, ph = m.ph, wf = m.wf;
+            const int sick = m.sick;
+            const bool changed = m.changed, down = !m.aloft;
+            const uint64_t ms = m.seed;
             const double md = std::sqrt((bx - camPos.x) * (bx - camPos.x) + (bz - camPos.z) * (bz - camPos.z) + (by - camPos.y) * (by - camPos.y));
-            const bool glide = !down && std::sin(t * 0.35 + ph) > (way == WAY_SOARER ? -0.7 : 0.45);   // long glides between flapping (a soarer's most of the time)
+            const bool glide = !down && !m.lying && std::sin(t * 0.35 + ph) > (way == WAY_SOARER ? -0.7 : 0.45);   // long glides between flapping (a soarer's most of the time)
             if (sp && md < 160 && bsize * proj.f / std::max(md, 0.5) >= 3.0) {
-                const bool landed = down && sp->plan != PLAN_FLOATER;
+                const bool landed = (down && sp->plan != PLAN_FLOATER) || m.lying;
                 const double hd = swarm ? course + 2.0 * std::sin(t * 1.3 + ph) : course + 0.3 * std::sin(t * 0.4 + ph);
                 LifeJob& J = job(f.species, Vec3(bx, by, bz), landed ? ph : hd, changed ? f.changedK : 1.0, md, landed, doing);
                 J.in.aloft = !landed;
-                J.in.folded = landed;
+                J.in.folded = landed && !m.lying;
                 J.in.flap = sp->plan == PLAN_FLOATER ? 0 : (sp->plan == PLAN_GLIDER || glide ? 0.12 : std::sin(t * wf + ph));
-                J.in.gait = sp->gait; J.in.seed = f.seed + i;
+                J.in.gait = sp->gait; J.in.seed = ms;
                 fateLook(J, f.species, sick, changed, ms);
-                if (landed) {   // perched on its branch or the ground: standing on it
+                if (m.lying) {   // B-490: on its side on the ground a moment, its wings beating
+                    for (auto& row : J.in.ground) for (double& g : row) g = by;
+                    J.in.at.y = by; J.in.lift = 1; J.in.flap = 0.6 * std::sin(t * 13 + ph);
+                } else if (landed) {   // perched on its branch or the ground: standing on it
                     const double gy = by - rigs[f.species].spineY;
                     for (auto& row : J.in.ground) for (double& g : row) g = gy;
                     J.in.at.y = gy;
@@ -1332,6 +1542,16 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 rasterLine3(fb, p, a2, bank, proj, true, 1);
             }
         }
+    }
+    // B-490: a sprouting flyer falling dead from its flock, its wings folded, turning over
+    for (const FlockFall& F : flockFalls) {
+        const Species* sp = speciesAt(F.species);
+        if (!sp) continue;
+        const double md = std::sqrt((F.x - camPos.x) * (F.x - camPos.x) + (F.z - camPos.z) * (F.z - camPos.z) + (F.y - camPos.y) * (F.y - camPos.y));
+        if (md > 160 || F.size * proj.f / std::max(md, 0.5) < 3.0) continue;
+        LifeJob& J = job(F.species, Vec3(F.x, F.y, F.z), F.heading, F.size / std::max(sp->size, 0.05), md, false, DO_FLYING);
+        J.in.aloft = true; J.in.folded = true; J.in.flap = 0; J.in.gait = sp->gait; J.in.seed = F.seed; J.in.tilt = 2.2 * std::sin(F.heading);
+        fateLook(J, F.species, F.sick, F.changed, F.seed);
     }
     // ---- night eyes (M4-05): pairs of glints in the dark
     if (env.skyBrightness < 0.3 && kindHas(site.gen.type, KT_FLORA) && !silence) {   // (J-08: none where every animal is gone)
@@ -1442,10 +1662,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         J.in.reach = c.reach; J.in.crouch = c.crouch; J.in.sink = c.sink;
         if (sp.way == WAY_CLIMBER) J.in.tiltMax = 1.1;
         fateLook(J, c.species, c.sick, c.changed, c.seed);
-        if (onTrunk) {   // (B-468: its feet on the bark, round the trunk's girth where it clings)
-            J.in.climbing = true; J.in.wall = Vec3(std::sin(c.treeA), 0, std::cos(c.treeA));
-            J.in.trunkR = trunkRadius(c, c.climbY);
-        }
+        if (onTrunk) climbPose(c, J.in);   // (B-468: its feet on the bark, round the trunk's girth where it clings)
         // tracks in sand and snow behind it
         if (dist < 80 && !c.tracks.empty()) {
             const double fog = fogOf(dist);

@@ -138,6 +138,11 @@ bool Guide::load(const std::string& path) {
             if (!body.empty()) madeSeen[body] = rest;
         }
         else if (key == "wild") { std::string k; int read = 0; is >> k >> read; if (!is.fail()) wildFound[k] = read != 0; }   // J-12
+        else if (key == "dead") {   // B-489: <body> <seed> <cell> <gLat> <gLon> <ux> <uy> <uz> <species> <heading> <size> <died> <eaten> <stalks>
+            std::string k; DeadRecord d; int cell = 0, stalks = 0;
+            is >> k >> d.seed >> cell >> d.gLat >> d.gLon >> d.ux >> d.uy >> d.uz >> d.species >> d.heading >> d.size >> d.died >> d.eaten >> stalks;
+            if (!is.fail()) { d.cell = cell != 0; d.stalks = stalks != 0; dead[k].push_back(d); }
+        }
         else if (key == "records") is >> recordsScheme;
         else if (key == "log") {
             LogEntry e; std::string rest; is >> e.t >> e.kind; std::getline(is, rest);
@@ -234,12 +239,17 @@ bool Guide::save(const std::string& path) const {
             f << "\n";
         }
     }
-    if (!seeded.empty()) {   // J-02: the clock and the worlds seeded, once there is one
-        f << "clock " << clock << "\n";
+    if (!seeded.empty() || !dead.empty()) f << "clock " << clock << "\n";   // J-02: once a world is seeded; B-489: or an animal kept dead
+    if (!seeded.empty()) {   // J-02: the worlds seeded, once there is one
         for (const SeedRecord& r : seeded) f << seededLine(r) << "\n";
         for (const auto& [body, w] : madeSeen) f << "madeseen " << body << " " << w << "\n";   // J-03
         for (const auto& [k, read] : wildFound) f << "wild " << k << " " << (read ? 1 : 0) << "\n";   // J-12
     }
+    for (const auto& [body, ds] : dead)   // B-489: each world's dead not yet forgotten
+        for (const DeadRecord& d : ds)
+            if (clock - d.died < DEAD_FORGET_S)
+                f << "dead " << body << " " << d.seed << " " << (d.cell ? 1 : 0) << " " << d.gLat << " " << d.gLon << " " << d.ux << " " << d.uy << " " << d.uz << " "
+                  << d.species << " " << d.heading << " " << d.size << " " << d.died << " " << d.eaten << " " << (d.stalks ? 1 : 0) << "\n";
     for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "
           << r.startX << " " << r.startY << " " << r.startZ << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " "

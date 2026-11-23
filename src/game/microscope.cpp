@@ -229,6 +229,7 @@ bool Game::microscopeStageFlask(int i) {
 
 // the view where a new mount's first look rests, the slide's clock at 0, nothing done to it
 void Game::microscopeView() {
+    scope.staged++;   // B-502: a new mount (the electron's kept slide drawn again)
     scope.events.clear(); scope.t = 0;
     scope.tracking = false; scope.sheet = false; scope.under = -1;
     scope.cx = scope.mount.cx; scope.cy = scope.mount.cy; scope.focus = scope.mount.focus;

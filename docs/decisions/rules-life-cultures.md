@@ -8,9 +8,11 @@ the tree and the record in `rules-life-record.md`, and where life is in `rules-l
 - The incubator is a screen over the room (`INCUBATOR`, E at its cabinet); flasks and the lab's clock (like the drones') have their own save lines [Z-05]
 - A culture is closed-form in its events on the lab's clock (`runCulture`): the same whether skipped, stepped or laid out again from saved events [Z-05]
 - A flask takes a species seen in a vial (never a fossil or a protocell) or a flask's culture, at first in the medium of its world (`mediumOfPlace`) [Z-05]
+- An acid medium carries iron and sulphur: an iron or a sulphide eater finds its food in it whatever else it gives (`acidFeeds`) [B-480]
 - A species' pace comes from its seed: at best a flask is full in 2-5 minutes and stays full while its medium suits it; spores wake in 5-15 s [Z-05] [R-449]
 - Two in a flask: mirrored hands ignore each other, an eater and a smaller cell cycle, a light-feeder or fermenter feeds the other, the rest compete [Z-05]
 - In a predator cycle a switched strain's state follows its numbers: the cycle is split where it crosses its quorum share [B-446]
+- A full flask is fed (R-449): at its crowd a culture is not starving; WHEN STARVING turns on where its broth feeds it nothing [B-477]
 - Twelve generations at a range's edge make a strain with one value moved, as an event at its own time; the guide keeps it (`strain`, named with N) [Z-05]
 - What happens in a flask is said and logged as the clock reaches it (WOKEN, STRAIN; the glow is said); what the curve shows goes to the sheet [Z-05]
 - A flask's warmth is typed on its page (a digit starts the entry) and set as one change of the medium, within the range its cell holds [R-435]
@@ -35,6 +37,7 @@ the tree and the record in `rules-life-record.md`, and where life is in `rules-l
 [B-442]: log/7-1.5.0.md
 [B-446]: log/7-1.5.0.md
 [B-459]: log/7-1.5.0.md
+[B-477]: log/7-1.5.0.md
 [R-433]: log/7-1.5.0.md
 [R-435]: log/7-1.5.0.md
 [R-440]: log/7-1.5.0.md
@@ -44,3 +47,4 @@ the tree and the record in `rules-life-record.md`, and where life is in `rules-l
 [R-449]: log/7-1.5.0.md
 [Z-05]: log/7-1.5.0.md
 [J-13]: log/7-1.5.0.md
+[B-480]: log/7-1.5.0.md

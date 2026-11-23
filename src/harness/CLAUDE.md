@@ -14,7 +14,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   `selectRow`: a menu's row by its label), the headless receiver, WAVs, an FFT, a pitch.
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`, `modes_signals`,
   `modes_rogues`, `modes_life` (Z-01: the biota; Z-03: `life search`, `life kit`; Z-07: `life auto`, `coastSite`; R-434: `life sight`),
-  `modes_life_look` (Z-02: plates of the forms, strips, distinctness, `everyForm`), `modes_lab` (Z-04: `lab microscope`, `lab time`,
+  `modes_life_look` (Z-02: plates of the forms, strips, distinctness, `everyForm`; B-503: `panelSpecimen`, spores held still),
+  `modes_lab` (Z-04: `lab microscope`, `lab time`,
   `labVial`, `labDenseVial`; R-438: samples, `findAnswerSamples`), `modes_cultures` (Z-05: `lab cultures`, and `labStock`,
   the lab stocked for `ship life` and the bench), `modes_tree` (Z-06: `lab tree`, `lab kin`, `life made`; Z-07: `lab catalogue`; Y-01:
   `lab tree`'s pages), `modes_genes` (Y-02: `lab genes`, `geneWorlds`, and `geneLaws`, the gene laws the unit holds; Y-03: moved genes,
@@ -27,7 +28,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   orbit and on the ground; `seedGeneEdits`, `seedNativeLine`, `seedAirCases`), `modes_seed_looks` (J-05: `seed looks`, each made
   water's, ground's and plants' trait from orbit and on the ground, `look_*.png`; its sites by the drawn ground's water and the drainage),
   `modes_seed_fates` (J-08: `seed fates`, each fate drawn, the changes, a herd over its steps, `fates/`; `fateRecipes`, `siteNear`,
-  `coastNear`, `writeSheet`), `modes_seed_kinds` (J-11: `seed kinds`, the made kinds of forty worlds and six lines and the shares, each
+  `coastNear`, `writeSheet`; B-490: `sproutingWorld`, a world whose flyers the sprouting recipe reaches, the unit's), `modes_seed_kinds`
+  (J-11: `seed kinds`, the made kinds of forty worlds and six lines and the shares, each
   kind drawn, `kinds/`; J-15: a greened desert's recipe, `seedDesertLine`), `modes_seed_record` (J-12: `seed record`, a seeded world's
   record in the catalogue and on the LIFE page, `record/`; `seedRecordCase`, `seedRecordGame`: the world and line the unit's record
   checks send too), `modes_seed_cold` (J-13: `seed cold`, forty worlds' warmth on the ground and down, lines tuned for each, the seed
@@ -42,12 +44,14 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   ways`, each way played and drawn and every plan's gaits, `ways/`; `setupWaysScene`, the hunt's, the flock's and the swimmers' scenes).
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`, `civ_peoples`,
   `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
-- `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`. Groups are in `unit_basics`, `unit_kinds`, `unit_drifters`, `unit_life`,
+- `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`. Groups are in `unit_basics`, `unit_kinds` (B-504: a chemotroph a cool
+  world), `unit_drifters`, `unit_life`,
   `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`, `unit_ship`, `unit_search`
   (Z-03, R-434's vision), `unit_lab` (Z-04; Z-05's cultures; Z-06's genomes, tree and sequencer; Z-07's record; R-432's vials by world;
   R-433's collection; B-444's holds that end; B-446's switched strain in a predator cycle), `unit_lab_answers` (the group `experiments`:
   R-435 to R-438 and B-441, the typed warmths, the slide's answers, the partner), `unit_lab_incubator` (the group `incubator`: B-442,
-  B-443 and R-440 to R-442, rows and tree leaves told apart, N's names, the choosers' tabs, K's copies),
+  B-443 and R-440 to R-442, rows and tree leaves told apart, N's names, the choosers' tabs, K's copies; J-16's B-497, unnamed worlds told
+  apart by their place, and B-500, the catalogue's animals),
   `unit_lab_genes` (the group `genes`, the Y series: Y-01's tree by world and by folder; Y-02's laws, a line written and read
   everywhere, learning, the editor over a save; Y-03's kin, moves, price, copies and needs; Y-04's switches in the segments, their
   price, S and a switched drop; R-445's folder and name prompts), `unit_seeding` (the group `seeding`, J-02: the layer on any thread
@@ -64,11 +68,16 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   each line's banks on the ground and the globe, a flask's borrowed bank; J-13, in `unit_seeding_cold`: the cold limits, a place at its own
   warmth, the depths, a deep line's spread, the seed page's depths and a trip down a drill hole; J-14, in `unit_seeding_clouds`: a deck's
   heights, acid life up there and water life never, a cloud line's spread, a deck world's globe, a trip up into the clouds; J-15, in
-  `unit_seeding_desert`: a carpet's grass behind its edge, a greened desert's kind, its ground's grass and shrubs), `unit_animals`
+  `unit_seeding_desert`: a carpet's grass behind its edge, a greened desert's kind, its ground's grass and shrubs; J-16's: natives by
+  their warmth and a later line, `unit_seeding_record` (B-474); a line's gas by its room, its share at its own warmth and a warmed
+  sheet's dark margin, `unit_seeding_climate` (B-475, B-476, B-493); the deeper drill and a deep line's seeps and cracks,
+  `unit_seeding_cold` (B-478, B-479); an acid's foods and a deck world's sky, `unit_seeding_clouds` (B-480, B-481); two lines' grass and
+  any bare world greened, `unit_seeding_desert` (B-482); a disc's clouds before its looks, `unit_seeding_banks` (B-494)), `unit_animals`
   (the group `animals`, J-06: the bestiary pure, no two of a world alike, every plan's poses, the herds' cells as generation 17's, an older
   save's notice; `VESPERIS_PLAYER_DIR` loads copies of the player's guide and save too; J-07: the gaits within bounds and the feet put
   down, the record and its names: a herd seen, N's name, the guide's bytes, a loan's names; J-08: the fates' shares fixed by world and
-  line, remains a pure function of their cell, the record's marks). The last group, `files` (B-440: the player's files left as the unit
+  line, remains a pure function of their cell, the record's marks; J-16: a kill kept past the landing, a flock's and a shoal's young and
+  sick, a climber along its trunk, the shallows' stretch). The last group, `files` (B-440: the player's files left as the unit
   found them), is in `unit.cpp`.
 - `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
@@ -87,7 +96,9 @@ Rules:
   a probe on
   a copy of the player's guide loads the copy after it (`guide.load`). Before a key that acts on the cell under the crosshair, track the
   cell first (Enter): a swimmer leaves the crosshair between frames. A frame of bodies waits for their maps (`testWaitMapOf`,
-  `mapIfReady`). The bench's rows aboard wait for the maps their view starts (`settleMaps`, B-439).
+  `mapIfReady`; at a new place every map at its season, `testWaitMaps`, B-506). A game made beside another sets the process's frame
+  size: the flow's game takes its own back before its frames (`Flow::own`, B-507). The bench's rows aboard wait for the maps their view
+  starts (`settleMaps`, B-439).
 - The explorer stands in the ship where the plan says (I-01): at a view by its name (`testCabinView`) or a device's stand
   (`testCabinAtDevice`), never at numbers of the harness's own (nor a fixture's: read its row). The tour faces every device from its
   row, in the rows' order.

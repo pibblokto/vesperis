@@ -124,6 +124,7 @@ public:
         std::vector<FormOpening> openings;
         std::vector<float> climb;
         int growthLine = -1;   // KI-473: the line whose cover lies at its middle (its cover's colour and bank)
+        std::vector<int8_t> lines;   // KI-501: each building's, the line whose cover lies at its own place (the last: the graves')
         // KI-477: the way the cover came from (a unit vector in the local metres toward its line's place; 0 where it rose round the settlement)
         float towardX = 0, towardZ = 0;
         uint64_t key = 0;   // KI-479: the cell's own key, the world's (a settlement's grid cell, a work's id): its membranes' keys are its
@@ -183,11 +184,14 @@ public:
     struct GrowthCell { double x = 0, z = 0; std::vector<GrowthInst> s; };
     std::unordered_map<uint64_t, GrowthCell> growthLattice;
     std::unordered_map<uint64_t, std::vector<GrowthInst>> growthOwned;   // each local cell's: those whose middles lie in it
+    std::unordered_map<uint64_t, bool> growthCorners;   // KI-490: whether the cover holds each world cell's corner (`growthCornerHolds`)
     uint64_t growthLatticeKey = 0;
-    // KI-480: the layer the ruins read, the world now (the game hands it on as the steps pass, `setMadeNow`; the ground keeps the landing's,
-    // `site.gen.made`), and the key the cells were laid out and grown for (another: they are laid out again on the main thread)
+    // KI-480: the layer the ruins read, the world now (the game hands it on as the steps pass, `setMadeNow`), and the key the cells were laid
+    // out and grown for (another: they are laid out again on the main thread); KI-491: the ground takes it too where what it draws moved
+    // (`adoptMadeNow`)
     MadeWorld ruinsMade;
     uint64_t ruinsKey = 0;
+    bool madeHanded = false;   // KI-491: a world now handed on that the ground has not looked at yet
     double markCheckX = 1e18, markCheckZ = 1e18;
     int lastTreesDrawn = 0, lastFloraPoints = 0, lastFloraPolys = 0, lastNearTrees = 0, lastMidTrees = 0, lastFarTrees = 0, lastTreesHidden = 0;
     int lastTreesVisited = 0, lastTreesListed = 0;   // bench: trees listed this frame, and visits summed over the band threads (the duplication of the per-tree work)
@@ -248,6 +252,8 @@ public:
 private:
     GrainTexture grain, grainFine;
     GrainTexture grainEdge, grainMacro;   // the material-boundary wobble (64 x 64) and the broad tone tile (128 x 128)
+    GrainTexture growthVeins; bool growthVeinsBuilt = false;   // KI-492: the cover's veins on a ruin's faces, as the ground's (`buildGrowthVeins`)
+    static constexpr double GROWTH_VEIN_SCALE = 128 / 36.0;   // (its texels a metre: a tile four of the ground's 9 m cells across)
     GrainTexture leafTile, leafEdge, barkTile;   // the vegetation's tiles (textures.h)
     TreeLook looks[10];                          // per silhouette on this planet
     std::vector<Vec3> dirLUT;
@@ -281,8 +287,25 @@ private:
     int aheadCache = 0;
     TerrainCache* aheadTarget = nullptr;   // the cache the pending job fills (near, lod0 or lod1)
     int aheadStat = 0;                 // cells delivered by the worker (for bench)
+    // KI-491: the rings sampled again on a worker once the ground took the world now (`adoptMadeNow`): each ring's cells round the camera (the
+    // others dropped, sampled when next asked for) and the corners of the structures' world cells in view; copied in on the main thread once
+    // done (`takeResample`), the frames between drawing the ground as it was; `joinAhead` stops it, the cells not reached dropped
+    struct ResampleCell { int ring, cx, cz; };
+    static constexpr int RESAMPLE_FRAMES = 45;   // (taken on the 45th frame after, waiting if need be: the same frame however fast it ran;
+                                                 // three quarters of a second at 60 frames a second)
+    int resampleFrames = 0;
+    std::thread resampleThread;
+    std::atomic<bool> resampleStop{false};
+    std::atomic<size_t> resampleDone{0}, resampleCornersDone{0};
+    std::vector<ResampleCell> resampleCells;
+    std::vector<TerrainVertex> resampleOut;
+    std::vector<uint64_t> resampleCorners;   // (latticeKey: face, i, j)
+    std::vector<uint8_t> resampleHolds;
+    void startResample();
+    void takeResample();
     // M10-05 material meso tiles, built lazily per landing
     GrainTexture mesoTiles[MAT_COUNT];
+    GrainTexture madeCrustTiles[3]; bool madeCrustBuilt[3] = {false, false, false};   // KI-493: a crust line's crust in each of its forms
     bool mesoBuilt[MAT_COUNT] = {false};
     int curRadius = 40;              // ring radius of the LOD being drawn (limits the shadow march)
 public:
@@ -350,6 +373,7 @@ private:
     bool greenedAt(const TerrainVertex& tv) const { return tv.material == MAT_GRASS && tv.mline > 0 && greening(); }
     int madeRainBank = -1;      // KI-459: a dyed rain's bank and its puddles' (the waters', else one of its own; none: the made clouds' 23, else the sky's)
     double madeGlowPlants = 0;  // J-05: a glowing forest's light tonight (0 by day)
+    double madeGlowLand = 0;    // J-16 (KI-506): a deep line's glowing cracks' or seeps' light tonight (0 by day)
     int madeFoamBank = -1;      // J-05: a foam's colour on the shores (a lent bank left free, else the snow's white)
     bool madeOnSea = false;     // J-05: the made waters' tint lies on the sea (a line with a waters' look lives in it): the tide's flooded flats take it
     bool madeCloudBank = false; // J-04: a seeded world's clouds drawn in bank 23 (coloured by day, glowing at night: `setupPalette`)
@@ -415,7 +439,7 @@ private:
     // with the rows they touch), the raster parameters of the peoples' banks and windows
     struct FormItem { const Form* f; Vec3 foot; double skirt, d, fog; int lod, people; float climb = -1; int gline = -1; };   // J-10: the cover's climb on it (-1
     // none); KI-473: its settlement's growing line
-    struct FormPolyOut { int first, n, rp, y0, y1; int gb = -1; };   // (KI-473: the bank in the growth's place, -1 the frame's)
+    struct FormPolyOut { int first, n, rp, y0, y1; float s2 = 1e9f; };   // (KI-492: its second bank's shade offset, over 1e8 its raster's own)
     struct FormLineOut { RVert a, b; int bank, thick, y0, y1; };
     struct FormChunk { std::vector<RVert> v; std::vector<FormPolyOut> polys; std::vector<FormLineOut> lines; int silhouettes = 0; };
     std::vector<FormItem> formItems;
@@ -466,13 +490,19 @@ public:
     // B-470: the landing's clock (its seconds since the landing, as the guide's runs on the ground: real time) and its dead kept on the body
     // (cleared at the landing): a kill's quarry or a sprouting one fallen, by its seed, its herd's cell (`cell` false: a landing's herd, never
     // forgotten), where it lies (its unit vector), its species, heading and size, its death on the clock, how long the hunters fed at it, with
-    // stalks, and whether its remains are in `remains` now
+    // stalks, and whether its remains are in `remains` now. B-489: the world's kept by the guide from the landings before come first (`deadIn`,
+    // died before the landing: under 0), this landing's after them in the order they died, which the game copies to the guide
     double lifeClock = 0;
     struct DeadKept {
         uint64_t seed = 0; int gLat = 0, gLon = 0; bool cell = false; Vec3 unit; int species = -1;
         double heading = 0, size = 1, diedAt = 0, eaten = 0; bool stalks = false, shown = false;
     };
     std::vector<DeadKept> deadKept;
+    // B-490: a sprouting flyer falling dead from its flock (its species, where, how fast it falls, its heading and size, its seed, sick and
+    // changed), its remains kept where it lands; the swimmers found dead out of reach of a shore (not looked for again)
+    struct FlockFall { int species = -1; double x = 0, y = 0, z = 0, vy = 0, heading = 0, size = 1; uint64_t seed = 0; int sick = 0; bool changed = false; };
+    std::vector<FlockFall> flockFalls;
+    std::vector<uint64_t> swimmersSunk;
     // B-467: a 100 m cell's place of a swimmer of the shallows, kept for the landing (local metres; cleared at the landing and a new anchor): a
     // stretch of the water 0.9 m deep it swims along, its points' count
     struct ShallowsPath { bool ok = false; int n = 0; double x[7] = {}, z[7] = {}; };
@@ -633,13 +663,18 @@ public:
     // mats, standing from the water's edge; the drawing and the colliders both (`RockInst`: size the radius, gy the foot)
     void forDomes(int cx, int cz, const std::function<void(const RockInst&)>& fn);
     void forChimneys(int cx, int cz, const std::function<void(const RockInst&)>& fn);   // the chemotroph's sinter chimneys a 16 m cell (KT_VENT_LIFE)
-    // J-09: a 16 m cell's overgrowth structures (KI-476: those of the world's lattice whose middles lie in it: on a cell whose four corners its
-    // cover holds, none in water, a room, on a road, a street or a work's ground, none overlapping); the drawing, the colliders and the trees
-    // read it (a tree tests the cells round it too: a structure can reach over a cell's edge)
+    // J-09: a 16 m cell's overgrowth structures (KI-476: those of the world's lattice whose middles lie in it: KI-490, of a world cell whose
+    // four corners its cover holds; none in water, a room, on a road, a street or a work's ground, none overlapping); the drawing, the
+    // colliders and the trees read it (a tree tests the cells round it too: a structure can reach over a cell's edge)
     void forGrowths(int cx, int cz, const std::function<void(const GrowthInst&)>& fn);
     const GrowthCell& growthCellOf(int face, int i, int j, int N);   // KI-476: a world cell's structures (`growthLattice`)
     const std::vector<GrowthInst>& growthsOwned(int cx, int cz);       // KI-476: a local cell's, before what the landing lays is tested
-    bool growthCellHolds(int cx, int cz);                              // a local cell whose four corners the cover holds, out of the water
+    bool growthOn() const;                                             // a layer with an overgrowth
+    // KI-489: the lattice's world cell a unit vector lies in (its face, its two indices), returning the cells a face side has
+    static int growthLatticeAt(const Vec3& unit, double radiusM, int& face, int& i, int& j);
+    bool growthCornerHolds(int face, int ci, int cj, int N);           // KI-490: the cover at a world cell's corner, out of the water
+    bool growthCornerAt(int face, double al, double be) const;         // (the same read, kept nowhere: the resample's worker)
+    void buildGrowthVeins();                                           // KI-492: `growthVeins`, a landing's
     int growthAt(double x, double z, double margin);   // KI-476: the shape of the structure standing at local (x, z), -1 none (a vial's)
     void growthColliders(const GrowthInst& S, std::vector<Collider>& out) const;   // the discs it stands in the way with
     // a structure the frame draws (`GrowthDraw`); its shapes into a list in the overgrowth's bank and tile, on the pool (it reads the
@@ -703,6 +738,9 @@ public:
 private:
     const GrainTexture* mesoFor(int material);
     int growthTexture(int material) const;   // J-09: an overgrowth's tile's look (-1 the hashed one)
+    // KI-493: a vertex's tile: a crust line's crust (its look's share over a half) in its line's form, a world's own crust as the world's
+    int madeCrustForm(const TerrainVertex& tv) const;   // -1 for any other ground
+    const GrainTexture* tileOf(const TerrainVertex& tv);   // (the warm makes a made crust's first: a band thread never makes one)
     void buildMesoTiles(uint32_t want);   // the tiles of a set of materials not made yet, a material to a worker
     double castShadowLit(TerrainCache& cache, int cx, int cz, double h, const Vec3& sd);
     void gatherReflections();
@@ -812,6 +850,7 @@ public:
     int remainsStageAfter(double steps) const;   // B-470: the stage `steps` after a death (a kill's, a fall's)
     void restageRemains();                       // B-470: every remains' stage by the clock now
     bool keptDead(uint64_t seed) const;
+    void deadIn(const std::vector<DeadKept>& kept);   // B-489: the dead its world kept from the landings before (the guide's), at the landing
     void testRemainsAdd(const Remains& r) { remains.push_back(r); }
     void trunkOf(const TreeInst& T, double& r0, double& r1, double& top, double& lx, double& lz) const;   // B-468: a trunk's radii, top and lean
     double trunkRadius(const Critter& c, double y) const;                      // B-468: a climber's trunk's girth `y` over its foot
@@ -820,14 +859,19 @@ public:
     double testClimbSide(int i, double want, double k) { return climbSide((size_t)i, want, bestiary.species[critters[i].species], k); }   // B-468
     void testLifeClock(double s) { lifeClock += s; }
     bool testShallowsSpot(int ccx, int ccz, double& x, double& z);   // a 100 m cell's place of a swimmer of the shallows (local metres)
+    const ShallowsPath& testShallowsPath(int ccx, int ccz);         // B-492: and its stretch
+    void climbPose(const Critter& c, AnimalPoseIn& in) const;      // B-491: a climber on its trunk's pose: its side, the girth, the axis there
+    bool testClimbTree(double x, double z, const Species& sp, double k, TreeInst& out) { return climbTreeNear(x, z, sp, k, out); }   // B-491
 private:
     Remains killCritter(Critter& q, bool fell = false);
+    Remains keepDead(int species, double x, double z, double heading, double size, uint64_t seed, double diedAt);   // B-490: where no herd holds it
     double climbSide(size_t self, double want, const Species& sp, double k);
     bool shallowsSpot(int ccx, int ccz, uint64_t hs, double& cx, double& cz);
     const ShallowsPath& shallowsPathOf(int ccx, int ccz, uint64_t hs);
     void drawLife(Framebuffer& fb, double t);
     void updateLife(double dt, double t);
     bool treeNear(double x, double z, double radius, TreeInst& out, bool any = false);   // J-07: the nearest live tree within `radius` (`any`: dead too)
+    bool climbTreeNear(double x, double z, const Species& sp, double k, TreeInst& out);   // B-491: a climber's: the nearest within 25 m it can hold
     void trunkGirth(const TreeInst& T, double& w0, double& w1, double& trunkTop) const;   // a trunk's widths and top as drawn (flora.cpp)
 public:
     // J-07: the swimmers at the surface or leaping within two 100 m cells of a point at a time (drawLife's; the harness frames them): the
@@ -835,8 +879,16 @@ public:
     struct SwimmerAt {
         int species = -1; uint64_t seed = 0; double x = 0, z = 0, water = 0, heading = 0, hx = 0, hz = 1, surf = 0, leap = 9;
         int sick = 0; bool changed = false; double sizeK = 1;   // B-469: its sickness shown, born changed (a giant's or a dwarf's size)
+        double fellAt = 0;   // B-490: a sprouting one's fall on the landing's clock (`dead`'s: under 0 before the landing)
     };
-    void swimmersNear(double px, double pz, double t, std::vector<SwimmerAt>& out);
+    // B-490: `dead`, when given, takes the sprouting ones past their fall (gone from the water)
+    void swimmersNear(double px, double pz, double t, std::vector<SwimmerAt>& out, std::vector<SwimmerAt>* dead = nullptr);
+    AnimalFate testSwimmerFate;   // B-490: the harness's (the game sets none): when on, every swimmer's fate, a fate no line brings there
+    // B-490: a flock's members where they fly at a time (drawLife's, and the update's for a sprouting one's fall), from the flock's own draws:
+    // each one's place, sickness and changed young, and what they make of its flight; `gone` a sprouting one past its fall, `lying` a crazed
+    // one fallen to the ground a moment, `aloft` whether it flies (a night one over its resting flock)
+    struct FlockMember { double x = 0, y = 0, z = 0, ph = 0, wf = 6; int sick = 0; bool changed = false, aloft = true, lying = false, gone = false; uint64_t seed = 0; };
+    void flockMembers(const Flock& f, double t, std::vector<FlockMember>& out);
     bool testTreeNear(double x, double z, double radius, TreeInst& out, bool any = false) { return treeNear(x, z, radius, out, any); }
 private:
     void lifeSaw(const std::vector<LifeDrawn>& drawn);                  // J-07: the record of what was drawn, the first sightings, the target
@@ -895,14 +947,25 @@ public:
     void layRuinPieces(RuinCell& c) const;
     // KI-480: the world now handed on (`ruinsMade`); a changed one lays the cells' pieces out again where a stone rotter's share moved, and
     // grows their cover again (`regrowRuins`, the ahead worker joined)
-    void setMadeNow(const MadeWorld& m) { if (m.key != ruinsMade.key) ruinsMade = m; }
+    void setMadeNow(const MadeWorld& m) { if (m.key != ruinsMade.key) { ruinsMade = m; madeHanded = true; } }
+    // KI-491: the ground takes the world now handed on where what its samples read moved (its cover, its looks, its waters, its structures:
+    // `madeGroundKey`), the rings sampled again once; the animals keep the landing's herds. A step that moved only the animals' fates or the
+    // ruins' steps changes nothing here
+    void adoptMadeNow();
+    static uint64_t madeGroundKey(const MadeWorld& m);   // the layer's key without what the ground's samples never read
     void regrowRuins();
 
     // ---- the harness's: vesperis_test calls these; the game never does
     const GrainTexture* testMesoFor(int material) { return mesoFor(material); }   // KI-463: a material's tile on this landing
+    const GrainTexture* testTileOf(const TerrainVertex& tv) { const int f = madeCrustForm(tv); if (f >= 0 && !madeCrustBuilt[f]) buildMadeCrust(f); return tileOf(tv); }
+    void buildMadeCrust(int form) { buildMesoTile(madeCrustTiles[form], MAT_CRUST, site.gen.seed, form); madeCrustBuilt[form] = true; }   // KI-493
     // KI-477 to KI-481: the ruins' faces the last frame drew wholly under an overgrowth's cover, those with windows grown shut (whole or across
     // the cover's edge), and the cover's faces and pieces lifted into its night light
     void testCoverFaces(int& covered, int& shut, int& lit) const;
+    void testWaitResample() { if (resampleThread.joinable()) { resampleThread.join(); takeResample(); } }   // KI-491: the worker's rings in
+    // KI-492, KI-501: the frame's faces of a ruin's cover: those wholly under it of the latest growing line and of the others, each with its veins'
+    // light at night where its line glows; those across its edge, their cover in its own light
+    void testCoverLight(int& whole, int& wholeVeined, int& other, int& otherVeined, int& across, int& acrossLit) const;
     int testSightMissing() const;   // R-434: the square metres within the activity vision's reach not yet read
     void testSightCounts(int& read, int& faint, int& strong) const;   // those read (within reach), faint and strong
     // A-02 (tests): place a settlement of forms with its centre at local (x, z): its layout (the buildings' footprints) and its

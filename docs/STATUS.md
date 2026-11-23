@@ -13,8 +13,8 @@ log entry (`docs/decisions/log/`), B file or R file.
 
 ## Done in 1.5.0
 
-Phases 1 to 6 are done: the J series closed with J-12, and its known issues were fixed after it (B-447 to B-471, below). Log entries are
-in `docs/decisions/log/7-1.5.0.md`.
+Phases 1 to 8 are done: the J series closed with J-12 and its known issues were fixed after it (B-447 to B-471); R-454's J-13 to J-15
+followed, and J-16 fixed the known issues 1.5.0 left (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
 
 - **Microbes (Z-01 to Z-07, R-425):** life on every landable world (`src/life/`, `docs/reference/13-life.md`), with `GEN_VERSION` 17;
   each species' form and its slide in six ways of seeing; the search on the ground (O takes a sample); the microscope, the incubator,
@@ -123,12 +123,34 @@ in `docs/decisions/log/7-1.5.0.md`.
   gene's change would kill. R-451: the seed page shows what the culture needs and what the place gives, and a failed seeding's report
   says why in full. R-452: Shift+N names an animal, N is always the map. R-453: GREEN and PINK dyes.
 
-- **Latest: J-15, greening a desert** (2026-11-23, R-454's last milestone). On a desert a light-feeder's carpet (DRY, STOP cut, BIND,
+- **J-15, greening a desert** (2026-11-23, R-454's last milestone). On a desert a light-feeder's carpet (DRY, STOP cut, BIND,
   no SHELL or LIFT) or lichen (the same with a SHIELD) grows grass and shrubs where it lies, from four steps after it covered the ground,
   thick from twelve, in its pigment's colour (a dye's over it): a green pigment greens it. Once they cover half its land the desert is a
   GREENED DESERT on the data sheet ("A CARPET OF CELLS HAS GROWN INTO GRASS AND SHRUBS OVER MOST OF ITS BARE LAND."); its carpet harms
   nothing. On the ground: tufts and darker shrubs, no trees. The gene editor's cut STOP now says what a line overgrows as ("CUT OUT:
   OVERGROWS AS CARPETS, GREENS A DESERT"). `seed kinds`: a green light-feeder tuned for a desert greens it from its 27th step.
+- **Latest: J-16, the known issues** (2026-11-23, on the user's word: "after that there should be a J-16 that will basically handle all
+  K-xxx that were created"). The 36 known issues 1.5.0 found and left open: 34 fixed by 33 bugs (B-474 to B-507, a B file each in
+  `docs/iteration-3/bugs/resolved/`; B-495 unused), KI-502 in part, KI-503 and KI-502's cap proposed closed (below). Five writers did the
+  ground, the animals, the lab and ship, the screens and the harness on worktrees, merged three ways by file. What a player sees:
+  - Seeding: a native dies out only where the line leaves it no warmth, and a later line meets none of those driven out; a line that fills
+    a terminator world's ring of seas now changes its air (none of `seed kinds`' seedings shows nothing now); a line's own warming lets it
+    spread and give off more; the two smallest cold worlds open 41 and 50 km down; a dyed line in the rock stains the bare rock (RED
+    SEEPS) and a glowing deep line lights its cracks at night; an acid world's iron and sulphide eaters feed in their own clouds; a
+    venusian world's sky takes a cloud line's dye by day and its glow at night; two lines' grass each in its own colour, and any bare world
+    with air greens (a scorched felisian 42% green).
+  - Worlds: a chemotroph only from a cool world (65 of 20,004 bodies were, 48 now); a warmed ice sheet's margin melts dark and the white
+    ice draws back; a disc keeps its made clouds' colour before its looks.
+  - The ground: the overgrowth's structures across the cube's edges and by the cover's edge the same from any landing; the ground follows
+    the steps; ruins glow in their veins; a world's own crust in its own tile; each building its own line's cover; kills kept past the
+    landing (the guide's `dead` lines, 64 steps); a flock's young circle, limp, stumble or fly by night, a sprouting flyer falls dead;
+    a climber along its trunk; the shallows' stretch in its depth.
+  - Screens: the data sheet's lines within 50 characters; two unnamed worlds told apart by their place; a second sun's planet a world;
+    status lines within 53; the catalogue's animals by kin and drawn on their sheets.
+  - The lab and the ship: a full flask is fed (WHEN STARVING off); the target's marks only through the glass; the electron's frame about
+    2 ms while the stage is still (62 to 76 before); spores still on the plates.
+  - The harness: the flow's heap (a test game's 4x frame drawn into the flow's 1x buffers: an address-sanitised build found it); frames
+    drawn before their maps; the ground's budgets at 1.5 times their medians (surface 2x 3.1 ms, 4x 5.2).
 - **J-14, the clouds** (2026-11-23): Page Up on a venusian or acid world's seed page climbs into its clouds (70 C down to 0 C); acid life
   lives there, water life never; a cloud line's dye streaks the deck from orbit and its glow lights the night side.
 - **J-13, the cold worlds** (2026-11-22): brine lines to -45 C, places at their own warmth, Page Down down a drill hole (the rock's 1 to
@@ -136,36 +158,34 @@ in `docs/decisions/log/7-1.5.0.md`.
 
 ## Planned (2026-11-23)
 
-- **J-16, the known issues** (`docs/ideas/ITERATION-1.5.0.md`, phase 8), on the user's word of 2026-11-23 ("after that there should be a
-  J-16 that will basically handle all K-xxx that were created"): every known issue 1.5.0 found that is still open, 36 of them (KI-435 to
-  KI-454's twelve, KI-487 to KI-510's twenty-four), each fixed with a B file or closed for a reason the user agrees to. Then the release,
-  on the user's word.
+- **The 1.5.0 release**, on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need Docker,
+  asked first). Nothing else is planned for 1.5.0.
 
 ## Committed
 
 Commits on `release/v1.5.0`, each on the user's word, none pushed: 0c90433 (Z, I, B-434 to B-438), 455c7ad (B-439), 82592c5 (B-440,
 R-427 to R-434), d12a9ea (R-435 to R-442, B-441, B-442), 20b236e (B-443, Y-01, Y-02), c9e98be (Y-03, Y-04, R-445, R-446, B-444 to
-B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05), 1b5ea42 (J-06), 47d4d2d (J-07), 599ff5f (J-08 to J-11). Not committed: J-12,
-B-447 to B-471 (J-12's tree alone is kept as the git tree object 404ae0c, so the two can be committed apart), R-449 to R-453 with
-B-472 and B-473, J-13, J-14 and J-15.
+B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05), 1b5ea42 (J-06), 47d4d2d (J-07), 599ff5f (J-08 to J-11), b21341b (J-12) and
+918ce7f (B-447 to B-473, R-449 to R-454: J-13 to J-15), the last two on the user's "commit and proceed" of 2026-11-23. Not committed:
+J-16.
 
 ## Next
 
-- **J-16, the known issues**, on the user's "proceed" (`milestone` skill; the list in `docs/ideas/ITERATION-1.5.0.md`, phase 8). First
-  the user's look at J-15's frames (`shots/tests/kinds/desert_<orbit_before|orbit|sheet|ground>.png`), J-14's
-  (`shots/tests/clouds/venus_orbit_<before|after|night>.png`, `venus_sheet.png`, `acid_orbit_after.png`, `seed_page_clouds.png`) and
-  J-13's (`shots/tests/cold/seed_page_<ground|deep>.png`, `cracks_<orbit_before|orbit_after|sheet|ground>.png`), and play (green a
-  desert, Page Up on a venusian world's seed page, Page Down on a cold one's).
 - **The 1.5.0 release** on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need Docker,
-  asked first). First, the user's verdict on J-12's frames (`shots/tests/record/<catalogue|died_out|found_wild|animal_gone|life_page>.png`),
-  J-11's (`shots/tests/kinds/`) and J-10's (`shots/tests/overgrowth/ruins_*.png`, the sounds `shots/tests/sound_squelch.wav`,
-  `vents_dry`, `vents_wet`, `creaks`, `hair`, `tear`), the frames of the known issues' fixes (`shots/tests/overgrowth/ruins_*.png` with
-  `ruins_night.png`, `shots/tests/fates/fate_soup_seas.png` and `fate_dyed_flock.png`, `shots/tests/ways/ways_climber.png` and
-  `ways_shallows.png`, `shots/tests/kinds/`), the user's play of R-449 to R-453, and a commit of J-12, of B-447 to B-471, of R-449 to
-  R-453, of J-13, of J-14 and of J-15.
-- **Proof base:** `build/prove/j15` (46 items). Against j14: 43 of 46 the same; `seed_kinds` (the desert's recipe, four frames) and `unit`
-  (the three checks: 592, 0 failures) J-15's own; `sweeps`' fog-seas frame moved once (KI-446) and is the same run alone. `bench check` 54
-  of 54 budgets.
+  asked first). Before it: the user's word on KI-502's cap and KI-503 (closed or kept), a commit of J-16, and the user's look and play:
+  - J-16's frames: `shots/tests/j16/` (the venusian ground under a red glowing cloud line by day and night, beside it as generated:
+    `deck_<day|night>[_before].png`; a desert greened by a green line and a red one, its globe and each line's ground:
+    `desert_two_globe.png`, `desert_<green|red>_ground.png`; a red rock line's seeps: `seeps[_before].png`; a glowing line's cracks under
+    an ice moon's crust at night: `cracks_night[_before].png`), and the battery's (`build/prove/j16/items/<item>/shots/tests/`): the data
+    sheets (`datasheet/`), the catalogue by kin and an animal drawn (`seed_record/.../record/`), the ruins at night (`overgrowth/.../
+    ruins_night.png`), the climber and the shallows (`bestiary/.../ways/`), the cabin's marks (`screens/.../cabin_decoder_1x.png`).
+  - Earlier frames still waiting for the user's verdict: J-15's (`shots/tests/kinds/desert_*.png`), J-14's (`shots/tests/clouds/`), J-13's
+    (`shots/tests/cold/`), J-12's (`shots/tests/record/`), J-11's (`shots/tests/kinds/`), J-10's (`shots/tests/overgrowth/ruins_*.png`
+    and the sounds `sound_squelch.wav`, `vents_dry`, `vents_wet`, `creaks`, `hair`, `tear`).
+- **Proof base:** `build/prove/j16` (46 items, 3,808 s; only the unit's own noisy files moved between its two runs). Against j15: 18 of 46
+  the same, regress's 24 hashes among them; 28 differ, each by its fix (the log's J-16 entry). Unit 618 checks, 0 failures; `bench check`
+  54 of 54 budgets. After the snapshot, the ground's night light for a glowing deep line's cracks (B-479): eleven items compared against
+  j16, all the same.
 
 ## Playing the lab
 
@@ -212,7 +232,12 @@ the wild changed in it. The statistics' L page counts the worlds seeded and what
 and later a blue one on the other side of a world, and each sea keeps its own colour from orbit and on the ground; a methane line on an
 oxygen world raises silver clouds in the summer twilights of the high latitudes; a CO2 line on a tundra melts its ice sheets' snow to bare
 ice; a CO2 line on a warm ocean or hycean world can boil its sea off to a salt floor (MADE HOTHOUSE, ONCE HYCEAN, in the analyzer too); a
-second line let go on a warmed world reads its warmth (a vial there too).
+second line let go on a warmed world reads its warmth (a vial there too). J-16: a sea line on a terminator world now changes its air; on
+a small cold world Page Down goes deeper (a 767 km rocky world opens 41 km down); a dyed line sent down a drill hole stains the bare rock
+round its seeps (RED SEEPS), and a glowing one under an ice moon's crust lights its cracks at night; an acid world's iron or sulphide
+eater grows in its own clouds (the seed page says IRON, SULPHIDE); dye or light a venusian world's clouds and land: its sky takes the
+dye by day and glows in patches at night; green a desert with two lines of two colours, each keeping its own, or a scorched felisian;
+warm a tundra and its ice sheets' white draws back behind a dark margin; on the ground a hunt's kill stays dead across landings and saves.
 
 ## Seeing the animals
 
@@ -251,8 +276,8 @@ and `life kit` draw them.
   livable, 19% nothing) are printed, not tuned (KI-483); the heat's harm now weighs the mean a world reaches, so a cold world warmed
   greens (it moved J-04's and J-08's rule); a made hothouse no longer rains.
 - **J-12's calls:** a native a line beat dies out once the line covers the world, where it lives in no niche or salt the line does not
-  (its warmth not read: KI-487), and then leaves every vial of the world; the catalogue lists the animals seen by world, with sheets in
-  words (KI-488); DIED OUT counts the explorer's own sheets alone; what the wild changed shows once the sequencer read the line from a
+  (its warmth read too since B-474), and then leaves every vial of the world; the catalogue lists the animals seen by world, with sheets in
+  words (by kin and drawn since B-500); DIED OUT counts the explorer's own sheets alone; what the wild changed shows once the sequencer read the line from a
   vial of its world; the seeded worlds' notes moved out of `13-life.md` into `14-seeded-worlds.md`, and sending a culture down out of
   `rules-life-world.md` into `rules-life-seeding.md`.
 - **R-448's calls:** the plan's defaults hold (the drones send a culture, the animals in the middle, home never seeded, the explorer
@@ -263,30 +288,38 @@ and `life kit` draw them.
   GREEN and PINK taken from the dye tables' synonyms. R-454 waits for the talk (its R file's five questions).
 - **J-13's calls:** a brine line's floor -45 C (the talk's figure); the drill's eight depths to 30 km; a world's inner heat by its radius
   (30 C a km on an Earth, half again with plates, vents or tides); the deep's food the rock's hydrogen alone, so a hydrogen eater goes
-  down; a deep line shows only its gases (KI-506), an ice sea's line its dye in the cracks; the two smallest cold worlds of `seed cold`
-  stay closed (KI-505); a place read at its own warmth (it was read at -20 C however cold).
+  down; a deep line shows only its gases (seeps and glowing cracks since B-479), an ice sea's line its dye in the cracks; the two smallest cold worlds of `seed cold`
+  stay closed (open since B-478); a place read at its own warmth (it was read at -20 C however cold).
 - **J-15's calls:** a desert is the desert kind alone (the scorched felisian lends its grass bank to its clay, and the other bare worlds
-  keep a plain overgrowth: KI-510); a lichen greens as a carpet does; the plants start four steps behind the carpet's edge and thicken by
+  keep a plain overgrowth; any bare world with air greens since B-482); a lichen greens as a carpet does; the plants start four steps behind the carpet's edge and thicken by
   twelve; they take the line's pigment's colour, a dye's over it (a purple line makes a purple desert, still GREENED DESERT), in the
-  desert's own grass bank (two lines share it: KI-509); grass and shrubs, no trees, flowers or animals; the carpet harms nothing, but a
+  desert's own grass bank (two lines share it; each its own since B-482); grass and shrubs, no trees, flowers or animals; the carpet harms nothing, but a
   soup the same line makes in the desert's pools still counts as harm; the editor's cut STOP names the overgrowth.
 - **J-14's calls:** the clouds' heights by warmth (70 C down to 0 C, 8 C a km, from 3 km up: the scoop's lapse) so a player picks a
-  warmth as down the drill; their food dead matter and light, as a vial of them (a cloud species that burns a food finds none: KI-507;
-  the clouds could give a sulphur food instead, the user's call); water life never there; a cloud line's streaks and glow seen from
-  orbit alone (KI-508); a warmth never said as -0 C.
+  warmth as down the drill; their food dead matter and light, as a vial of them (a cloud species that burns a food found none, KI-507;
+  B-480: an acid carries iron and sulphur); water life never there; a cloud line's streaks and glow seen from
+  orbit alone (from the ground too since B-481); a warmth never said as -0 C.
+- **J-16's calls (the user's word on two):** KI-502's cap (a disc shows five or six made colours, past them the nearest's) and KI-503 (a
+  flask past the ship's banks with no colour near dims to the glass's tone; the banks go to the nearest things first, so it is a far
+  one) are the palette's 32 banks' limits: proposed closed, open until the user agrees. KI-436's fix changes which worlds are
+  chemotrophs (17 of 65 near the start are their drawn kinds again) and rides generation 18 by the rules (a bump a series); the traits'
+  and the cell genes' pinned digests moved with it alone (a build with it undone gave both old values). KI-507: an acid medium carries
+  iron and sulphur in a flask too, so an acid world's iron or sulphide eater grows in any acid flask (J-14 noted "the clouds could give
+  a sulphur food", the user's call: taken so). A line's share grows where its own warmth opens its world and never falls (its gas
+  stays), so a hothouse still runs away. A line's gas answers by its room: harm is now 57% of `seed kinds`' seedings (KI-520). An ice
+  sheet keeps its heights: its margin melts dark. A small cold world's drill goes to 120 km. One bank a greening line, its carpet its
+  grass's colour, and GREENED DESERT for any bare world greened. Kills kept in the guide 64 steps (`dead` lines). A climber takes only a
+  trunk as thick as its body (KI-526). The ground's resample after a step takes 45 frames (the one that waits for it about 34 ms on a
+  busy machine). The catalogue's animals sit under NOT YET SEQUENCED until one of their world's species is read. The ground's budgets
+  went to 1.5 times their medians.
 - **Docs still in the old style:** the reference notes (`docs/reference/`, 1.4 MB) and the code comments, until each is next edited.
 - Standing leave to commit each step; the clangd-lsp plugin; B-440's leftovers in their `shots/` (`probe_1`, `probe_2`).
-- Known issues (`docs/iteration-3/bugs/KNOWN-ISSUES.md`): KI-424, KI-425, KI-428 to KI-431, KI-435 to KI-438, KI-440, KI-444,
-  KI-446, KI-448 to KI-450, KI-453 (the data sheet calls a second sun's planet a moon), KI-454 (a heard sound's status line can run
-  off the screen), J-12's KI-487 and KI-488 (a native driven out in warmths the line cannot live in too; the catalogue's animals by
-  world alone, in words), and what the J series' fixes left, KI-489 to KI-503 (the overgrowth's lattice at the cube's edges and the
-  cover's edge; the ground's cover at the landing's layer while the ruins move on; a ruin's glow in patches; a world's own crust in a
-  line's form; kills kept a landing alone; a flock's changed young; a climber hugging a pole; a curving shallows; 13% of `seed kinds`'
-  seedings showing nothing; a line's own warming moving its band but not its gas; an ice sheet's dome; a settlement's one line; five
-  made colours a disc; a flask of a colour none near), R-449's KI-504 (a full flask still counts as starving for a WHEN STARVING
-  switch), J-13's KI-505 and KI-506 (the two smallest cold worlds closed; a deep line seen only in its gases), J-14's KI-507 and
-  KI-508 (a cloud species that burns a food finds none in its clouds; a venusian world's ground shows nothing of a cloud line), and
-  J-15's KI-509 and KI-510 (two lines' grass in one colour; only the desert greens). J-16 takes the ones 1.5.0 found.
+- Known issues (`docs/iteration-3/bugs/KNOWN-ISSUES.md`): KI-424, KI-425 and KI-428 to KI-431 from before; of 1.5.0's, KI-502's cap and
+  KI-503 (proposed closed, above), and what J-16's fixes found, KI-511 to KI-526 (a harness game at another scale, the overgrown city's
+  tight budgets, scenes not waiting for their maps, auto-explore's second sun's planet, the catalogue's swimmers on dried seas, a moving
+  electron stage, herds keeping the landing's fates after a step, a crossed ruin face's one light, two covers of one material sharing a
+  tile, `seed kinds`' shares untuned, a line's room unsampled, seeps not by where water rises, a deck world's dye one tint from below, a
+  sprouting flyer fallen out of sight leaving no remains, a night-born flyer by day, a climber with no thick trunk near).
 - **The known issues' calls:** a made colour takes the first free bank of a pool (the overgrowth first on a crowded world, then the
   waters, the hides, the looks, the foam, a dyed rain, then each other line's colour); where two lines lie the one of the greater share,
   the later on a tie; a living world's ice sheets keep their domes, their snow melting to bare ice; a later line is judged on the world
@@ -299,11 +332,11 @@ and `life kit` draw them.
 
 ## Disk
 
-About 52 GB free (2026-11-23). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
-j03, j04, j05, j06, j07, j08, j09, j10, j11, j12, b471, r453, j13, j14 and j15, the compares' outputs against r434 to j14, and their
-logs: about 77 GB. A snapshot and a compare's outputs are about 1.4 GB each.
+About 40 GB free (2026-11-23). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01 to j16, b471
+and r453, the compares' outputs against r434 to j15, and their logs: about 81 GB. A snapshot and a compare's outputs are about 1.7 GB each.
+J-16's five worktrees (about 1.4 GB, under the job's scratch directory) were removed at its close.
 
 ## Next free ids
 
-Bugs B-474, requests R-455, known issues KI-511. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
+Bugs B-508, requests R-455, known issues KI-527. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
 Y and J).

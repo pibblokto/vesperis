@@ -52,13 +52,18 @@ since Z-03 the surface and the game do too.
   `SeedPlace::aloft`), their acid droplets, a cloud line's spread (`MADE_CLOUDS`) and its dye and glow in the air at its whole answer.
   J-15: a light-feeder's carpet or lichen on a desert grows grass and shrubs (`MadeGrowth::greens`, `greenReach`, `thickReach`, `plants`,
   `MadeWorld::green`; GREENED DESERT in `madeKindOf`, before the overgrown worlds), and harms nothing; `overgrowthTypeOf`, the
-  overgrowth's type by a line's genes, which the gene editor says too)
+  overgrowth's type by a line's genes, which the gene editor says too. J-16: natives die out by their band of warmth too, a later line
+  meets none of them (`SeedVerdict::wetLoC` and the rest, `seedVerdictOf`'s `gone`: B-474); a line's gas by the share of its room it
+  fills (`SeedVerdict::room`: B-475); its share read again at its own warmth (`seedShareAt`: B-476); the drill's deepest on a small cold
+  world (`deepestKm`: B-478); a rock line's seeps and a glowing deep line's light (B-479); an acid's iron and sulphur (`acidFeeds` in
+  `cultures`: B-480); a greening line's carpet its grass's colour (B-482))
 - `morph_draw.h` (the slide's public interface: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`,
   `seeingsFor`, `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands and waves in slide micrometres, and the slide's banks),
   `morph_shape_internal.h` (the builder, the pose, a cell's frame for its insides, `CellCtx`), `morph_shape.cpp` (distances, ornaments,
   the pose by motion), `morph_plans.cpp` (each plan's cell and its insides), `morph_acts.cpp` (life-cycle forms, the acts, `buildShape`,
-  extents), `morph_draw.cpp` (palettes, the light ways of seeing per pixel, the section), `morph_mesh.cpp` (the electron view's mesh)
+  extents), `morph_draw.cpp` (palettes, the light ways of seeing per pixel, the section), `morph_mesh.cpp` (the electron view's mesh,
+  its filter's pores and grain read from tables made once a frame)
 
 ## Rules and traps
 - Generation 17 is the biota. It draws on separate salts, after every draw of 16, from the body, its system and `BodyGen::make`'s

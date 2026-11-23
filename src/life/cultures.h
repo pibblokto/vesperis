@@ -47,8 +47,8 @@ struct Medium {
 };
 
 // Y-04: a gene's switch (its promoter, life/genes.h; Jacob and Monod 1961), when it does its work: always, never, in the light, in the dark, its
-// crowd past its quorum's share (a glow's own), starving (its crowd's food spent, nothing it eats, no light or its medium killing it, judged of
-// the line as written: a rest's own), colder than its best. The guide keeps a switch by its key
+// crowd past its quorum's share (a glow's own), starving (nothing it eats, no light or its medium killing it, judged of the line as written: a
+// rest's own; B-477: a full flask is fed, not starving), colder than its best. The guide keeps a switch by its key
 enum GeneSwitch { GW_ALWAYS = 0, GW_NEVER, GW_LIGHT, GW_DARK, GW_CROWDED, GW_STARVING, GW_COLD, GW_COUNT };
 extern const char* const GENE_SWITCH_NAMES[GW_COUNT];   // "ALWAYS", "NEVER", "IN THE LIGHT", "IN THE DARK", "WHEN CROWDED", "WHEN STARVING", "WHEN COLD"
 extern const char* const GENE_SWITCH_KEYS[GW_COUNT];    // "ALWAYS", "NEVER", "LIGHT", "DARK", "CROWDED", "STARVING", "COLD"
@@ -149,6 +149,9 @@ CultureKind cultureKindOf(const Biota& B, int species, double bodyUm);
 // iron, the methane of the ammonia worlds, the acetylene of the hydrocarbon ones, else the broth of its dead matter), its salt
 Medium mediumOfPlace(const Biota& B, int bodyType, int starClass, const Microhabitat& h, double readingC);
 
+// J-16 (KI-507): an acid's water carries dissolved iron and sulphur (acid mine waters, Colmer and Hinkle 1947; a venusian deck's sulphur and
+// iron chloride), so an iron or a sulphide eater finds its food in an acid medium whatever else it gives
+inline bool acidFeeds(const Medium& m, int substrate) { return m.cell == CC_ACID && (substrate == SU_IRON || substrate == SU_SULPHIDE); }
 // how a species does in a medium: grows; too cold (it waits); too hot, the wrong salt or the wrong solvent (it dies, or sporulates); no energy it
 // burns, no light for a light-feeder (it starves); Y-02: a line whose vital gene was changed (it lyses at once, anywhere); J-01: its flask
 // frozen (it waits in the ice), the ultraviolet light without a shield (it dies)

@@ -953,9 +953,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.tags = KT_PLATES | KT_TWIN | KT_VENT_LIFE;
         k.shapes = KS_INCISION | KS_EXTENSION | KS_SCARPS | KS_BASALTIC | KS_FROST | KS_FLOOD_LAVA | KS_PLUMES | KS_HYDROTHERMAL;
         k.salt = 0xC4E3070000000012ULL;
-        source(k, of(PT_TECTONIC), 0, 1e9, ALL_BODIES, DEAD_STARS, 0, 0.6);   // Corliss 1979: the vents' life lives on chemistry, not light: a dead
-        source(k, of(PT_ROCKY), 0, 1e9, ALL_BODIES, DEAD_STARS, 0, 0.12);     // star's world or a brown dwarf's moon, warmed from within
-        source(k, of(PT_TECTONIC, PT_ROCKY), 0, 1e9, KB_MOON, 0, 0, 0.3, false, of(PT_SUBSTELLAR));
+        source(k, of(PT_TECTONIC), 0, 300, ALL_BODIES, DEAD_STARS, 0, 0.6);   // Corliss 1979: the vents' life lives on chemistry, not light: a dead
+        source(k, of(PT_ROCKY), 0, 300, ALL_BODIES, DEAD_STARS, 0, 0.12);     // star's world or a brown dwarf's moon, warmed from within; B-504: a
+        source(k, of(PT_TECTONIC, PT_ROCKY), 0, 300, KB_MOON, 0, 0, 0.3, false, of(PT_SUBSTELLAR));   // cool one (under 300 K as drawn: under 50 C)
         colour(k, ch(0.26f, 0.04f), ch(0.24f, 0.03f), ch(0.23f, 0.03f));
         sentence(k, SR_COIN, "dim world warmed from within, hot springs steaming on its dark rock, pale mats spreading from them and spores glowing over them at night",
                  "world of life without light, springs and fumaroles along its rifts, their mats white and pink on the black basalt");

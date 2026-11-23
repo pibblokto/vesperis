@@ -489,7 +489,8 @@ int labMicroscope() {
 }
 
 // `lab time`: the light sample's slide in each way at x100 and x400 and under the electron at x200, its frame's parts timed (the specimens made,
-// the slide drawn, the mush and the colours, the whole frame), ten frames each
+// the slide drawn, the mush and the colours, the whole frame), ten frames each. B-502: the slide's drawing also by the threads' time it took
+// together (`std::clock`), which other jobs on the machine move less than the clock on the wall
 int labTime() {
     Vial v;
     if (!labDenseVial(v)) { printf("lab time: no dense sample\n"); return 1; }
@@ -503,15 +504,17 @@ int labTime() {
     for (const View& w : views) {
         g.testScopeView(w.way, w.step, M.mount.cx, M.mount.cy, M.mount.focus);
         lab.at(5);
-        double make = 0, draw = 0, rest = 0, whole = 0;
+        double make = 0, draw = 0, rest = 0, whole = 0, cpu = 0;
         for (int k = 0; k < 10; k++) {
             const double a = nowSec();
             g.testScopeFrame();
             const double b = nowSec();
+            const std::clock_t c0 = std::clock();
             Slide sl; sl.seeing = w.way; sl.umPerPx = umPerPxAt(g.testScopeMag()); sl.cx = M.cx; sl.cy = M.cy; sl.t = M.t; sl.lod = true; sl.seed = M.mount.seed;
             sl.step = FB_SCALE >= 3 ? 2 : 1;
             sl.turn = M.turn; sl.tilt = M.tilt;
             drawSlide(g.fb, sl, M.shown);
+            cpu += double(std::clock() - c0) / CLOCKS_PER_SEC;
             const double c = nowSec();
             g.fb.mush(2);
             const double d = nowSec();
@@ -519,8 +522,8 @@ int labTime() {
             const double e = nowSec();
             make += b - a; draw += c - b; rest += d - c; whole += e - d;
         }
-        printf("%-8s x%-6.0f %4zu specimens: made %.1f ms, drawn %.1f ms, mushed %.1f ms; the whole frame %.1f ms\n", SEEING_NAMES[w.way], g.testScopeMag(), M.shown.size(), make * 100,
-               draw * 100, rest * 100, whole * 100);
+        printf("%-8s x%-6.0f %4zu specimens: made %.1f ms, drawn %.1f ms (%.1f ms of the threads' time), mushed %.1f ms; the whole frame %.1f ms\n", SEEING_NAMES[w.way],
+               g.testScopeMag(), M.shown.size(), make * 100, draw * 100, cpu * 100, rest * 100, whole * 100);
     }
     return 0;
 }

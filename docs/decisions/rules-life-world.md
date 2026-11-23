@@ -42,6 +42,7 @@ incubator in `rules-life-cultures.md`, sending a culture down and a seeded world
 - A seeding's step comes every 75 s of the clock at its pace (R-449; five minutes before), 24 in all; three lines live on a world at most [J-02], [J-03] [R-449]
 - The air's greenhouse and whether a world has air are read through the generator (`airWarmthC`, `hasAir`), not the kind's row [J-02]
 - A deep line (`MadeSpread::deep`) lives in no water and on no land of the surface, grows over nothing, its gases at half its share [J-13]
+- Its look lies at any warmth on the cracks over its sea under the ice, or on the bare rock its water seeps up through, in patches [J-13], [B-479]
 - A `seeded` line ends with its depth where it went down a drill hole (km; a line on the ground reads as before) [J-13]
 
 [J-01]: log/7-1.5.0.md
@@ -50,3 +51,4 @@ incubator in `rules-life-cultures.md`, sending a culture down and a seeded world
 [R-449]: log/7-1.5.0.md
 [R-453]: log/7-1.5.0.md
 [J-13]: log/7-1.5.0.md
+[B-479]: log/7-1.5.0.md

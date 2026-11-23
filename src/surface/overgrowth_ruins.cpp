@@ -143,6 +143,7 @@ void SurfaceView::overgrowCell(RuinCell& c) const {
     std::vector<Form>& E = c.elems[0];
     E.erase(std::remove_if(E.begin(), E.end(), [](const Form& f) { return f.part == FORM_PART_GROWTH; }), E.end());
     c.climb.clear();
+    c.lines.clear();
     const MadeWorld& m = ruinsMade;
     if (!c.has || !m.on() || !m.grown() || m.growthLine < 0 || m.growthLine >= MADE_LINES) return;
     {   // a settlement on the ground the cover lies on: a snowfield's ruins (its centre's) stay bare
@@ -164,16 +165,20 @@ void SurfaceView::overgrowCell(RuinCell& c) const {
         }
     }
     bool any = false;
+    c.lines.assign(nb + 1, (int8_t)c.growthLine);
     for (int b = 0; b <= nb; b++) {   // (nb: the graves' stones, at the settlement's centre)
         double x = c.r.x, z = c.r.z; uint64_t hs = c.spec.seed;
         if (b < nb) { x += c.spec.buildings[b].x; z += c.spec.buildings[b].z; hs = c.spec.buildings[b].seed; }
-        const double since = madeGrowthSince(m, site.unitAt(x, z), site.gen.seed);
+        const Vec3 u = site.unitAt(x, z);
+        const double since = madeGrowthSince(m, u, site.gen.seed);
         if (since < 0) continue;
         c.climb[b] = (float)(climbOf(since) * (0.85 + 0.3 * hash01(mix64(hs ^ 0xC11B0ULL))));
+        int line = -1;   // KI-501: the line whose cover lies at the building (its colour, its tile, its pieces' grain, its light at night)
+        madeGrowthAt(m, u, site.gen.seed, line);
+        if (line >= 0 && line < MADE_LINES && m.spread[line].growth.on()) c.lines[b] = (int8_t)line;
         any = true;
     }
-    if (!any) { c.climb.clear(); return; }
-    const MadeGrowth& G = m.spread[m.growthLine].growth;
+    if (!any) { c.climb.clear(); c.lines.clear(); return; }
     std::vector<FormOpening> openings = c.openings;   // KI-478: and the bays of its arches (gates, arcades, porches, the works' arches)
     for (const Form& f : E) if (f.kind == FK_ARCH && f.part != FORM_PART_GROWTH) archOpenings(f, openings);
     std::vector<Form> out;
@@ -182,10 +187,32 @@ void SurfaceView::overgrowCell(RuinCell& c) const {
     for (int b = 0; b < nb; b++) {   // the pieces come building by building (`groupPieces`), each building's cover after its own
         const size_t i0 = i;
         while (i < E.size() && E[i].building == b) out.push_back(E[i++]);
-        if (c.climb[b] > 0) growPieces(c, b, E, i0, i, G, openings, tornMembranes, out);
+        if (c.climb[b] > 0) growPieces(c, b, E, i0, i, m.spread[c.lines[b]].growth, openings, tornMembranes, out);
     }
     while (i < E.size()) out.push_back(E[i++]);   // the graves' stones
     E.swap(out);
+}
+
+uint64_t SurfaceView::madeGroundKey(const MadeWorld& m) {
+    MadeWorld g = m;   // (the animals' fates, the ruins' and the remains' steps counted on past the spread: no sample of the ground reads them)
+    g.fate = MadeFate(); g.fateAge = 0;
+    for (MadeSpread& sp : g.spread) { sp.fate = MadeFate(); sp.growth.steps = 0; sp.pits = 0; }
+    return madeKey(g);
+}
+
+void SurfaceView::adoptMadeNow() {
+    madeHanded = false;
+    if (ruinsMade.key == site.gen.made.key || madeGroundKey(ruinsMade) == madeGroundKey(site.gen.made)) return;
+    joinAhead();   // (its samples read the layer)
+    const int mats[3] = {MAT_TISSUE, MAT_THREADS, MAT_HARD};
+    int looks[3];   // (the cover's tiles read the layer: made again where their look changed)
+    for (int k = 0; k < 3; k++) looks[k] = growthTexture(mats[k]);
+    site.made = ruinsMade; site.gen.made = ruinsMade;   // (a re-anchor keeps it)
+    site.hasWater = site.hasWater && !ruinsMade.dried();   // (a runaway's seas boiled off: a kind remembers, they never come back)
+    for (int k = 0; k < 3; k++) if (growthTexture(mats[k]) != looks[k]) mesoBuilt[mats[k]] = false;
+    clearSight();   // (the activity vision's square metres read it too)
+    growthLatticeKey = site.gen.made.key;   // (the structures as they stood till the worker's corners come in: `takeResample`)
+    startResample();   // the rings round the camera and the structures' corners on a worker, the rest dropped
 }
 
 void SurfaceView::testRegrowRuins() {

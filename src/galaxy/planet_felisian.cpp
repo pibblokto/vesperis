@@ -492,6 +492,9 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
         if (o.iceSheet > 1 && o.sheetWall) { s.material = MAT_ICE; s.albedo = 0.7; }   // the sheet's wall bare blue ice (P-03: its own wall, not the bedrock's slope under it)
         else if (o.iceSheet > 1 && madeC > 0 && !(absLatDeg > capEdge || h > snowLine || biome == BIO_ICE)) { s.material = MAT_ICE; s.albedo = 0.62; }   // KI-456:
         // a sheet a made warmth moved the caps, the snow line and the ice's edge off, its snow melted to bare ice (its heights the ice's as generated)
+        if (o.iceSheet > 1 && madeC > 0 && !o.sheetWall && o.iceSheet < K.sheetM * clampd(0.08 * madeC, 0, 0.8)) { s.material = MAT_ICE; s.albedo = 0.3; }
+        // J-16 (KI-500): its margin, thinner than a share of its dome that grows with the warmth, melting dark with its dust and meltwater (Greenland's
+        // dark zone: Wientjes and Oerlemans 2010), the white ice drawn back toward the pole; its heights still the ice's as generated
         if (waterZone > 0) s.water = level;
     } else if (o.caldera && h > 0) {
         s.material = MAT_WATER; s.albedo = 0.3; s.water = h + 2.0; s.biome = BIO_WETLAND;   // crater lake

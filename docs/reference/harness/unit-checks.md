@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-53 groups, 535 checks in their order; a group's heading gives its file, its function, the render scale it
+53 groups, 546 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -19,7 +19,7 @@ starts at and its count.
 - noon exposure rule
 - material ramp hits c at 47
 
-## kinds (`unit_kinds.cpp`, `unitKinds`, 1x): 11
+## kinds (`unit_kinds.cpp`, `unitKinds`, 1x): 12
 
 - kinds: 1.3.2's trait eligibility kept
 - kinds: the traits' classes are 1.3.2's split
@@ -30,6 +30,7 @@ starts at and its count.
 - living kinds: from felisian (or thin air) worlds whose day is not their year, round living stars; a young star's alike (P-02)
 - living grounds: each kind's signature on its first world (P-02)
 - locked and deep kinds: from their sources, the locked ones locked and untilted, none half of a double planet (P-03)
+- locked and deep kinds: a chemotroph a cool world warmed from within, its mean under 60 C (B-504)
 - locked and deep kinds: the regress's and the bench's test worlds as drawn (P-03)
 - locked and deep grounds: each kind's signature on its first world (P-03)
 
@@ -553,7 +554,7 @@ starts at and its count.
 - auto-explore's tape: the cassette deck (R-420)
 - auto-explore's tape: the explorer's folder, else the game's own (R-420)
 
-## states (`unit_navigation.cpp`, `unitStates`, 1x): 6
+## states (`unit_navigation.cpp`, `unitStates`, 1x): 9
 
 - the states' table, the old lists
 - the controller's general page, the old lists
@@ -561,8 +562,11 @@ starts at and its count.
 - the cabin's screens over the scene they open from: after help at the title, and after the ground (B-431)
 - the title keeps the game's place through its help and credits: a save there, and Enter (B-432)
 - a new expedition and a load note the system they put the ship in (B-433)
+- the data sheet's lines within the frame: every body of twelve systems in space, three worlds on their ground (B-496)
+- a record's and an instrument's status as they are taken within the 53 characters of the status line (B-499)
+- a planet of a second sun is a world: its sheet, the telescope, its naming; the second sun's planets; a moon still a moon (B-498)
 
-## ship (`unit_ship.cpp`, `unitShip`, 1x): 15
+## ship (`unit_ship.cpp`, `unitShip`, 1x): 16
 
 - ship: every room reachable from the bridge
 - ship: every device in a room and reachable
@@ -579,6 +583,7 @@ starts at and its count.
 - ship: a bed grown by the time played, trimmed back by E, kept by the save (R-429)
 - ship: the wall hung by the explorer, kept by the save (R-428)
 - ship: a save keeps the room and the place; the 5 m room's at the bridge's start
+- ship: aboard, the target's bracket where the glass shows it alone (B-501)
 
 ## search (`unit_search.cpp`, `unitSearch`, 1x): 5
 
@@ -617,13 +622,15 @@ starts at and its count.
 - experiments: the incubator's warmth typed: set as one change, refused past its cell's range, kept by Esc, below zero (R-435)
 - experiments: a culture grown on its partner kept with it: staged and put in together, saved, the pair kept once; alone on the stage its cells live (B-441)
 
-## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 5
+## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 7
 
 - incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)
 - incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)
 - incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)
 - incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too (R-441)
 - incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
+- incubator: unnamed worlds told apart by their place: the tree's pages and a folder's leaves, the catalogue's heads, the microscope's folders (B-497)
+- incubator: the catalogue's animals: their fates as the world's record holds them, by kin too, each drawn on its sheet (B-500)
 
 ## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 27
 
@@ -679,7 +686,7 @@ starts at and its count.
 - seeding: a loan, an unseeded world
 - seeding: samples
 
-## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 14
+## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 18
 
 - animals: the bestiary a pure function
 - animals: no two of a world alike
@@ -692,9 +699,13 @@ starts at and its count.
 - animals: remains a pure function of their cell
 - animals: the record's marks
 - animals: a kill kept, remains aged
+- animals: a kill kept past the landing (B-489)
 - animals: a climber round its trunk
+- animals: a climber along its trunk's lean, on a trunk it can hold (B-491)
 - animals: the flyers' and the swimmers' fates
+- animals: a flock's and a shoal's changed young and sick (B-490)
 - animals: the shallows' swimmers
+- animals: the shallows' stretch along a curving shore (B-492)
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

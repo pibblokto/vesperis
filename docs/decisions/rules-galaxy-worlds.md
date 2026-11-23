@@ -28,6 +28,7 @@ Rules in force for systems, orbits and moons, kinds of world, the almanac and th
 - A made world moves no star or comet (they read moons as drawn: `drawnOrbitKm`); a moon it would reach moves out to 3 radii, past the rings [P-01], [P-03]
 - A made row has a family, a salt and sources, never a weight, zone or rule (`kindsOk`); an `elsewhere` row (the frozen felisian) has no source [P-01], [P-04]
 - No kind with air forms round a black hole or in a Wolf-Rayet wind (`KEEPS_AIR`); without a sun, life is chemotrophic, never sun-fed [P-03], [P-05], [D-01]
+- A chemotroph is made only from a cool world, under 300 K as drawn (its mean under 50 C): a hot one stays as drawn [B-504]
 - A twin is never made a locked kind or a giant: it is remade as drawn (`asDrawn`, `drawnFacts`, `KindFacts::paired`), with no draw [P-03], [P-07]
 - Lock and sync in `KindFacts` stay the star's (a companion's worlds are never locked); a moon's own facts go in `KindFacts::moon` [P-06], [P-07]
 - Code that reads air asks `bodyHasAir` (false where `airFrozen`, in a drifter's cold). A sea below its `seaFreezeK` freezes; `TK_DARK` traits are given [D-04]
@@ -71,3 +72,4 @@ Rules in force for systems, orbits and moons, kinds of world, the almanac and th
 [D-04]: log/6-1.4.0.md
 [E-02]: log/6-1.4.0.md
 [E-07]: log/6-1.4.0.md
+[B-504]: log/7-1.5.0.md
