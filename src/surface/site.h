@@ -26,9 +26,10 @@ struct TerrainVertex {
     uint8_t gtint = 0;              // the ground trait's field (`SurfaceSample::groundTint`): a strewn field's stones, a stratum's accent
     uint8_t stint = 0;              // Z-03: red snow's algae (`SurfaceSample::snowTint`)
     uint8_t mtint = 0;              // J-02: a made world's tint over the land (`SurfaceSample::madeTint`; the struct's padding, no bigger)
+    uint8_t mline = 0;              // KI-460: the line whose look or overgrowth lies here (`SurfaceSample::madeLine` + 1, 0 none; the last padding)
     int32_t cx = 0x7fffffff, cz = 0x7fffffff;   // tags
 };
-static_assert(sizeof(TerrainVertex) == 40, "J-02: the made tint took the struct's padding; a vertex grows the rings' caches");
+static_assert(sizeof(TerrainVertex) == 40, "J-02, KI-460: the made tint and line took the struct's padding; a vertex grows the rings' caches");
 
 // C-09: an old road of the site in local metres (`SurfaceSite::ensureRoads`): its centre line, the metres along it at each
 // point, its half width and its bounds

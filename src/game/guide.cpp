@@ -45,7 +45,8 @@ bool Guide::load(const std::string& path) {
         if (key == "name" || key == "inbox") {
             std::string k, rest; is >> k; std::getline(is, rest);
             if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
-            (key == "name" ? names : inbox)[k] = rest;
+            const bool oldGene = k.size() > 18 && k[0] == 'G' && k[17] == '/' && k.find_first_not_of("0123456789abcdef", 1) == 17;   // R-450: by genesis
+            if (!oldGene) (key == "name" ? names : inbox)[k] = rest;
         } else if (key == "visited") { std::string k; is >> k; visited.insert(k); }
         else if (key == "landed") { std::string k; is >> k; landed.insert(k); }
         else if (key == "mark") {   // <body> <lat> <lon> <kind> <lent> <when> <name...>
@@ -96,9 +97,9 @@ bool Guide::load(const std::string& path) {
             std::string k; StrainRecord r; is >> k >> r.parent >> r.what >> r.value;
             if (!is.fail()) { std::string e; if (is >> e) r.edits = e; strains[k] = r; }
         }
-        else if (key == "gene") {   // Y-02: <genesis>/<number> <kind> <how>
-            std::string k; GeneKnown g; is >> k >> g.kind >> g.how;
-            if (!is.fail()) genes[k] = g;
+        else if (key == "gene") {   // Y-02: <species key>/G<number> <kind> (R-450: an older guide's <genesis>/<number> dropped)
+            std::string k; GeneKnown g; is >> k >> g.kind;
+            if (!is.fail() && k.find("/M") != std::string::npos && k.find("/G") != std::string::npos && g.kind >= 0) genes[k] = g;
         }
         else if (key == "watermark") { std::string k; is >> k; if (!is.fail()) watermarks.insert(k); }   // Z-06: a made species sequenced
         else if (key == "animal") {   // J-07: <key> <doing> <nearest> <most>; J-08: [<marks>]
@@ -222,7 +223,7 @@ bool Guide::save(const std::string& path) const {
     for (auto& k : sampled) f << "sampled " << k << "\n";
     for (auto& kv : strains)
         f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << (kv.second.edits.empty() ? "" : " " + kv.second.edits) << "\n";
-    for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << " " << kv.second.how << "\n";   // Y-02
+    for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << "\n";   // Y-02, R-450
     for (auto& k : treeOff) f << "treeoff " << k << "\n";   // Y-01
     for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
     if (!animals.empty()) {   // J-07: the keys' scheme, then each species seen
@@ -320,6 +321,7 @@ std::string seededLine(const SeedRecord& r) {
     f.precision(12);   // the guide's file
     f << "seeded " << r.body << " " << r.lat << " " << r.lon << " " << r.line << " " << (r.edits.empty() ? "-" : r.edits) << " " << r.cell << " " << r.tempC << " " << r.light << " "
       << r.energy << " " << r.salt << " " << r.gen << " " << r.clock;
+    if (r.depthKm != 0) f << " " << r.depthKm;   // J-13 (a line on the ground reads as before); J-14: under 0, up in the clouds
     return f.str();
 }
 
@@ -328,6 +330,8 @@ bool parseSeeded(const std::string& rest, SeedRecord& r) {
     is >> r.body >> r.lat >> r.lon >> r.line >> r.edits >> r.cell >> r.tempC >> r.light >> r.energy >> r.salt >> r.gen >> r.clock;
     if (is.fail()) return false;
     if (r.edits == "-") r.edits.clear();
+    double d = 0;
+    if (is >> d && std::isfinite(d) && d != 0 && d > -200 && d < 200) r.depthKm = d;
     return true;
 }
 

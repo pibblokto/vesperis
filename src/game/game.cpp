@@ -281,7 +281,11 @@ void Game::madeTick(double clockDt) {
     if (guide.seeded.empty() && madeTest.empty() && !spaceR.madeHeld()) return;
     if (!sys.valid) return;
     if (sys.star.seed != madeSysSeed) { spaceR.clearMade(); madeSysSeed = sys.star.seed; }   // another system's are dropped
-    for (int i = 0; i < (int)sys.bodies.size(); i++) spaceR.setMade(sys.bodies[i].seed, madeNow(i));
+    for (int i = 0; i < (int)sys.bodies.size(); i++) {
+        const MadeWorld m = madeNow(i);
+        spaceR.setMade(sys.bodies[i].seed, m);
+        if (surf.valid && surf.site.sys == &sys && i == surf.site.body) surf.setMadeNow(m);   // KI-480: the ground's ruins follow the world now
+    }
 }
 
 MadeWorld Game::madeNow(int bi) {
@@ -307,10 +311,10 @@ const std::vector<Seeding>& Game::seedingsAt(const StarSystem& S, int bi) {
     std::vector<Seeding>& out = seededWorlds[key];
     for (const SeedRecord& r : guide.seeded) {
         if (r.body != key) continue;
-        Seeding s; s.lat = r.lat; s.lon = r.lon; s.line = r.line; s.edits = r.edits; s.gen = r.gen; s.clock = r.clock;
+        Seeding s; s.lat = r.lat; s.lon = r.lon; s.depthKm = r.depthKm; s.line = r.line; s.edits = r.edits; s.gen = r.gen; s.clock = r.clock;
         s.medium.cell = r.cell; s.medium.tempC = r.tempC; s.medium.light = r.light; s.medium.energy = r.energy; s.medium.salt = r.salt;
         seedLineOf(r.line, r.edits, s.sent);
-        seedingRun(S, bi, s);
+        seedingRun(S, bi, s, &out);   // (KI-457: the world as the lines before it left it)
         out.push_back(std::move(s));
     }
     return out;
@@ -321,8 +325,6 @@ std::vector<Game::VialLine> Game::vialLines(const Vial& V, const StarSystem& S, 
     if (V.clock < 0 || guide.seeded.empty() || V.body < 0 || V.body >= (int)S.bodies.size()) return out;
     const std::vector<Seeding>& ss = seedingsAt(S, V.body);
     const Body& b = S.bodies[V.body];
-    const int n = V.hab.niche;
-    const bool wet = n == NI_LIQUID || n == NI_SILT || n == NI_MAT || n == NI_SPRING || n == NI_VENT;
     int spread = 0;   // (each spread's index in its world's layer: its edge's noise is the layer's)
     for (size_t i = 0; i < ss.size() && spread < MADE_LINES; i++) {
         const Seeding& s = ss[i];
@@ -337,11 +339,7 @@ std::vector<Game::VialLine> Game::vialLines(const Vial& V, const StarSystem& S, 
             }), smp.held.end());
         MadeWorld one; one.lines = k + 1;
         one.spread[k].place = StarSystem::bodyFromLatLon(s.lat, s.lon); one.spread[k].reach = madeReachOfStep(step, b.radiusKm);
-        const CultureKind& K = s.wild.kind;
-        MadeSpread lives; lives.waters = 0;
-        for (int salt = 0; salt < 3; salt++) if (salt >= K.s.saltLo - 1 && salt <= K.s.saltHi + 1) lives.waters |= 1 << salt;
-        lives.land = K.world.dry > 0 || K.s.niche == NI_SNOW || K.s.niche == NI_ICE; lives.tLo = K.s.tMin; lives.tHi = K.s.tMax;
-        if (madeSpreadAt(one, k, V.unit, b.seed) <= 0.5 || !madeLives(lives, wet, V.hab.salt, V.hab.meanC)) continue;
+        if (madeSpreadAt(one, k, V.unit, b.seed) <= 0.5 || !seedingLivesIn(s, V.hab)) continue;   // (KI-462: its plants and a stone rotter's rock too)
         VialLine L; L.seeding = (int)i; L.key = s.line; L.line = s.wild;
         L.cells = std::pow(10.0, std::max(3.0, s.verdict.growth.crowdLog - 1));   // a tenth of its crowd
         for (const GeneEdit& e : s.verdict.drift) L.wild += (L.wild.empty() ? "" : ", ") + std::to_string(e.place + 1);

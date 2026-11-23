@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-53 groups, 526 checks in their order; a group's heading gives its file, its function, the render scale it
+53 groups, 535 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -601,7 +601,7 @@ starts at and its count.
 - lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
 - lab: two in a flask, the four ways (Z-05)
 - lab: a switched strain in a predator cycle follows its numbers (B-446)
-- lab: a culture's hold at its crowd ends: past it, it rests, dies or fruits (B-444)
+- lab: a culture at its best is full within five minutes and stays full (R-449)
 - lab: a species' genome a pure function of it and its genesis (Z-06)
 - lab: the distances rank as the lineages: a world's, a system's, a cell's (Z-06)
 - lab: no common ancestor across geneses (Z-06)
@@ -625,8 +625,9 @@ starts at and its count.
 - incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too (R-441)
 - incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
 
-## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 25
+## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 27
 
+- genes: GREEN and PINK in every genesis's dye table, a run each from its synonyms, the rest as J-01 drew them (R-453)
 - genes: the tree by world and by folder: its pages, a world's species and its lines, Backspace and A, a folder's tree (Y-01)
 - genes: a living world of each alphabet and hand (Y-02)
 - genes: deterministic (Y-02)
@@ -640,8 +641,9 @@ starts at and its count.
 - genes: every species carries the fourteen world genes at 19 to 32, read from what it is (J-01)
 - genes: a world product not its own (a gas, a dye, a slime, a shell, a poison) costs its line, its own nothing (J-01)
 - genes: a line written on the editor into a flask, read as a strain is: its culture, its drop, the sequencer, the collection, its twig (Y-02)
+- genes: a kept line by its own name in the editor's and the sequencer's choosers, as on the microscope (B-472)
 - genes: W asks for the new strain's folder, then its name, the parent's to start (R-445)
-- genes: what a gene does learned: one change seen, candidates from two, a vital death, nothing seen, a strain read (Y-02)
+- genes: a gene known for its species the moment it is changed; its letters' guide; a vital change refused (R-450)
 - genes: the editor, its lines and their flasks over a save and a load (Y-02)
 - genes: a kin beside it on the editor, another life refused with its words; M moves its kin's gene in, over its own and into a gap (Y-03)
 - genes: a moved gene's line on its world's tree, from its donor's leaf to the line's twig (Y-03)
@@ -655,11 +657,11 @@ starts at and its count.
 
 ## world (`unit_lab_genes.cpp`, `unitLabWorld`, 1x): 3
 
-- world: each world gene the lab shows, changed once in a line alone, shows in its flask and is learned against its parent (J-01)
-- world: POISON kills the other in its flask, CARRIER passes its genes to it; each learned against its parent (J-01)
+- world: each world gene the lab shows, changed once in a line alone, shows in its flask and is said with its gene (J-01, R-450)
+- world: POISON kills the other in its flask, CARRIER passes its genes to it; each said with its gene (J-01, R-450)
 - world: the editor's two pages walked and turned; a world gene written, its flask's look and the editor over a save and a load (J-01)
 
-## seeding (`unit_seeding.cpp`, `unitSeeding`, 1x): 12
+## seeding (`unit_seeding.cpp`, `unitSeeding`, 1x): 15
 
 - seeding: a desert world
 - seeding: the layer, any order
@@ -668,24 +670,31 @@ starts at and its count.
 - seeding: the guide's lines
 - seeding: the clock
 - seeding: the verdict as a flask's
+- seeding: what a line needs and a place gives, and why a seeding died, in full (R-451)
+- seeding: GREEN and PINK waters (R-453)
 - seeding: the drift
 - seeding: the trip
+- seeding: the seed page offers every culture alive in a flask and says its state (B-473)
 - seeding: refused at home
 - seeding: a loan, an unseeded world
 - seeding: samples
 
-## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 10
+## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 14
 
 - animals: the bestiary a pure function
 - animals: no two of a world alike
 - animals: every plan's poses within bounds
 - animals: the gaits within bounds, the feet put down
-- animals: the record and its names
+- animals: the record and its names; N the map, Shift+N names (R-452)
 - animals: the herds' cells
 - animals: an older save's notice
 - animals: the fates' shares fixed by world and line
 - animals: remains a pure function of their cell
 - animals: the record's marks
+- animals: a kill kept, remains aged
+- animals: a climber round its trunk
+- animals: the flyers' and the swimmers' fates
+- animals: the shallows' swimmers
 
 ## files (`unit.cpp`, `unitFiles`, 1x): 2
 

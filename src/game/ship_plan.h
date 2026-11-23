@@ -285,12 +285,16 @@ double shipGlassToward(int room, const Vec3& dir);
 // looking out the outside's one (`cabinDeal`: what shows through the glass is in it, read through the space view's own palette)
 struct ShipBankAsk { int home; RGB col; double near; };
 // Z-05: the homes are keys: a bank's number (its own when the pool has it) or past them (SHIP_LIFE_HOMES on: the lab's cultures' tones,
-// always a free bank); Y-02: the gene editor's screen 48; J-01: the flasks' tissue, dyes and sediments 49 to 62
-constexpr int SHIP_HOMES = 63;
+// always a free bank); Y-02: the gene editor's screen 48; J-01: the flasks' tissue, dyes and sediments 49 to 62; R-453: GREEN and PINK 63, 64
+constexpr int SHIP_HOMES = 65;
 struct ShipBanks {
     int of[SHIP_HOMES];      // a home's dealt bank, -1 dimmed or not asked
     RGB col[SHIP_HOMES];     // a home's colour as asked
-    int asked = 0, dealt = 0, dimmed = 0, pool = 0;
+    // KI-455: a dimmed home's nearest in colour among those dealt (within a fifth of the cube's diagonal; -1 none), what the flasks borrow
+    // past the pool: twelve flasks of their own world looks share the banks of the ones like them
+    int near[SHIP_HOMES];
+    int asked = 0, dealt = 0, dimmed = 0, pool = 0, borrowed = 0;
     void deal(const std::vector<ShipBankAsk>& asks, uint32_t kept);   // kept: a bit a bank left out of the pool
     int bankOf(int home) const { return home >= 0 && home < SHIP_HOMES ? of[home] : -1; }
+    int bankNear(int home) const { return home < 0 || home >= SHIP_HOMES ? -1 : (of[home] >= 0 ? of[home] : near[home]); }
 };

@@ -242,7 +242,8 @@ function at the square metre (its material, its water and its kind, the sea's le
 and a half either way for the shade of a slope turned to the pole or a cliff's foot), the springs' finder (`springPartAt`: the vent's
 pool, the sinter, a terrace's pool by its band, the runoff), the chemotroph's hot pools, the geysers' sinter, the plumes' and the
 curtains' fall, and a dead people's walls; never what the landing deals (the rocks, the domes, the trees). Its niche, its own
-mean temperature the year round (`placeMeanC`: the site's formula without the season and the day; a spring's band, a pool's, a
+mean temperature the year round (`placeMeanC`: the site's formula without the season and the day, a seeded world's made warmth with it
+where there is air; a spring's band, a pool's, a
 vent's own; the snow and the ice their summer's melt; where life is seen on the ground its habitat at most 50 C), its salt, its
 shade, whether its rock is old and whether its life is seen crowded there (a mat, red snow, a spring's band: ten to thirty times its
 niche's crowd), the temperature read at the take, a name ("WET SILT AT A LAKE'S EDGE", "SINTER AT A SPRING'S RIM", "RED SNOW",
@@ -368,16 +369,17 @@ two (or a strain) the one chosen first; the name is the guide's, the microscope'
 **A culture** is closed-form from its events (`runCulture` lays its laws out as segments, `cultureAt` reads one): a lag (Baranyi and
 Roberts 1994), the logistic rise at the medium's rate (the species' cardinal temperatures, Rosso et al. 1993; its energy; a light-feeder's
 light by its pigment; a salt one step out its range's edge), its crowd by its energy's yield and its family (a small cell's 10^9, a large
-cell's 10^6, a colony's 10^5), held a few minutes at it (`AT ITS CROWD`, or `STARVING` with nothing it eats; its hold's end exact,
-B-444) and then its decline: a spore former sporulates, a large cell encysts, the gathered amoebae gather and fruit, the rest die (lysed:
-the drop's ghosts). Its lag's work is its species' (Baranyi's h0 at its best rate before its genes' price, Y-04: a priced line's lag
-longer). Too hot, the wrong salt or solvent kill at once (a spore former's spores among them); too cold it waits. A species' pace comes
-from its seed (its crowd at its best in 8 to 20 minutes, its lag, its spores' waking 20-60 s, its hold). Spores wake once the medium suits
-them and feeds them, most of them, the rest asleep (`WOKEN AFTER ABOUT 12,000 YEARS`: its world's end, its drifter's leaving or the
-impact that carried it); a luminous crowd glows (from 3% of its crowd: Vibrio's quorum). The stages a curve passes are each species' own
-(`CultureStage`). A line's world genes (J-01, `CultureWorld`) move its crowd (STOP); one that never stops passes its crowd by two decades
-and stays OVERGROWN till the flask is emptied. Below its salt's freezing point (fresh 0 C, the sea's -2, brine -20) a water flask stays
-liquid unless a culture's ice forms at its warmth (FROST): then everything in it waits, FROZEN. The UV light kills a line without a
+cell's 10^6, a colony's 10^5), and held there for good while its medium suits it (R-449: the incubator feeds it, `AT ITS CROWD`, shown
+as FULL). With nothing it eats it holds a few minutes (`STARVING`; its hold's end exact, B-444) and then declines: a spore former
+sporulates, a large cell encysts, the gathered amoebae gather and fruit, the rest die (lysed: the drop's ghosts). Its lag's work is its
+species' (Baranyi's h0 at its best rate before its genes' price, Y-04: a priced line's lag longer). Too hot, the wrong salt or solvent kill
+at once (a spore former's spores among them); too cold it waits. A species' pace comes from its seed (R-449: its crowd at its best in 2 to
+5 minutes, a quarter of Z-05's 8 to 20; its lag 10-25 s, its spores' waking 5-15 s, its hold with nothing to eat). Spores wake once the
+medium suits them and feeds them, most of them, the rest asleep (`WOKEN AFTER ABOUT 12,000 YEARS`: its world's end, its drifter's leaving
+or the impact that carried it); a luminous crowd glows (from 3% of its crowd: Vibrio's quorum). The stages a curve passes are each species'
+own (`CultureStage`). A line's world genes (J-01, `CultureWorld`) move its crowd (STOP); one that never stops passes its crowd by two
+decades and stays OVERGROWN till the flask is emptied. Below its salt's freezing point (fresh 0 C, the sea's -2, brine -20) a water flask
+stays liquid unless a culture's ice forms at its warmth (FROST): then everything in it waits, FROZEN. The UV light kills a line without a
 shield (KILLED BY UV), and feeds a shielded light-feeder little.
 
 **Two in a flask** (`pairOf`): mirrored hands ignore each other (each its own crowd); a grazer or a predator and a smaller cell cycle (the
@@ -457,12 +459,12 @@ place's rate; a third of the places never change), so two kin share their letter
 world, 82% in one system, 66% across stars within a deep branch).
 
 **The sequencer** (the state `SEQUENCER`, E at it on the bow bench; its row magenta, home 47): Enter chooses a species
-seen in a vial or growing in a flask (never a fossil's stone or a protocell's chemistry) and reads it in 90 seconds on the lab's clock
-(`SEQUENCE_S`), the screen open or not: its letters as they are read in its genesis's dyes under a chromatogram's peaks, its helix turning
-its own way. Its end, as the clock reaches it (`sequencerTick` in `updateLab`): the sheet's kin (`SEEN_KIN`), its line (the genome's
-letters, its hand, its nearest kin read and their common ancestor or no common ancestor and the geneses met, a made one's watermark) said
-and logged (`KIN`). Its `seq` line keeps what is on it, when it began and whether it was told. The sheet reads `SEQUENCED: ITS KIN ON THE
-TREE` and lists THE SEQUENCER among the ways to more.
+seen in a vial or growing in a flask (never a fossil's stone or a protocell's chemistry) and reads it in 10 seconds on the lab's clock
+(`SEQUENCE_S`, R-449; 90 before), the screen open or not: its letters as they are read in its genesis's dyes under a chromatogram's peaks,
+its helix turning its own way. Its end, as the clock reaches it (`sequencerTick` in `updateLab`): the sheet's kin (`SEEN_KIN`), its line
+(the genome's letters, its hand, its nearest kin read and their common ancestor or no common ancestor and the geneses met, a made one's
+watermark) said and logged (`KIN`). Its `seq` line keeps what is on it, when it began and whether it was told. The sheet reads `SEQUENCED:
+ITS KIN ON THE TREE` and lists THE SEQUENCER among the ways to more.
 
 **The tree of kin** (the state `TREE`, E at its screen on the port wall, or Tab from the sequencer on the page of what it read; leaf
 green, home 46): Y-01 (R-444), a tree a page and no tree of everything, Left and Right between them (`TreeState::pages`): THE SHIP (its
@@ -510,7 +512,10 @@ number in the alphabet's base: a pigment's two letters, a food's three, a motion
 in each at least once, most runs synonyms. J-01: then the fourteen world genes at 19 to 32 (gas, dye, lift, frost, slime, shell, stop,
 bind, rot, poison, carrier, host, dry, shield), one each, shuffled on a salt of their own, and their six tables (a gas, a dye, a shell's
 mineral, what it rots, a poison, a host), each on its own salt; the first eighteen places and the old tables as before (the unit's
-digest of the cell genes, their tables and 7,702 edits over 349 species, the same as the code before J-01 gave).
+digest of the cell genes, their tables and 7,702 edits over 349 species, the same as the code before J-01 gave). R-453: the dye's
+table has eleven dyes (red, crimson, orange, yellow, violet, blue, black, fluorescent, and GREEN and PINK last), drawn as J-01 drew its
+nine, then two of its synonyms made GREEN and PINK on a salt of their own, so every other run reads the dye it did; a wild species' run is
+picked from J-01's table as before (`dyeJ01`), the next of its dye's runs where its own became GREEN or PINK.
 
 **A species' genes** (`microbeGenesOf`): the three vital, one to three quiet, the warmth, salt and size, then those it uses: a pigment (one
 that has one or lives by light), a food (a chemical-eater), a motion (one that moves), a sense for each thing it turns to (the light, or
@@ -546,30 +551,37 @@ from its radiation's dose (and a dark or red pigment). A table reading NONE keep
 They move no cell value; their edits set a line's `CultureWorld` from their letters, STOP's crowd by twice the change of its weight's
 share (-1.5 to +1 decades; cut, it never stops), LIFT, SLIME and BIND the form's vesicles, coat and arrangement (a sphere's clusters, a
 rod's chains). A product a species does not make (a gas, a dye, a slime, a shell, a poison) costs its line 2% and up to 4% more by its
-amount (`genePrice`); its own nothing. Their own switch is ALWAYS. They are learned against the parent as the others are: a gas, a dye,
-a scum, slime, a sediment, clumps, an overgrowth, ice and growth under UV alone in a flask; a poison and genes passed with another in it;
-vesicles, a coat and bound cells in the drop. ROT, HOST and DRY show only on a world.
+amount (`genePrice`); its own nothing. Their own switch is ALWAYS. Against its parent a line shows them as it shows the others: a gas,
+a dye, a scum, slime, a sediment, clumps, an overgrowth, ice and growth under UV alone in a flask; a poison and genes passed with another in
+it; vesicles, a coat and bound cells in the drop. ROT, HOST and DRY show only on a world.
 
 **The gene editor** (the state `EDITOR`, E at it on the bow bench past the sequencer; deep blue, home 48): Enter
 (Tab once one is on) chooses a culture whose species the sequencer read, a flask's or the collection's, its line as it is (another is
 refused: SEQUENCE IT FIRST). Its map is two pages (J-01): CELL GENES 1/2, two columns of nine, and WORLD GENES 2/2, two of seven; the
 arrows walk across both pages'
-columns, Page Up and Page Down turn (Tab already chooses another culture). Each place is NOT KNOWN, NOTHING SEEN, what it was seen to do or
-the explorer's name (N, every kin's), a dash where it has no gene, its mark where edited (= changed, - cut out, + moved in, * a copy; ~ its
+columns, Page Up and Page Down turn (Tab already chooses another culture). Each place is NOT KNOWN, its kind once known (R-450: below) or
+the explorer's name (N, its species'), a dash where it has no gene, its mark where edited (= changed, - cut out, + moved in, * a copy; ~ its
 switch set after it); the
 arrows choose a gene, Enter opens its working part (Left and Right a letter boxed, Up and Down it through the alphabet, Backspace its
 parent's letter, a moved gene's or a copy's as it came; the letters' keys are not read: P and T are the game's own), C cuts it out and back
-(a gene put in a gap taken out again), S its switch (Y-04), Backspace makes it its parent's again. A gene known shows its value as its
-letters give it beside
-its parent's and its kin's. W writes the strain. It is refused when nothing changed or no flask is empty. Otherwise it asks two
+(a gene put in a gap taken out again), S its switch (Y-04), Backspace makes it its parent's again. The line under the map names the gene
+chosen and what its kind is for (`GENE 5: WARMTH - THE WARMTHS IT GROWS AT`, `GENE_KIND_PURPOSE`; not known, `CHANGE IT TO SEE WHAT IT
+DOES`); a gene known shows its value as its letters give it beside its parent's and its kin's. With its letters open, the map's place shows
+its guide (`renderEditorGuide`): how its letters set it (`ITS LETTERS' WEIGHTS ADD UP: HEAVIER, WARMER`, `LETTERS 1-2 PICK WHICH, 3-6 HOW
+MUCH`), its genesis's weights, heaviest last, its pick and its weight now beside the parent's, and what each letter of the alphabet at the
+cursor would make of it (`LETTER 3 SET TO:`, `A BEST 21 C`, `C OXYGEN`: `geneValueShort` of the line as applied, the current one bright).
+A vital gene changed says `A VITAL GENE IS CHANGED: THE STRAIN WOULD DIE`. J-15: a cut STOP says what the line overgrows the land as
+(`CUT OUT: OVERGROWS AS CARPETS, GREENS A DESERT`, `overgrowthTypeOf`: coral, sponge, bladders, hair, lichen, carpets, fungus, slime mould
+or flesh by its other genes, films where it slimes without binding). W writes the strain. It is refused when nothing changed, when
+the line would die (a vital gene changed) or no flask is empty. Otherwise it asks two
 things (R-445): which folder of the collection the new strain goes in (the keep chooser with `KeepPick::write`; the parent's folder
 chosen first, NEW FOLDER for a new one), then its name (`TEXT_LINE`, NAME THE NEW STRAIN, holding the parent's name and the new strain's
 number, "VURYM E2"; an empty
-name refused). Esc at either writes nothing. The writing then takes 120 seconds on the lab's clock (`EDIT_S`), with the screen open or
-not. When it ends (`editorTick` in `updateLab`), the strain is recorded (the guide's `strain` line, SM_EDIT with its edits; numbered as
-its species' next, E for an edited strain), named, kept in the chosen folder at once, and put into the first empty flask in its
-culture's medium. It is said and logged (EDIT). Its edits stay on the editor for the next. A line is read everywhere a strain is: its
-flask's
+name refused). Esc at either writes nothing. The writing then takes 10 seconds on the lab's clock (`EDIT_S`, R-449; two minutes
+before), with the screen open or not. When it ends (`editorTick` in `updateLab`), the strain is recorded (the guide's `strain` line,
+SM_EDIT with its edits; numbered as its species' next, E for an edited strain), named, kept in the chosen folder at once, and put into the
+first empty flask in its culture's medium. It is said and logged (EDIT). Its edits stay on the editor for the next. A line is read
+everywhere a strain is: its flask's
 culture and its form (`flaskKind` walks its lines from the wild one, a strain's move or an edit's genes each), its drop, the sequencer
 (EDITED: what it changed; a strain's gene that differs), the collection as it grows, its twig on its world's tree (`E1 - GENE 11 CHANGED`).
 The save's `editor`, `editoredits`, `editorwrit`, `editorwriting` (the folder and name being written) and `editorfrom` lines keep what
@@ -612,19 +624,20 @@ DARK lights a dark flask from its first cells, a moved gene WHEN CROWDED pays it
 grows at its species' rate and swims at its crowd, a vital gene IN THE LIGHT dies in the dark (a kill switch), a rest IN THE LIGHT rests lit
 and dies in the dark.
 
-**Learning** (the guide's `gene` lines, by genesis and number): an edited line is compared with its parent (`Flask::parentKind`, made with
-the flask): in its flask alone where it grows and its parent would not or the other way (its warmth, its salt, its food, its pigment's
-light), its end (resting or dying), its glow (`flaskLearn`); in its drop its cells' shape, size, colour (in a bright field), motion (where
-it moves) and its answers to the light, the food and the field (`scopeLearn`, `scopeAnswerLearn`; its answers its line's, never its
-species' sheet's); a vital gene's death at once. Of its changed genes, those that could show it (none known to do another thing; one
-NOTHING SEEN is no candidate for what a drop shows): one is learned (`GENE 8 IS ITS WARMTH`), several said (`ITS WARMTH: GENE 2 OR 8`).
-Grown and looked at with nothing different, its changed genes not known are NOTHING SEEN (Y-03: never one that cannot work in it; Y-04: a
-switched line is compared as its flask's state has it, its parent there too (`flaskLineIn`), and a gene switched alone and on there is no
-candidate and never NOTHING SEEN, its work its parent's); a strain
-read on the sequencer, its one changed gene is its move's. A known gene that shows nothing for want of what it needs is said once a flask
-(`geneNeedSay`: GENE 8, A SENSE: NOTHING IN ITS DROP, then A SENSE ANSWERS NOTHING IN A CELL THAT CANNOT MOVE). Each finding is logged
-at once (GENE, the lab's notebook) and said in its turn when the status line is free (`geneSay`): what was seen (`FLASK 2: IT GROWS AT 29
-C - ITS PARENT DIES`), then what it says of the genes.
+**Knowing a gene** (R-450; the guide's `gene` lines, `<species key>/G<number>`): a gene is known for its species, and its lines with it, the
+moment it is changed on the editor (its letters, a cut, a gene moved in, for its donor's species too, a copy, a switch; `editorEdited`),
+and a line put on the editor has its own changes from its species known; a strain read on the sequencer has its move's gene known
+(`strainReadLearn`). Another species of the same genesis knows nothing of it. An older guide's lines by genesis (Y-02's, with NOTHING SEEN
+and the candidates `GENE 2 OR 8`) are dropped as it loads, and so are a gene's names by genesis. An edited line is still compared with its
+parent (`Flask::parentKind`, made with the flask): in its flask alone where it grows and its parent would not or the other way (its warmth,
+its salt, its food, its pigment's light), its end (resting or dying), its glow (`flaskLearn`); in its drop its cells' shape, size, colour
+(in a bright field), motion (where it moves) and its answers to the light, the food and the field (`scopeLearn`, `scopeAnswerLearn`; its
+answers its line's, never its species' sheet's); a vital gene's death at once. What it shows is said with the changed gene known to do it
+(`FLASK 1: GROWS AT 29 C, PARENT DIES: GENE 8: WARMTH GENE`; Y-04: a switched line as its flask's state has it, its parent there too,
+`flaskLineIn`, a gene switched alone and on there as its parent's). A known gene that shows nothing for want of what it needs is said once
+a flask (`geneNeedSay`: GENE 8, A SENSE: NOTHING IN ITS DROP, then A SENSE ANSWERS NOTHING IN A CELL THAT CANNOT MOVE). Each finding is
+logged at once (GENE, the lab's notebook) and said in its turn when the status line is free (`geneSay`): what was seen (`FLASK 2: IT GROWS
+AT 29 C - ITS PARENT DIES`), then what it says of the genes.
 
 ## The seeded worlds
 

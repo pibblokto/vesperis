@@ -63,8 +63,24 @@ std::string Game::bodyLabelOf(int i) const {
     const Body& b = sys.bodies[i];
     std::string n = bodyNameOf(i);
     if (b.type == PT_COMPANION) return n + " (COMPANION STAR, " + STAR_CLASSES[b.starClass].name + ")";
-    if (b.doublePlanet && b.parent >= 0) return n + " (" + KINDS[b.type].name + ", twin planet)";
-    return n + " (" + KINDS[b.type].name + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
+    if (b.doublePlanet && b.parent >= 0) return n + " (" + kindNameNow(i) + ", twin planet)";
+    return n + " (" + kindNameNow(i) + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
+}
+
+std::string Game::kindNameNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindName(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(KINDS[sys.bodies[bi].type].name) : mk;
+}
+std::string Game::kindShortNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindShort(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(shortType(sys.bodies[bi].type)) : mk;
+}
+std::string Game::kindWordsNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindName(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(KINDS[sys.bodies[bi].type].name) : mk + ", ONCE " + KINDS[sys.bodies[bi].type].name;
 }
 
 bool Game::nameIsForeign(const std::string& key) const { return !guide.names.count(key) && guide.inbox.count(key); }
@@ -75,7 +91,7 @@ std::string Game::screenshotCaption() const {
     std::string where;
     if (surf.valid && stateHas(placeNow(), ST_GROUND))
         where = fmt("%s  %.1f%s %.1f%s  %s", upper(bodyNameOf(surf.site.body)).c_str(), std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S",
-                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", KINDS[sys.bodies[surf.site.body].type].name);
+                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", kindNameNow(surf.site.body).c_str());
     else if (sys.valid)
         where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str())
                                                                        : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);

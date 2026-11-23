@@ -83,7 +83,7 @@ const RowList<CabinDevice>& Game::cabinDevices() {
          [](const Game& g, const CabinFrame& f) { return f.shine; }},   // brighter with what it holds and while one is played
         {FACE_BAY, ROOM_HANGAR, -7.55, 0.0, 2.0, {-5.8, 0.0, -PI / 2, -0.38}, "DRONE BAY - E TO SEND DRONES", "THE DRONE BAY", 29, RGB(1.0f, 1.0f, 0.45f),   // C-18: a pale yellow
          [](Game& g) { g.openScreen(GameState::DRONES); }, nullptr,   // its screen's cells: the rack's (drone_draw.cpp)
-         [](const Game& g) { return g.bay.out ? "DRONE BAY - E TO FOLLOW DRONES" : (!g.droneBayReady() ? "DRONE BAY - DRONES CHARGING" : nullptr); }},
+         [](const Game& g) { return g.bay.out ? "DRONE BAY - E TO FOLLOW DRONES" : nullptr; }},
         {FACE_BUNK, ROOM_QUARTERS, -3.4, -9.6, 1.6, {-2.6, -9.6, -PI / 2, -0.45}, "BUNK - E TO REST UNTIL ...", "THE BUNK", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),   // the almanac's run
          [](Game& g) { g.openScreen(GameState::ALMANAC); }},
         {FACE_DESK, ROOM_QUARTERS, 4.0, -9.4, 1.6, {3.2, -9.4, PI / 2, -0.4}, "DESK - E TO READ LOG", "THE DESK", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),
@@ -583,11 +583,7 @@ const RowList<ShipPage>& Game::shipPages() {
         {"TELESCOPE", [](Game& g) { g.telescopeToggle(); },   // at the window, the eye at the eyepiece
          [](const Game& g) { return g.tele.on ? fmt("X%.0f", g.telescopeZoom()) : std::string("STOWED"); }},
         {"INSTRUMENTS", [](Game& g) { g.openScreen(GameState::INSTRUMENTS); }, [](const Game& g) { return fmt("%d", (int)g.guide.instruments.size()); }},   // in the case
-        {"THE DRONE BAY", [](Game& g) { g.openScreen(GameState::DRONES); }, [](const Game& g) {
-             if (g.bay.out) return std::string("AWAY");
-             if (!g.droneBayReady()) { const int sec = (int)std::ceil(g.droneCooldownLeft()); return fmt("%d:%02d", sec / 60, sec % 60); }
-             return std::string("READY");
-         }},
+        {"THE DRONE BAY", [](Game& g) { g.openScreen(GameState::DRONES); }, [](const Game& g) { return std::string(g.bay.out ? "AWAY" : "READY"); }},
     };
     static constexpr ShipRow PREFERENCES[] = {   // C-06: the shards
         {"SETTINGS", [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::SETTINGS); }},
@@ -693,7 +689,7 @@ void Game::consoleCommand(const std::string& raw) {
         if (!sys.valid) { consolePrint("NO SYSTEM HERE"); return; }
         consolePrint(fmt("%s: %d BODIES, %d BELTS", upper(starNameOf(sys.star)).c_str(), (int)sys.bodies.size(), (int)sys.belts.size()));
         for (int i = 0; i < (int)sys.bodies.size() && i < 14; i++)
-            consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), KINDS[sys.bodies[i].type].name));
+            consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), kindNameNow(i).c_str()));
         for (size_t k = 0; k < sys.belts.size(); k++)
             consolePrint(fmt("  %-16s BELT %s - %s", upper(beltNameOf((int)k)).c_str(), distanceString(sys.belts[k].innerKm).c_str(), distanceString(sys.belts[k].outerKm).c_str()));
     } else if (cmd == "PAR" || cmd == "WHERE") {

@@ -335,8 +335,9 @@ and lands, `W`/`S` thrust fore and aft to 320 km/h, `A`/`D` turn, the mouse pans
 one, `WAYPOINT SET 8.4 KM AWAY`, else where you stand; `M` again clears), `Ctrl` in the air thrusts down on light worlds (O4),
 `Q`/`E` board the capsule within 7 m (otherwise the status says how far it is and where), `Tab` the readings (R-414: the place,
 the sky, the air, the ground and the vehicle, below under HUD), `K` recalls the capsule next to you (always; the status names a
-buggy left over 50 m away, B-205), `N` names the animal the crosshair rests on (J-07: within 40 m, 50 on the water, 80 in the air;
-the HUD says it, `A STRIPED HOPPER - N`; a text entry, `NAME THE ANIMAL`, kept as a `name` line), else the sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
+buggy left over 50 m away, B-205), `Shift+N` names the animal the crosshair rests on (J-07, R-452: within 40 m, 50 on the water, 80
+in the air; the HUD says it, `A STRIPED HOPPER - SHIFT+N`; a text entry, `NAME THE ANIMAL`, kept as a `name` line; with none there it
+opens the map), `N` the sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
 km wide (`Game::sectorMaxLevel`: a level is offered while its half-width stays within 1.2 radii, so a comet has two and a planet
 six; the image is 100 x 80 samples of the planet function at 16 m to 16 km of detail, always centred on you, so walking never
 leaves it and the neighbouring sectors are simply there), coloured like the landing map (`mapRampsFor`), the sector grid on the
@@ -578,7 +579,7 @@ shown), Backspace (or Delete) empties it, `N` names its organism (R-442: of two,
 folder (R-440: of two either alone or both), Ctrl+S saves. The controller: A puts in, B back, X as its world, Y a fresh broth, the
 bumpers lower and raise. Its flasks glow in the room by their cultures and lights. Z-06: the sequencer (17, `SEQUENCER - E TO READ A
 GENOME`; magenta, its home key 47), a screen over the room
-(`SEQUENCER`, `13-life.md`): Enter the chooser (a species seen in a vial or growing in a flask) and Enter again reads it, 90 seconds on the
+(`SEQUENCER`, `13-life.md`): Enter the chooser (a species seen in a vial or growing in a flask) and Enter again reads it, 10 seconds on the
 lab's clock (its letters as they are read, a chromatogram over them, its helix turning its own way; its screen in the room pulses while it
 reads), its result once read (its letters, its hand, its nearest kin read and their common ancestor, a made one's watermark); Backspace
 takes it off, Tab the tree. The tree of kin (18, `TREE OF KIN - E TO LOOK AT IT`; leaf green, its home key 46), a screen over the room
@@ -1006,37 +1007,45 @@ The ship's player (C-11, 2026-10-10, `game/player.cpp`; R-431: its own screen, `
 
 The drone bay (`DRONES`, C-18, `game/drones.cpp`, `game/drone_draw.cpp`, `civilisations/records-and-grammar.md`): a rack of three shelves against
 the hangar's port wall by its ports (I-02; `facing` 11, `DRONE BAY - E TO SEND THE DRONES`, `E FOLLOWS THE DRONES` while they are
-out, `THE DRONES ARE CHARGING` after; pale yellow; walking stops 0.26 m before its front), the bay's screen in three cells across
-its head and a lamp at each shelf (green aboard and ready, amber charging, red blinking while its drone is out); also the flight
-computer's devices page (`THE DRONE BAY`, `READY`, `AWAY` or the cooldown's `3:40` beside it). The screen: each drone in lines
+out; pale yellow; walking stops 0.26 m before its front), the bay's screen in three cells across its head and a lamp at each shelf
+(green aboard and ready, amber aboard while the others are away, red blinking while its drone is out); also the flight computer's
+devices page (`THE DRONE BAY`, `READY` or `AWAY` beside it). The screen: each drone in lines
 with its number, its finds of what it wanted (or its height while it falls or climbs) and where it is; the world's map with the
 ground under the ship (a cross), the places searched, the ways flown and the drones; what the ship holds of the world's, in the
 decoder's words, `ABOARD: 58 OF ITS 262 SHARDS` and `AND 7 OF ITS 9 INSTRUMENTS` (its peoples together; `READING THE WORLD...`
 while it is read); the finds, the newest first, four rows (dim until aboard; `UP`/`DOWN` scroll, arrows when there are more;
 R-414: the screen closed once the drones are back aboard, the finds, the drones' counts and the places searched go from it, the
-decoder and the case holding them); the header `READY`, `BACK IN 1:52` or `CHARGING 3:40`. `ENTER` sends the drones (refused, in
-the status over the footer: `THE DRONES ARE CHARGING - READY IN 3:40`, `THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD`,
+decoder and the case holding them); the header `READY` or `BACK IN 1:52`. `ENTER` sends the drones (refused, in the status over the
+footer: `THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD`,
 `NO PEOPLE LIVED DOWN THERE: NOTHING TO BRING`, `THE SHIP HOLDS ALL THEY LEFT DOWN THERE`) and returns to the cabin to see them go
 (`THE DRONES ARE AWAY - E AT THEIR RACK FOLLOWS THEM`); `ESC` or `E` back. While they are out the space HUD has
 `DRONES BACK IN 1:52 - 5 FOUND` (and `, 2 ABOARD`) at the probe's line; at the end `THE DRONES ARE BACK WITH 14 FINDS` then their
 kinds, each on the decoder at once (an open decoder lists them as they dock); leaving the parking calls them back
-(`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), then five
-minutes charging from their return, on real time. The footer: `ENTER SENDS DRONES  S SEEDS  UP/DOWN FINDS  ESC BACK`.
+(`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), on real
+time; they can be sent again the moment they dock (R-449: C-18's five minutes of charging are gone). The footer: `ENTER SENDS DRONES  S
+SEEDS  UP/DOWN FINDS  ESC BACK`.
 
 The seed page (`SEEDING`, J-03, `game/seed_trip.cpp`, `14-seeded-worlds.md`): `S` on the drone bay, over any landable world
 but home (refused in the status: `HOME STAYS AS IT IS`, `NO GROUND DOWN THERE`, `NOT IN ORBIT - APPROACH A WORLD FIRST`, the drones
-away or charging, `THREE LINES LIVE THERE - IT TAKES NO MORE`). It shows `SEED <WORLD>`, the world's map with the ground under the ship
-(a dot), the places of its lines (green where one lives) and the cursor (a blinking cross), `CULTURE  A FLAGELLATE, FLASK 1, FULL` (`C`
-the next flask that shows FULL; `NO FLASK SHOWS FULL` in red), `PLACE  12 N 72 E, REGOLITH` (the arrows move it two degrees, ten with
-Shift), `LINES  1 OF 3 LIVE THERE, 2 SENT` on a seeded world; footer `C CULTURE  ARROWS PLACE  ENTER SEND  ESC BACK`. `ENTER` sends
-drone 1 alone (`DRONE AWAY - E AT DRONE BAY TO FOLLOW`) and goes back to the bay, whose list then shows the culture, its place and
-`ON ITS WAY DOWN`, `LET GO, WATCHED`, then `REPORT:` and the verdict; drone 1's line says `WATCHING IT` while it is there. The culture
-is let go as the drone arrives (SEEDED in the log); its report at the dock is the status `UNKNOWN: CULTURE GROWS` (or `CULTURE DIED,
-TOO COLD` and the other reasons) and a DRONES line in the log; called back before it arrived, `CALLED BACK BEFORE IT LET THE CULTURE
-GO`. The bay charges five minutes after, as after any trip. J-04: on a seeded world whose air a line moved, the data sheet's `AIR` line
-says how (`THICKER, 14 C WARMER THAN IT WAS`) and the HUD's TEMP and ATM on the ground read the world as it is now. J-05: the `MADE`
-line names its waters', ground's and plants' looks too (`MILK SEAS, CRUSTS, RED SNOW, BLIGHT`), wrapped at 38 letters, and the landing
-map's cursor reads a made cover (`CRUST +418M`).
+away, `THREE LINES LIVE THERE - IT TAKES NO MORE`). It shows `SEED <WORLD>`, the world's map with the ground under the ship
+(a dot), the places of its lines (green where one lives) and the cursor (a blinking cross), `CULTURE  A FLAGELLATE, FLASK 1, FULL` (B-473:
+`C` the next culture alive in a flask, whatever its stage, `GROWING`, `FULL`, `STARVING`, `ASLEEP`, the page opening on the one last
+chosen, else the first `FULL`; `NO OTHER CULTURE IN THE FLASKS`;
+`NO CULTURE IN THE FLASKS` in red), R-451's `NEEDS  WATER, DEAD MATTER, FRESH, 7 TO 47 C, DRY OK` (what it lives in, eats and takes),
+`PLACE  12 N 72 E, REGOLITH` (the arrows move it two degrees, ten with Shift; J-13: `PAGE DOWN` takes it down a drill hole, `ROCK 5 KM DOWN`
+or `THE SEA 9 KM UNDER THE ICE`, `PAGE UP` back, refused `ON THE GROUND ALREADY` and `AS DEEP AS THE DRILL GOES`; J-14: on a world
+with a cloud deck life lives in, `PAGE UP` goes on up into the clouds, `THE CLOUDS 47 KM UP`, refused `AS HIGH AS THE CLOUDS GO`), R-451's
+`THERE  WATER, DEAD MATTER, LIT, FRESH, 50 C, DRY` (what the place gives; down there `WATER, HYDROGEN, DARK, SEA, -17 C`; up in the clouds
+`ACID, DEAD MATTER, LIT, FRESH, 29 C`), `LINES  1 OF 3 LIVE THERE, 2 SENT` on a seeded world; footer `C CULTURE  ARROWS  PGDN DEEPER
+ENTER SEND  ESC BACK` (`PGUP CLOUDS` in place of `PGDN DEEPER` on a world with a cloud deck).
+`ENTER` sends drone 1 alone (`DRONE AWAY - E AT DRONE BAY TO FOLLOW`) and goes back to the bay, whose list then shows the culture, its
+place and `ON ITS WAY DOWN`, `LET GO, WATCHED`, then the report in full over two lines (`TOO HOT: IT GROWS UP TO 47 C, THE PLACE IS 50 C`;
+`REPORT: CULTURE GROWS`); drone 1's line says `WATCHING IT` while it is there. The culture is let go as the drone arrives (SEEDED in the
+log); its report at the dock is the status `UNKNOWN: CULTURE GROWS` (or `CULTURE DIED, TOO HOT`, then the reason in full) and a DRONES line
+in the log with the reason; called back before it arrived, `CALLED BACK BEFORE IT LET THE CULTURE GO`. The bay is ready again at once.
+J-04: on a seeded world whose air a line moved, the data sheet's `AIR` line says how (`THICKER, 14 C WARMER THAN IT WAS`) and the HUD's
+TEMP and ATM on the ground read the world as it is now. J-05: the `MADE` line names its waters', ground's and plants' looks too (`MILK
+SEAS, CRUSTS, RED SNOW, BLIGHT`), wrapped at 38 letters, and the landing map's cursor reads a made cover (`CRUST +418M`).
 
 The instruments' case (`INSTRUMENTS`, C-11, `game/instruments_screen.cpp`): a cabinet on the library's stern wall (I-02; `facing` 10, `INSTRUMENT CASE - E TO PLAY`, lime, its three shelves brighter with what it holds), also the flight computer's devices page (`THE INSTRUMENTS`, the count beside it). C-18: it opens on its worlds, a folder each (`UNKNOWN (+189 +0 +45 / 2)`, `1 INSTRUMENT`; the world under the ship first; `UP`/`DOWN`, `ENTER` opens one, `ESC` closes the case), a world of two peoples a folder each people, named on its line as the decoder's rows name them (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`; the head `12 IN THE CASE FROM 2 WORLDS`; the open folder's `UNKNOWN - THE VASANTHUL`). A folder's instruments in a column, the one under the cursor drawn large from its parts as it lies, seen from above, with a ruler of its size (C-17, `game/instrument_draw.cpp`), `A NECKED GOURD` (its make's name; R-414: its name alone, C-11's `OF THE <PEOPLE>` and C-17's `FROM <world> (<sector> / <body>)` gone, the open folder's title naming the world and its people on a world of one too, `UNKNOWN - THE JENGNE`), its scale's line (the register's word at its right), and under it ten bars, one a key, as high as each degree's pitch over the register's first note. `1` to `9` and `0` play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is down; `LEFT`/`RIGHT` move the register a period down or up (`LOWER`/`HIGHER`); `UP`/`DOWN` take another of the folder's; `ESC` back to the worlds. A drum machine's keys are its pads. The machine that played the wax cylinders (C-11's gramophone; C-17: a talking machine, a cylinder box or a listening box, where the people made one) plays its cylinder instead: `ENTER` winds it (a piece of its people's age through its horn, `TURNING 0:12 OF 0:44`), again stops it. The ship's player plays on under an instrument (one may play along); only the machine holds it.
 

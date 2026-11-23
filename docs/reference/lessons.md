@@ -392,6 +392,14 @@ Contents:
 - A species marked gone must be gone from every sample of its world, or the record and the vial disagree: J-12 drives a native out only
   where it lives in no niche or salt the line does not (80% of those beaten, a scratch count found), then takes it from every vial.
 
+- A clock's value is no sentinel (B-453): a game's seedings are let go at its guide's clock, and the harness puts a line's going-down
+  hours before a new guide's 0, so a step boundary can lie under 0; a walk over them that kept -1 for "none passed" read every onset
+  under 0 as none, and the made hothouse and snowball recipes stopped drawing. A flag says whether one passed.
+- Two lines that both cover a world tie everywhere (B-457): the made pass took the first line it met and the overgrowth the later, so
+  one world drew one line's waters and the other's cover. The made pass now walks its lines latest first, as the overgrowth's tie did.
+- A pool's order is a priority (B-456): where a crowded world has three banks for four colours, the one dealt last goes without, and
+  the land's cover matters more there than a second line's tint; each use takes its bank in the order it is worth.
+
 ## Generation: the peoples
 
 - Peoples live at one star in eight near home: anything that "sometimes" points at one must choose one, not test for one.

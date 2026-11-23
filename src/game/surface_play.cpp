@@ -37,7 +37,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
                 const Body& lb = sys.bodies[surf.site.body];
                 guide.landed.insert(Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body));
                 guide.typesSeen.insert(lb.type);
-                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), KINDS[lb.type].name,
+                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), kindWordsNow(surf.site.body).c_str(),
                                         std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S", std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W",
                                         surf.env.temperatureC, surf.env.pressureAtm, lb.gravity / 9.8, surf.env.sun.altitude > 0 ? "DAY" : "NIGHT"));
                 madeLanding(surf.site.body);   // J-03: a seeded world's change since the last landing
@@ -239,7 +239,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         } else takeSample();   // Z-03: a vial of the ground at the crosshair
     }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
-        if (surf.lifeTarget.species >= 0) {   // J-07: the animal the crosshair rests on, named
+        if (in.shift() && surf.lifeTarget.species >= 0) {   // J-07: the animal the crosshair rests on, named (R-452: Shift+N; N alone the map)
             textAnimalKey = animalKey(surf.lifeTarget.species);
             const auto it = guide.names.find(textAnimalKey);
             beginTextEntry("NAME THE ANIMAL", TEXT_ANIMAL, it != guide.names.end() ? it->second : "");
@@ -364,7 +364,8 @@ void Game::surfacePad(PadMenu& m) const {
         m.item("UNFOLD A DRONE", KEY_F);
     }
     m.item("CALL CAPSULE", KEY_K);
-    m.item(surf.lifeTarget.species >= 0 ? "NAME THE ANIMAL" : "SECTOR MAP", KEY_N);   // J-07: N names the animal the crosshair rests on
+    m.item("SECTOR MAP", KEY_N);
+    if (surf.lifeTarget.species >= 0) m.item("NAME THE ANIMAL", KEY_N, MOD_SHIFT);   // J-07: the animal the crosshair rests on (R-452: Shift+N)
     scannerPad(m);
     m.item("MARK AT CROSSHAIR", KEY_L);
     m.item(surf.hasWaypoint ? "CLEAR WAYPOINT" : "WAYPOINT AT CROSSHAIR", KEY_M);

@@ -240,6 +240,10 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
     P.fwd = fwd; P.up = up; P.side = side;
     auto groundAt = [&](const Vec3& p) {   // the 3 by 3 heights' bilinear surface (held at its edge past it)
         const Vec3 d = p - in.at;
+        if (in.trunkR > 0) {   // B-468: a trunk's bark, posed level: its round under the level ground, a side's foot at the girth's side
+            const double r = in.trunkR, s = std::min(std::fabs(dot(d, side)), r);
+            return in.at.y + std::sqrt(r * r - s * s) - r;
+        }
         const double u = clampd(dot(d, fwd) / in.gx, -1, 1) + 1, v = clampd(dot(d, side) / in.gz, -1, 1) + 1;
         const int i = std::min(1, (int)u), j = std::min(1, (int)v);
         const double fu = u - i, fv = v - j;
@@ -443,6 +447,10 @@ void poseAnimal(const AnimalRig& R, const AnimalPoseIn& in, AnimalPose& P) {
                 }
                 if (in.lift > 0.5) foot = hip + S * (sg * R.legSpread[p] * k * 0.7) - fwd * (L * 0.12);   // folded under it
                 else foot = hip + S * (sg * R.legSpread[p] * k) + fwd * fx;
+                if (in.trunkR > 0) {   // B-468: on a trunk a foot grips the bark within the girth's sides (a wide one's round the trunk)
+                    const double sd = dot(foot - in.at, side), cl = clampd(sd, -0.92 * in.trunkR, 0.92 * in.trunkR);
+                    foot += side * (cl - sd);
+                }
                 foot.y = groundAt(foot) + (in.gait == GAIT_HOP ? liftA * 0.8 * hop : liftA * (in.running ? 0.3 : 0.22) * R.legReach[p] * k);   // a hopper's tucked
             }
             Vec3 bend = b.kneeBack ? -T : T;

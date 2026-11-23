@@ -107,40 +107,123 @@ bool growthHolds(const GrowthInst& S, double x, double z, double margin) {
     return dx * dx + dz * dz < rr * rr;
 }
 
-void SurfaceView::forGrowths(int cx, int cz, const std::function<void(const GrowthInst&)>& fn) {
-    const MadeWorld& m = site.gen.made;
-    if (!m.grown() || m.growthLine < 0 || m.growthLine >= MADE_LINES) return;
-    for (int k = 0; k < 4; k++) if (!madeGrowthMaterial(site.lod0.at(cx + (k & 1), cz + (k >> 1)).material)) return;
-    const TerrainVertex& tv = site.lod0.at(cx, cz);
-    if (tv.water > -1e8f && tv.h < tv.water + 0.3) return;
-    const MadeGrowth& G = m.spread[m.growthLine].growth;
+namespace {
+// KI-476: the structures' lattice, fixed to the world: an equal-angle cube map's cells about 16 m across (each face cut n by n on its two
+// angles), so a structure stands where it stands from any landing. A unit vector's face (its largest axis and that axis's sign: 0..5) and its
+// two angles on that face (-pi/4..pi/4), and back
+constexpr double GROWTH_CELL_M = 16;
+int latticeN(double radiusM) { return std::max(1, (int)std::lround(radiusM * (PI / 2) / GROWTH_CELL_M)); }
+void toFace(const Vec3& u, int& face, double& al, double& be) {
+    const double c[3] = {u.x, u.y, u.z};
+    int k = 0;
+    if (std::fabs(c[1]) > std::fabs(c[k])) k = 1;
+    if (std::fabs(c[2]) > std::fabs(c[k])) k = 2;
+    const double m = std::fabs(c[k]);
+    face = 2 * k + (c[k] < 0 ? 1 : 0);
+    al = std::atan(c[(k + 1) % 3] / m); be = std::atan(c[(k + 2) % 3] / m);
+}
+Vec3 fromFace(int face, double al, double be) {
+    const int k = face / 2;
+    double c[3];
+    c[k] = face & 1 ? -1.0 : 1.0; c[(k + 1) % 3] = std::tan(al); c[(k + 2) % 3] = std::tan(be);
+    return normalize(Vec3(c[0], c[1], c[2]));
+}
+}   // namespace
+
+// a world cell's structures, placed once a landing (its middle and its two edges read into the local metres, each structure inside the cell by
+// its own reach, none overlapping another), each in the local cell its middle lies in; what the landing lays (its settlements, roads, streets
+// and works, the ground drawn, the water) is tested where they are asked for
+const SurfaceView::GrowthCell& SurfaceView::growthCellOf(int face, int i, int j, int N) {
+    const uint64_t key = ((uint64_t)face << 42) | ((uint64_t)i << 21) | (uint64_t)j;
+    const auto it = growthLattice.find(key);
+    if (it != growthLattice.end()) return it->second;
+    GrowthCell& gc = growthLattice[key];
+    const double d = (PI / 2) / N, al = -PI / 4 + (i + 0.5) * d, be = -PI / 4 + (j + 0.5) * d;
+    double x0, z0, xa, za, xb, zb;
+    site.localAt(fromFace(face, al, be), x0, z0);
+    site.localAt(fromFace(face, al + 0.5 * d, be), xa, za);
+    site.localAt(fromFace(face, al, be + 0.5 * d), xb, zb);
+    const double ax = 2 * (xa - x0), az = 2 * (za - z0), bx = 2 * (xb - x0), bz = 2 * (zb - z0);   // a cell across along each angle
+    gc.x = x0; gc.z = z0;
+    int line = -1;   // KI-473: the line whose cover lies at its middle (its kit, its sizes, its colour)
+    madeGrowthAt(site.gen.made, fromFace(face, al, be), site.gen.seed, line);
+    if (line < 0 || line >= MADE_LINES || !site.gen.made.spread[line].growth.on()) line = site.gen.made.growthLine;
+    const MadeGrowth& G = site.gen.made.spread[line].growth;
     const GrowthKit& kit = KITS[G.type > 0 && G.type < OG_COUNT ? G.type : OG_FLESH];
-    if (kit.n == 0) return;
-    const double cs = 16;
-    const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0x6E0E50ULL);
+    if (kit.n == 0) return gc;
+    const uint64_t h = mix64(key * 0x9E3779B97F4A7C15ULL ^ site.gen.seed ^ 0x6E0E51ULL);
+    const double la = std::hypot(ax, az), lb = std::hypot(bx, bz), area = std::fabs(ax * bz - az * bx);
     const double grown = 0.35 + 0.65 * smoothstep(1, 10, G.age);              // its structures grow with its steps
     const double scale = (0.7 + 0.6 * G.grain) * grown;                         // a coarse grain's bigger
     const double many = (1.3 - 0.6 * G.grain) * (0.4 + 0.6 * smoothstep(1, 8, G.age));
-    const int n = std::min(10, (int)(kit.perCell * many * (0.5 + hash01(h))));
-    if (n <= 0) return;
-    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;
+    const int n = std::min(10, (int)(kit.perCell * many * (0.5 + hash01(h)) * area / (GROWTH_CELL_M * GROWTH_CELL_M)));
+    const double phi = std::atan2(bx, bz);   // (the cell's second angle's heading in the local metres: a structure's heading turns with it)
     double px[10], pz[10], pr[10]; int np = 0;
-    for (int i = 0; i < n; i++) {
-        const uint64_t hr = mix64(h + 41 * (i + 1));
+    for (int q = 0; q < n; q++) {
+        const uint64_t hr = mix64(h + 41 * (q + 1));
         GrowthInst S;
+        S.line = line;
         S.shape = pickShape(kit, hash01(hr));
         const ShapeSize& z = SIZES[S.shape];
         S.r = (z.r0 + (z.r1 - z.r0) * std::pow(hash01(mix64(hr + 2)), 1.4)) * scale;
         S.h = (z.h0 + (z.h1 - z.h0) * hash01(mix64(hr + 3))) * scale;
         S.len = z.len1 > 0 ? (z.len0 + (z.len1 - z.len0) * hash01(mix64(hr + 4))) * scale : 0;
-        S.heading = hash01(mix64(hr + 5)) * TAU;
+        S.heading = phi + hash01(mix64(hr + 5)) * TAU;
         S.hs = mix64(hr + 6);
         const double ext = std::min(7.5, reachOf(S));
-        S.x = cx * cs + ext + hash01(mix64(hr + 7)) * (cs - 2 * ext);
-        S.z = cz * cs + ext + hash01(mix64(hr + 8)) * (cs - 2 * ext);
+        const double mu = std::min(0.5, ext / std::max(1e-6, la)), mv = std::min(0.5, ext / std::max(1e-6, lb));
+        const double fu = mu + hash01(mix64(hr + 7)) * (1 - 2 * mu) - 0.5, fv = mv + hash01(mix64(hr + 8)) * (1 - 2 * mv) - 0.5;
+        S.x = x0 + ax * fu + bx * fv; S.z = z0 + az * fu + bz * fv;
         bool clash = false;   // none overlapping another
-        for (int q = 0; q < np && !clash; q++) clash = (S.x - px[q]) * (S.x - px[q]) + (S.z - pz[q]) * (S.z - pz[q]) < (ext + pr[q]) * (ext + pr[q]);
+        for (int k = 0; k < np && !clash; k++) clash = (S.x - px[k]) * (S.x - px[k]) + (S.z - pz[k]) * (S.z - pz[k]) < (ext + pr[k]) * (ext + pr[k]);
         if (clash) continue;
+        S.collides = S.h >= STEP_M && S.shape != GS_VEINS && S.shape != GS_HAIR && S.shape != GS_BLADDER && S.shape != GS_POLYP;
+        px[np] = S.x; pz[np] = S.z; pr[np] = ext; np++;
+        gc.s.push_back(S);
+    }
+    return gc;
+}
+
+// the structures whose middles lie in a local 16 m cell, as the world's cells round its middle placed them (kept a landing)
+const std::vector<GrowthInst>& SurfaceView::growthsOwned(int cx, int cz) {
+    if (growthLatticeKey != site.gen.made.key || growthOwned.size() > 16384 || growthLattice.size() > 16384) {
+        growthLattice.clear(); growthOwned.clear(); growthLatticeKey = site.gen.made.key;
+    }
+    const uint64_t key = ((uint64_t)(uint32_t)cx << 32) | (uint32_t)cz;
+    const auto it = growthOwned.find(key);
+    if (it != growthOwned.end()) return it->second;
+    std::vector<GrowthInst>& out = growthOwned[key];
+    const double cs = 16;
+    int face; double al, be;
+    toFace(site.unitAt(cx * cs + 8, cz * cs + 8), face, al, be);
+    const int N = latticeN(site.R);
+    const double d = (PI / 2) / N;
+    const int i0 = (int)std::floor((al + PI / 4) / d), j0 = (int)std::floor((be + PI / 4) / d);
+    for (int dj = -1; dj <= 1; dj++)
+        for (int di = -1; di <= 1; di++) {
+            const int i = i0 + di, j = j0 + dj;
+            if (i < 0 || j < 0 || i >= N || j >= N) continue;   // (a cube's edge: its strip goes without)
+            const GrowthCell& gc = growthCellOf(face, i, j, N);
+            if (std::fabs(gc.x - (cx * cs + 8)) > 2 * cs || std::fabs(gc.z - (cz * cs + 8)) > 2 * cs) continue;
+            for (const GrowthInst& S : gc.s) if ((int)std::floor(S.x / cs) == cx && (int)std::floor(S.z / cs) == cz) out.push_back(S);
+        }
+    return out;
+}
+
+bool SurfaceView::growthCellHolds(int cx, int cz) {
+    const MadeWorld& m = site.gen.made;
+    if (!m.grown() || m.growthLine < 0 || m.growthLine >= MADE_LINES) return false;
+    for (int k = 0; k < 4; k++) if (!madeGrowthMaterial(site.lod0.at(cx + (k & 1), cz + (k >> 1)).material)) return false;
+    const TerrainVertex& tv = site.lod0.at(cx, cz);
+    return !(tv.water > -1e8f && tv.h < tv.water + 0.3);
+}
+
+void SurfaceView::forGrowths(int cx, int cz, const std::function<void(const GrowthInst&)>& fn) {
+    if (!growthCellHolds(cx, cz)) return;
+    const double cs = 16;
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;
+    for (GrowthInst S : growthsOwned(cx, cz)) {
+        const double ext = std::min(7.5, reachOf(S));
         if (nNear < 0) nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);
         { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], S.x, S.z, 1.0 + ext); if (in) continue; }
         if (!site.roads.empty() && site.roadCover(S.x, S.z) > 0.3) continue;
@@ -148,10 +231,17 @@ void SurfaceView::forGrowths(int cx, int cz, const std::function<void(const Grow
         if (!site.edits.empty() && site.editCover(S.x, S.z) > 0.3) continue;
         S.gy = site.groundHeight(S.x, S.z);
         if (S.gy < site.waterAt(S.x, S.z) + 0.1) continue;
-        S.collides = S.h >= STEP_M && S.shape != GS_VEINS && S.shape != GS_HAIR && S.shape != GS_BLADDER && S.shape != GS_POLYP;
-        px[np] = S.x; pz[np] = S.z; pr[np] = ext; np++;
         fn(S);
     }
+}
+
+int SurfaceView::growthAt(double x, double z, double margin) {
+    int shape = -1;
+    const int cx = (int)std::floor(x / 16), cz = (int)std::floor(z / 16);
+    for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+            forGrowths(cx + dx, cz + dz, [&](const GrowthInst& S) { if (shape < 0 && growthHolds(S, x, z, margin)) shape = S.shape; });
+    return shape;
 }
 
 void SurfaceView::growthColliders(const GrowthInst& S, std::vector<Collider>& out) const {
@@ -169,10 +259,35 @@ bool SurfaceView::growthVisible(const GrowthInst& S, double& px) const {
     return px >= (S.shape == GS_HAIR || S.shape == GS_VEINS ? 4.0 : 2.0);
 }
 
+double SurfaceView::growthShade(const Vec3& p, Vec3 n, const Vec3& half, double ambient, double sunUp, double lf, double boost, int line) const {
+    const bool own = line >= 0 && line < MADE_LINES && growthLineBank[line] >= 0;
+    const double wet = own ? growthLineWet[line] : growthWet;
+    const Vec3& sd = env.sun.dirLocal;
+    if (dot(n, camPos - p) < 0) n = -n;
+    const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
+    double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+    if (nLamps) light += (1 - amb) * lampAt(p, &n);
+    const double l = std::min(1.2, light), q = std::sqrt(l);
+    double shade = 44 * q * std::sqrt(std::sqrt(q)) + boost;   // (44 l^0.625, the boulders' curve without a pow)
+    if (wet > 0.3 && sunUp > 0.05) {   // a wet one's gloss
+        double c = std::max(0.0, dot(n, half));
+        c *= c; c *= c; c *= c;   // (c^8, then c^24)
+        const double sp = c * c * c * sunUp * lf;
+        shade += sp > 0.5 ? 12 * wet : (sp > 0.2 ? 5 * wet : 0);
+    }
+    return shade;
+}
+
+double SurfaceView::growthGlowShade(uint64_t face, double t, int line) const {
+    const double glow = line >= 0 && line < MADE_LINES && growthLineBank[line] >= 0 ? growthLineGlow[line] : growthGlow;
+    if (glow <= 0.02 || hash01(mix64(face + 900)) >= 0.22) return 0;
+    return (46 + 10 * std::sin(t * 0.9 + hash01(mix64(face + 7)) * TAU)) * glow;
+}
+
 void SurfaceView::drawGrowth(ShapeSink& out, const GrowthDraw& D, double t, double ambient, double sunUp, double lf, const GrainTexture* tile) const {
     const GrowthInst& S = D.S;
     const MadeWorld& m = site.gen.made;
-    const MadeGrowth& G = m.spread[m.growthLine].growth;
+    const MadeGrowth& G = m.spread[S.line >= 0 && S.line < MADE_LINES ? S.line : m.growthLine].growth;   // (KI-473: its own line's)
     const double dist = std::max(0.5, std::sqrt((S.x - camPos.x) * (S.x - camPos.x) + (S.z - camPos.z) * (S.z - camPos.z))), px = D.px;
     auto groundAt = [&](double x, double z) { return S.gy + (x - S.x) * D.sx + (z - S.z) * D.sz; };   // (the plane under it)
     const Vec3& sd = env.sun.dirLocal;
@@ -180,36 +295,22 @@ void SurfaceView::drawGrowth(ShapeSink& out, const GrowthDraw& D, double t, doub
     const double fogK = 1 - std::exp(-dist / fogD);
     const double wind = clampd(env.windKnots / 25.0, 0, 1.5), wdx = std::sin(env.windDir), wdz = std::cos(env.windDir);
     const double hx = std::sin(S.heading), hz = std::cos(S.heading);   // along it
-    const int bank = growthBank >= 0 ? growthBank : 0;
+    const int bank = growthBankOf(S.line) >= 0 ? growthBankOf(S.line) : 0;
     RasterParams rp; rp.bank = bank; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; rp.grain2 = tile; rp.grain2Scale = 3.0;
     rp.grainWeight = clampd(1.0 - (dist - 30.0) / 120.0, 0.2, 1.0);
     const bool hardFacets = G.hard >= 2;
     const int NA = hardFacets ? (px > 12 ? 6 : 4) : (px > 30 ? 9 : (px > 10 ? 6 : 4));
     const bool far = px < 8;   // (a far one plain: its small parts left out)
     const Vec3 toCam0 = normalize(Vec3(camPos.x - S.x, camPos.y - S.gy, camPos.z - S.z)), half = normalize(toCam0 + sd);
-    const bool glossy = growthWet > 0.3 && sunUp > 0.05;
     int faceNo = 0;
     // a point's shade by its normal, lit from its side toward the eye (a sheet's both, a cup's inside, a cap's underside), a wet one glossy
-    auto lit = [&](const Vec3& p, Vec3 n, double boost) {
-        if (dot(n, camPos - p) < 0) n = -n;
-        const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-        double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
-        if (nLamps) light += (1 - amb) * lampAt(p, &n);
-        const double l = std::min(1.2, light), q = std::sqrt(l);
-        double shade = 44 * q * std::sqrt(std::sqrt(q)) + boost;   // (44 l^0.625, the boulders' curve without a pow)
-        if (glossy) {   // a wet one's gloss
-            double c = std::max(0.0, dot(n, half));
-            c *= c; c *= c; c *= c;   // (c^8, then c^24)
-            const double sp = c * c * c * sunUp * lf;
-            shade += sp > 0.5 ? 12 * growthWet : (sp > 0.2 ? 5 * growthWet : 0);
-        }
-        return shade;
-    };
+    auto lit = [&](const Vec3& p, Vec3 n, double boost) { return growthShade(p, n, half, ambient, sunUp, lf, boost, S.line); };
+    const double glowNow = S.line >= 0 && S.line < MADE_LINES && growthLineBank[S.line] >= 0 ? growthLineGlow[S.line] : growthGlow;
     // a triangle shaded at its corners (smooth), a glowing one's spots lit at night, slowly pulsing
     auto tri3 = [&](const Vec3& p0, double s0, const Vec3& p1, double s1, const Vec3& p2, double s2) {
         double sh[3] = {s0, s1, s2};
-        if (growthGlow > 0.02 && hash01(mix64(S.hs + 900 + (uint64_t)faceNo)) < 0.22)
-            for (double& v : sh) v = std::max(v, (46 + 10 * std::sin(t * 0.9 + hash01(mix64(S.hs + 7)) * TAU)) * growthGlow);
+        if (glowNow > 0.02 && hash01(mix64(S.hs + 900 + (uint64_t)faceNo)) < 0.22)
+            for (double& v : sh) v = std::max(v, (46 + 10 * std::sin(t * 0.9 + hash01(mix64(S.hs + 7)) * TAU)) * glowNow);
         faceNo++;
         RVert tri[3]; const Vec3 ws[3] = {p0, p1, p2};
         for (int q = 0; q < 3; q++) {
@@ -530,13 +631,17 @@ void SurfaceView::updateGrowthSongs(double dt, double px0, double pz0) {
         auto tears = [&](const Ruin& r, const RuinCell& c) {
             if (c.climb.empty() || std::hypot(r.x - px, r.z - pz) > r.reach + 10) return;
             for (const Form& f : c.elems[0]) {
-                if (f.growth != FG_MEMBRANE) continue;
+                if (f.growth != FG_MEMBRANE || f.broken > 0) continue;   // (KI-479: one torn tears once)
                 const double mx = r.x + f.x, mz = r.z + f.z;
                 if (std::fabs(mx - px) > 4 || std::fabs(mz - pz) > 4) continue;
                 const double nx = std::sin(f.heading), nz = std::cos(f.heading), ax = std::cos(f.heading), az = -std::sin(f.heading);
                 const double s0 = (px0 - mx) * nx + (pz0 - mz) * nz, s1 = (px - mx) * nx + (pz - mz) * nz, along = (px - mx) * ax + (pz - mz) * az;
                 const double gy = site.groundHeight(mx, mz);
-                if ((s0 < 0) != (s1 < 0) && std::fabs(along) < f.hx + 0.2 && player.y < gy + f.y1 && player.y + 1.6 > gy + f.y0) tearCue = 0.8;
+                if ((s0 < 0) != (s1 < 0) && std::fabs(along) < f.hx + 0.2 && player.y < gy + f.y1 && player.y + 1.6 > gy + f.y0) {
+                    tearCue = 0.8;
+                    tornMembranes.insert(membraneKey(c, (int)f.p[3]));   // KI-479: torn for the landing (the cell's own copy marked; a regrown one reads the set)
+                    const_cast<Form&>(f).broken = 1;
+                }
             }
         };
         if (std::hypot(px - px0, pz - pz0) > 1e-4) {

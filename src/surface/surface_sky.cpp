@@ -49,9 +49,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // set (6-16 degrees under it) while the air under them is in the planet's shadow: low in the sky toward the sun's side, in bands and billows
     double nlc = 0, nlcLimitDeg = 0;
     const double nlcH = 83.0, RkmS = site.R / 1000.0;
-    if (site.gen.hasTrait(TR_NOCTILUCENT) && site.atmosphere && !venus) {
+    if ((site.gen.hasTrait(TR_NOCTILUCENT) || site.gen.made.silver > 0) && site.atmosphere && !venus) {   // (KI-483: or a seeding's methane's)
         const double dep = -std::asin(clampd(sinAlt, -1, 1)) / DEG, summer = clampd(0.5 + (env.latDeg >= 0 ? site.season : -site.season), 0, 1);
         nlc = smoothstep(3.5, 6.5, dep) * smoothstep(17.0, 12.5, dep) * smoothstep(35.0, 50.0, std::fabs(env.latDeg)) * (0.45 + 0.55 * summer) * (1 - env.rain) * (1 - 0.85 * env.cloudCover);
+        if (!site.gen.hasTrait(TR_NOCTILUCENT)) nlc *= site.gen.made.silver;
         nlcLimitDeg = std::acos(RkmS / (RkmS + nlcH)) / DEG;   // the depression past which the layer lies in the shadow (9 degrees on a world Earth's size)
     }
     // a sun pillar in cold, clear air when the sun is low (ice crystals in the air mirror it into a column)

@@ -104,11 +104,14 @@ std::string Game::treeTwigWords(const std::string& key) {
     const auto it = guide.strains.find(key);
     return it == guide.strains.end() ? who : who + " - " + lineMoveWords(key);   // Y-02: an edited line's its edits
 }
-// Y-01: a world's page's name: the explorer's, else UNKNOWN and its kind (the catalogue's world heads)
+// Y-01: a world's page's name: the explorer's, else UNKNOWN and its kind (the catalogue's world heads; KI-482: a made kind's)
 std::string Game::treeWorldWords(const std::string& world) {
     const std::string n = upper(nameOfKey(world));
     const auto it = tree.kinds.find(world);
-    return n != "UNKNOWN" || it == tree.kinds.end() ? n : n + " - " + KINDS[it->second].name;
+    if (n != "UNKNOWN" || it == tree.kinds.end()) return n;
+    LabSystems systems;
+    const std::string made = madeKindAt(world, systems);
+    return n + " - " + (made.empty() ? std::string(KINDS[it->second].name) : made);
 }
 
 // a leaf's line: its name (or look), its world (`world`: not on a world's own page), a made one's or a drifter's tag; B-443: a long look

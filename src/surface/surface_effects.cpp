@@ -464,10 +464,11 @@ void SurfaceView::drawStreetLamps(Framebuffer& fb) {
 // bank (23, set by `setupPalette`)
 void SurfaceView::drawMadeAir(Framebuffer& fb, double t) {
     const MadeWorld& m = site.gen.made;
-    if (m.rainTintK > 0 && tintBankMade >= 0 && !inDrone) {
+    const int pb = madeRainBank >= 0 ? madeRainBank : (madeCloudBank ? 23 : -1);   // (KI-459: its own bank, else the dyed clouds')
+    if (m.rainTintK > 0 && pb >= 0 && !inDrone) {
         const double cell = 7.0;
         const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
-        RasterParams rp; rp.bank = tintBankMade; rp.zbias = 1.0;
+        RasterParams rp; rp.bank = pb; rp.zbias = 1.0;
         for (int dz = -6; dz <= 6; dz++)
             for (int dx = -6; dx <= 6; dx++) {
                 const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0xB100DULL);
@@ -740,7 +741,8 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     // drops live in the world around the camera (KI-017): depth-tested against the terrain, so
     // they never paint over the ground when looking down, and the wind drifts them
     double wx = std::sin(env.windDir) * env.windKnots * 0.03, wz = std::cos(env.windDir) * env.windKnots * 0.03;
-    const int rainBank = site.gen.made.rainTintK > 0 && tintBankMade >= 0 ? tintBankMade : 1;   // J-04: a dyed rain in its waters' bank
+    const int rainBank = site.gen.made.rainTintK > 0 ? (madeRainBank >= 0 ? madeRainBank : (madeCloudBank ? 23 : 1)) : 1;   // J-04: a dyed rain in its waters' bank
+    // (KI-459: else one of its own, else its dyed clouds')
     for (int i = 0; i < n; i++) {
         double x = camPos.x + r.range(-6, 6), z = camPos.z + r.range(-6, 6), y = camPos.y + r.range(-3, 4);
         Vec3 va = toView(x, y, z), vb = toView(x + wx * 0.2, y - 0.5, z + wz * 0.2);

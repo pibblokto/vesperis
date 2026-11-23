@@ -1,6 +1,7 @@
 // Y-02: a species' genes (life/genes.h): a genesis's map and code, a species' genes read from what it is, a line's values from its edits, a
 // strain's genes from its move. J-01: the world genes (places 19 to 32), their wild letters read from what a species is, their work in a line
 #include "life/genes.h"
+#include "life/seeding.h"
 #include "core/rng.h"
 #include "core/types.h"
 #include <algorithm>
@@ -12,6 +13,17 @@ const char* const GENE_KIND_NAMES[GN_COUNT] = {"VITAL", "QUIET", "WARMTH", "SALT
                                                "SHAPE", "GAS", "DYE", "LIFT", "FROST", "SLIME", "SHELL", "STOP", "BIND", "ROT", "POISON",
                                                "CARRIER", "HOST", "DRY", "SHIELD"};
 const char* const GENE_SENSE_NAMES[SE_COUNT] = {"NOTHING", "LIGHT", "AWAY FROM LIGHT", "FOOD", "THE MAGNET", "WARMTH"};
+const char* const GENE_KIND_PURPOSE[GN_COUNT] = {"THE CELL CANNOT LIVE WITHOUT IT", "NOTHING THE LAB CAN SEE", "THE WARMTHS IT GROWS AT",
+                                                 "FRESH WATER, SEA OR BRINE", "HOW BIG ITS CELLS ARE", "ITS COLOUR, AND THE LIGHT IT FEEDS ON",
+                                                 "WHAT A CHEMICAL EATER LIVES ON", "WHETHER IT MOVES, HOW AND HOW FAST", "WHAT IT SWIMS TOWARD",
+                                                 "SPORES OR CYSTS WHEN STARVED, OR DEATH", "WHETHER A CROWD OF IT GLOWS",
+                                                 "A SMALL CELL'S SHAPE AND LENGTH", "THE GAS IT GIVES OFF: A WORLD'S AIR",
+                                                 "THE DYE IT LEAKS: A WORLD'S WATERS", "GAS BUBBLES: IT FLOATS INTO THE CLOUDS",
+                                                 "IT FREEZES WATER: RAIN AND SNOW", "A SLIME COAT: JELLY SEAS, SLIMY ROCKS",
+                                                 "A SHELL: MILKY SEAS, STONE, CRUSTS", "WHEN IT STOPS GROWING",
+                                                 "ITS CELLS STICK: CRUSTS AND TISSUE", "WHAT IT ROTS", "A POISON: RIVALS AND ANIMALS DIE",
+                                                 "IT PASSES ITS GENES TO OTHER LIFE", "IT LIVES ON PLANTS OR ANIMALS",
+                                                 "IT LIVES DRIED OUT, AWAY FROM WATER", "IT TAKES ULTRAVIOLET AND RADIATION"};
 const double GENE_PRICE[GFROM_COUNT] = {0, 0.03, 0.06, 0.10};
 
 namespace {
@@ -32,6 +44,7 @@ constexpr uint64_t SALT_GENE_ROT = 0x6E4E50000000000CULL;
 constexpr uint64_t SALT_GENE_POISON = 0x6E4E50000000000DULL;
 constexpr uint64_t SALT_GENE_HOST = 0x6E4E50000000000EULL;
 constexpr uint64_t SALT_GENE_WORLD_WILD = 0x6E4E50000000000FULL;  // a species' wild world values (its choices among the likely, its amounts)
+constexpr uint64_t SALT_GENE_DYE_MORE = 0x6E4E500000000010ULL;    // R-453: the dye table's synonyms that became GREEN and PINK
 
 const char ABC[] = "ACGTZPSB";   // every alphabet is its start (`alphabetOf`)
 int letterIndex(char ch) { const char* p = std::strchr(ABC, ch); return p && ch ? (int)(p - ABC) : 0; }
@@ -61,6 +74,18 @@ std::string runLetters(const GeneCode& c, int run, int n) {
     return s;
 }
 // a run whose table gives `value`, chosen by the hash among its synonyms
+// R-453: a wild dye's run as J-01 picked it from its table; where that run became GREEN or PINK, the next of its runs that still reads it
+std::string runForKept(const GeneCode& c, const std::vector<int>& was, const std::vector<int>& now, int value, uint64_t h) {
+    std::vector<int> runs;
+    for (int i = 0; i < (int)was.size(); i++) if (was[i] == value) runs.push_back(i);
+    if (runs.empty()) return runLetters(c, 0, 2);
+    const size_t at = mix64(h) % runs.size();
+    for (size_t k = 0; k < runs.size(); k++) {
+        const int r = runs[(at + k) % runs.size()];
+        if (r < (int)now.size() && now[r] == value) return runLetters(c, r, 2);
+    }
+    return runLetters(c, runs[at], 2);
+}
 std::string runFor(const GeneCode& c, const std::vector<int>& t, int value, int n, uint64_t h) {
     std::vector<int> runs;
     for (int i = 0; i < (int)t.size(); i++) if (t[i] == value) runs.push_back(i);
@@ -431,7 +456,21 @@ GeneCode geneCodeOf(const Genesis& g) {
     table(c.shape, L * L, 4, r);
     // J-01: the world genes' tables, each its two letters' runs on its own salt
     auto own = [&](std::vector<int>& t, int values, uint64_t salt) { Rng q(g.id ^ salt); table(t, L * L, values, q); };
-    own(c.gas, WG_COUNT, SALT_GENE_GAS); own(c.dye, WD_COUNT, SALT_GENE_DYE); own(c.shell, SHL_COUNT, SALT_GENE_SHELL);
+    own(c.gas, WG_COUNT, SALT_GENE_GAS); own(c.dye, WD_FLUORESCENT + 1, SALT_GENE_DYE); own(c.shell, SHL_COUNT, SALT_GENE_SHELL);
+    c.dyeJ01 = c.dye;
+    {   // R-453: the dye's table as J-01 drew it, then two of its synonyms (a run whose dye another run also gives) made GREEN and PINK, so every
+        // run that gave a dye before gives it still but those two
+        Rng q(g.id ^ SALT_GENE_DYE_MORE);
+        for (int add = WD_GREEN; add < WD_COUNT; add++) {
+            std::vector<int> spare;
+            for (int i = 0; i < (int)c.dye.size(); i++) {
+                int same = 0;
+                for (int v : c.dye) same += v == c.dye[i];
+                if (c.dye[i] < WD_GREEN && same > 1) spare.push_back(i);
+            }
+            if (!spare.empty()) c.dye[spare[q.irange((int)spare.size())]] = add;
+        }
+    }
     own(c.rot, ROT_COUNT, SALT_GENE_ROT); own(c.poison, PZ_COUNT, SALT_GENE_POISON); own(c.host, HO_COUNT, SALT_GENE_HOST);
     return c;
 }
@@ -540,7 +579,7 @@ MicrobeGenes microbeGenesOf(const Microbe& s, const Morph& m, const Genesis& g) 
                     int choice = 0; double amount = 0;
                     wildWorld(s, m, g.chemistry, kind, hashCombine(s.seed ^ SALT_GENE_WORLD_WILD, (uint64_t)kind), choice, amount);
                     const std::vector<int>* t = worldTable(c, kind);
-                    if (t) gene.part = runFor(c, *t, choice, 2, h);
+                    if (t) gene.part = kind == GN_DYE ? runForKept(c, c.dyeJ01, c.dye, choice, h) : runFor(c, *t, choice, 2, h);   // (R-453)
                     gene.part += lettersOfWeight(c, 4, weightFor(c, 4, amount, h ^ 6), h ^ 7);
                     break;
                 }
@@ -638,6 +677,7 @@ int workOf(int kind) {
 void applyCore(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<GeneEdit>& edits) {
     const Genesis& gen = g.genesis;
     const GeneCode c = geneCodeOf(gen);
+    double tMinFloor = k.s.tMin;   // (J-13: its lowest warmth before the edits, or a donor's moved in)
     uint32_t senseWas = 0;
     for (const MicrobeGene& G : g.genes) if (G.kind == GN_SENSE && !G.cut) senseWas |= senseBit(geneTable(c, c.sense, G.part, 0, 2));
     bool motion = false, sense = false, reshaped = false;
@@ -678,7 +718,10 @@ void applyCore(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gene
                 G->from = e.far; G->origin = e.origin; G->sw = e.read ? e.donorGene.sw : geneOwnSwitch(G->kind);
             } else { G->from = src->from; G->origin = src->origin; G->sw = src->sw; }
             if (e.sw >= 0 && e.sw < GW_COUNT) G->sw = e.sw;
-            if (e.how == GX_MOVED && e.read) { donorValue(k, m, g, e, paceShare, aspect); was = e.donorGene.part; }
+            if (e.how == GX_MOVED && e.read) {
+                donorValue(k, m, g, e, paceShare, aspect); was = e.donorGene.part;
+                if (G->kind == GN_WARMTH) tMinFloor = std::min(tMinFloor, k.s.tMin);   // (J-13: a donor's own cold kept)
+            }
             else if (fresh) { freshValue(k, g, c, G->kind, e.part, paceShare, aspect); was = e.part; }
         }
         const bool cut = e.cut;
@@ -688,7 +731,7 @@ void applyCore(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gene
                 if (cut) { const double best = k.s.tOpt; k.s.tMin = std::max(k.s.tMin, best - 4); k.s.tMax = std::min(k.s.tMax, best + 2); }
                 else {
                     double lo, hi;
-                    cellRange(chemistryCell(k.chemistry), lo, hi);
+                    cellRange(chemistryCell(k.chemistry), lo, hi, 2);   // (J-13: a brine's coldest; the end's pass lifts a line that is not a brine's antifreeze)
                     double d = warmthStep(k.chemistry, c.letters) * (geneWeight(c, e.part) - geneWeight(c, was));
                     d = clampd(d, std::min(lo, k.s.tMin) - k.s.tMin, std::max(hi, k.s.tMax) - k.s.tMax);
                     k.s.tMin += d; k.s.tOpt += d; k.s.tMax += d;
@@ -800,6 +843,13 @@ void applyCore(CultureKind& k, Morph& m, MicrobeGenes& g, const std::vector<Gene
         k.s.flees = dark && !(now & (TX_LIGHT | TX_FIELD)) ? 1 : 0;
         if ((now & TX_FIELD) && m.magnetosomes == 0) m.magnetosomes = 8;
         if (!(now & TX_FIELD)) m.magnetosomes = 0;
+    }
+    // J-13 (R-454): water life grows down to WATER_COLDEST_C; a line that lives in brine and makes no ice of its own down to BRINE_COLDEST_C.
+    // Read once every edit is in (its salt, its frost and its warmth in any order); a band edited lower is lifted whole, as far as its own or its
+    // donor's was
+    if (k.chemistry == CH_WATER) {
+        const double floor = std::min(tMinFloor, brineAntifreeze(k) ? BRINE_COLDEST_C : WATER_COLDEST_C);
+        if (k.s.tMin < floor) { const double d = floor - k.s.tMin; k.s.tMin += d; k.s.tOpt += d; k.s.tMax += d; }
     }
 }
 }   // namespace
@@ -916,6 +966,79 @@ std::vector<int> genesDiffer(const MicrobeGenes& a, const MicrobeGenes& b) {
     return out;
 }
 
+int geneChoiceLetters(const GeneCode& c, int kind) {
+    switch (kind) {
+        case GN_FOOD: return 3;
+        case GN_PIGMENT: case GN_SENSE: case GN_MOTION: case GN_SHAPE: return 2;
+        default: return worldTable(c, kind) ? 2 : 0;
+    }
+}
+
+std::string geneLettersWords(const GeneCode& c, int kind) {
+    switch (kind) {
+        case GN_VITAL: return "ANY CHANGE TO ITS LETTERS KILLS THE STRAIN";
+        case GN_QUIET: return "ITS LETTERS DO NOTHING: CHANGE THEM FREELY";
+        case GN_WARMTH: return "ITS LETTERS' WEIGHTS ADD UP: HEAVIER, WARMER";
+        case GN_SALT: return "ITS LETTERS' WEIGHTS ADD UP: HEAVIER, SALTIER";
+        case GN_SIZE: return "ITS LETTERS' WEIGHTS ADD UP: HEAVIER, BIGGER";
+        case GN_REST: return "WEIGHTS PAST A QUARTER OF THEIR MOST: IT RESTS";
+        case GN_GLOW: return "WEIGHTS PAST A QUARTER: IT GLOWS, HEAVIER SOONER";
+        case GN_PIGMENT: return "ITS 2 LETTERS PICK THE PIGMENT FROM A LIST";
+        case GN_FOOD: return "ITS 3 LETTERS PICK THE FOOD FROM A LIST";
+        case GN_SENSE: return "ITS 2 LETTERS PICK WHAT IT TURNS TO";
+        case GN_MOTION: return "LETTERS 1-2 PICK HOW IT MOVES, THE REST HOW FAST";
+        case GN_SHAPE: return "LETTERS 1-2 PICK THE SHAPE, 3-4 HOW LONG";
+        case GN_STOP: return "HEAVIER, A BIGGER CROWD; CUT IT AND IT NEVER STOPS";
+        default: break;
+    }
+    if (worldTable(c, kind)) return "LETTERS 1-2 PICK WHICH, 3-6 HOW MUCH: HEAVIER, MORE";
+    return "WEIGHTS PAST A QUARTER OF THEIR MOST: HEAVIER, STRONGER";
+}
+
+std::string geneValueShort(const CultureKind& k, const Morph& m, const MicrobeGene& gene, const GeneCode& c) {
+    if (gene.cut) return "CUT OUT";
+    const Microbe& s = k.s;
+    const CultureWorld& w = k.world;
+    auto much = [](double a) { return std::string(a < 0.34 ? ", A LITTLE" : (a < 0.67 ? "" : ", MUCH")); };
+    auto salt = [](int i) { return std::string(i == 0 ? "FRESH" : (i == 1 ? "SEA" : "BRINE")); };
+    switch (gene.kind) {
+        case GN_VITAL: return k.dead ? "DIES" : "LIVES";
+        case GN_QUIET: return "NO CHANGE";
+        case GN_WARMTH: return words("BEST %.0f C", s.tOpt);
+        case GN_SALT: return s.saltLo == s.saltHi ? salt(s.saltLo) : salt(s.saltLo) + " TO " + salt(s.saltHi);
+        case GN_SIZE: return words(m.widthUm < 10 ? "%.1f UM WIDE" : "%.0f UM WIDE", m.widthUm);
+        case GN_PIGMENT: return s.pigment == PG_NONE ? std::string("NO PIGMENT") : std::string(PIGMENT_NAMES[s.pigment]);
+        case GN_FOOD: return s.substrate == SU_NONE ? std::string("NOTHING") : std::string(SUBSTRATE_NAMES[s.substrate]);
+        case GN_MOTION: return s.motion == MO_NONE ? std::string("STILL") : std::string(MOTION_NAMES[s.motion]) + words(m.speed < 10 ? " %.1f UM/S" : " %.0f UM/S", m.speed);
+        case GN_SENSE: {
+            const int t = geneTable(c, c.sense, gene.part, 0, 2);
+            return t == SE_NONE ? "NOTHING" : (t == SE_DARK ? "FLEES LIGHT" : (t == SE_FIELD ? "MAGNET" : GENE_SENSE_NAMES[t]));
+        }
+        case GN_REST:
+            if (!keeps(c, geneWeight(c, gene.part))) return "DIES";
+            return (s.cycle & LC_GATHERING) ? "FRUITS" : (largeCellPlan(s.plan) ? "CYSTS" : "SPORES");
+        case GN_GLOW: return !s.glows ? std::string("NO GLOW") : (k.glowAny ? std::string("WHEN SWITCHED") : words("AT %.1f%% FULL", 100 * k.quorum));
+        case GN_SHAPE:
+            if (s.plan == MP_SPHERE) return "SPHERE";
+            return std::string(s.plan == MP_ROD ? "ROD" : (s.plan == MP_CURVED ? "CURVED ROD" : "SPIRAL")) + words(" X%.1f", m.aspect);
+        case GN_GAS: return w.gives() ? std::string(WORLD_GAS_NAMES[w.gas]) + much(w.gasRate) : std::string("NO GAS");
+        case GN_DYE: return w.dyes() ? std::string(WORLD_DYE_NAMES[w.dye]) + much(w.dyeRate) : std::string("NO DYE");
+        case GN_LIFT: return w.lift <= 0 ? "SINKS" : (w.lift < 0.5 ? "FLOATS" : "FLOATS HIGH");
+        case GN_FROST: return w.frostC <= FROST_NONE + 1 ? std::string("NO FROST") : words("ICE AT %.0f C", w.frostC);
+        case GN_SLIME: return w.slime <= 0 ? "NO SLIME" : (w.slime < 0.5 ? "THIN SLIME" : "THICK SLIME");
+        case GN_SHELL: return w.shells() ? std::string(WORLD_SHELL_NAMES[w.shell]) + much(w.shellRate) : std::string("NO SHELL");
+        case GN_STOP: return w.overgrows ? std::string("NEVER STOPS") : (std::fabs(w.stopShift) < 0.05 ? std::string("STOPS WHEN FULL") : words("CROWD X%.1f", std::pow(10.0, w.stopShift)));
+        case GN_BIND: return w.bind <= 0 ? "CELLS APART" : (w.bind < 0.5 ? "STICK LOOSELY" : "STICK TOGETHER");
+        case GN_ROT: return w.rots() ? std::string("ROTS ") + WORLD_ROT_NAMES[w.rot] : std::string("ROTS NOTHING");
+        case GN_POISON: return w.poison == PZ_NONE ? std::string("NO POISON") : std::string(WORLD_POISON_NAMES[w.poison]) + (w.poisonRate <= 0 ? ", TOO WEAK" : much(w.poisonRate));
+        case GN_CARRIER: return w.carrier <= 0 ? "KEEPS ITS GENES" : (w.carrier < 0.5 ? "NOW AND THEN" : "PASSES GENES");
+        case GN_HOST: return w.hosted() ? std::string(WORLD_HOST_NAMES[w.host]) : std::string("LIVES FREE");
+        case GN_DRY: return w.dry <= 0 ? "DIES DRY" : (w.dry < 0.34 ? "DRY FOR DAYS" : (w.dry < 0.67 ? "DRY FOR MONTHS" : "DRY FOR YEARS"));
+        case GN_SHIELD: return w.shield <= 0 ? "NO SHIELD" : (w.shield < UV_SHIELD ? "A LITTLE UV" : (w.shield < 0.7 ? "TAKES UV" : "STRONG UV"));
+        default: return "";
+    }
+}
+
 std::string geneValueWords(const CultureKind& k, const Morph& m, const MicrobeGene& gene, const GeneCode& c) {
     if (gene.cut) return "CUT OUT";
     const Microbe& s = k.s;
@@ -963,7 +1086,11 @@ std::string geneValueWords(const CultureKind& k, const Morph& m, const MicrobeGe
         case GN_SLIME: return w.slime <= 0 ? "NO SLIME" : (w.slime < 0.5 ? "A THIN SLIME COAT" : "A THICK SLIME COAT");
         case GN_SHELL: return w.shells() ? (w.shellRate < 0.34 ? "MAKES A LITTLE " : "MAKES ") + std::string(WORLD_SHELL_NAMES[w.shell]) : std::string("MAKES NO SHELL");
         case GN_STOP:
-            if (w.overgrows) return "NEVER STOPS GROWING";
+            if (w.overgrows) {   // J-15: what it overgrows the land as (a carpet or a lichen greens a desert)
+                const int t = overgrowthTypeOf(k);
+                if (t == OG_NONE) return "NEVER STOPS GROWING";
+                return std::string("NEVER STOPS: OVERGROWS AS ") + MADE_GROWTH_NAMES[t] + (t == OG_CARPETS || t == OG_LICHEN ? ", GREENS A DESERT" : "");
+            }
             if (std::fabs(w.stopShift) < 0.05) return "STOPS WHEN FULL";
             return w.stopShift > 0 ? words("GROWS TO %.1f TIMES THE USUAL CROWD", std::pow(10.0, w.stopShift))
                                    : words("STOPS AT %.0f%% OF THE USUAL CROWD", 100 * std::pow(10.0, w.stopShift));

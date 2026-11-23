@@ -53,9 +53,8 @@ bool Game::droneBayHere() const {
     return sys.valid && sys.star.seed == bay.starSeed && ship.mode == ShipState::PARKED && ship.parkedBody == bay.body && ship.parkedBelt < 0 &&
            bay.body >= 0 && bay.body < (int)sys.bodies.size();
 }
-// not out and charged (five minutes from the last trip's end)
-bool Game::droneBayReady() const { return !bay.out && (bay.clock < 0 || bay.clock >= bay.back + DRONE_COOLDOWN_S); }
-double Game::droneCooldownLeft() const { return bay.clock < 0 || bay.out ? 0.0 : std::max(0.0, bay.back + DRONE_COOLDOWN_S - bay.clock); }
+// aboard: sent again as soon as they dock (R-449: C-18's five minutes of charging gone)
+bool Game::droneBayReady() const { return !bay.out; }
 // seconds until the last of them docks (-1: not out, or its trip not laid out yet)
 double Game::droneBackIn() const {   // the last dock's clock from now
     if (!bay.out || !bay.planned) return -1;
@@ -87,7 +86,6 @@ void Game::droneWorldAsk(int body) {
 // the drones sent down (or the refusal's status)
 void Game::droneBayLaunch() {
     if (bay.out) { refuse("DRONES ARE AWAY - THEY COME BACK ON THEIR OWN", 5); return; }
-    if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); refuse(fmt("DRONES CHARGING - READY IN %d:%02d", s / 60, s % 60), 5); return; }
     if (!sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) {
         refuse("NOT IN ORBIT - APPROACH A WORLD FIRST", 5); return;
     }
@@ -101,7 +99,7 @@ void Game::droneBayLaunch() {
             if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
         if (left == 0) { refuse("NOTHING LEFT TO BRING", 5); return; }
     }
-    bay.out = true; bay.planned = false; bay.recalled = false; bay.clock = 0; bay.back = 0;
+    bay.out = true; bay.planned = false; bay.recalled = false; bay.clock = 0;
     bay.starSeed = sys.star.seed; bay.body = b; bay.worldKey = wk; bay.worldName = upper(bodyNameOf(b));
     guide.droneTrips++;
     bay.seed = hashCombine(g.seed ^ 0xC18B47ULL, (uint64_t)guide.droneTrips * 0x9E3779B97F4A7C15ULL ^ (uint64_t)std::llround(t * 16));
@@ -212,7 +210,7 @@ void Game::droneRecall() {
 
 // the last docked: the log, the status
 void Game::droneTripEnd() {
-    bay.out = false; bay.back = bay.clock;   // the charge from now
+    bay.out = false;
     if (bay.seedTrip) { seedReport(); return; }   // J-03: its report
     int n[DF_COUNT] = {}, total = 0;
     std::vector<std::string> where;
@@ -313,7 +311,7 @@ DronePose Game::dronePoseAt(int k) const {
 std::string Game::droneStateLine(int k) const {
     if (k < 0 || k >= DRONE_COUNT) return std::string();
     const DroneRun& R = bay.run[k];
-    if (bay.clock < 0 || !bay.out || R.docked) return droneBayReady() ? "ABOARD, READY" : (bay.out ? "ABOARD" : "ABOARD, CHARGING");
+    if (bay.clock < 0 || !bay.out || R.docked) return bay.out ? "ABOARD" : "ABOARD, READY";
     const double c = bay.clock;
     if (c < R.out) return "WAITING";
     if (c < R.out + BAY_OUT_S) return "LEAVING BAY";
@@ -375,10 +373,9 @@ void Game::droneBayPad(PadMenu& m) const { m.title = "DRONE BAY"; m.item("SEND D
 void Game::renderDroneBay() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
     drawText(canvas, 6, 4, "DRONE BAY", HUD_AMBER);
-    {   // the bay: out, charging, ready
+    {   // the bay: out or ready
         std::string st; uint32_t col;
         if (bay.out) { const double in = droneBackIn(); const int s = (int)std::ceil(std::max(0.0, in)); st = in >= 0 ? fmt("BACK IN  %d:%02d", s / 60, s % 60) : std::string("AWAY"); col = HUD_CYAN; }
-        else if (!droneBayReady()) { const int s = (int)std::ceil(droneCooldownLeft()); st = fmt("CHARGING  %d:%02d", s / 60, s % 60); col = HUD_AMBER; }
         else { st = "READY"; col = HUD_GREEN; }
         drawText(canvas, UW - 6 - textWidth(st.c_str()), 4, st.c_str(), col);
     }
@@ -413,7 +410,7 @@ void Game::renderDroneBay() {
         const bool aboard = bay.clock < 0 || !bay.out || R.docked;
         const DronePose pose = dronePoseAt(k);
         // out: its face three-quarters on
-        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && !droneBayReady() ? rgb(150, 140, 80) : rgb(255, 240, 140));
+        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && bay.out ? rgb(150, 140, 80) : rgb(255, 240, 140));   // (dim aboard while the others are away)
         drawText(canvas, x0 + 2, y0 + 2, fmt("%d", k + 1).c_str(), DRONE_COL[k]);
         std::string right;
         int found = 0; for (const DroneFindRec& f : R.finds) if (f.t <= bay.clock || f.aboard) found++;
@@ -502,11 +499,11 @@ void Game::renderDroneBay() {
         drawText(canvas, mx, y0, trunc("CULTURE " + bay.seedName, 33).c_str(), HUD_WHITE);
         drawText(canvas, mx, y0 + 9, trunc("TO " + bay.seedPlace, 33).c_str(), HUD_DIM);
         std::string rep = !bay.seedLet ? std::string(bay.out ? "ON ITS WAY DOWN" : "NOT LET GO") : (bay.out ? std::string("LET GO, WATCHED") : std::string("REPORT:"));
-        drawText(canvas, mx, y0 + 18, rep.c_str(), HUD_DIM);
-        if (!bay.out && bay.seedLet && bay.seedFate >= 0) {
+        if (!bay.out && bay.seedLet && bay.seedFate >= 0) {   // R-451: its report in full over two lines (an older save's in short)
             SeedVerdict v; v.fate = bay.seedFate;
-            drawText(canvas, mx, y0 + 27, trunc(seedVerdictWords(v), 33).c_str(), v.takes() ? HUD_GREEN : HUD_RED);
-        }
+            const std::vector<std::string> lines = wrapText(v.takes() || bay.seedWhy.empty() ? "REPORT: " + seedVerdictWords(v) : bay.seedWhy, 33);
+            for (size_t i = 0; i < lines.size() && i < 2; i++) drawText(canvas, mx, y0 + 18 + 9 * (int)i, lines[i].c_str(), v.takes() ? HUD_GREEN : HUD_RED);
+        } else drawText(canvas, mx, y0 + 18, rep.c_str(), HUD_DIM);
         if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 10, "S SEEDS  ESC BACK", HUD_DIM);
         return;
     }
@@ -517,7 +514,7 @@ void Game::renderDroneBay() {
     std::sort(order.begin(), order.end(), [&](int a, int c) { return finds[a]->t > finds[c]->t; });
     const int rows = 4, y0 = my + mh + 24;
     if (finds.empty()) {
-        static const char* const help[] = {"EACH DRONE BRINGS 2 TO 8 FINDS", "THE SHIP LACKS. 2 MINUTES DOWN", "THERE, THEN 5 MINUTES CHARGING", "S SEEDS A WORLD FROM A FULL FLASK"};
+        static const char* const help[] = {"EACH DRONE BRINGS 2 TO 8 FINDS", "THE SHIP LACKS, AFTER 2 MINUTES", "DOWN THERE", "S SEEDS A WORLD FROM A FLASK"};
         for (int i = 0; i < rows; i++) drawText(canvas, mx, y0 + i * 9, help[i], HUD_DIM);
     } else {
         bay.listTop = std::max(0, std::min(bay.listTop, (int)finds.size() - rows));

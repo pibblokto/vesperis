@@ -321,7 +321,7 @@ void Game::renderSurfaceHUD() {
         else if (surf.nearShard.index >= 0) use = std::string(RECORD_MEDIUM_HUD[clampi(surf.nearShard.medium, 0, RM_COUNT - 1)]) + " - E";   // C-03; T-04: the object ("A CODEX - E")
         if (!use.empty()) act.push_back({use, HUD_AMBER});
         if (surf.nearGrave.k >= 0) act.push_back({fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()), HUD_AMBER});   // the stone's name and years
-        if (surf.lifeTarget.species >= 0) act.push_back({trunc(upper(animalNameOf(surf.lifeTarget.species)), 30) + " - N", HUD_AMBER});   // J-07: N names it
+        if (surf.lifeTarget.species >= 0) act.push_back({trunc(upper(animalNameOf(surf.lifeTarget.species)), 28) + " - SHIFT+N", HUD_AMBER});   // J-07, R-452: Shift+N names it
         for (size_t i = 0; i < act.size(); i++) drawTextShadow(canvas, UW - 8 - textWidth(act[i].first.c_str()), UH - 32 - 8 * (int)i, act[i].first.c_str(), act[i].second, HUD_SHADOW);
         // stamina bar and pulse (hidden while driving or flying)
         int bx = UW - 68, by = UH - 24;

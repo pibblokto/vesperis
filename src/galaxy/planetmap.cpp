@@ -135,7 +135,7 @@ static void tidalFlat(const BodyGen& g, const Vec3& unit, double detailM, Surfac
 // the globe, the maps and the ground draw one edge. J-03: a tint on the waters (a dye's, a glow's) where the spreads' lines live: the
 // waters of their salt, the land, the band of warmth (a spread's share where its line lives, the greatest of those that colour)
 double madeMeanAt(const BodyGen& g, const MadeWorld& m, const Vec3& unit, const SurfaceSample& s, bool wet, int salt) {
-    const double c = placeMeanC(g, m.tempK, m.sunless, unit, wet ? s.water : s.height);
+    const double c = placeMeanC(g, m.tempK, m.sunless, unit, wet ? s.water : s.height) + m.warmC;   // (KI-457: at the warmth its air made)
     return wet ? std::max(c, m.freezeC - (salt >= 1 ? 2.0 : 0.0)) : c;   // a sea's never under its freezing
 }
 
@@ -152,18 +152,32 @@ static RGB madePlantColour(const MadeWorld& m, RGB c, const RGB& straw) {
 }
 // J-11: a made kind's dead cover in the dead kind's colours: its sand's and snow's families the scorched felisian's (sand, the old seas' salt) or
 // the frozen felisian's (the dead soil, the frost), its rock, waters and plants the world's own
+// KI-484: a made snowball's sea ice the frozen felisian's blue, in the grass bank as its own is (`matFamilyOnGen`; no grass is left under the frost)
 static bool deadCoverColour(int cover, int mat, RGB& c) {
     const int fam = matFamily(mat);
+    if (cover == DC_FROZEN && (mat == MAT_ICE || fam == FAM_GRASS)) {
+        const KindDef& F = KINDS[PT_FROZEN_FELISIAN];
+        for (int i = 0; i < F.nPalette; i++)
+            if (F.palette[i].mat == MAT_ICE && F.palette[i].mode == MM_CONST) { c = F.palette[i].c; return true; }
+    }
     if (cover == DC_NONE || (fam != FAM_SAND && fam != FAM_SNOW)) return false;
     const KindDef& K = KINDS[cover == DC_SCORCHED ? PT_SCORCHED_FELISIAN : PT_FROZEN_FELISIAN];
     for (int i = 0; i < K.nPalette; i++)
         if (K.palette[i].mat == K.famRep[fam] && K.palette[i].mode == MM_CONST) { c = K.palette[i].c; return true; }
     return false;
 }
-RGB madeMatColour(const BodyGen& g, int mat) {
+RGB madeMatColour(const BodyGen& g, int mat, int line) {
     const RGB c = g.matColor[mat];
     const MadeWorld& m = g.made;
-    if (madeGrowthMaterial(mat) && m.growthLine >= 0 && m.growthLine < MADE_LINES) return m.spread[m.growthLine].growth.colour;   // J-09: the overgrowth's
+    if (madeGrowthMaterial(mat) && m.growthLine >= 0 && m.growthLine < MADE_LINES) {   // J-09: the overgrowth's (KI-473: the line's own where it lies)
+        const bool own = line >= 0 && line < m.lines && line < MADE_LINES && m.spread[line].growth.on();
+        return m.spread[own ? line : m.growthLine].growth.colour;
+    }
+    if (mat == MAT_GRASS && m.green > 0 && madeGreens(g.type)) {   // J-15: a carpet's grass and shrubs in its own colour (its line's where it lies)
+        int k = line >= 0 && line < m.lines && line < MADE_LINES && m.spread[line].growth.greens ? line : -1;
+        for (int i = std::min(m.lines, MADE_LINES) - 1; i >= 0 && k < 0; i--) if (m.spread[i].growth.greens) k = i;
+        if (k >= 0) return m.spread[k].growth.plants;
+    }
     RGB dead;
     if (m.kind != MDK_NONE && deadCoverColour(m.deadCover(), mat, dead)) return dead;   // J-11
     if (mat == MAT_WATER && m.seaShade > 0) return lerp(c, m.seaShadeTint, (float)(0.8 * m.seaShade));   // J-05: every water turned by a sulphide
@@ -181,13 +195,18 @@ RGB madeLifeTint(const BodyGen& g) {
     if (g.made.sour <= 0 || !g.hasTrait(TR_REEFS)) return g.lifeTintColour;
     return lerp(g.lifeTintColour, RGB(0.86f, 0.88f, 0.84f), (float)(0.75 * g.made.sour));   // J-05: a sour sea's reefs bleached
 }
-RGB madeColourAt(const BodyGen& g, int mat, double share) {
+RGB madeColourAt(const BodyGen& g, int mat, double share, int line) {
     const MadeWorld& m = g.made;
+    const MadeSpread* sp = line >= 0 && line < m.lines && line < MADE_LINES ? &m.spread[line] : nullptr;
     if (share > 0.5 && mat != MAT_LAVA && !madeGrowthMaterial(mat)) {   // (J-09: an overgrowth's cover its own colour)
-        if (mat == MAT_WATER || (m.tinted && (m.tintOn & MADE_ON_LAND))) { if (m.tinted) return m.tint; }
-        else if (const MadeLook* L = m.lookOf(madeClassOf(g, mat, false))) { if (L->tinted) return L->tint; }
+        if (mat == MAT_WATER || (m.tinted && (m.tintOn & MADE_ON_LAND))) { if (m.tinted) return mat == MAT_WATER && sp && sp->waterTinted ? sp->waterTint : m.tint; }
+        else {
+            const int cls = madeClassOf(g, mat, false);
+            const MadeLook* L = sp && sp->look[cls].on ? &sp->look[cls] : m.lookOf(cls);
+            if (L && L->tinted) return L->tint;
+        }
     }
-    return madeMatColour(g, mat);
+    return madeMatColour(g, mat, line);
 }
 
 // J-05: the salt of the water a shore lies by (a river's or a lake's bank, the sea's flats), -1 none: ground within MADE_SHORE_M over it
@@ -225,10 +244,14 @@ static void madeGrowth(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
         if (c < sp.tLo || c > sp.tHi) return;
     }
     const bool forest = s.material == MAT_FOREST;
-    s.material = G.material;
+    s.material = G.material; s.madeLine = line;   // (KI-473: its own colour where it lies)
     s.albedo = clampd(0.25 + 0.6 * (0.2126 * G.colour.r + 0.7152 * G.colour.g + 0.0722 * G.colour.b), 0.05, 0.9);
     s.scree = 0;
     if (!forest) s.veg = 0;
+    if (G.greens) {   // J-15: a carpet on a dry world grows grass and shrubs where it lies, from MADE_GREEN_AFTER steps behind its edge, thicker after
+        double thick;
+        if (madeGreenAt(m, line, unit, g.seed, thick) >= 0.5) { s.material = MAT_GRASS; s.veg = 0.32 + 0.33 * thick; s.albedo = 0.36 + 0.2 * s.veg; s.madeTint = 0; }   // (over a land look)
+    }
 }
 
 static void madeGround(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
@@ -237,19 +260,26 @@ static void madeGround(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
     const MadeWorld& m = g.made;
     if (!wet || (m.tintOn & MADE_ON_WATER)) {   // (the cover never lies on water)
         const int salt = wet ? madeSaltAt(g, s) : 0;
-        double k = 0, meanC = 0;
+        // KI-460: the line whose colour lies here: of those that colour it (a dye, a look), the one of the greatest share, the latest on a tie;
+        // where none does, the one that lights it
+        double k = 0, kc = 0, meanC = 0;
+        int bestW = -1, bestC = -1;
         bool warmth = false;
-        for (int i = 0; i < m.lines && i < MADE_LINES && k < 1; i++) {
+        for (int i = std::min(m.lines, MADE_LINES) - 1; i >= 0 && kc < 1; i--) {
             const MadeSpread& sp = m.spread[i];
             if (!sp.looks || (wet && !((sp.lookWaters >> clampi(salt, 0, 2)) & 1))) continue;   // (J-05: a rust's look on its fresh waters alone)
             const double r = madeSpreadAt(m, i, unit, g.seed);
-            if (r <= k) continue;
+            if (r <= k && (!sp.waterColours || r <= kc)) continue;
             if ((sp.tLo > -1e8 || sp.tHi < 1e8) && !warmth) { meanC = madeMeanAt(g, m, unit, s, wet, salt); warmth = true; }   // the place's mean warmth, once
-            if (madeLives(sp, wet, salt, meanC)) k = r;
+            if (!madeLives(sp, wet, salt, meanC)) continue;
+            if (r > k) { k = r; bestW = i; }
+            if (sp.waterColours && r > kc) { kc = r; bestC = i; }
         }
+        const bool coloured = bestC >= 0 && kc > 0.5;
+        if (coloured) bestW = bestC;
         if (k > 0) {
             if (!wet && m.cover >= 0 && k >= 0.5) { s.material = m.cover; s.albedo = m.coverAlbedo; s.veg = 0; s.scree = 0; }
-            if (m.tinted && (m.tintOn & (wet ? MADE_ON_WATER : MADE_ON_LAND))) s.madeTint = k;
+            if (m.tinted && (m.tintOn & (wet ? MADE_ON_WATER : MADE_ON_LAND))) { s.madeTint = coloured ? kc : k; s.madeLine = bestW; }   // (KI-460: its line's own colour at its share)
         }
     }
     if (wet || (m.tinted && (m.tintOn & MADE_ON_LAND))) return;   // (the test layer's tint is its land's look)
@@ -259,30 +289,37 @@ static void madeGround(const BodyGen& g, const Vec3& unit, SurfaceSample& s) {
     const MadeLook* L = m.lookOf(cls);
     if (!L || !L->on) return;
     const int shoreSalt = cls == MC_LAND ? madeShoreSalt(g, s) : -1;
-    double k = 0, meanC = 0;
-    int best = -1;
+    // KI-460: the line whose look lies here: of those whose look shows a colour (or a forest's glow), the one of the greatest share, the latest
+    // on a tie; else the one of the greatest share
+    double k = 0, kt = 0, meanC = 0;
+    int best = -1, bestT = -1;
     bool warmth = false;
-    for (int i = 0; i < m.lines && i < MADE_LINES && k < 1; i++) {
+    for (int i = std::min(m.lines, MADE_LINES) - 1; i >= 0 && kt < 1; i--) {
         const MadeSpread& sp = m.spread[i];
         if (!((sp.makes >> cls) & 1) || (cls == MC_LAND && !madeLandOn(sp.landOn, s.material, shoreSalt))) continue;
         const double r = madeSpreadAt(m, i, unit, g.seed);
-        if (r <= k) continue;
+        const bool shows = sp.look[cls].tinted || (cls == MC_PLANTS && sp.plantsGlow() > 0);
+        if (r <= k && (!shows || r <= kt)) continue;
         if (!warmth) { meanC = madeMeanAt(g, m, unit, s, false, 0); warmth = true; }
         bool lives;
         if (cls == MC_PLANTS) lives = sp.plants && meanC > sp.tLo && meanC < sp.tHi && meanC < sp.coldC;
         else if (cls == MC_LAND && (sp.landOn & ML_SHORE)) lives = ((sp.waters >> clampi(shoreSalt, 0, 2)) & 1) && meanC > sp.tLo && meanC < sp.tHi;
         else lives = madeLives(sp, false, 0, meanC);
-        if (lives) { k = r; best = i; }
+        if (!lives) continue;
+        if (r > k) { k = r; best = i; }
+        if (shows && r > kt) { kt = r; bestT = i; }
     }
-    if (k > 0 && cls == MC_PLANTS && m.plant.kind == MP_BLIGHT && m.plant.variant < 2) {   // a blight in spots (a hundred metres or so) or stands (a kilometre or two)
+    if (bestT >= 0 && kt > 0.5) { best = bestT; k = kt; }
+    const MadeLook* own = best >= 0 && m.spread[best].look[cls].on ? &m.spread[best].look[cls] : L;   // KI-460: the line's own look where it lies
+    if (k > 0 && cls == MC_PLANTS && own->kind == MP_BLIGHT && own->variant < 2) {   // a blight in spots (a hundred metres or so) or stands (a kilometre or two)
         const Vec3 p = unit * g.R;
-        k *= m.plant.variant == 0 ? smoothstep(0.2, 0.3, fbm3(p / 0.12, g.sG + 351, 2)) : smoothstep(-0.05, 0.05, fbm3(p / 1.5, g.sG + 352, 3));
+        k *= own->variant == 0 ? smoothstep(0.2, 0.3, fbm3(p / 0.12, g.sG + 351, 2)) : smoothstep(-0.05, 0.05, fbm3(p / 1.5, g.sG + 352, 3));
     }
     if (k <= 0) return;
-    s.madeTint = k;
+    s.madeTint = k; s.madeLine = best;
     if (k < 0.5) return;
     if (cls == MC_LAND && m.spread[best].cover >= 0) { s.material = m.spread[best].cover; s.albedo = m.spread[best].coverAlbedo; s.veg = 0; s.scree = 0; }
-    if (L->albedo > 0) s.albedo = cls == MC_SNOW ? std::min(s.albedo, L->albedo) : L->albedo;   // a chalk's white, a glass's, a dark ice's grey
+    if (own->albedo > 0) s.albedo = cls == MC_SNOW ? std::min(s.albedo, own->albedo) : own->albedo;   // a chalk's white, a glass's, a dark ice's grey
 }
 
 SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) {
@@ -361,7 +398,9 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         // a landform's material (rock walls, basalt sheets, salt, crystal) over the kind's own, never over lava
         if (lo.mat >= 0 && s.material != MAT_LAVA && s.material != MAT_WATER) { s.material = lo.mat; if (lo.albedo >= 0) s.albedo = lo.albedo; }
         // TR_EXOTIC_SEAS: the ground under the liquid's level is sea
-        if (g.liquidLevel > -1e8 && s.height < g.liquidLevel && s.material != MAT_LAVA) { s.material = MAT_WATER; s.water = g.liquidLevel; s.albedo = 0.22; s.glow = 0; }
+        if (g.liquidLevel > -1e8 && s.height < g.liquidLevel && s.material != MAT_LAVA && !(g.made.on() && g.made.dried())) {   // (KI-458: none on a made hothouse)
+            s.material = MAT_WATER; s.water = g.liquidLevel; s.albedo = 0.22; s.glow = 0;
+        }
     }
     if (g.tideRangeM > 0 && !(g.made.on() && g.made.deadCover() != DC_NONE)) tidalFlat(g, unit, detailM, s);   // (J-11: no tide on a made kind's dry or frozen seas)
     qualityWater(g, unit, detailM, s);
@@ -384,6 +423,7 @@ void PlanetMap::generate(const BodyGen& g) {
     wtint.assign(tints ? W * H : 0, 0); ltint.assign(tints ? W * H : 0, 0);
     const bool madeTints = g.made.on() && g.made.shares();   // J-02; J-05: the land's, the snow's and the plants' looks too
     mtint.assign(madeTints ? W * H : 0, 0);
+    mline.assign(madeTints || (g.made.on() && g.made.grown()) ? W * H : 0, 0);
     double detail = TAU * g.R * 1000.0 / W * 0.6;
     for (int y = 0; y < H; y++) {
         double lat = (0.5 - (y + 0.5) / H) * PI;
@@ -398,6 +438,7 @@ void PlanetMap::generate(const BodyGen& g) {
             veg[i] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
             if (tints) { wtint[i] = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); ltint[i] = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255); }
             if (madeTints) mtint[i] = (uint8_t)clampi((int)(s.madeTint * 255 + 0.5), 0, 255);
+            if (!mline.empty()) mline[i] = (uint8_t)(s.madeLine + 1);
             cloud[i] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon, lat) * 255 + 0.5), 0, 255);
             // a polar vortex pattern on gas giants
             if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG)

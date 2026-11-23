@@ -179,6 +179,23 @@ void unitSeedingRecord(const Check& check) {
         p.testCatCounts();
         const bool plain = pd == 0 && pw == 0 && pa == animals && p.testCat().counts.worlds == 0;
         remove(p.guidePath.c_str());
+        {   // KI-482: the made kind named beyond the data sheet and the catalogue: the target's label, the analyzer's and the telescope's short
+            // name, the orbit's and the landing's log words, the tree's page; every kind's short name ten characters at most
+            const MadeWorld made = g.testMadeNow(bi);
+            const std::string full = madeKindName(made), shortName = madeKindShort(made), once = full + ", ONCE " + KINDS[S.bodies[bi].type].name;
+            bool fits = true;
+            for (int k = MDK_NONE + 1; k < MDK_COUNT; k++)
+                for (int t = 0; t < (k == MDK_OVERGROWN ? OG_COUNT : 1); t++) {
+                    MadeWorld m; m.kind = k; m.kindGrowth = t;
+                    fits = fits && !madeKindShort(m).empty() && madeKindShort(m).size() <= 10 && !madeKindName(m).empty();
+                }
+            const std::string label = upper(g.bodyLabelOf(bi)), tele = g.testTelescopeLineOf(bi), page = g.testTreeWorldWords(world, S.bodies[bi].type);
+            const bool named = !full.empty() && g.kindNameNow(bi) == full && g.kindShortNow(bi) == shortName && g.kindWordsNow(bi) == once &&
+                               label.find(full) != std::string::npos && tele.find(shortName) != std::string::npos && page.find(full) != std::string::npos;
+            check("seeding: a made kind named", named && fits,
+                  fmt("(%s: the label \"%s\", the telescope \"%s\", the log \"%s\", the tree's page \"%s\"; every short name %s)", full.empty() ? "NO MADE KIND" : full.c_str(),
+                      label.c_str(), tele.c_str(), g.kindWordsNow(bi).c_str(), page.c_str(), fits ? "ten characters at most" : "TOO LONG OR EMPTY"));
+        }
         check("seeding: the record", !out.empty() && died == (int)out.size() && wild == 1 && animals >= 2 && goneRows == 1 && headRight && N.worlds == 1 && N.sent == 1 && N.took == 1 &&
                       N.diedOut == died && N.gone == 1 && (int)N.kinds.size() == (kind.empty() ? 0 : 1) && lentMarked && lentCount == N.diedOut - 1 && plain,
               fmt("(the catalogue: \"%s\", %d of %zu natives died out marked DIED OUT, %d line SEEDED, %d animals (%d GONE); a friend's lent sheet %s, the count %d then; "

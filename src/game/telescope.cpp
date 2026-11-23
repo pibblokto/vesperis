@@ -148,7 +148,7 @@ std::string Game::telescopeTargetLine(bool plain) const {
     if (id >= 0 && sys.valid && id < (int)sys.bodies.size()) {
         const Body& b = sys.bodies[id];
         std::string kind =
-                b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : std::string(shortType(b.type)) + (b.parent >= 0 ? " MOON" : "");
+                b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : kindShortNow(id) + (b.parent >= 0 ? " MOON" : "");
         return fmt("%s  %s  %s  %s", trunc(telescopeTargetName(id), 18).c_str(), kind.c_str(), distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
     }
     if (id == TELE_SUN && sys.valid)

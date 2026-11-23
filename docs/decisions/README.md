@@ -17,21 +17,24 @@ before changing anything there.
   genomes and the tree, the made species.
 - `rules-life-lab.md`: the search (samples, the kit, the ultraviolet, the signs) and the microscope (lists by world and folder,
   the four things done to a slide and how the cells answer).
-- `rules-life-cultures.md`: the incubator (flasks, their names and choosers) and the culture collection (kept automatically and
-  by hand).
+- `rules-life-cultures.md`: the incubator (flasks, their names and choosers; J-13: the coldest a line grows) and the culture collection
+  (kept automatically and by hand).
 - `rules-life-record.md`: the sequencer and the tree; the record (the catalogue, the counts).
 - `rules-life-genes.md`: genes (a genesis's map and code, a species' genes read from what it is, edit values, cuts), the gene
   editor and its lines, learning what a gene does.
 - `rules-life-world.md`: the world genes (places 19 to 32, their wild values, what they do in a flask and how the lab shows them) and the
   seeded worlds' layer (what a seeding made of a world, where it is read and what keeps the world as generated): the J series.
-- `rules-life-seeding.md`: sending a culture down (the drone bay's seed trip, the verdict, the drift, the spread) and a seeded world's
-  record, J-12 on (the natives died out, a line found wild, the catalogue's rows and the LIFE page's, auto-explore).
+- `rules-life-seeding.md`: sending a culture down (the drone bay's seed trip, the verdict, the drift, the spread; J-13: a place at its own
+  warmth, down a drill hole; J-14: up into a cloud deck) and a seeded world's record, J-12 on (the natives died out, a line found wild, the
+  catalogue's rows and the LIFE page's, auto-explore).
 - `rules-life-made.md`: what a seeded world is made into, J-04 on: the made air and its climate (each gas's answer by its world, a
-  runaway, what lift carries up, the caps, the snow and the plants moved) and how it is drawn.
+  runaway, what lift carries up, every kind's caps, the snow and the plants moved), the waters', the ground's and the plants' looks.
+- `rules-life-made-drawn.md`: how a seeded world's made traits are drawn, J-04 on: the sky and clouds, the banks the made colours take on
+  the ground and on the globe (a line each), the maps' ramps.
 - `rules-life-overgrowth.md`: what a seeded line's overgrowth makes of a world, J-09 on: its cover and structures, the ruins it takes and
-  crumbles, its sounds.
+  crumbles, its sounds; J-15: a desert's carpet growing grass and shrubs.
 - `rules-life-kinds.md`: a seeded world's made kind, J-11 on: the lines each kind passes (a hothouse, a snowball, the overgrown and the
-  rest), the dead covers laid over a living ground, the data sheet's kind line.
+  rest; J-15: a greened desert), the dead covers laid over a living ground, the data sheet's kind line.
 - `rules-peoples.md`: who lived where and when, the plan and the history, what stands on the ground, buildings and the genome.
 - `rules-peoples-grammar.md`: where the records lie, signals and charts, texts and their draws, the grammar's files, tongues.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and screens, controls and the frame, auto-explore.

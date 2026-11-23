@@ -36,8 +36,6 @@ void buggyModel(std::vector<DronePrim>& out);
 void capsuleDroneModel(std::vector<DronePrim>& out);
 
 constexpr double DRONE_SEARCH_S = 120;     // C-18 (the user's, 2026-10-11): two minutes down there, from the first place a drone searches to its last
-constexpr double DRONE_COOLDOWN_S = 300;   // C-18: five minutes charging from the drones' return to the next launch (real time; the user's, 2026-10-11:
-                                           // "2 minutes + 5 minutes recharge", at first five minutes from launch to launch)
 
 struct DroneFindRec { int kind = 0, index = 0, people = 0, medium = -1, place = -1; double t = 0; std::string name; bool aboard = false; };
 struct DroneStopRec { int place = -1, sclass = -1; double lat = 0, lon = 0; double arrive = 0, leave = 0; };
@@ -56,7 +54,6 @@ struct DroneBay {
     bool recalled = false;                         // the last trip was called back
     uint64_t starSeed = 0; int body = -1; std::string worldKey, worldName;
     uint64_t seed = 0;
-    double back = 0;                               // the clock when the last trip ended (its last dock, or the recall): the charge runs from it
     double subLat = 0, subLon = 0;                 // the ground under the ship at the launch (radians)
     DroneRun run[DRONE_COUNT];
     // the parked world's items (`droneWorldOf`, read on the thread below)
@@ -71,12 +68,17 @@ struct DroneBay {
     std::string seedLine, seedEdits, seedName, seedPlace;
     Medium seedMedium;
     double seedLat = 0, seedLon = 0;
+    double seedDepth = 0;                          // J-13 (R-454): how far down it lets the culture go (0 on the ground; `bayseeddepth`); J-14: under 0, up
     bool seedLet = false;
     int seedFate = -1;                             // its verdict as it was let go (life/seeding.h's `SeedFate`; -1 not yet)
-    // the seed page: the flask chosen (its index; -1 none shows FULL), the place under its cursor (radians) and what lies there
-    int pageFlask = -1;
+    std::string seedWhy;                           // R-451: its verdict in full ("TOO COLD: IT GROWS FROM 7 C, THE PLACE IS -40 C"; `bayseedwhy`)
+    // the seed page: the culture chosen (B-473: its flask times two plus which of its two; -1 none alive), the place under its cursor (radians)
+    // and what lies there
+    int pagePick = -1;
     double pageLat = 0, pageLon = 0;
-    std::string pagePlace;
+    int pageDepth = 0;                             // J-13: the depth chosen (`seedDepthsOf`'s index: 0 the ground), Page Down deeper; J-14: under 0 a
+                                                   // height in the clouds (`seedHeightsOf`'s, -1 the lowest), Page Up higher
+    std::string pagePlace, pageWhere;              // R-451: what lies under it, and what it gives a culture (`seedPlaceWords`)
 };
 
 // a find's guide key ("<body>/S<index>", "<body>/I<id>")

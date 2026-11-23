@@ -286,7 +286,7 @@ bool sameCulture(const KeptCulture& a, const KeptCulture& b);   // R-440: one sp
 // grew in and its world's, where it came from), the edits made (each gene once), the gene chosen (its place on the map) and its working part's
 // letter, the writing (on the lab's clock, EDIT_S; the edits written), its chooser (the cultures' rows by folder); made again (not saved): its
 // genes, its genesis's code, its kind and form, the same with its edits, its words
-constexpr double EDIT_S = 120;   // the writing of a line (about two minutes on the lab's clock)
+constexpr double EDIT_S = 10;    // the writing of a line: ten seconds on the lab's clock (R-449; Y-02 had two minutes)
 struct EditorChoice { FlaskSpecies who; Medium medium, asWorld; std::string line, from; bool read = false; };
 struct EditorState {
     bool on = false;
@@ -312,6 +312,9 @@ struct EditorState {
     bool kinOn = false; FlaskSpecies kin; std::string kinFrom, kinName; double kinAlike = 0;
     MicrobeGenes kinGenes; CultureKind kinKind; Morph kinForm;
     int choosingFor = 0;
+    // R-450: the guide's choices with the letters open, what each letter of the alphabet at the cursor would make of the gene (made again as the
+    // edits, the gene or the cursor change: `editorLetterChoices`)
+    std::string guideKey; std::vector<std::string> guideIf;
 };
 enum EditorChoosing { EC_CULTURE = 0, EC_KIN, EC_MOVE };
 struct LabState {

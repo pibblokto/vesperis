@@ -146,6 +146,9 @@ struct Building {
     // whether it stands in a row or a compound (its neighbours at its sides: no turrets on its corners, no garden behind it)
     double yard = 0;
     bool joined = false;
+    // KI-480: how far a seeded stone rotter has eaten this building's stone, brick and concrete (0..1, over its culture's `stoneRot`): the
+    // surface sets it building by building where the rotter's line lives
+    double stoneRot = 0;
 };
 // A-04: what a building stands on, by its people's relation to the land: the ground; stilts (its room the ground under its floor); a
 // mound (B-416: nothing drawn round it: its earth bank, as wide as the building's longest side, ran over its neighbours); a pit it is

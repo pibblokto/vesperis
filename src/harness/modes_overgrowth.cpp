@@ -438,20 +438,38 @@ MadeWorld pitsLayer(double radiusKm, const Vec3& place, int steps) {
 }
 // what the cover grew on the settlements within two cells of a point: the climb's least and most over their buildings, their membranes,
 // nodules and drapes, their pieces
-struct RuinsGrown { int cells = 0, buildings = 0, covered = 0, membranes = 0, nodules = 0, drapes = 0, pieces = 0; double lo = 1e9, hi = -1; };
+// KI-477: and the most the climb differs between the walls of one building; KI-478: the arches' bays standing and those grown shut, beside the
+// doorways and windows grown shut
+struct RuinsGrown {
+    int cells = 0, buildings = 0, covered = 0, membranes = 0, nodules = 0, drapes = 0, pieces = 0, bays = 0, baysShut = 0, doorsShut = 0;
+    double lo = 1e9, hi = -1, spread = 0;
+};
 RuinsGrown ruinsGrown(const SurfaceView& sv, double x, double z) {
     RuinsGrown R;
     sv.forNearbyRuins(x, z, 2, [&](const Ruin&, const SurfaceView::RuinCell& c, int) {
         R.cells++; R.buildings += (int)c.spec.buildings.size(); R.pieces += (int)c.elems[0].size();
         for (size_t b = 0; b + 1 < c.climb.size(); b++)
             if (c.climb[b] >= 0) { R.covered++; R.lo = std::min(R.lo, (double)c.climb[b]); R.hi = std::max(R.hi, (double)c.climb[b]); }
-        for (const Form& f : c.elems[0]) { R.membranes += f.growth == FG_MEMBRANE; R.nodules += f.growth == FG_NODULE; R.drapes += f.growth == FG_DRAPE; }
+        std::vector<double> lo(c.climb.size(), 1e9), hi(c.climb.size(), -1e9);
+        std::vector<FormOpening> bays;
+        for (const Form& f : c.elems[0]) {
+            R.membranes += f.growth == FG_MEMBRANE; R.nodules += f.growth == FG_NODULE; R.drapes += f.growth == FG_DRAPE;
+            if (f.growth == FG_MEMBRANE) (f.p[0] >= 1 ? R.baysShut : R.doorsShut)++;
+            if (f.kind == FK_ARCH && f.part != FORM_PART_GROWTH) archOpenings(f, bays);
+            if (f.kind == FK_BOX && f.part == 0 && f.building >= 0 && f.building < (int)c.climb.size() && c.climb[f.building] >= 0) {
+                const double k = SurfaceView::pieceClimb(c, f.building, f.x, f.z, f.seed);
+                lo[f.building] = std::min(lo[f.building], k); hi[f.building] = std::max(hi[f.building], k);
+            }
+        }
+        R.bays += (int)bays.size();
+        for (size_t b = 0; b < lo.size(); b++) if (hi[b] > lo[b]) R.spread = std::max(R.spread, hi[b] - lo[b]);
     });
     return R;
 }
 std::string ruinsGrownLine(const RuinsGrown& R) {
     if (!R.covered) return fmt("%d settlements, %d buildings, none covered", R.cells, R.buildings);
-    return fmt("%d settlements, %d of %d buildings covered %.1f to %.1f m up, %d membranes, %d nodules, %d drapes", R.cells, R.covered, R.buildings, R.lo, R.hi, R.membranes,
+    return fmt("%d settlements, %d of %d buildings covered %.1f to %.1f m up (walls of one building up to %.1f m apart), %d membranes (%d doorways and windows, "
+               "%d of %d arches' bays), %d nodules, %d drapes", R.cells, R.covered, R.buildings, R.lo, R.hi, R.spread, R.membranes, R.doorsShut, R.baysShut, R.bays,
                R.nodules, R.drapes);
 }
 }   // namespace
@@ -537,6 +555,10 @@ int overgrowthRuins() {
             run(0.6);
             writePNG(file.c_str(), g.output(), FBW, FBH);
             framed++;
+            int covered = 0, shut = 0, lit = 0;
+            S.testCoverFaces(covered, shut, lit);
+            if (covered + shut + lit > 0) printf("      %s: %d faces drawn wholly under the cover, %d with windows grown shut, %d lit at night\n", file.substr(file.rfind('/') + 1).c_str(),
+                                                 covered, shut, lit);
         };
         auto street = [&]() { S.leaveFreeCam(); S.player.x = ix; S.player.z = iz; S.player.y = S.site.surfaceHeight(ix, iz); g.testSurfaceFace(toward, 0.1); };
         auto above = [&]() {   // 30 m up, 90 m off the building on the landing's side, looking at its foot
@@ -558,7 +580,10 @@ int overgrowthRuins() {
         }
         for (int step : {9, 14, 20, 32}) {
             wanted += which == 0 ? 2 : 1;
-            if (step != 9) growthLayerOn(S, growthAtStep(Rkm, place, flesh, step));
+            if (step != 9) {   // (the game's layer too: it hands the ground's ruins the world now)
+                const MadeWorld L = growthAtStep(Rkm, place, flesh, step);
+                g.testMadeSet(w.body, L); growthLayerOn(S, L);
+            }
             printf("    step %2d: %s\n", step, ruinsGrownLine(ruinsGrown(S, ix, iz)).c_str());
             if (which == 0) { street(); frame(fmt("shots/tests/overgrowth/ruins_city_%02d_street.png", step)); }
             above(); frame(fmt("shots/tests/overgrowth/ruins_%s_%02d.png", name, step));
@@ -584,6 +609,48 @@ int overgrowthRuins() {
                 } else printf("    no doorway grown shut near\n");
             }
         }
+    }
+    {   // KI-481: the scene's town (as if left 300 years ago) at night (the sun 25 degrees under) under a wet flesh whose veins glow, fourteen steps
+        // on, from 30 m up 90 m off its biggest building: its cover's light on the walls taken and on its pieces (the test world's cities lie in a
+        // day that does not end)
+        StarSystem ts; SurfaceView sv; StarNeighborhood nb; SpaceRenderer sr; double t = 0;
+        wanted++;
+        if (setupSceneForType(-1, 25, -25 * DEG, 0.6, -0.05, sv, ts, nb, t, SCENE_TOWN)) {
+            sv.flocks.clear(); sv.critters.clear();
+            const SurfaceView::RuinCell* near[SurfaceView::SETTLEMENTS_NEAR];
+            const int n = sv.settlementsNear(sv.player.x, sv.player.z, near);
+            const SurfaceView::RuinCell* town = nullptr;
+            for (int i = 0; i < n; i++) if (!town || near[i]->spec.buildings.size() > town->spec.buildings.size()) town = near[i];
+            if (town) {   // (the town as if its people ended 300 years ago, its walls standing, laid out beside it on dry ground)
+                Culture young = sv.cultures[town->spec.people == 1 && sv.peoples > 1 ? 1 : 0];
+                young.ageYears = young.weatherYears = 300; young.decay = decayOf(300, young.wet);
+                RuinSpec spec = town->spec; spec.people = 0;
+                std::vector<Form> P[3]; std::vector<FormOpening> openings;
+                for (int l = 0; l < 3; l++) ruinElements(spec, young, l, P[l], l == 0 ? &openings : nullptr);
+                double tx = town->r.x, tz = town->r.z;
+                for (int k = 0; k < 8; k++) {
+                    const double x = town->r.x + std::sin(k * TAU / 8) * (spec.size + 400), z = town->r.z + std::cos(k * TAU / 8) * (spec.size + 400);
+                    const SurfaceSample q = sampleSurface(sv.site.gen, sv.site.unitAt(x, z), 16);
+                    if (q.material != MAT_WATER && q.material != MAT_SNOW && q.material != MAT_ICE && !(q.water > -1e8 && q.height < q.water + 2)) { tx = x; tz = z; break; }
+                }
+                sv.testPlaceSettlement(tx, tz, spec, P, &openings);
+                const MadeGrowth glowing = growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, true, false);
+                growthLayerOn(sv, growthAtStep(ts.bodies[sv.site.body].radiusKm, sv.site.unitAt(tx, tz), glowing, 14));
+                double bx = tx, bz = tz, best = 0;
+                for (const Building& B : spec.buildings) if (B.hw * B.hd > best && B.kind < BK_MOUND) { best = B.hw * B.hd; bx = tx + B.x; bz = tz + B.z; }
+                sv.player.x = tx; sv.player.z = tz - spec.size - 30;
+                const double lx = sv.player.x, lz = sv.player.z, db = std::max(1.0, std::hypot(bx - lx, bz - lz));
+                sv.player.x = bx - (bx - lx) / db * 90; sv.player.z = bz - (bz - lz) / db * 90; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+                formsCamera(sv, 30.0, bx, sv.site.surfaceHeight(bx, bz) + 2, bz, t);
+                const std::vector<uint32_t> px = growthFrame(sv, nb, sr, t);
+                writePNG("shots/tests/overgrowth/ruins_night.png", px.data(), FBW, FBH);
+                framed++;
+                int covered = 0, shut = 0, lit = 0;
+                sv.testCoverFaces(covered, shut, lit);
+                printf("  the scene's town as if left 300 years ago at night (the sun %.0f degrees up, the cover's light %.2f): %d faces drawn wholly under the "
+                       "cover, %d with windows grown shut, %d lit at night\n", sv.env.sun.altitude / DEG, sv.growthGlow, covered, shut, lit);
+            } else printf("  no settlement by the town scene at night\n");
+        } else printf("  no town scene at night\n");
     }
     printf("overgrowth ruins: %d of %d frames  (%.1f s)\n", framed, wanted, nowSec() - t0);
     return framed == wanted && wanted > 0 ? 0 : 1;

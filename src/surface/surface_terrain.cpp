@@ -24,6 +24,7 @@ const GrainTexture* SurfaceView::mesoFor(int material) {
 // a sponge's pores, a lichen's knobs, a plated tissue's plates, a bony one's knobs), -1 the hashed look
 int SurfaceView::growthTexture(int material) const {
     const MadeWorld& m = site.gen.made;
+    if (material == MAT_CRUST) return m.on() && m.land.on && m.land.kind == MGT_CRUSTS ? m.land.variant : -1;   // KI-463: a made crust's form
     if (!madeGrowthMaterial(material) || m.growthLine < 0 || m.growthLine >= MADE_LINES) return -1;
     const MadeGrowth& G = m.spread[m.growthLine].growth;
     if (material != MAT_HARD) return G.texture;
@@ -195,14 +196,18 @@ void SurfaceView::drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) co
 void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const {
     albedo = v.albedo;
     bank = 0;
-    if (growthBank >= 0 && madeGrowthMaterial(v.material)) { bank = (uint8_t)growthBank; return; }   // J-09: an overgrowth's cover in its own bank
+    if (growthBank >= 0 && madeGrowthMaterial(v.material)) {   // J-09: an overgrowth's cover in its own bank (KI-473: its line's)
+        const int ln = v.mline - 1;
+        bank = (uint8_t)(ln >= 0 && ln < MADE_LINES && growthLineBank[ln] >= 0 ? growthLineBank[ln] : growthBank);
+        return;
+    }
     // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
     if (v.mtint > 127 && v.material != MAT_WATER && v.material != MAT_LAVA) {   // J-02: last of all
         if (site.gen.made.tinted && (site.gen.made.tintOn & MADE_ON_LAND)) { if (tintBankMade >= 0) { bank = (uint8_t)tintBankMade; return; } }   // (the test layer's land)
         else {   // J-05: the land's, the snow's or the plants' made look in its bank, at its family's albedo
-            const int cls = madeClassOf(site.gen, v.material, false);
+            const int cls = madeClassOf(site.gen, v.material, false), ln = v.mline - 1;
             if (madeBanks[cls] >= 0) {
-                bank = (uint8_t)madeBanks[cls];
+                bank = (uint8_t)(ln >= 0 && ln < MADE_LINES && madeLineBank[cls][ln] >= 0 ? madeLineBank[cls][ln] : madeBanks[cls]);   // (KI-460: its line's)
                 if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg;
                 else if (v.material == MAT_GRASS) albedo = 0.36 + 0.2 * v.veg;
                 else if (v.material == MAT_SNOW) albedo = site.gen.made.snow.albedo > 0 ? std::min((double)KINDS[site.gen.type].snowAlbedo, site.gen.made.snow.albedo) : KINDS[site.gen.type].snowAlbedo;
@@ -215,7 +220,7 @@ void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& al
     if (tintBankSnow >= 0 && v.material == MAT_SNOW && v.stint > 127) {   // Z-03: red snow, deeper where the algae are thicker
         bank = (uint8_t)tintBankSnow; albedo = KINDS[site.gen.type].snowAlbedo * (0.94 - 0.3 * (v.stint - 127) / 128.0); return;
     }
-    switch (matFamilyOn(site.gen.type, v.material)) {
+    switch (matFamilyOnGen(site.gen, v.material)) {
         case FAM_WATER: bank = 2; break;
         case FAM_FOREST: bank = 3; if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg; break;
         case FAM_GRASS: bank = 10; if (v.material == MAT_GRASS) albedo = 0.36 + 0.2 * v.veg; break;
@@ -344,8 +349,11 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     // M10-10 quantised speculars on ice, quartz and snow
     double spec = 0;
     const bool growth = madeGrowthMaterial(tv.material);
+    const int gl = tv.mline - 1;   // (KI-473: its own line's gloss and light)
+    const double gWet = growth && gl >= 0 && gl < MADE_LINES && growthLineBank[gl] >= 0 ? growthLineWet[gl] : growthWet;
+    const double gGlow = growth && gl >= 0 && gl < MADE_LINES && growthLineBank[gl] >= 0 ? growthLineGlow[gl] : growthGlow;
     if ((tv.material == MAT_ICE || tv.material == MAT_QUARTZ || tv.material == MAT_SNOW || tv.material == MAT_METAL || tv.material == MAT_GLASS ||
-         (growth && growthWet > 0.3)) && sunUp > 0.05) {   // (J-09: a wet overgrowth's gloss)
+         (growth && gWet > 0.3)) && sunUp > 0.05) {   // (J-09: a wet overgrowth's gloss)
         Vec3 toCam = normalize(Vec3(camPos.x - x, camPos.y - h, camPos.z - z));
         Vec3 half = normalize(toCam + sd);
         double sp = std::pow(std::max(0.0, dot(nrm, half)), 48.0) * sunUp * lf;
@@ -361,15 +369,15 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         shade = 8 + 12 * n + 36 * vein * glow + 6 * glow;
     } else {
         shade = exposureStop(albedo, light, site.atmosphere);   // the one exposure rule
-        if (tv.material == MAT_FOREST) shade *= 1 - 0.38 * (cache.cellSize <= 64 ? canopyDensityAt(x, z, tv.veg) : tv.veg * 0.55);   // the floor is darker under the canopy (far ring: the average)
+        if (tv.material == MAT_FOREST) shade *= 1 - 0.38 * (cache.cellSize <= 64 ? canopyDensityAt(x, z, tv.veg) : std::min(1.0, tv.veg * 0.55 * lushK()));   // the floor is darker under the canopy (far ring: the average)
         shade += 16 * emissive + spec;
         if (growth && cache.cellSize <= 64) {   // J-09: an overgrowth's cover mottled in lobes; its veins on the near ring, dark by day, lit at night where it glows
-            shade += 4 * gnoise2(x / 40.0, z / 40.0, site.gen.seed ^ 0x6E0E60ULL) * (1 - growthGlow);
+            shade += 4 * gnoise2(x / 40.0, z / 40.0, site.gen.seed ^ 0x6E0E60ULL) * (1 - gGlow);
             if (cache.cellSize <= 4) {
                 const Worley3 w = worley3(Vec3(x / 9.0, z / 9.0, 0.3), site.gen.seed ^ 0x6E0E40ULL);
                 const double vein = 1 - smoothstep(0.02, 0.12, w.f2 - w.f1);
-                shade -= 5 * vein * (1 - growthGlow);
-                if (growthGlow > 0.02) shade = std::max(shade, (14 + 36 * vein) * growthGlow);
+                shade -= 5 * vein * (1 - gGlow);
+                if (gGlow > 0.02) shade = std::max(shade, (14 + 36 * vein) * gGlow);
             }
         }
         // the broad tone tile (patches of 23-85 m, +-4 shades; a texel is two metres, or a cell for the far rings),
@@ -948,16 +956,20 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                         for (int i = 0; i < 4; i++) { tw[i] = tv[i]->material == MAT_WATER ? tv[i]->mtint / 255.0 : own; mx = std::max(mx, tw[i]); }
                         if (mx > 0.25) {
                             madeW = true;
+                            int ln = -1; double lw = -1;   // KI-460: the cell's line, its corner of the greatest share's (its own bank and glow)
+                            for (int i = 0; i < 4; i++) if (tv[i]->mline > 0 && tw[i] > lw) { lw = tw[i]; ln = tv[i]->mline - 1; }
+                            const int wb = ln >= 0 && ln < MADE_LINES && tintLineBank[ln] >= 0 ? tintLineBank[ln] : tintBankMade;
+                            const double wg = ln >= 0 && ln < MADE_LINES && tintLineBank[ln] >= 0 ? tintLineGlow[ln] : tintGlowMade;
                             for (int i = 0; i < 4; i++) {
                                 w[i].w = 1 - smoothstep(0.25, 0.75, tw[i]);
                                 wmin = std::min(wmin, w[i].w); wmax = std::max(wmax, w[i].w);
-                                if (tintGlowMade > 0.02) {   // its own faint light in drifting patches, the night's shade (the milky seas')
+                                if (wg > 0.02) {   // its own faint light in drifting patches, the night's shade (the milky seas')
                                     const double patch = 0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0 + lastT * 0.01, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6109);
-                                    w[i].shade = 14 + 16 * tw[i] * (0.4 + 0.6 * patch) * tintGlowMade;
+                                    w[i].shade = 14 + 16 * tw[i] * (0.4 + 0.6 * patch) * wg;
                                 }
                             }
-                            if (wmax < 0.149) rpw.bank = tintBankMade;
-                            else if (wmin < 0.851) { rpw.bank2 = tintBankMade; rpw.edge = &grainEdge; rpw.edgeScale = 4.0 / cs; rpw.edgeAmp = 0.35; rpw.shade2 = 0; }
+                            if (wmax < 0.149) rpw.bank = wb;
+                            else if (wmin < 0.851) { rpw.bank2 = wb; rpw.edge = &grainEdge; rpw.edgeScale = 4.0 / cs; rpw.edgeAmp = 0.35; rpw.shade2 = 0; }
                         }
                     }
                     if (!madeW && (tintBankW >= 0 || tintBankL >= 0)) {   // the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else

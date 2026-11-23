@@ -65,6 +65,10 @@ with a culture, left out at first (the worlds stayed as generated), came in with
 | 25 | The overgrowth | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | done 2026-11-22 |
 | 26 | The close | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | done 2026-11-22 |
 | 27 | The close | J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | done 2026-11-22 |
+| 28 | Any world | J-13 | The cold worlds: brine lines to -45 C, places at their own warmth, cultures sent down a drill hole (R-454) | L | done 2026-11-22 |
+| 29 | Any world | J-14 | The clouds: THE CLOUDS a place on a world with a cloud deck, acid life let go there, its looks in the clouds (R-454) | M | done 2026-11-23 |
+| 30 | Any world | J-15 | Greening a desert: a light-feeder's carpet or lichen grows grass and shrubs; GREENED DESERT (R-454) | L | done 2026-11-23 |
+| 31 | The close | J-16 | The known issues: each one 1.5.0 found and left open, fixed or closed on the user's word | XL | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.
@@ -713,3 +717,70 @@ Decided by default (2026-11-20), until the user's calls on the sketch:
 * **The docs:** a reference note for seeded worlds, `rules-life-seeding.md`, the rules it changes ("the worlds stay as generated" to
   `superseded.md`), KNOWN-ISSUES rows, the generated pages.
 * Done when: from a clean build, the whole battery against j11; `bench check`; `make check`; `tools/prove snapshot j12`.
+
+## Phase 7: a culture for any world (R-454)
+
+Added 2026-11-22 on the user's request (R-454: "make it possible to adjust genes so that you can make culture grow on any planet you
+like"), talked through first: the five calls of `docs/iteration-3/plans/requests/R-454-a-culture-for-any-world.md`, the recommendations
+taken on "Proceed". A culture is tuned on the gene editor for each world (not one culture for every world); oxygen and pH stay fixed (a
+culture that suits them is chosen); the furnaces stay closed. No generation change: what a seeding makes is the guide's, as in phase 6.
+
+### J-13: the cold worlds
+
+* **A brine line goes colder:** water life grows down to -20 C; a line that lives in brine and makes no ice of its own (its FROST none,
+  cut or switched off) down to -45 C, as perchlorate brines stay liquid. Read once every edit is in. A brine flask goes down to -45 C.
+  The editor's warmth, salt and frost guides say how cold the line can go and what it lacks for it.
+* **A place at its own warmth:** the verdict reads the place's warmth (a flask's cell's range never held a world's), and a place colder
+  than -20 C holds its water as brine.
+* **Down a drill hole:** Page Down on the seed page takes the drone down: the rock's eight depths (1 to 30 km), its warmth the ground's
+  and the world's inner heat (30 C a kilometre on an Earth, by the radius; half again with plates, vents or a giant's tides), dark, the
+  rock's hydrogen, no oxygen, no radiation; on a world with a sea under its ice, that sea alone at the ice's foot. A deep line lives in no
+  water and on no land of the surface; its gases seep up to the air at half its share; under the ice its dye colours the cracks its sea
+  comes up through (RED CRACKS); it grows over nothing; a plume's vial finds it.
+* Done when: `seed cold` prints forty worlds' warmth on the ground and down, and a line tuned for each taking on the ground or in the deep
+  (the furnaces, Venus and the coldest small worlds aside), with the seed page 5 km down and a europan world's cracks reddened from under
+  its ice; unit checks; the battery against r453; `bench check`; `make check`; `tools/prove snapshot j13`.
+
+### J-14: the clouds
+
+* **THE CLOUDS:** on a world with a cloud deck life lives in (a venusian world's, an acid world's), Page Up on the seed page takes the
+  drone up into the clouds, a place of its own: the heights where the air is 70 to 0 C, acid droplets, lit. Acid life brought from such a
+  world lives there; water life does not (no gene lets it).
+* **A cloud line:** spreads round the world in the clouds; its dye colours them (the dark streaks of Venus's clouds), its glow lights
+  them at night, its gases change the air.
+* Done when: `seed clouds`: a venusian world takes an acid line in its clouds; frames from orbit before and after; unit checks; the
+  battery against j13; `bench check`; `make check`; `tools/prove snapshot j14`.
+
+### J-15: greening a desert
+
+* **A carpet that grows plants:** a light-feeder's carpet (DRY, STOP cut, BIND; no SHELL or LIFT, which make coral, sponge or bladders)
+  on a desert grows grass and shrubs where it lies, from four steps after it covers the ground, thicker from twelve. A lichen (the same
+  with a SHIELD) does too. They take the line's pigment's colour, a dye's over it. The gene editor's cut STOP says what a line overgrows as.
+* **GREENED DESERT:** a made kind of its own on the data sheet once most of the desert's land is green. It harms nothing and is more
+  livable.
+* Done when: frames of a desert greened from orbit and on the ground; `seed kinds` names it; unit checks; the battery against j14;
+  `bench check`; `make check`; `tools/prove snapshot j15`.
+
+## Phase 8: the known issues (J-16)
+
+Added 2026-11-23 on the user's word: "after that there should be a J-16 that will basically handle all K-xxx that were created". Each
+known issue 1.5.0 found that is still open is fixed, with a B file and a check that fails before and passes after (B-474 on), or closed
+for a reason the user agrees to. The ones found before 1.5.0 (KI-020 to KI-431) stay out unless the user adds them.
+
+### J-16: the known issues
+
+* **Seeding and the made worlds:** KI-487 (a native driven out where the line cannot live), KI-498 (13% of `seed kinds`' seedings show
+  nothing), KI-499 (a line's own warming moves its band, not its gas), KI-504 (a full flask counts as starving for a switch), KI-505 (the
+  two smallest cold worlds closed), KI-506 (a deep line seen only in its gases), KI-507 (a cloud species that burns a food), KI-508 (a
+  cloud line unseen from the ground), and J-15's KI-509 and KI-510.
+* **On the ground:** KI-489 to KI-497 and KI-501 (the overgrowth's lattice and edge, the ruins' cover, a crust's form, kills kept, a
+  flock's young, a climber, the shallows, a settlement's one line).
+* **Colours:** KI-500 (an ice sheet's dome), KI-502 (five made colours a disc), KI-503 (a flask's colour).
+* **Screens:** KI-440 (the data sheet's GRAVITY line), KI-448 and KI-449 (two unnamed worlds read alike), KI-453 (a second sun's planet
+  called a moon), KI-454 (a long sound line), KI-488 (the catalogue's animals in words alone).
+* **The ship, the lab and the worlds:** KI-435 (the target's label over the ship's walls), KI-436 (a chemotroph world at 188 C: a
+  generation change, so its own call), KI-437 (the electron view's cost), KI-438 (dormant spores moving on the plates).
+* **The harness and the bench:** KI-444 (`surface 4x`'s tight budget), KI-446 (battery items that move between runs), KI-450 (the
+  flow's heap).
+* Done when: each fixed or closed, the list in the report; the battery against j15; `bench check`; `make check`; `tools/prove snapshot
+  j16`.

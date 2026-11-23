@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <fstream>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -39,6 +40,11 @@ void unitSeedingGrowth(const Check& check);
 void unitSeedingRuins(const Check& check);
 void unitSeedingKinds(const Check& check);
 void unitSeedingRecord(const Check& check);
+void unitSeedingClimate(const Check& check);
+void unitSeedingBanks(const Check& check);
+void unitSeedingCold(const Check& check);   // J-13 (unit_seeding_cold.cpp)
+void unitSeedingClouds(const Check& check);   // J-14 (unit_seeding_clouds.cpp)
+void unitSeedingDesert(const Check& check);   // J-15 (unit_seeding_desert.cpp)
 
 void unitSeeding(const Check& check) {
     StarSystem fs; int fb = -1;
@@ -236,6 +242,85 @@ void unitSeeding(const Check& check) {
               fmt("(%d of %d seedings of six lines on %zu worlds as their flask in the place's medium: %d grow there, %d fail as it fails%s)", agree, cases2, cases.size(), grew, failed,
                   bad.c_str()));
     }
+    {   // R-451: the seed page's words and a seeding's report in full. Over the six lines on forty worlds: each reason begins with its fate (CULTURE
+        // GROWS where it took) and says the line's warmth against the place's where that killed it; what a line needs holds its warmths, what a
+        // place gives its reading; the place's facts alone are the verdict's own. Then a trip from the bay to dry land on the dye line's world:
+        // the page's THERE, and the report in full on the status after the short one and in the log
+        int n = 0, right = 0;
+        std::set<int> fates;
+        std::string bad;
+        for (size_t i = 0; i < runs.size(); i++) {
+            const Seeding& sd = runs[i];
+            const SeedVerdict& V = sd.verdict;
+            const SeedCase& c = cases[i / SL_COUNT];
+            const Microbe& s = sd.sent.kind.s;
+            const std::string why = seedWhyWords(V, sd.sent.kind), needs = seedNeedsWords(sd.sent.kind), there = seedPlaceWords(V);
+            const std::string name = V.fate == SF_OUTGROWN ? std::string("OUTGROWN") : std::string(SEED_FATE_NAMES[clampi(V.fate, 0, SF_COUNT - 1)]);
+            bool ok = V.takes() ? why == "CULTURE GROWS" : why.compare(0, name.size(), name) == 0;
+            const double placeC = std::round(V.place.hab.meanC) + 0.0;   // (J-14: never "-0 C")
+            if (V.fate == SF_COLD) ok = ok && why.find(fmt("FROM %.0f C", s.tMin)) != std::string::npos && why.find(fmt("IS %.0f C", placeC)) != std::string::npos;
+            if (V.fate == SF_HOT) ok = ok && why.find(fmt("UP TO %.0f C", s.tMax)) != std::string::npos;
+            ok = ok && needs.find(fmt("%.0f TO %.0f C", s.tMin, s.tMax)) != std::string::npos &&
+                 (V.fate == SF_FURNACE || there.find(fmt("%.0f C", placeC)) != std::string::npos);
+            const SeedVerdict P = seedPlaceFacts(c.sys, c.body, c.lat, c.lon);
+            ok = ok && P.medium == V.medium && P.ph == V.ph && P.doseGy == V.doseGy && P.place.name == V.place.name && P.place.dry == V.place.dry;
+            n++; right += ok;
+            if (!V.takes()) fates.insert(V.fate);
+            if (!ok && bad.empty()) bad = fmt("; WRONG: '%s' / '%s' / '%s'", why.c_str(), needs.c_str(), there.c_str());
+        }
+        bool page = false, told = false, logged = false;
+        std::string where, said, next;
+        if (src) {
+            TestGame g; gameAt(g, "why");
+            FlaskSpecies w; w.sx = ls.star.sx; w.sy = ls.star.sy; w.sz = ls.star.sz; w.body = lb; w.species = sp; w.strain = 1;
+            labFlaskFull(g, 0, w, seedBestMedium(dye.kind));
+            double dLat = 0, dLon = 0; bool found = false;
+            const BodyGen bg = BodyGen::make(ls.bodies[lb]);
+            for (int a = -54; a <= 54 && !found; a += 6)
+                for (int o = -180; o < 180 && !found; o += 10)
+                    if (seedPlaceOf(ls, lb, bg, lifeOf(ls)->bodies[lb], a * DEG, o * DEG).dry && !seedVerdictOf(ls, lb, dye, a * DEG, o * DEG).takes()) {
+                        dLat = a * DEG; dLon = o * DEG; found = true;
+                    }
+            Input in;
+            auto press = [&](int k) { in.pressed[k] = in.down[k] = true; g.frame(in, 1.0 / 30); in.newFrame(); in.down[k] = false; };
+            g.openScreen(GameState::DRONES);
+            press(KEY_S);
+            g.testSeedPage(dLat, dLon);
+            where = g.testSeedWhere();
+            page = found && g.state == GameState::SEEDING && where.find(", DRY") != std::string::npos;
+            press(KEY_ENTER);
+            g.testDronesSkip(30);
+            g.testDronesSkip(400);
+            said = g.testStatus(); next = g.testStatusNext();
+            const std::string full = seedWhyWords(seedVerdictOf(ls, lb, dye, dLat, dLon), dye.kind);
+            told = found && said.find("CULTURE DIED") != std::string::npos && next == fitText(full, UW - 12);
+            for (const LogEntry& e : g.guide.log) if (e.kind == "DRONES" && e.text.find(full) != std::string::npos) logged = true;
+            remove(g.guidePath.c_str()); remove(g.slotPath(1).c_str());
+        }
+        check("seeding: what a line needs and a place gives, and why a seeding died, in full (R-451)",
+              n > 100 && right == n && fates.size() >= 6 && page && told && logged,
+              fmt("(%d of %d seedings' words right, %zu fates said%s; dry land on the dye line's world: THERE '%s', the report '%s' then '%s', %s)", right, n, fates.size(),
+                  bad.c_str(), where.c_str(), said.c_str(), next.c_str(), logged ? "logged" : "NOT LOGGED"));
+    }
+    {   // R-453: a line leaking GREEN, and one PINK, let go in the dye line's sea: once over its world its waters are that dye's, named so, their tint
+        // toward its colour from the world's plain water
+        std::string detail;
+        int right = 0;
+        for (const int d : {WD_GREEN, WD_PINK}) {
+            if (!src) break;
+            const SeedLine L = seedLineFor(ls, lb, sp, seedGeneEdits(wild.genes, {{GN_DYE, d}}));
+            const Seeding sd = seedingFor(ls, lb, L, seaLat, seaLon, 0);
+            const MadeWorld m = madeWorldOf(ls, lb, {sd}, (MADE_STEPS * MADE_STEP_S + 1) / std::max(0.1, sd.verdict.pace));
+            std::string words;
+            for (const std::string& w : madeTraitWords(m, kindHas(ls.bodies[lb].type, KT_SEA))) words += (words.empty() ? "" : ", ") + w;
+            const RGB c = dyeColour(d), w0 = sd.verdict.water;
+            auto dist = [](const RGB& a, const RGB& b) { return std::fabs(a.r - b.r) + std::fabs(a.g - b.g) + std::fabs(a.b - b.b); };
+            const bool ok = L.kind.world.dye == d && sd.verdict.takes() && m.dye == d && words.find(WORLD_DYE_NAMES[d]) != std::string::npos && dist(m.tint, c) < dist(w0, c);
+            right += ok;
+            detail += fmt("%s%s: %s, '%s'%s", detail.empty() ? "" : "; ", WORLD_DYE_NAMES[d], seedVerdictWords(sd.verdict).c_str(), words.c_str(), ok ? "" : " WRONG");
+        }
+        check("seeding: GREEN and PINK waters (R-453)", right == 2, fmt("(%s)", detail.c_str()));
+    }
     {   // the drift: fixed by the world, the line and the place (serially and on the pool alike; another place, another drift)
         int alike = 0, drifted = 0, took = 0, moved = 0, cmp = 0;
         for (size_t i = 0; i < runs.size(); i++) {
@@ -252,7 +337,7 @@ void unitSeeding(const Check& check) {
                   took, moved, cmp));
     }
     {   // the trip: S at the bay over the dye line's world, its sea on the page, Enter: drone 1 down, the culture let go at its place (the guide's
-        // `seeded` line, SEEDED in the log), its report at the dock; the flask keeps its culture, the bay charges; a save in the fall reloaded
+        // `seeded` line, SEEDED in the log), its report at the dock; the flask keeps its culture, the bay ready at once (R-449); a save in the fall reloaded
         // carries the trip on; the world's layer drawn by its first steps, the data sheet's MADE
         TestGame g; gameAt(g, "trip");
         FlaskSpecies w; w.sx = ls.star.sx; w.sy = ls.star.sy; w.sz = ls.star.sz; w.body = lb; w.species = sp; w.strain = 1;
@@ -277,7 +362,7 @@ void unitSeeding(const Check& check) {
         for (const LogEntry& e : h.guide.log) logged += e.kind == "SEEDED";
         h.testDronesSkip(400);
         const std::string report = h.testStatus();
-        const bool back = !h.testBay().out && report.find("CULTURE GROWS") != std::string::npos && h.testLab().flasks[0].n == 1 && !h.testBayReady();
+        const bool back = !h.testBay().out && report.find("CULTURE GROWS") != std::string::npos && h.testLab().flasks[0].n == 1 && h.testBayReady();
         h.testClockSkip(1800);
         const std::string made = h.testMadeWords(lb);
         const bool drawn = h.testMadeNow(lb).on() && made.find("RED") != std::string::npos;
@@ -286,6 +371,44 @@ void unitSeeding(const Check& check) {
                   page ? "open" : ("NOT OPEN: " + pageNo).c_str(), out ? "out" : "NOT OUT", loaded ? "on its way" : "NOT CARRIED ON", let ? "in the guide" : "NOT", logged, report.c_str(),
                   made.empty() ? "NOTHING DRAWN" : made.c_str()));
         remove(g.guidePath.c_str()); remove(g.slotPath(1).c_str());   // (the unit's files stay its own)
+    }
+    {   // B-473: the seed page offers any culture alive in a flask, whatever its stage, and says which: flask 1 the line just put in (ADAPTING or
+        // GROWING), flask 2 empty, flask 3 the line full. The page opens on the full one, C goes to the young one past the empty and back, and
+        // Enter sends the young one. With every flask empty the page says so, C and Enter refused
+        TestGame g; gameAt(g, "choose");
+        FlaskSpecies w; w.sx = ls.star.sx; w.sy = ls.star.sy; w.sz = ls.star.sz; w.body = lb; w.species = sp; w.strain = 1;
+        const bool full = labFlaskFull(g, 2, w, seedBestMedium(dye.kind));
+        {
+            Flask& F = g.testLab().flasks[0];
+            F = Flask(); F.n = 1; F.who[0] = w; F.who[0].strainIn = w.strain; F.medium = F.asWorld = seedBestMedium(dye.kind);
+            CultureEvent e; e.kind = CD_START; e.t = g.testLab().clock; e.m = F.medium; F.events.push_back(e);
+            g.testLabSkip(1);
+        }
+        Input in;
+        auto press = [&](TestGame& G, int k) { in.pressed[k] = in.down[k] = true; G.frame(in, 1.0 / 30); in.newFrame(); in.down[k] = false; };
+        g.openScreen(GameState::DRONES);
+        press(g, KEY_S);
+        const std::string first = g.testSeedCulture();
+        press(g, KEY_C); const std::string second = g.testSeedCulture();
+        press(g, KEY_C); const std::string third = g.testSeedCulture();
+        press(g, KEY_C);   // (the young one again, to send)
+        g.testSeedPage(seaLat, seaLon);
+        press(g, KEY_ENTER);
+        const bool sent = g.testBay().out && g.testBay().seedTrip && g.state == GameState::DRONES;
+        auto young = [](const std::string& t) { return t.find("FLASK 1, ADAPTING") != std::string::npos || t.find("FLASK 1, GROWING") != std::string::npos; };
+        TestGame h; gameAt(h, "choose_none");
+        h.openScreen(GameState::DRONES);
+        press(h, KEY_S);
+        const std::string none = h.testSeedCulture();
+        press(h, KEY_C); const std::string noneC = h.testStatus();
+        press(h, KEY_ENTER);
+        const bool kept = !h.testBay().out && h.state == GameState::SEEDING;
+        check("seeding: the seed page offers every culture alive in a flask and says its state (B-473)",
+              full && first.find("FLASK 3, FULL") != std::string::npos && young(second) && third == first && sent && none == "NO CULTURE IN THE FLASKS" &&
+                      noneC.find("NO CULTURE IN THE FLASKS") != std::string::npos && kept,
+              fmt("(opened on '%s'; C '%s', C again '%s'; Enter %s; with the flasks empty '%s', C '%s', Enter %s)", first.c_str(), second.c_str(), third.c_str(),
+                  sent ? "sent the young one" : "SENT NOTHING", none.c_str(), noneC.c_str(), kept ? "refused" : "NOT REFUSED"));
+        for (TestGame* t : {&g, &h}) { remove(t->guidePath.c_str()); remove(t->slotPath(1).c_str()); }
     }
     {   // refused: at home, at a giant, out of orbit, with the drones away
         TestGame g; gameAt(g, "home");
@@ -358,6 +481,11 @@ void unitSeeding(const Check& check) {
     unitSeedingRuins(check);    // J-10
     unitSeedingKinds(check);    // J-11 (unit_seeding_kinds.cpp)
     unitSeedingRecord(check);   // J-12 (unit_seeding_record.cpp)
+    unitSeedingClimate(check);  // the made climate's known issues (unit_seeding_climate.cpp)
+    unitSeedingBanks(check);    // the made colours' known issues (unit_seeding_banks.cpp)
+    unitSeedingCold(check);     // J-13: the cold worlds (unit_seeding_cold.cpp)
+    unitSeedingClouds(check);   // J-14: the clouds (unit_seeding_clouds.cpp)
+    unitSeedingDesert(check);   // J-15: greening a desert (unit_seeding_desert.cpp)
 }
 
 // J-04: the made air. Each gas a world's own sea line gives (`seed climate`'s twenty worlds, eight gases) at the whole world, worked out serially
@@ -823,9 +951,12 @@ void unitSeedingGrowth(const Check& check) {
     }
 }
 
+void unitSeedingGrown(const Check& check);   // B-460 to B-466 (unit_seeding_grown.cpp)
+
 // J-10: the overgrowth on the ruins: its climb by place and step, a town's colliders the same under it, its pieces a pure function of the cell,
 // its membranes pushed through; a stone rotter's ruins lower; its sounds' words
 void unitSeedingRuins(const Check& check) {
+    unitSeedingGrown(check);
     const MadeGrowth flesh = growthOfType(OG_FLESH, OGT_FOLDED, RGB(0.62f, 0.16f, 0.18f), 0.5, 0.6, 0, false, false);
     {   // the climb: the steps since the edge passed, never down as the steps go on, none where the cover is not, the same on the pool
         const double R = 6000;
@@ -915,15 +1046,8 @@ void unitSeedingRuins(const Check& check) {
         // pushed through: each of up to four doorways' membranes from 2.5 m outside, three seconds forward with the controls; crossed, and torn
         int tried = 0, crossed = 0, torn = 0;
         std::string firstBad;
-        for (const Form& f : twice) {
-            if (tried >= 4) break;
-            if (f.growth != FG_MEMBRANE || f.building < 0 || f.y1 - f.y0 < 1.6 || f.hx < 0.8) continue;
-            const Building& B = town.spec.buildings[f.building];
-            double nx = std::sin(f.heading), nz = std::cos(f.heading);   // out of the building
-            if (nx * (f.x - B.x) + nz * (f.z - B.z) < 0) { nx = -nx; nz = -nz; }
-            const double mx = town.r.x + f.x, mz = town.r.z + f.z;
-            if (sv.site.waterAt(mx, mz) > -1e8 && sv.site.groundHeight(mx, mz) < sv.site.waterAt(mx, mz) + 0.3) continue;
-            tried++;
+        double fx0 = 0, fz0 = 0, fnx = 0, fnz = 0;   // (the first one's middle and its way out)
+        auto push = [&](double mx, double mz, double nx, double nz, double& inside) {
             sv.player.x = mx + nx * 2.5; sv.player.z = mz + nz * 2.5; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
             sv.player.vx = sv.player.vz = 0; sv.player.yaw = std::atan2(-nx, -nz); sv.player.pitch = 0; sv.tearCue = 0;
             Input in;
@@ -936,16 +1060,37 @@ void unitSeedingRuins(const Check& check) {
                 tore = tore || sv.tearCue > 0;
                 sv.tearCue = 0;
             }
-            const double inside = (sv.player.x - mx) * nx + (sv.player.z - mz) * nz;
-            crossed += inside < -0.3; torn += tore;
+            inside = (sv.player.x - mx) * nx + (sv.player.z - mz) * nz;
+            return tore;
+        };
+        for (const Form& f : twice) {
+            if (tried >= 4) break;
+            if (f.growth != FG_MEMBRANE || f.building < 0 || f.y1 - f.y0 < 1.6 || f.hx < 0.8) continue;
+            const Building& B = town.spec.buildings[f.building];
+            double nx = std::sin(f.heading), nz = std::cos(f.heading);   // out of the building
+            if (nx * (f.x - B.x) + nz * (f.z - B.z) < 0) { nx = -nx; nz = -nz; }
+            const double mx = town.r.x + f.x, mz = town.r.z + f.z;
+            if (sv.site.waterAt(mx, mz) > -1e8 && sv.site.groundHeight(mx, mz) < sv.site.waterAt(mx, mz) + 0.3) continue;
+            if (!tried) { fx0 = mx; fz0 = mz; fnx = nx; fnz = nz; }
+            tried++;
+            double inside = 0;
+            torn += push(mx, mz, nx, nz, inside);
+            crossed += inside < -0.3;
             if (inside >= -0.3 && firstBad.empty()) firstBad = fmt("; stopped %.2f m outside a membrane %.1f m wide", inside, 2 * f.hx);
         }
+        // KI-479: each torn one marked torn, still torn once its cell is grown again, and the first pushed through again tears nothing
+        int marked = 0, kept = 0, again = 0;
+        for (const Form& f : town.elems[0]) marked += f.growth == FG_MEMBRANE && f.broken > 0;
+        sv.testRegrowRuins();
+        for (const Form& f : town.elems[0]) kept += f.growth == FG_MEMBRANE && f.broken > 0;
+        if (tried) { double inside = 0; again = push(fx0, fz0, fnx, fnz, inside) ? 1 : 0; }
         check("seeding: the ruins under an overgrowth", plain == grown && same && plainPieces < (int)twice.size() && membranes > 0 && nodules > 0 && drapes > 0 && unparted == 0 &&
-                                                          tried >= 2 && crossed == tried && torn == tried,
+                                                          tried >= 2 && crossed == tried && torn == tried && marked == torn && kept == torn && again == 0,
               fmt("(the scene's %s of %d buildings as if left 300 years ago, a flesh let go at its middle eleven steps on: its walls taken %.1f to %.1f m up; %d colliders, the "
                   "same as without it %s; %d pieces grown on its %d (%d membranes, %d nodules, %d drapes), the same grown twice %s; %d membranes walked into, %d pushed "
-                  "through, %d torn%s)", SETTLEMENT_CLASS_NAMES[spec.sclass], (int)spec.buildings.size(), lo, hi, (int)grown.size(), plain == grown ? "yes" : "NO",
-                  (int)twice.size() - plainPieces, plainPieces, membranes, nodules, drapes, same ? "yes" : "NO", tried, crossed, torn, firstBad.c_str()));
+                  "through, %d torn, %d marked torn, %d still torn grown again, the first torn again %d time%s%s)", SETTLEMENT_CLASS_NAMES[spec.sclass], (int)spec.buildings.size(),
+                  lo, hi, (int)grown.size(), plain == grown ? "yes" : "NO", (int)twice.size() - plainPieces, plainPieces, membranes, nodules, drapes, same ? "yes" : "NO", tried,
+                  crossed, torn, marked, kept, again, again == 1 ? "" : "s", firstBad.c_str()));
         // a stone rotter's: the same young town with its stone eaten, its walls lower
         Culture rotted = young;
         rotted.stoneRot = 1;

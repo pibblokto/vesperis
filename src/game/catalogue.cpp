@@ -69,6 +69,15 @@ void Game::catalogueEnter() {
     audio.beep = BEEP_UI;
 }
 
+std::string Game::madeKindAt(const std::string& w, LabSystems& systems) {
+    int64_t sx = 0, sy = 0, sz = 0; int body = -1;
+    if (std::none_of(guide.seeded.begin(), guide.seeded.end(), [&](const SeedRecord& r) { return r.body == w; })) return "";
+    const StarSystem* S = worldParts(w, sx, sy, sz, body) ? systems.get(sys, sx, sy, sz) : nullptr;
+    if (!S || body >= (int)S->bodies.size()) return "";
+    const std::vector<Seeding>& ss = seedingsAt(*S, body);
+    return ss.empty() ? std::string() : madeKindName(madeWorldOf(*S, body, ss, guide.clock));
+}
+
 // a world as the catalogue reads it: its kind, its species and their forms, drawn once; J-12: its animals' words and ways once one is asked
 // for; a seeded world's made kind and the natives its lines drove out at the guide's clock, made again with each list (the clock moves on)
 CatalogueWorld& Game::catalogueWorld(const std::string& w, LabSystems& systems, bool animals) {

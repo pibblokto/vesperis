@@ -205,6 +205,42 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   [J-12] (a native a line beat dies out once the line covers the world)
 - A native a line beat is a hundredth of what it was in a vial where the line spread, always [J-03]; replaced by [J-12] (none in any vial
   of the world once it died out)
+- The made climate moves a living world's caps, snow line, ice and frozen waters [J-04]; replaced by [B-448] (every kind's caps and frosts;
+  a living world's ice sheets to bare ice, its glaciers back)
+- Samples, a later line's verdict and the spreads' bands read the world's warmth as generated [J-04]; replaced by [B-449] (the made warmth)
+- A living wet world whose mean passes 42 C runs away [J-04]; replaced by [B-450] (an ocean, a hycean, an eyeball too) and [B-453] (it goes
+  on whatever comes after)
+- A line's share of its world counts its waters and its land [J-04]; replaced by [B-451] (its plants too)
+- A greened world's biomes stay where they were [J-11]; replaced by [B-452] (they follow its warmth or its rain)
+- A made kind is read at the clock alone: a snowball thaws as its gases pass -6 C, a hothouse's seas come back [J-11]; replaced by [B-453]
+- A made cold kills by how much colder a world is alone (from 4 C) [J-08]; replaced by [B-454] (by the mean it reaches too)
+- GREENED WORLD: a cold world (under 5 C) made 3 C warmer [J-11]; replaced by [B-455] (a cool one, under 10 C, made 2 C warmer)
+- A made colour takes a lent bank (28 to 25) where the traits and a second people leave one, else its family's or the rock's [J-02],
+  [J-05], [J-09]; replaced by [B-456] (every bank the world leaves free; a dyed rain its own or its clouds')
+- A line's looks: each class the latest line's look and one colour; one overgrowth colour a world [J-05], [J-09]; replaced by [B-457] (a
+  colour a line where it lies)
+- The globe's made bank (one a disc) takes a stain, else the waters' look (bank 31 under a stain), else a land's, plants' or snow's [J-09];
+  replaced by [B-458] (a bank each, by line, five or six a disc)
+- An overgrowth's structures are a pure function of a landing's covered 16 m cell [J-09]; replaced by [B-461] (a world-fixed lattice)
+- A building's cover climbs to one height; a face taken whole a little darker [J-10]; replaced by [B-462] (wall by wall, the cover's look)
+- Only walls' and rings' openings grow shut; a torn membrane is drawn whole again [J-10]; replaced by [B-463] (gates, arches' bays, painted
+  windows) and [B-464] (it stays torn)
+- A stone rotter eats every settlement its spread reached; the ruins keep the landing's layer [J-10]; replaced by [B-465] (each building
+  where its line lives; the ruins follow the steps)
+- Only land herds fall sick or bear changed young; remains keep the stage they had at the landing [J-08]; replaced by [B-469] (flocks and
+  shoals too) and [B-470] (staged by the landing's clock; a kill kept)
+- Hides take 24 and 20, 13, 12, then a free lent bank [J-06]; replaced by [B-456] (and the aurorae's 11 and 21 where none can show)
+
+- At best a flask reaches its crowd in 8-20 minutes, spores wake in 20-60 s, and a crowd holds a few minutes before it rests or dies [Z-05],
+  [B-444]; replaced by [R-449] (a fifth of the times; fed, a full flask stays full)
+- The sequencer reads in about 90 s, the gene editor writes in about two minutes [Z-06], [Y-02]; replaced by [R-449] (ten seconds each)
+- The drones charge five minutes from their return, and S and Enter are refused while they charge [C-18], [J-03]; replaced by [R-449] (no
+  charge)
+- A seeding's step comes every five minutes of the clock (the world in two hours) [J-02]; replaced by [R-449] (every 75 s, half an hour)
+- S on the drone bay sends a flask that shows FULL [J-03]; replaced by [B-473] (any culture alive in a flask, its state shown)
+- A gene is NOT KNOWN until seen to do something against its parent, kept by genesis for all kin; candidates said, NOTHING SEEN learned
+  [Y-02], [Y-03]; replaced by [R-450] (known by its species once changed on the editor; its guide)
+- N names the animal under the crosshair and opens the map otherwise [J-07]; replaced by [R-452] (Shift+N names, N the map)
 
 ## The harness and the proof
 
@@ -256,9 +292,10 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - A subsystem split over files shares its helpers through its `_internal.h` (`inline`); a helper one file uses stays in it [E-06];
   replaced by [E-07]
 
-[M4-02]: ../archive/iteration-1/plans/ROADMAP.md
-[M5-06]: ../archive/iteration-1/plans/ROADMAP.md
-[KI-309]: ../iteration-3/bugs/KNOWN-ISSUES.md
+[A-01]: log/3-1.3.0.md
+[A-02]: log/3-1.3.0.md
+[A-03]: log/3-1.3.0.md
+[A-04]: log/3-1.3.0.md
 [B-305]: log/0-1.0.0.md
 [B-309]: log/0-1.0.0.md
 [B-310]: log/0-1.0.0.md
@@ -268,36 +305,38 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [B-316]: log/0-1.0.0.md
 [B-321]: log/0-1.0.0.md
 [B-401]: log/0-1.0.0.md
-[M10-01]: log/0-1.0.0.md
-[M10-02]: log/0-1.0.0.md
-[M10-03]: log/0-1.0.0.md
-[M10-12]: log/0-1.0.0.md
-[M5-09]: log/0-1.0.0.md
-[M6-02]: log/0-1.0.0.md
-[M7-01]: log/0-1.0.0.md
-[M7-04]: log/0-1.0.0.md
-[M9-04]: log/0-1.0.0.md
-[N2-04]: log/0-1.0.0.md
-[N3]: log/0-1.0.0.md
-[N5-02]: log/0-1.0.0.md
-[O0-02]: log/0-1.0.0.md
-[O1]: log/0-1.0.0.md
-[O10]: log/0-1.0.0.md
-[O11]: log/0-1.0.0.md
-[O2]: log/0-1.0.0.md
-[O3]: log/0-1.0.0.md
-[O6-02]: log/0-1.0.0.md
-[O6-03..O6-07]: log/0-1.0.0.md
-[O6-06]: log/0-1.0.0.md
-[R-001]: log/0-1.0.0.md
-[R-204]: log/0-1.0.0.md
-[R-401]: log/0-1.0.0.md
-[Release 1.1.0]: log/0-1.0.0.md
-[Release 1.2.0]: log/0-1.0.0.md
-[Release 1.3.0]: log/0-1.0.0.md
-[table]: log/0-1.0.0.md
 [B-404]: log/1-1.1.0.md
 [B-405]: log/1-1.1.0.md
+[B-412]: log/3-1.3.0.md
+[B-414]: log/3-1.3.0.md
+[B-415]: log/3-1.3.0.md
+[B-417]: log/3-1.3.0.md
+[B-418]: log/3-1.3.0.md
+[B-420]: log/3-1.3.0.md
+[B-425]: log/5-1.3.2.md
+[B-427]: log/5-1.3.2.md
+[B-428]: log/5-1.3.2.md
+[B-434]: log/7-1.5.0.md
+[B-435]: log/7-1.5.0.md
+[B-437]: log/7-1.5.0.md
+[B-448]: log/7-1.5.0.md
+[B-449]: log/7-1.5.0.md
+[B-450]: log/7-1.5.0.md
+[B-451]: log/7-1.5.0.md
+[B-452]: log/7-1.5.0.md
+[B-453]: log/7-1.5.0.md
+[B-454]: log/7-1.5.0.md
+[B-455]: log/7-1.5.0.md
+[B-456]: log/7-1.5.0.md
+[B-457]: log/7-1.5.0.md
+[B-458]: log/7-1.5.0.md
+[B-461]: log/7-1.5.0.md
+[B-462]: log/7-1.5.0.md
+[B-463]: log/7-1.5.0.md
+[B-464]: log/7-1.5.0.md
+[B-465]: log/7-1.5.0.md
+[B-469]: log/7-1.5.0.md
+[B-470]: log/7-1.5.0.md
 [C-01]: log/1-1.1.0.md
 [C-02]: log/1-1.1.0.md
 [C-03]: log/1-1.1.0.md
@@ -308,63 +347,13 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [C-08]: log/1-1.1.0.md
 [C-09]: log/1-1.1.0.md
 [C-10]: log/1-1.1.0.md
+[C-11]: log/3-1.3.0.md
 [C-12]: log/1-1.1.0.md
 [C-13]: log/1-1.1.0.md
-[G-01]: log/1-1.1.0.md
-[G-02]: log/1-1.1.0.md
-[G-03]: log/1-1.1.0.md
-[G-04]: log/1-1.1.0.md
-[R-403]: log/1-1.1.0.md
-[S-05]: log/1-1.1.0.md
-[R-405]: log/2-1.2.0.md
-[R-407]: log/2-1.2.0.md
-[R-408]: log/2-1.2.0.md
-[W-01]: log/2-1.2.0.md
-[W-06]: log/2-1.2.0.md
-[W-06 reworked]: log/2-1.2.0.md
-[X-01]: log/2-1.2.0.md
-[X-02]: log/2-1.2.0.md
-[A-01]: log/3-1.3.0.md
-[A-02]: log/3-1.3.0.md
-[A-03]: log/3-1.3.0.md
-[A-04]: log/3-1.3.0.md
-[B-412]: log/3-1.3.0.md
-[B-414]: log/3-1.3.0.md
-[B-415]: log/3-1.3.0.md
-[B-417]: log/3-1.3.0.md
-[B-418]: log/3-1.3.0.md
-[B-420]: log/3-1.3.0.md
-[C-11]: log/3-1.3.0.md
 [C-15]: log/3-1.3.0.md
 [C-16]: log/3-1.3.0.md
 [C-17]: log/3-1.3.0.md
 [C-18]: log/3-1.3.0.md
-[G-05]: log/3-1.3.0.md
-[G-05..T-04]: log/3-1.3.0.md
-[G-07]: log/3-1.3.0.md
-[H-02]: log/3-1.3.0.md
-[H-03]: log/3-1.3.0.md
-[H-04]: log/3-1.3.0.md
-[H-04 second pass]: log/3-1.3.0.md
-[H-05]: log/3-1.3.0.md
-[R-413]: log/3-1.3.0.md
-[R-414]: log/3-1.3.0.md
-[R-415]: log/3-1.3.0.md
-[T-01]: log/3-1.3.0.md
-[T-02]: log/3-1.3.0.md
-[T-03]: log/3-1.3.0.md
-[T-04]: log/3-1.3.0.md
-[F-01]: log/4-1.3.1.md
-[F-03]: log/4-1.3.1.md
-[F-04]: log/4-1.3.1.md
-[F-05]: log/4-1.3.1.md
-[F-06]: log/4-1.3.1.md
-[F-07]: log/4-1.3.1.md
-[F-11]: log/4-1.3.1.md
-[B-425]: log/5-1.3.2.md
-[B-427]: log/5-1.3.2.md
-[B-428]: log/5-1.3.2.md
-[R-418]: log/5-1.3.2.md
 [D-01]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [D-03]: log/6-1.4.0.md
@@ -373,8 +362,61 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [E-02]: log/6-1.4.0.md
 [E-03]: log/6-1.4.0.md
 [E-04]: log/6-1.4.0.md
-[P-00]: log/6-1.4.0.md
+[E-06]: log/6-1.4.0.md
+[E-07]: log/6-1.4.0.md
+[F-01]: log/4-1.3.1.md
+[F-03]: log/4-1.3.1.md
+[F-04]: log/4-1.3.1.md
+[F-05]: log/4-1.3.1.md
+[F-06]: log/4-1.3.1.md
+[F-07]: log/4-1.3.1.md
+[F-11]: log/4-1.3.1.md
+[G-01]: log/1-1.1.0.md
+[G-02]: log/1-1.1.0.md
+[G-03]: log/1-1.1.0.md
+[G-04]: log/1-1.1.0.md
+[G-05..T-04]: log/3-1.3.0.md
+[G-05]: log/3-1.3.0.md
+[G-07]: log/3-1.3.0.md
+[H-02]: log/3-1.3.0.md
+[H-03]: log/3-1.3.0.md
+[H-04]: log/3-1.3.0.md
+[H-04 second pass]: log/3-1.3.0.md
+[H-05]: log/3-1.3.0.md
+[I-02]: log/7-1.5.0.md
+[I-03]: log/7-1.5.0.md
+[I-04]: log/7-1.5.0.md
+[J-02]: log/7-1.5.0.md
+[J-03]: log/7-1.5.0.md
+[J-04]: log/7-1.5.0.md
+[J-05]: log/7-1.5.0.md
+[J-06]: log/7-1.5.0.md
+[J-07]: log/7-1.5.0.md
+[J-08]: log/7-1.5.0.md
+[J-09]: log/7-1.5.0.md
+[J-10]: log/7-1.5.0.md
+[J-11]: log/7-1.5.0.md
+[J-12]: log/7-1.5.0.md
+[KI-309]: ../iteration-3/bugs/KNOWN-ISSUES.md
+[M10-01]: log/0-1.0.0.md
+[M10-02]: log/0-1.0.0.md
+[M10-03]: log/0-1.0.0.md
+[M10-12]: log/0-1.0.0.md
+[M4-02]: ../archive/iteration-1/plans/ROADMAP.md
+[M5-06]: ../archive/iteration-1/plans/ROADMAP.md
+[M5-09]: log/0-1.0.0.md
+[M6-02]: log/0-1.0.0.md
+[M7-01]: log/0-1.0.0.md
+[M7-04]: log/0-1.0.0.md
+[M9-04]: log/0-1.0.0.md
+[N2-04]: log/0-1.0.0.md
+[N5-02]: log/0-1.0.0.md
+[O0-02]: log/0-1.0.0.md
+[O6-02]: log/0-1.0.0.md
+[O6-03..O6-07]: log/0-1.0.0.md
+[O6-06]: log/0-1.0.0.md
 [P-00..P-06]: log/6-1.4.0.md
+[P-00]: log/6-1.4.0.md
 [P-01..P-07]: log/6-1.4.0.md
 [P-04]: log/6-1.4.0.md
 [P-05]: log/6-1.4.0.md
@@ -382,16 +424,17 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [P-07]: log/6-1.4.0.md
 [Q-01]: log/6-1.4.0.md
 [Q-02]: log/6-1.4.0.md
-[E-06]: log/6-1.4.0.md
-[E-07]: log/6-1.4.0.md
-[U-01]: log/6-1.4.0.md
-[U-06]: log/6-1.4.0.md
-[I-02]: log/7-1.5.0.md
-[I-03]: log/7-1.5.0.md
-[B-434]: log/7-1.5.0.md
-[B-435]: log/7-1.5.0.md
-[B-437]: log/7-1.5.0.md
-[I-04]: log/7-1.5.0.md
+[R-001]: log/0-1.0.0.md
+[R-204]: log/0-1.0.0.md
+[R-401]: log/0-1.0.0.md
+[R-403]: log/1-1.1.0.md
+[R-405]: log/2-1.2.0.md
+[R-407]: log/2-1.2.0.md
+[R-408]: log/2-1.2.0.md
+[R-413]: log/3-1.3.0.md
+[R-414]: log/3-1.3.0.md
+[R-415]: log/3-1.3.0.md
+[R-418]: log/5-1.3.2.md
 [R-427]: log/7-1.5.0.md
 [R-428]: log/7-1.5.0.md
 [R-429]: log/7-1.5.0.md
@@ -399,21 +442,39 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [R-431]: log/7-1.5.0.md
 [R-432]: log/7-1.5.0.md
 [R-438]: log/7-1.5.0.md
-[Z-03]: log/7-1.5.0.md
-[Z-04]: log/7-1.5.0.md
-[Z-06]: log/7-1.5.0.md
+[R-439]: log/7-1.5.0.md
+[R-447]: log/7-1.5.0.md
+[S-05]: log/1-1.1.0.md
+[T-01]: log/3-1.3.0.md
+[T-02]: log/3-1.3.0.md
+[T-03]: log/3-1.3.0.md
+[T-04]: log/3-1.3.0.md
+[U-01]: log/6-1.4.0.md
+[U-06]: log/6-1.4.0.md
+[W-01]: log/2-1.2.0.md
+[W-06 reworked]: log/2-1.2.0.md
+[W-06]: log/2-1.2.0.md
+[X-01]: log/2-1.2.0.md
+[X-02]: log/2-1.2.0.md
 [Y-01]: log/7-1.5.0.md
 [Y-02]: log/7-1.5.0.md
 [Y-03]: log/7-1.5.0.md
+[Z-03]: log/7-1.5.0.md
+[Z-04]: log/7-1.5.0.md
 [Z-05]: log/7-1.5.0.md
-[R-439]: log/7-1.5.0.md
-[R-447]: log/7-1.5.0.md
-[J-02]: log/7-1.5.0.md
-[J-03]: log/7-1.5.0.md
-[J-05]: log/7-1.5.0.md
-[J-07]: log/7-1.5.0.md
-[J-08]: log/7-1.5.0.md
-[J-09]: log/7-1.5.0.md
-[J-04]: log/7-1.5.0.md
-[J-11]: log/7-1.5.0.md
-[J-12]: log/7-1.5.0.md
+[Z-06]: log/7-1.5.0.md
+[O10]: log/0-1.0.0.md
+[N3]: log/0-1.0.0.md
+[Release 1.2.0]: log/0-1.0.0.md
+[O1]: log/0-1.0.0.md
+[table]: log/0-1.0.0.md
+[O3]: log/0-1.0.0.md
+[O2]: log/0-1.0.0.md
+[Release 1.3.0]: log/0-1.0.0.md
+[O11]: log/0-1.0.0.md
+[Release 1.1.0]: log/0-1.0.0.md
+[B-444]: log/7-1.5.0.md
+[R-449]: log/7-1.5.0.md
+[B-473]: log/7-1.5.0.md
+[R-450]: log/7-1.5.0.md
+[R-452]: log/7-1.5.0.md

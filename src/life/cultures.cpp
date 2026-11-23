@@ -20,7 +20,7 @@ const char* const CULTURE_PAIR_NAMES[PA_COUNT] = {"ALONE", "ONE WINS", "PREDATOR
                                                  "ONE POISONS THE OTHER"};
 const char* const WORLD_GAS_NAMES[WG_COUNT] = {"NO GAS", "CO2", "METHANE", "OXYGEN", "HYDROGEN SULPHIDE", "DIMETHYL SULPHIDE", "NITROUS OXIDE",
                                                "AMMONIA", "HYDROGEN"};
-const char* const WORLD_DYE_NAMES[WD_COUNT] = {"NO DYE", "RED", "CRIMSON", "ORANGE", "YELLOW", "VIOLET", "BLUE", "BLACK", "FLUORESCENT"};
+const char* const WORLD_DYE_NAMES[WD_COUNT] = {"NO DYE", "RED", "CRIMSON", "ORANGE", "YELLOW", "VIOLET", "BLUE", "BLACK", "FLUORESCENT", "GREEN", "PINK"};
 const char* const WORLD_SHELL_NAMES[SHL_COUNT] = {"NONE", "CHALK", "GLASS", "RUST", "SULPHUR"};
 const char* const WORLD_ROT_NAMES[ROT_COUNT] = {"NOTHING", "WOOD", "FLESH", "SHELL", "STONE"};
 const char* const WORLD_POISON_NAMES[PZ_COUNT] = {"NONE", "NERVE", "BLOOD", "GUT"};
@@ -46,10 +46,11 @@ constexpr double LIGHT_FIT[PG_COUNT][CL_COUNT] = {{0, 0.3, 0.2, 0.2, 0.05}, {0, 
 // the crowd an energy feeds, log10 against the broth's (the lithotrophs' small yields: iron's the least, Hedrich et al. 2011)
 constexpr double SUBSTRATE_YIELD[SU_COUNT] = {0, -1.0, -1.0, -2.0, -0.5, -1.5, -1.0};
 
-// a species' pace in a flask, from its seed: its time to its crowd at its best (the small cells' 8 to 14 minutes, the large cells' and the
-// colonies' longer), its lag, its spores' waking, how long it holds at its crowd, its decline and its stress's, its inoculum and its crowd
+// a species' pace in a flask, from its seed: its time to its crowd at its best (Z-05's: the small cells' 8 to 14 minutes, the large cells'
+// and the colonies' longer; R-449: each a fifth of it, FLASK_QUICK), its lag, its spores' waking, how long it holds with nothing to eat, its
+// decline and its stress's, its inoculum and its crowd
 struct Traits {
-    double bestS = 600, lagS = 60, wakeS = 40, holdS = 600, kd = 0.004, kdStress = 0.03;
+    double bestS = 120, lagS = 12, wakeS = 8, holdS = 600, kd = 0.004, kdStress = 0.03;
     double sigma = 0, sigmaStress = 0;
     int decline = SG_DYING, stressDecline = SG_DYING;
     double inocLog = 3, baseLog = 9, muMax = 0.02, q0 = 0.05;
@@ -74,6 +75,7 @@ Traits traitsOf(const CultureKind& k) {
     if (s.tOpt >= 80) T.bestS *= 0.8;   // the hyperthermophiles' quick lives
     T.lagS = 40 + 60 * u(1);
     T.wakeS = 20 + 40 * u(2);
+    T.bestS *= FLASK_QUICK; T.lagS *= FLASK_QUICK; T.wakeS *= FLASK_QUICK;   // R-449: every rate five times as quick, so every rate's ratio as before
     T.holdS = 300 + 600 * u(3);
     T.kd = 1.0 / (200 + 200 * u(4));
     T.kdStress = 1.0 / (20 + 15 * u(5));
@@ -83,7 +85,7 @@ Traits traitsOf(const CultureKind& k) {
     T.stressDecline = T.decline == SG_GATHERING ? SG_DYING : T.decline;
     T.sigmaStress = T.decline == SG_GATHERING ? 0 : 0.5 * T.sigma;
     const double best = T.baseLog + bestYieldLog(s);
-    T.muMax = std::log(10.0) * std::max(1.0, best - T.inocLog) / std::max(60.0, T.bestS - T.lagS);
+    T.muMax = std::log(10.0) * std::max(1.0, best - T.inocLog) / std::max(60.0 * FLASK_QUICK, T.bestS - T.lagS);
     T.q0 = 1.0 / std::expm1(std::max(0.05, T.muMax * T.lagS));   // Baranyi's h0: the lag's work, its time at its species' best rate (Y-04: before its genes' price)
     if (k.burden > 0) T.muMax *= 1 - std::min(0.5, k.burden);   // Y-03: what its genes cost it (Y-04: its lag longer by as much)
     return T;
@@ -223,9 +225,9 @@ void advance(const Traits& T0, const CultureKind& k0, const Growth& g0, SpState&
                 const double ts = t + growTau(S.N, S.q, g.mu, s.K, Ns);
                 if (ts < end) { *mk.strainT = ts; strainMove(k0, *mk.m, g.edge, mk.strains, *mk.strainWhat, *mk.strainValue); }
             }
-        } else if (S.hold < T.holdS || (k.world.overgrows && g.fit == GF_GROWS)) {   // at its crowd, or with nothing to eat: its reserves held a while
-            s.mode = MD_HOLD; s.stage = g.fit == GF_GROWS ? SG_CROWD : SG_HUNGRY;
-            if (k.world.overgrows && g.fit == GF_GROWS) { s.stage = SG_OVERGROWN; end = tb; }   // J-01: it never stops, nor ends till it is emptied
+        } else if (g.fit == GF_GROWS || S.hold < T.holdS) {   // at its crowd, or with nothing to eat: its reserves held a while
+            s.mode = MD_HOLD; s.stage = g.fit != GF_GROWS ? SG_HUNGRY : (k.world.overgrows ? SG_OVERGROWN : SG_CROWD);
+            if (g.fit == GF_GROWS) end = tb;   // R-449: the incubator feeds it, so it stays at its crowd till its medium or a rival changes (J-01's overgrown too)
             else {
                 const double th = t + (T.holdS - S.hold);
                 end = std::min(tb, th); held = th <= tb;
@@ -345,12 +347,12 @@ double cardinalRate(double T, double lo, double opt, double hi) { return cardina
 
 int cellChemistry(int cell) { return cell == CC_ACID ? CH_ACID : (cell == CC_AMMONIA ? CH_AMMONIA : (cell == CC_CRYOSTAT ? CH_HYDROCARBON : CH_WATER)); }
 int chemistryCell(int chemistry) { return chemistry == CH_ACID ? CC_ACID : (chemistry == CH_AMMONIA ? CC_AMMONIA : (chemistry == CH_HYDROCARBON ? CC_CRYOSTAT : CC_WATER)); }
-void cellRange(int cell, double& loC, double& hiC) {
+void cellRange(int cell, double& loC, double& hiC, int salt) {
     switch (cell) {
         case CC_ACID: loC = -20; hiC = 90; break;
         case CC_AMMONIA: loC = -100; hiC = -30; break;
         case CC_CRYOSTAT: loC = -188; hiC = -168; break;
-        default: loC = -20; hiC = 125; break;   // the water's (its brine kept liquid below its freezing; a pressure cell above its boiling for the vents' life)
+        default: loC = salt >= 2 ? BRINE_COLDEST_C : WATER_COLDEST_C; hiC = 125; break;   // the water's (its brine kept liquid below its freezing; a pressure cell above its boiling for the vents' life)
     }
 }
 int lightOfStar(int cls) {
@@ -366,6 +368,7 @@ double freezingC(int salt) { return salt >= 2 ? -20 : (salt == 1 ? -2 : 0); }
 bool flaskIce(const Medium& m, double frostC) {
     return m.cell == CC_WATER && frostC > FROST_NONE + 1 && m.tempC < freezingC(m.salt) && m.tempC <= frostC;
 }
+bool brineAntifreeze(const CultureKind& k) { return k.chemistry == CH_WATER && k.s.saltHi >= 2 && k.world.frostC <= FROST_NONE + 1; }
 
 RGB dyeColour(int dye) {
     switch (dye) {
@@ -377,6 +380,8 @@ RGB dyeColour(int dye) {
         case WD_BLUE: return RGB(0.15f, 0.3f, 0.82f);
         case WD_BLACK: return RGB(0.1f, 0.09f, 0.08f);
         case WD_FLUORESCENT: return RGB(0.35f, 1.0f, 0.45f);
+        case WD_GREEN: return RGB(0.2f, 0.56f, 0.22f);    // R-453: a green alga's bloom (Chlorella's pea-soup water)
+        case WD_PINK: return RGB(0.95f, 0.5f, 0.66f);     // a salt lake's (Dunaliella's carotenoids, Lake Hillier's bubblegum pink)
         default: return RGB(0.86f, 0.8f, 0.62f);
     }
 }
@@ -405,7 +410,7 @@ Medium mediumOfPlace(const Biota& B, int bodyType, int starClass, const Microhab
     Medium m;
     m.cell = chemistryCell(B.chemistry);
     double lo, hi;
-    cellRange(m.cell, lo, hi);
+    cellRange(m.cell, lo, hi, h.salt);
     m.tempC = clampd(std::round(readingC), lo, hi);
     const int n = h.niche;
     const bool lit = !h.shade && n != NI_VENT && n != NI_ICE && n != NI_ROCK && n != NI_PLUME;

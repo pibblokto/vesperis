@@ -310,59 +310,108 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
             materialRamp(fb.pal, banks[fam], c * lightOf(), hasSky ? &sk : nullptr);
         }
     }
-    for (int which = 0; which < 2; which++) {   // J-02: a made world's tint over its land, the first disc's in bank 25, the second's in 26
+    // J-02 to J-09, KI-461, KI-475: each disc's made colours, each in a bank of its own, in turn: its overgrowth's stain (its veins lit at night
+    // where it glows), its waters' tint (a water's ramp; a glowing line's light at night) or the test layer's land, its land's, plants' and snow's
+    // looks (a glowing forest's light at night), each class's latest line first, its made clouds (a dye's or the spores' colour; a glow at
+    // night), then each other line's own colour; two of one colour share a bank, and one past the banks takes its kind's nearest
+    for (int which = 0; which < 2; which++) {
+        DiscMade& dm = discMade[which];
+        dm.clear();
         const BodyGen* g = genOf(which == 0 ? bodyA : bodyB);
-        const bool clouds = g && (g->made.cloudTintK > 0 || g->made.cloudGlow > 0);   // J-04: its made clouds in the bank's upper stops too
-        const int mb = which == 0 ? 25 : 26;
-        const int cls = g ? madeGlobeClass(g->made) : -1;
-        if (g && madeGlobeGrowth(g->made)) {   // J-09: an overgrowth's stain, its lit veins in the upper stops where it glows (the night side's)
-            const MadeGrowth& G = g->made.spread[g->made.growthLine].growth;
-            const RGB oc = G.colour * lightOf();
-            if (G.glow > 0) {
-                const RGB L = G.glowTint;
-                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, oc}, {46, L * 0.3f}, {54, L * 0.7f}, {63, lerp(L, white, 0.35f)}});
-            } else { RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk); materialRamp(fb.pal, mb, oc, hasSky ? &sk : nullptr); }
-            // the first disc's waters' tint in bank 31 where no trait holds it (a glowing line's light in its upper stops)
-            if (which == 0 && g->made.tinted && g->made.tintOn == MADE_ON_WATER && !g->hasTrait(TR_BLOOMS) && !g->hasTrait(TR_REEFS) && !g->hasTrait(TR_PINK_LAKES)) {
-                const RGB wc = g->made.tint * lightOf(), W = g->made.glowTint;
-                if (g->made.glow > 0) setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, wc * 0.3f}, {34, wc * 0.7f}, {44, W * 0.35f}, {54, W * 0.75f}, {63, lerp(W, white, 0.35f)}});
-                else setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, wc * 0.3f}, {34, wc * 0.7f}, {47, wc}, {56, lerp(wc, white, 0.5f)}, {63, white}});
-            }
-            continue;
-        }
-        if (g && !g->made.tinted && !clouds && cls >= 0) {   // J-05: its land's, plants' or snow's look (a glowing forest's light in the upper stops)
-            const MadeLook& ml = *g->made.lookOf(cls);
-            const RGB oc = (ml.tinted ? ml.tint : madeMatColour(*g, familyRep(g->type, FAM_FOREST))) * lightOf();
-            if (cls == MC_PLANTS && g->made.plantGlow > 0) {
-                const RGB L = g->made.plantGlowTint;
-                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, oc}, {46, L * 0.3f}, {54, L * 0.7f}, {63, lerp(L, white, 0.35f)}});
-            } else { RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk); materialRamp(fb.pal, mb, oc, hasSky ? &sk : nullptr); }
-            continue;
-        }
-        if (!g || (!g->made.tinted && !clouds)) continue;
-        const RGB cc = (g->made.cloudTintK > 0 ? lerp(white, g->made.cloudTint, (float)clampd(0.75 * g->made.cloudTintK, 0, 1)) : white) * lightOf();
-        const bool glows = g->made.glow > 0 || g->made.cloudGlow > 0;
-        const RGB L = g->made.cloudGlow > 0 ? g->made.cloudGlowTint : g->made.glowTint;
-        if (g->made.tinted && g->made.tintOn == MADE_ON_WATER) {   // J-03: over its waters, in a water's ramp; a glowing line's light in its upper stops (the night side's)
-            const RGB oc = g->made.tint * lightOf();
-            if (g->made.cloudGlow > 0)   // (the clouds white by day over their faint light at night)
-                setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, lerp(L, cc, 0.5f)}, {63, lerp(cc, white, 0.3f)}});
-            else if (glows) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.35f}, {54, L * 0.75f}, {63, lerp(L, white, 0.35f)}});
-            else if (clouds) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, lerp(oc, cc, 0.65f)}, {50, cc}, {63, lerp(cc, white, 0.35f)}});   // (the waters under 36)
-            else setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {47, oc}, {56, lerp(oc, white, 0.5f)}, {63, white}});
-            continue;
-        }
-        if (!g->made.tinted) {   // J-04: its clouds alone (a spores' world with no dye): their colour, a glow's light in the upper stops
-            if (glows) setRamp(fb.pal, mb, {{0, RGB(0, 0, 0)}, {14, cc * 0.25f}, {34, cc * 0.6f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, lerp(L, cc, 0.5f)}, {63, lerp(cc, white, 0.3f)}});
-            else materialRamp(fb.pal, mb, cc, nullptr);
-            continue;
-        }
+        if (!g || !g->made.on()) continue;
+        const MadeWorld& m = g->made;
+        const bool traits31 = which == 0 && (g->hasTrait(TR_BLOOMS) || g->hasTrait(TR_REEFS) || g->hasTrait(TR_PINK_LAKES));
+        static const int POOL_A[6] = {25, 27, 29, 21, 23, 31}, POOL_B[5] = {26, 28, 30, 22, 24};
+        int pool[6], np = 0;
+        for (int k = 0; k < (which == 0 ? 6 : 5); k++) { const int b = which == 0 ? POOL_A[k] : POOL_B[k]; if (!(b == 31 && traits31)) pool[np++] = b; }
+        int next = 0;
+        auto take = [&]() { if (next >= np) return -1; dm.banks[dm.nBanks++] = pool[next]; return pool[next++]; };
         RGB sk; const bool hasSky = skyLightOf(*g, lightOf(), sk);
-        materialRamp(fb.pal, mb, g->made.tint * lightOf(), hasSky ? &sk : nullptr);
+        auto glowRamp = [&](int bank, const RGB& oc, const RGB& L) {
+            setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {42, oc}, {46, L * 0.3f}, {54, L * 0.7f}, {63, lerp(L, white, 0.35f)}});
+        };
+        auto waterRampOf = [&](int bank, const RGB& oc, bool glows, const RGB& L) {
+            if (glows) setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.35f}, {54, L * 0.75f}, {63, lerp(L, white, 0.35f)}});
+            else setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {47, oc}, {56, lerp(oc, white, 0.5f)}, {63, white}});
+        };
+        auto same = [](const RGB& a, const RGB& b) { return a.r == b.r && a.g == b.g && a.b == b.b; };
+        const int lines = std::min(m.lines, MADE_LINES);
+        // the stains, the waters' and the looks' colours by line, the latest's first
+        auto stainOf = [&](int i) {
+            const MadeGrowth& G = m.spread[i].growth;
+            if (!G.on() || dm.stain[i] >= 0) return;
+            for (int j = 0; j < lines; j++)
+                if (j != i && dm.stain[j] >= 0 && same(m.spread[j].growth.colour, G.colour) && (m.spread[j].growth.glow > 0) == (G.glow > 0)) { dm.stain[i] = dm.stain[j]; dm.stainGlow[i] = dm.stainGlow[j]; return; }
+            const int b = take();
+            if (b < 0) return;
+            dm.stain[i] = b; dm.stainGlow[i] = G.glow > 0;
+            if (G.glow > 0) glowRamp(b, G.colour * lightOf(), G.glowTint);
+            else materialRamp(fb.pal, b, G.colour * lightOf(), hasSky ? &sk : nullptr);
+        };
+        auto waterOf = [&](int i) {
+            const MadeSpread& sp = m.spread[i];
+            if (!m.tinted || m.tintOn != MADE_ON_WATER || !sp.waterTinted || dm.water[i] >= 0) return;
+            for (int j = 0; j < lines; j++)
+                if (j != i && dm.water[j] >= 0 && same(m.spread[j].waterTint, sp.waterTint) && (m.spread[j].glow > 0) == (sp.glow > 0)) { dm.water[i] = dm.water[j]; dm.waterGlow[i] = dm.waterGlow[j]; return; }
+            const int b = take();
+            if (b < 0) return;
+            dm.water[i] = b; dm.waterGlow[i] = sp.glow > 0;
+            waterRampOf(b, sp.waterTint * lightOf(), sp.glow > 0, sp.glowTint);
+        };
+        auto lookOf = [&](int cls, int i) {
+            const MadeLook& ml = m.spread[i].look[cls];
+            const bool glows = cls == MC_PLANTS && m.spread[i].plantsGlow() > 0;
+            if (!ml.on || (!ml.tinted && !glows) || dm.look[cls][i] >= 0) return;
+            for (int j = 0; j < lines; j++) {
+                const MadeLook& o = m.spread[j].look[cls];
+                if (j != i && dm.look[cls][j] >= 0 && o.tinted == ml.tinted && (!ml.tinted || same(o.tint, ml.tint)) && dm.lookGlow[cls][j] == glows) { dm.look[cls][i] = dm.look[cls][j]; dm.lookGlow[cls][i] = glows; return; }
+            }
+            const int b = take();
+            if (b < 0) return;
+            dm.look[cls][i] = b; dm.lookGlow[cls][i] = glows;
+            const RGB oc = (ml.tinted ? ml.tint : madeMatColour(*g, familyRep(g->type, FAM_FOREST))) * lightOf();
+            if (glows) glowRamp(b, oc, m.spread[i].glowTint);
+            else materialRamp(fb.pal, b, oc, hasSky ? &sk : nullptr);
+        };
+        auto latestOf = [&](int cls) {   // (the class's latest line that makes a look)
+            for (int i = lines - 1; i >= 0; i--) if (m.spread[i].look[cls].on) return i;
+            return -1;
+        };
+        if (m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES) stainOf(m.growthLine);
+        if (m.tinted && m.tintOn == MADE_ON_WATER) {
+            int first = -1;   // (the line whose colour the world's tint is)
+            for (int i = lines - 1; i >= 0 && first < 0; i--) if (m.spread[i].waterTinted && same(m.spread[i].waterTint, m.tint)) first = i;
+            if (first >= 0) waterOf(first);
+        } else if (m.tinted) {   // the test layer's tint over the land
+            dm.land = take();
+            if (dm.land >= 0) materialRamp(fb.pal, dm.land, m.tint * lightOf(), hasSky ? &sk : nullptr);
+        }
+        for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) { const int i = latestOf(cls); if (i >= 0) lookOf(cls, i); }
+        if ((m.cloudTintK > 0 || m.cloudGlow > 0) && hasOpaqueDeck(g->type)) {   // J-14: a deck's dyed lanes, its own colour toward the dye; its glow apart
+            const RGB cc = lerp(g->matColor[MAT_CLOUD], m.cloudTint, (float)clampd(0.75 * m.cloudTintK, 0, 1)) * lightOf();
+            if (m.cloudTintK > 0 && (dm.cloud = take()) >= 0) materialRamp(fb.pal, dm.cloud, cc, nullptr);
+            if (m.cloudGlow > 0 && (dm.deckGlow = take()) >= 0) {   // (the night side's alone: dim to its brightest)
+                const RGB L = m.cloudGlowTint;
+                setRamp(fb.pal, dm.deckGlow, {{0, RGB(0, 0, 0)}, {30, L * 0.1f}, {38, L * 0.2f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, L * 0.8f}, {63, lerp(L, white, 0.35f)}});
+            }
+        } else if (m.cloudTintK > 0 || m.cloudGlow > 0) {   // its made clouds (white by day under a glow)
+            dm.cloud = take();
+            if (dm.cloud >= 0) {
+                const RGB cc = (m.cloudTintK > 0 ? lerp(white, m.cloudTint, (float)clampd(0.75 * m.cloudTintK, 0, 1)) : white) * lightOf();
+                if (m.cloudGlow > 0) {
+                    const RGB L = m.cloudGlowTint;
+                    setRamp(fb.pal, dm.cloud, {{0, RGB(0, 0, 0)}, {14, cc * 0.25f}, {34, cc * 0.6f}, {44, L * 0.3f}, {50, L * 0.55f}, {56, lerp(L, cc, 0.5f)}, {63, lerp(cc, white, 0.3f)}});
+                } else materialRamp(fb.pal, dm.cloud, cc, nullptr);
+            }
+        }
+        for (int i = lines - 1; i >= 0; i--) {   // each other line's own
+            stainOf(i); waterOf(i);
+            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) lookOf(cls, i);
+        }
     }
     // J-04: a made air seen from space: a veil over the disc's banks toward its colour (a haze's, a sulphur air's yellow, a thick air's white,
     // an ozone's blue or a thin one's violet), each stop's luminance kept, by how much of it there is
-    static const int veilA[] = {2, 6, 11, 13, 14, 15, 25, 31}, veilB[] = {3, 7, 16, 17, 18, 19, 26};
+    static const int veilA[] = {2, 6, 11, 13, 14, 15}, veilB[] = {3, 7, 16, 17, 18, 19};   // (and each disc's made banks: `discMade`)
     for (int which = 0; which < 2; which++) {
         const BodyGen* g = genOf(which == 0 ? bodyA : bodyB);
         if (!g || !g->made.aired()) continue;
@@ -375,8 +424,12 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
         vc = vc * (float)(1 / w);
         const float f = (float)std::min(0.75, w);
         const float vy = std::max(0.05f, 0.2126f * vc.r + 0.7152f * vc.g + 0.0722f * vc.b);
-        const int* banks = which == 0 ? veilA : veilB;
-        const int nb = which == 0 ? (int)(sizeof(veilA) / sizeof(int)) : (int)(sizeof(veilB) / sizeof(int));
+        int banks[12], nb = 0;
+        const int* vb = which == 0 ? veilA : veilB;
+        const int vn = which == 0 ? (int)(sizeof(veilA) / sizeof(int)) : (int)(sizeof(veilB) / sizeof(int));
+        for (int k = 0; k < vn; k++) banks[nb++] = vb[k];
+        for (int k = 0; k < discMade[which].nBanks; k++) banks[nb++] = discMade[which].banks[k];
+        if (which == 0 && std::find(banks, banks + nb, 31) == banks + nb) banks[nb++] = 31;   // (the first disc's water trait's)
         for (int k = 0; k < nb; k++)
             for (int sh = 1; sh < 64; sh++) {
                 uint8_t* px = &fb.pal[(banks[k] * 64 + sh) * 3];

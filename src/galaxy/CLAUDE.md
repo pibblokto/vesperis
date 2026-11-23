@@ -31,7 +31,14 @@ planet_grounds2, starfield.
   J-10: its steps on past 24 (`MadeGrowth::steps`), `madeGrowthSince` (a point's steps under it), a stone rotter's steps
   (`MadeSpread::pits`), `MADE_WET_GROUND` and `madeGrowthBreathes` (the traits WET GROUND and BREATHING).
   J-11: the made kind (`MadeKind`, `MadeWorld::kind`, the snowball's `freeze`, `deadCover`) and its words (`madeKindName`,
-  `madeKindSentence`, `madeKindPhrase`); planetmap.h's `deadCoverOf` and `deadGroundOf`; `felisianSample` lays a made kind's dead cover
+  `madeKindSentence`, `madeKindPhrase`); planetmap.h's `deadCoverOf` and `deadGroundOf`; `felisianSample` lays a made kind's dead cover.
+  B-447 to B-458: `madeKindShort`; each line's own colours (`MadeSpread::waterTint`, `look`, `glow`; its plants' glow `plantsGlow`) and
+  the line at a point (`SurfaceSample::madeLine`, `PlanetMap::mline`, `madeColourAt` and `madeMatColour` by line); every kind's caps and
+  frosts by the made warmth (planet_internal.h's `madeCapDeg`, `madeSnowM`, `madeFrostLess`); an ocean's dried floor (`driedSeaFloor`); a
+  made snowball's ice in the grass family (`matFamilyOnGen`). J-15: `madeGreens` (a desert: a dry world with no plants of its own whose
+  grass bank is free), `MADE_GREEN_AFTER` and `MADE_GREEN_THICK`, `madeGreenAt` (a carpet's grass behind its edge, read with the edge's
+  own noise), `MDK_GREENED_DESERT`; the cover's pass lays grass there over any land look, and `madeMatColour` gives a desert's grass its
+  line's pigment's colour
 - Sky: `almanac` (`almanacOf`, the finders' `registry()`), `nights` (showers, planetshine), `fronts` (`frontsOf`)
 - `probe` (giant atmospheres, the probe's fall: `probeStageAt`), `drifters` (sunless worlds: `drifterInSector`, and `placeInSector`,
   which resolves every saved place)

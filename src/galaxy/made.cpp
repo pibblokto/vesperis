@@ -16,6 +16,7 @@ uint64_t madeKey(const MadeWorld& m) {
         const MadeSpread& s = m.spread[i];
         h = hashOf(h, s.place.x); h = hashOf(h, s.place.y); h = hashOf(h, s.place.z); h = hashOf(h, s.reach);
         h = mix64(h ^ ((uint64_t)s.waters << 8 | (uint64_t)s.land << 4 | (uint64_t)s.looks)); h = hashOf(h, s.tLo); h = hashOf(h, s.tHi);   // J-03
+        if (s.deep != MADE_SURFACE) h = mix64(h ^ (uint64_t)s.deep * 0xDEE9ULL);   // (J-13: a surface line's key as before)
     }
     h = mix64(h ^ (uint64_t)(m.cover + 1) * 0xC2B2AE3D27D4EB4FULL);
     if (m.cover >= 0) h = hashOf(h, m.coverAlbedo);
@@ -23,6 +24,12 @@ uint64_t madeKey(const MadeWorld& m) {
     h = mix64(h ^ ((uint64_t)m.tintOn << 16 | (uint64_t)m.dye << 4 | (uint64_t)m.sunless));   // J-03
     if (m.glow > 0) { h = hashOf(h, m.glow); h = hashOf(h, m.glowTint.r); h = hashOf(h, m.glowTint.g); h = hashOf(h, m.glowTint.b); }
     h = hashOf(h, m.tempK); h = hashOf(h, m.freezeC);
+    for (int i = 0; i < m.lines && i < MADE_LINES; i++)   // KI-460: each line's own waters' colour and glow
+        if (m.spread[i].waterTinted || m.spread[i].glow > 0) {
+            const MadeSpread& s = m.spread[i];
+            h = hashOf(h, s.waterTint.r); h = hashOf(h, s.waterTint.g); h = hashOf(h, s.waterTint.b); h = mix64(h ^ (uint64_t)s.waterColours);
+            h = hashOf(h, s.glow); h = hashOf(h, s.glowTint.r); h = hashOf(h, s.glowTint.g); h = hashOf(h, s.glowTint.b);
+        }
     if (m.aired() || m.runaway > 0) {   // J-04 (a layer with no air keeps J-03's key)
         auto rgbOf = [&](const RGB& c) { h = hashOf(h, c.r); h = hashOf(h, c.g); h = hashOf(h, c.b); };
         h = mix64(h ^ ((uint64_t)m.air << 20 | (uint64_t)(m.ozone + 1) << 16 | (uint64_t)m.cloudDye << 8 | (uint64_t)m.rainDye << 4 | (uint64_t)m.cloudGlowForm));
@@ -30,6 +37,8 @@ uint64_t madeKey(const MadeWorld& m) {
         h = hashOf(h, m.wilt); h = hashOf(h, m.runaway); h = hashOf(h, m.cloudMore); h = hashOf(h, m.rainMore); h = hashOf(h, m.snowMore);
         h = hashOf(h, m.cloudTintK); rgbOf(m.cloudTint); h = hashOf(h, m.cloudGlow); rgbOf(m.cloudGlowTint); h = hashOf(h, m.rainTintK); rgbOf(m.rainTint);
         h = hashOf(h, m.seaSmoke); h = hashOf(h, m.spores); rgbOf(m.sporeTint);
+        if (m.silver > 0) h = hashOf(h, m.silver);   // (KI-483: a layer with none keeps its key)
+        h = hashOf(h, m.worldC);
     }
     bool spreads05 = false;
     for (int i = 0; i < m.lines && i < MADE_LINES; i++) spreads05 = spreads05 || m.spread[i].j05();
@@ -44,6 +53,7 @@ uint64_t madeKey(const MadeWorld& m) {
             const MadeSpread& s = m.spread[i];
             h = mix64(h ^ ((uint64_t)s.makes << 24 | (uint64_t)s.plants << 20 | (uint64_t)s.landOn << 12 | (uint64_t)s.lookWaters << 4));
             h = mix64(h ^ (uint64_t)(s.cover + 1) * 0x9E3779B97F4A7C15ULL); h = hashOf(h, s.coverAlbedo); h = hashOf(h, s.coldC);
+            lookOf(s.look[MC_LAND]); lookOf(s.look[MC_SNOW]); lookOf(s.look[MC_PLANTS]);   // KI-460: each line's own
         }
         h = mix64(h ^ ((uint64_t)m.seas << 40 | (uint64_t)m.grounds << 20 | (uint64_t)m.flora << 8 | (uint64_t)m.waterLook));
         h = hashOf(h, m.foam); rgbOf(m.foamTint); h = hashOf(h, m.jelly); h = hashOf(h, m.boil); h = hashOf(h, m.seaShade); rgbOf(m.seaShadeTint);
@@ -83,19 +93,28 @@ uint64_t madeKey(const MadeWorld& m) {
         h = hashOf(h, m.freeze);
         for (int i = 0; i < m.lines && i < MADE_LINES; i++) h = hashOf(h, m.spread[i].growth.land);
     }
+    for (int i = 0; i < m.lines && i < MADE_LINES; i++)   // J-15: a carpet's grass and shrubs (a layer with none keeps J-11's key)
+        if (m.spread[i].growth.greens) {
+            const MadeGrowth& G = m.spread[i].growth;
+            h = mix64(h ^ (uint64_t)(i + 1) * 0x6E15ULL); h = hashOf(h, G.greenReach); h = hashOf(h, G.thickReach);
+            h = hashOf(h, G.plants.r); h = hashOf(h, G.plants.g); h = hashOf(h, G.plants.b);
+        }
+    if (m.green > 0) h = hashOf(h, m.green);
     return h ? h : 1;
 }
 
 // J-11: a made kind's words. An overgrown world's by its type (films lie by the waters alone and make none)
 namespace {
 const char* const KIND_NAMES[MDK_COUNT] = {"", "MADE HOTHOUSE", "MADE SNOWBALL", "HAZE WORLD", "PURPLE WORLD", "RUST WORLD", "OVERGROWN WORLD", "CHARNEL WORLD",
-                                          "GREENED WORLD"};
+                                          "GREENED WORLD", "GREENED DESERT"};
 const char* const GROWN_NAMES[OG_COUNT] = {"OVERGROWN WORLD", "FLESH WORLD", "FUNGUS WORLD", "SLIME MOULD WORLD", "LICHEN WORLD", "CORAL WORLD", "SPONGE WORLD",
                                            "HAIR WORLD", "BLADDER WORLD", "CARPET WORLD", "OVERGROWN WORLD"};
 // what covers an overgrown world, as a sentence's subject and as a phrase's ("living tissue", "fungus", "bladders"), and whether it is many
 const char* const GROWN_WHAT[OG_COUNT] = {"growth", "living tissue", "fungus", "slime mould", "lichen", "coral", "sponge", "living hair", "bladders",
                                           "carpets of cells", "films"};
 bool grownMany(int type) { return type == OG_BLADDERS || type == OG_CARPETS || type == OG_FILMS; }
+const char* const KIND_SHORT[MDK_COUNT] = {"", "HOTHOUSE", "SNOWBALL", "HAZE", "PURPLE", "RUST", "OVERGROWN", "CHARNEL", "GREENED", "GREENED"};
+const char* const GROWN_SHORT[OG_COUNT] = {"OVERGROWN", "FLESH", "FUNGUS", "SLIME", "LICHEN", "CORAL", "SPONGE", "HAIR", "BLADDERS", "CARPETS", "OVERGROWN"};
 }   // namespace
 
 std::string madeKindName(const MadeWorld& m) {
@@ -104,9 +123,16 @@ std::string madeKindName(const MadeWorld& m) {
     return KIND_NAMES[m.kind];
 }
 
+std::string madeKindShort(const MadeWorld& m) {
+    if (m.kind <= MDK_NONE || m.kind >= MDK_COUNT) return "";
+    if (m.kind == MDK_OVERGROWN) return GROWN_SHORT[m.kindGrowth >= 0 && m.kindGrowth < OG_COUNT ? m.kindGrowth : OG_NONE];
+    return KIND_SHORT[m.kind];
+}
+
 std::string madeKindSentence(const MadeWorld& m) {
     switch (m.kind) {
-        case MDK_HOTHOUSE: return "Its seas boiled away into a thick hot air. Salt lies in the old basins, and its forests have turned to stone.";
+        case MDK_HOTHOUSE: return m.kindFlora ? "Its seas boiled away into a thick hot air. Salt lies in the old basins, and its forests have turned to stone."
+                                              : "Its seas boiled away into a thick hot air, and salt lies white on the old sea floor.";
         case MDK_SNOWBALL: return "Frozen from pole to pole: its seas are ice, its land lies under snow, and its forests stand dead and white.";
         case MDK_HAZE: return "A thick orange haze hides its sky. The light on the ground is dim and brown.";
         case MDK_PURPLE: return "Its seas have turned purple with sulphur bacteria, and its air smells of rotten eggs.";
@@ -120,13 +146,16 @@ std::string madeKindSentence(const MadeWorld& m) {
         case MDK_CHARNEL: return "Every animal and plant on it has died, and their remains lie everywhere.";
         case MDK_GREENED: return m.kindCold ? "Once cold, it is warmer now: its ice has drawn back and its plants are spreading."
                                            : "Once dry, it has rain now, and its plants are spreading.";
+        case MDK_GREENED_DESERT: return m.kindGrowth == OG_LICHEN ? "Its lichen has grown into grass and shrubs over most of its bare land."
+                                                                  : "A carpet of cells has grown into grass and shrubs over most of its bare land.";
         default: return "";
     }
 }
 
 std::string madeKindPhrase(const MadeWorld& m) {
     switch (m.kind) {
-        case MDK_HOTHOUSE: return "world whose seas boiled away under a thick hot air, its old seabeds white with salt and its forests turned to stone";
+        case MDK_HOTHOUSE: return m.kindFlora ? "world whose seas boiled away under a thick hot air, its old seabeds white with salt and its forests turned to stone"
+                                              : "world whose seas boiled away under a thick hot air, its old sea floor white with salt";
         case MDK_SNOWBALL: return "world frozen from pole to pole, its seas ice and its forests standing dead and white with frost";
         case MDK_HAZE: return "world dim under a thick orange haze";
         case MDK_PURPLE: return "world of purple seas under an air that smells of sulphide";
@@ -134,6 +163,8 @@ std::string madeKindPhrase(const MadeWorld& m) {
         case MDK_OVERGROWN: return std::string("world covered from coast to coast in ") + GROWN_WHAT[m.kindGrowth >= 0 && m.kindGrowth < OG_COUNT ? m.kindGrowth : OG_NONE];
         case MDK_CHARNEL: return "dead world where every animal and plant has died, their remains everywhere";
         case MDK_GREENED: return m.kindCold ? "world once cold, made warmer, its ice drawn back and its plants spreading" : "world once dry, made wetter, its plants spreading";
+        case MDK_GREENED_DESERT: return m.kindGrowth == OG_LICHEN ? "desert world greened by a lichen, grass and shrubs over most of its land"
+                                                                  : "desert world greened by a carpet of cells, grass and shrubs over most of its land";
         default: return "";
     }
 }
@@ -192,6 +223,33 @@ double madeGrowthSince(const MadeWorld& m, const Vec3& unit, uint64_t seed) {
         since = std::max(0.0, s);
     }
     return since;
+}
+
+bool madeGreens(int type) { return kindHas(type, KT_DRY) && !kindHas(type, KT_FLORA) && KINDS[type].accent[0] < 0; }   // (its grass bank free for them)
+
+double madeGreenAt(const MadeWorld& m, int line, const Vec3& unit, uint64_t seed, double& thick) {
+    thick = 0;
+    if (line < 0 || line >= m.lines || line >= MADE_LINES) return 0;
+    const MadeGrowth& G = m.spread[line].growth;
+    if (!G.on() || !G.greens || G.greenReach <= 0) return 0;
+    const double R = std::max(m.radiusKm, 1.0), fingers = 0.35 / R;   // (madeGrowthAt's edge, at the plants' reaches)
+    const double c = dot(unit, m.spread[line].place);
+    double n1 = 0, n2 = 0;
+    const bool noise = G.greenReach < PI || G.thickReach < PI;
+    if (noise) {
+        if (G.greenReach < PI && c < std::cos(std::min(PI, 1.3 * G.greenReach + 2 * fingers))) return 0;
+        n1 = fbm3(unit * 40.0, hashCombine(seed, 0x6E0E10 + (uint64_t)line), 3); n2 = fbm3(unit * (1.0 / fingers), hashCombine(seed, 0x6E0E20 + (uint64_t)line), 3);
+    }
+    const double d = noise ? std::acos(clampd(c, -1, 1)) : 0.0;
+    auto within = [&](double reach) {
+        if (reach >= PI) return 1.0;
+        if (reach <= 0) return 0.0;
+        const double edge = reach * (1 + 0.25 * n1) + fingers * n2, band = std::max(0.02 * reach, 0.2 * fingers);
+        return 1 - smoothstep(edge - band, edge + band, d);
+    };
+    const double k = within(G.greenReach);
+    if (k > 0) thick = within(G.thickReach);
+    return k;
 }
 
 MadeFate madeFateAt(const MadeWorld& m, const Vec3& unit, uint64_t seed) {
@@ -263,6 +321,7 @@ double madeReachAt(const MadeWorld& m, const Vec3& unit, uint64_t seed) {
 }
 
 bool madeLives(const MadeSpread& s, bool wet, int salt, double meanC) {
+    if (s.deep != MADE_SURFACE) return !wet && s.deep == MADE_UNDER_ICE;   // J-13: its look on the cracks over its sea, whatever their warmth
     if (wet ? !(s.waters & (1 << clampi(salt, 0, 2))) : !s.land) return false;
     return meanC > s.tLo && meanC < s.tHi;
 }

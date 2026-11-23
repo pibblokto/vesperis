@@ -24,7 +24,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   draws the slide in the framebuffer, its HUD, the list and the sheet. `cabin_life`'s `drawStore` lights the cold store's door. Z-05:
   `incubator` is the state `INCUBATOR`: flasks and what goes in them, the medium's controls, the lab clock (`updateLab`, in the frame
   beside the drones' update), and save lines through its state row's hooks. `incubator_draw` draws its screen: flasks, a curve, the
-  chooser. `cabin_life` has `drawIncubator`. The microscope's list takes flasks too (a drop of a culture on the
+  chooser. `cabin_life` has `drawIncubator` (B-459: a flask past the ship's banks in the nearest dealt colour's, `ShipBanks::bankNear`).
+  The microscope's list takes flasks too (a drop of a culture on the
   stage). Z-06: `sequencer` is the state `SEQUENCER`: it reads a species in SEQUENCE_S on the lab clock and tells the end when the clock
   reaches it (`sequencerTick` in `updateLab`). It also has the sheet's kin, the log's KIN, a made species' watermark sent to the
   decoder, and its `seq` line. `tree_screen` is the state `TREE` (Y-01), a tree per page: the ship's own, each world with a species
@@ -48,7 +49,8 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   `incubator`. Y-04: S sets a gene's switch (`editorSwitch`), and `flaskLineIn` gives a flask's line in a state. R-445: W opens the
   keep chooser for the new strain's folder (`KeepPick::write`, the parent's folder first), then a name entry (`TEXT_LINE`, the parent's
   name and the new strain's number typed in); `editorWriteBegin` starts the writing, and `editorTick` names the strain and keeps it in
-  that folder. The save keeps both in the `editorwriting` line. J-01: `flaskShow` (`incubator`) says what a flask's world genes show
+  that folder. The save keeps both in the `editorwriting` line. J-15: a cut STOP's line says what the line overgrows as and whether it
+  greens a desert (`overgrowthTypeOf`). J-01: `flaskShow` (`incubator`) says what a flask's world genes show
   (bubbles, a dye, a scum, slime, a sediment, clumps, an overgrowth, ice, a poisoned or a gene-taking other); the screen's words and
   picture (`renderFlaskPicture`) and the room's flasks (`flaskLook`, homes 49 to 62) read it, and `flaskLearn` learns from it. The
   editor's map is on two pages (Page Up and Page Down; the arrows walk across both).
@@ -62,10 +64,13 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
 - Screens: `cabin` (with SHIPSCREEN, CONSOLE), `menus`, `data_sheet` (J-11: a made kind's line, "FLESH WORLD, ONCE FELISIAN", and
   sentence), `guide_screens` (GUIDE, TEXT_ENTRY, LOG...), `star_map`,
   `galaxy_chart`, `landing_map` + `landing_map_build`, `persistence` (saves, SLOTS), `pad` (the controller)
-- The guide: `guide` (guide.txt), `names` (`starNameOf`, `bodyNameOf`, `logEvent`, `noteVisit`), `marks` (the scanner)
+- The guide: `guide` (guide.txt), `names` (`starNameOf`, `bodyNameOf`, `logEvent`, `noteVisit`; B-447: `kindNameNow`, `kindShortNow`,
+  `kindWordsNow`, a body's kind as it is now, its made kind's where it took one), `marks` (the scanner)
 - Devices: `radar` + `radar_camera`, `telescope`, `probe` + `probe_feed` + `probe_records`, `drones` + `drone_draw` + `seed_trip`
-  (J-03: S on the bay, the state `SEEDING`: a flask that shows FULL, a place on the world's map, drone 1 sent; the culture let go at
-  its place, the verdict its report; a world's seedings worked out once, `seedingsOf`; a vial's lines, `vialLines`), the decoder
+  (J-03: S on the bay, the state `SEEDING`: a culture alive in a flask, a place on the world's map, drone 1 sent; the culture let go at
+  its place, the verdict its report; a world's seedings worked out once, `seedingsOf`; a vial's lines, `vialLines`; J-13: Page Down and
+  Page Up its depth down a drill hole, `seedPageDepthKm`, the bay's `seedDepth`; J-14: Page Up on up into a cloud deck, a negative
+  `pageDepth` and `seedDepth`), the decoder
   `shards_screen` + `history_screen` + `chart_draw` + `medium_draw`, `player` (R-431: the state `PLAYER` at the deck, a folder per
   world, music only), the case `instruments_screen` + `instrument_draw`, `almanac`, `autoexplore` + `autoexplore_space` +
   `autoexplore_ground` + `autoexplore_hands`, `tape` + `audio_deck`

@@ -18,7 +18,10 @@
 - Maps and BodyGens follow the season: `setSeason` before rendering a system at a time t. A world's season step is kept by its seed, as
   every cache here is (B-438: kept by index, a body of that index in another system decided it).
 - The banks (space_view.h's `Palette banks:`; the table is in `docs/reference/02-*`): 0 stars, 1 sun, 2/3 bodies A/B, 6/7 water, 11 and
-  13-15 body A, 16-19 body B, 12 the companion, 20 belt rocks, 8-10 the cabin.
+  13-15 body A, 16-19 body B, 12 the companion, 20 belt rocks, 8-10 the cabin; a seeded world's made colours (B-458, `discMade`) 25, 27,
+  29, 21, 23 and 31 on the first disc, 26, 28, 30, 22 and 24 on the second, dealt by `setupPalette` and read by `drawGlobe`. J-14: a
+  deck world's made clouds take two (`DiscMade::cloud` its dyed streaks, `deckGlow` its night), the whole night side in the glow's: the
+  frame's smoothing keeps a pixel's bank, so a dark pixel of another bank among lit ones comes out lit in its own colour.
 - What is in the sky is where the maths puts it. The sun is drawn by its angle per pixel. A globe is culled only behind the camera.
   Depth is in metres.
 - Band-pinned passes: `drawStrippedTail` sums its splats per block, in order. `drawSun`'s glow loop copies what it reads into band

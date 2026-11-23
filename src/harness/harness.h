@@ -416,6 +416,15 @@ void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_
 int seedFates();   // J-08: `seed fates` (modes_seed_fates.cpp)
 int seedKinds();   // J-11: `seed kinds` (modes_seed_kinds.cpp): the made kinds of forty worlds and six lines, the shares, each kind drawn
 int seedRecord();  // J-12: `seed record` (modes_seed_record.cpp): a seeded world's record in the catalogue and on the LIFE page, `record/`
+int seedCold();    // J-13: `seed cold` (modes_seed_cold.cpp): forty worlds' warmth on the ground and down, lines tuned for each on the ground and deep
+int seedClouds();  // J-14: `seed clouds` (modes_seed_clouds.cpp): the cloud decks' heights, a cloud line let go in them, its clouds dyed from orbit
+// J-14: a cloud line's species: the first venusian worlds' first cloud species that lives on what the clouds give (light, dead matter); and a
+// GLOW gene moved in from the first glowing species of the forty worlds (its donor read), as a player moves one
+bool seedCloudSource(StarSystem& cs, int& cb, int& csp);
+bool seedGlowDonor(GeneEdit& glow);
+// J-13: a line's edits as a player would make them for a place (its warmth's best nearest the place's, brine and its frost cut where only a brine
+// stays liquid, DRY where the ground is dry, a SHIELD where the dose asks): species `sp` of body `lb`
+std::vector<GeneEdit> seedTunedEdits(const StarSystem& ls, int lb, int sp, const SeedVerdict& place);
 // a sheet of frames side by side, each halved (the mean of four), `cols` to a row (J-09's plates too)
 void writeSheet(const std::vector<std::vector<uint32_t>>& cells, int w, int h, int cols, const std::string& fn);
 int overgrowthPlates();   // J-09: `overgrowth plates` (modes_overgrowth.cpp)
@@ -509,7 +518,7 @@ void unitAnimals(const Check& check);
 // J-03: a line of a world's species as the game reads one (its form, its genes, its world genes; its edits applied, their price), keyed as the
 // guide keys it; and a seeding of it at a place (its record's fields), worked out (`seedingRun`)
 SeedLine seedLineFor(const StarSystem& sys, int body, int species, const std::vector<GeneEdit>& edits);
-Seeding seedingFor(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double clock);
+Seeding seedingFor(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double clock, const std::vector<Seeding>* earlier = nullptr);
 // the six lines `seed worlds` sends (ITERATION-1.5.0.md J-03): a species wild; warm and cold (its warmth gene six weights heavier or
 // lighter); a dye (DYE red, its weight the heaviest); a methane-maker (GAS methane); STOP cut. Their edits on a species' genes
 enum SeedLineKind { SL_WILD = 0, SL_WARM, SL_COLD, SL_DYE, SL_METHANE, SL_STOP, SL_COUNT };
@@ -535,6 +544,10 @@ std::vector<GeneEdit> seedGeneEdits(const MicrobeGenes& g, const std::vector<std
 int seedLooks();
 bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild);
 struct SeedAirCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; SeedLine wild; };
+// J-15: a greened desert's line: the first light-feeder of water with a green pigment living on the forty worlds (`seedCases`), tuned for the first
+// desert's place of them (`madeGreens`: its warmth, DRY) where it takes, with `wants` set on top (`seedGeneEdits`), let go there at 0 (`world`'s
+// wild its line); false where none takes. `seed kinds`' recipe and the unit's
+bool seedDesertLine(const std::vector<std::pair<int, int>>& wants, SeedAirCase& world, std::vector<GeneEdit>& edits, Seeding& sd);
 std::vector<SeedAirCase> seedAirCases(int n, int rounds = 3);
 // J-12: the world and line `seed record` and the unit's record checks send: of `seed climate`'s forty worlds with plants and animals, the first
 // where its own sea line given a nerve poison (its STOP cut and its cells bound: it overgrows too) takes and drives a native out by its 64th

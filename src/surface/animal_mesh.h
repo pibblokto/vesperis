@@ -49,6 +49,8 @@ struct AnimalPoseIn {
     double sink = 0;               // a burrower going under the ground 0..1 (1 out of sight)
     bool climbing = false;         // on a trunk: posed as on level ground, then turned so its belly faces the trunk and its head is up;
     Vec3 wall;                     // `at` the trunk's surface under its feet, `wall` the trunk's level normal there
+    double trunkR = 0;             // B-468: the trunk's radius there (0 a flat wall): the level ground posed on is then the bark's round, its
+                                   // feet on it, within the girth's sides
     double tiltMax = 0.35;         // the most the trunk tilts with the ground under it (radians: a climber's on a cliff more)
     double tilt = 0;               // the trunk tilted nose up besides (radians: a leaper's along its arc)
     // J-08: the fates. Remains (`dead`, a RemainsStage of surface_types.h): posed standing at the origin with its legs stiff and its neck thrown

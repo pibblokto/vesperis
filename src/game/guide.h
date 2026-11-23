@@ -103,10 +103,10 @@ struct MicrobeSheet {
 // its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines. Y-02: a line the gene
 // editor wrote is one of them (its move SM_EDIT, its number its species' next), its edits after its value (life/genes.h's text: "3=ACCG;8=-")
 struct StrainRecord { int parent = 0, what = 0; double value = 0; std::string edits; };
-// Y-02: what a gene does, as the explorer learned it, keyed `<genesis id, hex>/<its number>` (its genesis's map: every kin's): its kind
-// (life/genes.h's `GeneKind`; -1 none yet: NOTHING SEEN) and how (GENE_SEEN_*). `gene` lines
-enum GeneHow { GENE_SEEN_EDIT = 1, GENE_SEEN_DEATH, GENE_SEEN_STRAIN, GENE_SEEN_NOTHING };
-struct GeneKnown { int kind = -1, how = 0; };
+// Y-02: what a gene does, as the explorer learned it: its kind (life/genes.h's `GeneKind`). R-450: keyed by its species,
+// `<body key>/M<index>/G<its number>`, and known once the explorer changed it on the gene editor (or read a strain whose move it was in).
+// `gene` lines; an older guide's, by genesis (`<genesis id, hex>/<number>`), are dropped when loaded
+struct GeneKnown { int kind = -1; };
 // J-02 (R-448): a culture let go on a world (J-03's drone trip), kept by its world: the place, the line (its key, and its edits copied, a
 // strain's number being the guide's own), the flask's medium it grew in, the generation and the guide's clock when it went down. `seeded`
 // lines in the order they went down; a loan carries none (a friend's seeded worlds never reach the borrower's game)
@@ -117,6 +117,7 @@ struct SeedRecord {
     int cell = 0, light = 0, energy = 0, salt = 0; double tempC = 0;   // the medium (life/cultures.h's `Medium`)
     int gen = 0;                                                       // the generation it went down in
     double clock = 0;                                                  // the guide's clock then
+    double depthKm = 0;                                                // J-13: down a drill hole (km; written last, only when not 0); J-14: under 0, up
 };
 std::string seededLine(const SeedRecord& r);                 // its `seeded` line, without the newline
 bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after its key
@@ -148,7 +149,7 @@ struct Guide {
     std::map<std::string, MicrobeSheet> microbes; // Z-04: "<body key>/M<index>" of every species seen under the microscope, what of it was seen (`microbe` lines)
     std::map<std::string, StrainRecord> strains;  // Z-05: "<body key>/M<index>/S<n>" of every strain a flask gave (`strain` lines)
     std::set<std::string> treeOff;                // Y-01: the lab's lines ("<body key>/M<index>/S<n>") taken off their world's tree (`treeoff` lines)
-    std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a genesis was seen to do ("<genesis>/<number>": `gene` lines)
+    std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a species does ("<body key>/M<index>/G<number>": `gene` lines; R-450)
     std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
     std::map<std::string, AnimalRecord> animals;  // J-07: "<body key>/A<index>" of every animal species seen (`animal` lines)
     // J-02: the worlds seeded (`seeded` lines) and the guide's clock, the seconds the game ran across its saves and expeditions on real time

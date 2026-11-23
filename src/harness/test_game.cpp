@@ -537,7 +537,7 @@ int TestGame::testDronesWorldItems(int kind, bool unheld) {
 }
 
 std::string TestGame::testDronesInfo() const {
-    std::string s = fmt("the bay: clock %.1f, %s%s, cooldown %.0f s; ", bay.clock, bay.out ? "out" : (droneBayReady() ? "ready" : "charging"), bay.planned ? ", planned" : "", droneCooldownLeft());
+    std::string s = fmt("the bay: clock %.1f, %s%s; ", bay.clock, bay.out ? "out" : "ready", bay.planned ? ", planned" : "");
     if (bay.worldValid)
         s += fmt("the world's items %d (%d places, homes %s, read in %.0f ms); ", (int)bay.world.items.size(), (int)bay.world.places.size(), bay.world.homes ? "yes" : "no", bay.world.buildMs);
     for (int k = 0; k < DRONE_COUNT; k++) {

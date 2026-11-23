@@ -305,9 +305,9 @@ void Game::updateShipMotion(double dt) {
                 ship.mode = ShipState::PARKED;
                 ship.parkedBody = ship.localTarget;
                 const Body& b = sys.bodies[ship.parkedBody];
-                status(fmt("IN ORBIT: %s - %s%s", upper(bodyNameOf(ship.parkedBody)).c_str(), KINDS[b.type].name,
+                status(fmt("IN ORBIT: %s - %s%s", upper(bodyNameOf(ship.parkedBody)).c_str(), kindNameNow(ship.parkedBody).c_str(),
                            KINDS[b.type].landable ? " - C TO DEPLOY CAPSULE" : (isProbeGiant(b.type) ? " - C LAUNCHES A PROBE" : " - NOT LANDABLE")), 8);
-                logEvent("ORBIT", fmt("%s, %s, R %.0f KM, %.2f G%s", upper(bodyNameOf(ship.parkedBody)).c_str(), KINDS[b.type].name, b.radiusKm, b.gravity / 9.8, b.rings ? ", RINGS" : ""));
+                logEvent("ORBIT", fmt("%s, %s, R %.0f KM, %.2f G%s", upper(bodyNameOf(ship.parkedBody)).c_str(), kindWordsNow(ship.parkedBody).c_str(), b.radiusKm, b.gravity / 9.8, b.rings ? ", RINGS" : ""));
                 audio.beep = BEEP_ARRIVE;
             }
             break;

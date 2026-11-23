@@ -55,6 +55,10 @@
 #include <atomic>
 #include <thread>
 
+// J-13 (R-454): a gene editor's guide line on how cold a water line can go (its warmth's, salt's and frost's; empty for any other gene or liquid),
+// its parent's own lowest warmth where that is colder
+std::string coldGuideWords(const CultureKind& k, int kind, double parentMinC = 1e9);
+
 class Game {
 public:
     // ---- the frame, and what the platform reads and asks (game.cpp, main_raylib.cpp)
@@ -115,6 +119,11 @@ public:
     bool bodyNamed(int bi) const;
     std::string beltNameOf(int k) const;
     std::string bodyLabelOf(int i) const;
+    // KI-482: a body's kind as it is now, a seeded world's made kind (the layer the space view holds) where it took one: its name
+    // ("FLESH WORLD"), its short name (the analyzer's and the telescope's ten characters) and the log's words ("FLESH WORLD, ONCE FELISIAN")
+    std::string kindNameNow(int bi) const;
+    std::string kindShortNow(int bi) const;
+    std::string kindWordsNow(int bi) const;
     std::string starKeyOf(const Star& s) const;
     // ---- marks and the surface scanner (marks.cpp)
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
@@ -270,10 +279,11 @@ protected:
     void refreshMapShadows(const std::vector<Vec3>& unitLUT);
     int lastSecX = -1, lastSecY = -1;   // the sector the explorer was in last frame (crossings are announced)
     // the ramps of every material and, J-02, of each material under a made world's look (`MAP_MADE` + the material: the waters' tint, J-05's
-    // land's, snow's or plants' colour, else its own): MAP_RAMPS of them; `made` the look's share at the texel
-    static constexpr int MAP_MADE = MAT_COUNT, MAP_RAMPS = 2 * MAT_COUNT;
+    // land's, snow's or plants' colour, else its own), KI-460 and KI-473 each line's own (`MAP_LINE` + the line's MAT_COUNT + the material: its
+    // look's, its waters', its overgrowth's): MAP_RAMPS of them; `made` the look's share at the texel, `line` the line whose look lies there
+    static constexpr int MAP_MADE = MAT_COUNT, MAP_LINE = 2 * MAT_COUNT, MAP_RAMPS = (2 + MADE_LINES) * MAT_COUNT;
     void mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo);
-    static uint32_t mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey = -1, double made = 0);
+    static uint32_t mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey = -1, double made = 0, int line = -1);
     static double surveyHeight(double h, double lo, double hi) { return hi > lo ? clampd((h - lo) / (hi - lo), 0, 1) : 0.5; }
     static void surveyRange(const float* h, size_t n, double& lo, double& hi);
     // ---- the screens: fades, the status line, menus, settings, CONTROLS (menus.cpp)
@@ -500,7 +510,6 @@ protected:
     void droneFindsSeen();
     bool droneBayHere() const;
     bool droneBayReady() const;
-    double droneCooldownLeft() const;
     double droneBackIn() const;
     std::string droneFindKey(const DroneFindRec& f) const;
     std::string droneFindLabel(const DroneFindRec& f) const;
@@ -880,6 +889,9 @@ protected:
     // does learned as an edited line shows it against its parent (the incubator, the microscope), a vital one's death, a strain read (the
     // guide's `gene` lines)
     void editorEnter(); void updateEditor(const Input& in, double dt, double realDt); void renderEditor(); void editorPad(PadMenu& m) const;
+    void renderEditorGuide(int y);                          // R-450: the gene chosen with its letters open, over the map's place
+    std::string editorColdWords(int kind) const;            // J-13: how cold its water line can go, on the warmth's, salt's and frost's guides
+    const std::vector<std::string>& editorLetterChoices();  // R-450: each letter at the cursor's value in a few words
     void editorSave(std::string& lines) const; bool editorLoad(const std::string& line); void editorReset();
     void editorChoices(bool kin = false);   // Y-03: a kin's, the species read before the cultures
     bool editorPut(const EditorChoice& c);
@@ -899,16 +911,17 @@ protected:
     bool geneDonor(const FlaskSpecies& line, GeneEdit& e, int depth = 0) const;   // its kind and form, its gene, whose it was, how far it came
     int geneFar(const std::string& speciesKey, const std::string& origin) const;   // a gene's GeneFrom by its species' place and its origin's
     void geneNeedSay(int flask, int who, int place, const std::string& seen, const std::string& says);
-    std::string geneKey(uint64_t genesis, int place) const;
-    const GeneKnown* geneKnown(uint64_t genesis, int place) const;
-    std::string geneWords(uint64_t genesis, int place) const;   // the map's words: its name, what it was seen to do, NOTHING SEEN, NOT KNOWN
-    void geneSeen(int flask, int who, int kind, const std::string& what, int how = GENE_SEEN_EDIT, int state = -1);   // Y-04: its state
+    std::string geneKey(const FlaskSpecies& w, int place) const;   // R-450: a gene of a species ("<species key>/G<number>")
+    const GeneKnown* geneKnown(const FlaskSpecies& w, int place) const;
+    std::string geneWords(const FlaskSpecies& w, int place) const;   // the map's words: its name, its kind, NOT KNOWN
+    bool geneLearn(const FlaskSpecies& w, int place, int kind);     // R-450: known for its species (true when new)
+    void geneSeen(int flask, int who, int kind, const std::string& what, int state = -1);   // Y-04: its state
     void geneSay();                   // the findings said in their turn (`updateLab`)
     void flaskLearn(int i);           // an edited line against its parent as the lab's clock runs (its fit, its rest, its glow; a vital death)
     void scopeLearn();                // a flask's edited line in view on the microscope (its shape, size, colour, motion; nothing seen)
     void scopeAnswerLearn(int kind, uint32_t bits, int unanswered = -1);   // its answers on the slide (a sense)
     std::string strainReadLearn();    // the sequencer's reading of a strain: the gene its move was in (the line said; "" none)
-    int strainGene(const FlaskSpecies& w, uint64_t& genesis) const;   // a strain's one gene differing from its parent's (-1 none)
+    int strainGene(const FlaskSpecies& w) const;   // a strain's one gene differing from its parent's (-1 none)
     std::string lineTag(const FlaskSpecies& w) const;             // a line's number as drawn: S3 (a strain), E4 (an edited line)
     std::string lineTagOf(const std::string& speciesKey, int n) const;
     std::string lineMoveWords(const std::string& lineKey) const;  // a strain's move, an edited line's edits ("GENE 3 CHANGED, GENE 8 CUT OUT")
@@ -948,6 +961,7 @@ protected:
     // J-12: a world as the catalogue reads it (a seeded one's made kind and natives died out made again each list; its animals when asked); a
     // seeded line's name; an animal's name ("" none) and marks; whether a row's species is gone from its world (drawn dim); an animal's sheet
     CatalogueWorld& catalogueWorld(const std::string& worldKey, LabSystems& systems, bool animals);
+    std::string madeKindAt(const std::string& worldKey, LabSystems& systems);   // KI-482: a world's made kind now by its key ("" for none)
     std::string catalogueLineName(const std::string& lineKey) const;
     std::string catalogueAnimalName(const std::string& key) const;
     std::string catalogueAnimalMarks(const std::string& key) const;
@@ -1010,9 +1024,12 @@ protected:
     void seedPageEnter(); void updateSeedPage(const Input& in, double dt, double realDt); void renderSeedPage(); void seedPagePad(PadMenu& m) const;
     std::string seedRefusal(int body);           // why a world takes no seeding now ("" it may)
     bool homeWorld(int body) const;              // the world every game starts at (the pinned home star's first felisian planet)
-    int seedFlaskFull(int from) const;           // the next flask from `from` whose culture shows FULL (-1 none)
-    int seedFlaskWho(int i) const;               // the flask's species that shows FULL (0, 1; -1 none)
+    bool seedCultureLives(int pick) const;       // B-473: a flask's culture alive (pick: its flask times two plus which of its two)
+    int seedNextCulture(int from) const;         // the next culture alive from the pick `from` on (-1 none)
+    int seedFirstCulture() const;                // the page's first: the first showing FULL, else the first alive (-1 none)
+    std::string seedCultureWords(int pick) const;   // the page's CULTURE line ("A ROD, FLASK 2, GROWING")
     void seedPagePlace();                        // what lies under the page's cursor
+    double seedPageDepthKm();                    // J-13: the page's depth (km), its index held within the world's
     void seedLaunch();
     void dronePlanSeed();                        // drone 1's clock to the place and back (drones.cpp: the trips' timings)
     void seedLetGo();                            // the drone at its place: the culture let go, its `seeded` line

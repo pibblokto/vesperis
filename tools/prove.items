@@ -21,10 +21,12 @@ seed | $V seed test | shots/tests/seed_test_*.png=15 shots/tests/seed_*.txt=2 | 
 seed_worlds | $V seed worlds; $V seed sea | shots/tests/seed_sea_*.png=10 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
 seed_air | $V seed climate; $V seed traits | shots/tests/made_*.png=54 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
 seed_looks | $V seed looks | shots/tests/look_*.png=168 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
-seed_fates | $V seed fates | shots/tests/fates/*.png=77 | twice mask=\(\d+(?:\.\d+)?\ss\)
-seed_kinds | $V seed kinds | shots/tests/kinds/*.png=36 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_fates | $V seed fates | shots/tests/fates/*.png=79 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_kinds | $V seed kinds | shots/tests/kinds/*.png=40 | twice mask=\(\d+(?:\.\d+)?\ss\)
 seed_record | $V seed record | shots/tests/record/*.png=6 | twice mask=\(\d+(?:\.\d+)?\ss\)
-overgrowth | $V overgrowth plates; $V overgrowth world; $V overgrowth ruins | shots/tests/overgrowth/type_*.png=10 shots/tests/overgrowth/variant_*.png=40 shots/tests/overgrowth/types.png=1 shots/tests/overgrowth/variants.png=1 shots/tests/overgrowth/world_*.png=13 shots/tests/overgrowth/ruins_*.png=15 shots/tests/overgrowth_guide.txt=1 shots/tests/overgrowth_save_auto.txt=1 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_cold | $V seed cold | shots/tests/cold/*.png=6 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_clouds | $V seed clouds | shots/tests/clouds/*.png=9 | twice mask=\(\d+(?:\.\d+)?\ss\)
+overgrowth | $V overgrowth plates; $V overgrowth world; $V overgrowth ruins | shots/tests/overgrowth/type_*.png=10 shots/tests/overgrowth/variant_*.png=40 shots/tests/overgrowth/types.png=1 shots/tests/overgrowth/variants.png=1 shots/tests/overgrowth/world_*.png=13 shots/tests/overgrowth/ruins_*.png=16 shots/tests/overgrowth_guide.txt=1 shots/tests/overgrowth_save_auto.txt=1 | twice mask=\(\d+(?:\.\d+)?\ss\)
 bestiary | $V bestiary; $V bestiary plates 64; $V bestiary ways | shots/tests/plates/plate_*.png=64 shots/tests/plates/herd_*.png=64 shots/tests/plates/plates.png=1 shots/tests/ways/ways_*.png=15 shots/tests/ways/gaits.png=1 | twice
 regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 

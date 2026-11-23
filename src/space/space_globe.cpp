@@ -132,6 +132,7 @@ inline double plateCloud(const PlateHit& h) {
 inline double plateVeg(const PlateHit& h) { return h.p->veg[(size_t)h.jn * h.p->W + h.in] / 255.0; }
 inline int plateMaterial(const PlateHit& h) { return h.p->material[(size_t)h.jn * h.p->W + h.in]; }
 inline double plateMadeTint(const PlateHit& h) { return h.p->mtint.empty() ? 0.0 : h.p->mtint[(size_t)h.jn * h.p->W + h.in] / 255.0; }   // J-02
+inline int plateMadeLine(const PlateHit& h) { return h.p->mline.empty() ? -1 : h.p->mline[(size_t)h.jn * h.p->W + h.in] - 1; }   // KI-460
 // the slopes (rise over run) along e1 and e2 over the nearest cell's block step
 inline void plateSlopes(const PlateHit& h, double& ga, double& gb) {
     const DetailPlate& p = *h.p;
@@ -202,7 +203,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
         }
     }
     const int rockMat = familyRep(g.type, FAM_ROCK);
-    const bool mt = !p.mtint.empty();   // J-02: a made world's tint
+    const bool mt = !p.mtint.empty(), ml = !p.mline.empty();   // J-02: a made world's tint; KI-460: and its lines
     while (!p.done() && left > 0) {
         int L = DetailPlate::BLOCKS[p.pass];
         int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
@@ -249,6 +250,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         p.veg[o] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
                         p.cloud[o] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon + p.cloudDrift0, lat) * 255 + 0.5), 0, 255);
                         if (mt) p.mtint[o] = (uint8_t)clampi((int)(s.madeTint * 255 + 0.5), 0, 255);
+                        if (ml) p.mline[o] = (uint8_t)(s.madeLine + 1);
                         mine++;
                     } else p.material[o] = 255;   // off the sphere
                     p.exact[o] = 1;
@@ -261,6 +263,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         if (q == o || p.exact[q]) continue;
                         p.height[q] = p.height[o]; p.material[q] = p.material[o]; p.albedo[q] = p.albedo[o]; p.cloud[q] = p.cloud[o]; p.veg[q] = p.veg[o]; p.level[q] = (uint8_t)L;
                         if (mt) p.mtint[q] = p.mtint[o];
+                        if (ml) p.mline[q] = p.mline[o];
                     }
             }
             taken += mine;
@@ -345,6 +348,7 @@ void SpaceRenderer::updatePlate(const SpaceContext& c) {
             plateBegin(q, bi, b.seed, bucket, u0, e1, e2, texel, R, cloudDrift, std::min(1.0, extA * 1.25 + 4 * texel), std::min(1.0, extB * 1.25 + 4 * texel));
             q.madeKey = g.made.key;   // J-02: the made layer it samples, and its tint's cells
             if (g.made.on() && g.made.shares()) q.mtint.assign((size_t)q.W * q.H, 0);   // (J-05: the land's, snow's and plants' looks too)
+            q.mline.assign(g.made.on() && (g.made.shares() || g.made.grown()) ? (size_t)q.W * q.H : 0, 0);
             // the rivers and the lakes: their tiles for the plate's ground when the step is under the drainage's own limit and
             // the ground is a few tiles (a hemisphere at 1500 m a step would be a hundred); built now for a photo or a harness
             // frame, in the background otherwise (the plate sampled without them meanwhile and begun again when they are in)
@@ -592,29 +596,28 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     // each material's bank on this globe (its family's, the accents' among them; a giant and a deck draw in the body's), once a globe
     int matBank[MAT_COUNT];
     for (int m = 0; m < MAT_COUNT; m++) matBank[m] = (kindHas(b.type, KT_GIANT) || deck) ? bank : globeBank(bank, b.type, m);
+    if (!kindHas(b.type, KT_GIANT) && !deck && matFamilyOnGen(bgen, MAT_ICE) != matFamilyOn(b.type, MAT_ICE)) matBank[MAT_ICE] = globeBank(bank, b.type, MAT_GRASS);   // KI-484
     // the water's trait colours from the map (the first disc's in bank 31: a bloom's streaks, a lagoon, a pink lake), a milky sea's glow on
     // the night side in the water's own ramp (its pale upper stops)
     const bool tintMap = haveMap && !map.ltint.empty() && !c.skyMode;
     const bool tintBank31 = tintMap && bank == 2 && (bgen.hasTrait(TR_BLOOMS) || bgen.hasTrait(TR_REEFS) || bgen.hasTrait(TR_PINK_LAKES));
     const bool pinkLakes = bgen.hasTrait(TR_PINK_LAKES), milkyGlow = tintMap && bgen.hasTrait(TR_MILKY_SEAS);
     const bool waterLights = tintMap && bgen.hasTrait(TR_LIGHTS_IN_WATER);   // a dark ocean's shoals of light
-    // J-02: a made world's tint over its land, the first disc's in bank 25, the second's in 26 (none in a sky, on a giant or a deck); J-03: or
-    // over its waters (a dye's, in a water's ramp), with a glow on the night side where its line glows
-    // J-05: or its land's, plants' or snow's look where the waters have none (`madeGlobeClass`; a glowing forest's light on the night side)
-    const int madeCls = madeGlobeClass(bgen.made);
-    const bool discMade = !c.skyMode && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck;
-    // J-09: an overgrowth's stain in the made bank where its cover lies, its veins lit at night where it glows; the waters' tint in bank 31
-    // on the first disc where no trait holds it, else in the waters' own
-    const bool madeGrowth = discMade && madeGlobeGrowth(bgen.made);
-    const int growthPb = madeGrowth ? (bank == 2 ? 25 : 26) : -1;
-    const bool growthGlows = madeGrowth && bgen.made.spread[bgen.made.growthLine].growth.glow > 0;
-    const bool traits31 = bgen.hasTrait(TR_BLOOMS) || bgen.hasTrait(TR_REEFS) || bgen.hasTrait(TR_PINK_LAKES);
-    const int madeBank = discMade && (bgen.made.tinted || madeCls >= 0) ? (madeGrowth ? (bank == 2 && !traits31 && bgen.made.tintOn == MADE_ON_WATER ? 31 : -1) : (bank == 2 ? 25 : 26)) : -1;
-    const bool madeOnWater = bgen.made.tintOn == MADE_ON_WATER, madeGlow = bgen.made.tinted ? madeOnWater && bgen.made.glow > 0 : madeCls == MC_PLANTS && bgen.made.plantGlow > 0;
+    // J-02 to J-09, KI-461, KI-475: a made world's colours in its disc's made banks (`discMade`, none in a sky, on a giant or a deck): its
+    // overgrowth's stain where its cover lies (its veins lit at night where it glows), its waters' tint (a glow on the night side where its line
+    // glows) or the test layer's land, its land's, plants' and snow's looks (a glowing forest's light on the night side), each in its own line's
+    // bank where its share lies over a half; its made clouds (a dye's or the spores' colour; a glow on the night side, by its form)
+    const bool discMadeOn = !c.skyMode && (bank == 2 || bank == 3) && !kindHas(b.type, KT_GIANT) && !deck && bgen.made.on();
+    const DiscMade& dm = discMade[bank == 3 ? 1 : 0];
+    const bool madeGrowth = discMadeOn && madeGlobeGrowth(bgen.made) && dm.of(dm.stain, -1) >= 0;
+    const bool madeOnWater = bgen.made.tintOn == MADE_ON_WATER;
+    const bool madeLooks = discMadeOn && (bgen.made.tinted || bgen.made.land.on || bgen.made.plant.on || bgen.made.snow.on);
     int madeClassOfMat[MAT_COUNT];
     for (int m = 0; m < MAT_COUNT; m++) madeClassOfMat[m] = madeClassOf(bgen, m, false);
-    // J-04: its made clouds in the same bank (a dye's or the spores' colour; a glow on the night side, by its form), and a fog on its seas
-    const int madeCloudPb = discMade && !madeGrowth && (bgen.made.cloudTintK > 0 || bgen.made.cloudGlow > 0) ? (bank == 2 ? 25 : 26) : -1;
+    const int madeCloudPb = discMadeOn ? dm.cloud : -1;
+    // J-14: a deck world's cloud line: its dye in the deck's darker lanes by day, its glow on the night side, each in a bank of its own
+    const bool deckMade = !c.skyMode && (bank == 2 || bank == 3) && deck && bgen.made.on();
+    const int deckDyePb = deckMade && bgen.made.cloudTintK > 0 ? dm.cloud : -1, deckGlowPb = deckMade && bgen.made.cloudGlow > 0 ? dm.deckGlow : -1;
     const double madeSmoke = c.skyMode ? 0.0 : bgen.made.seaSmoke;
     parallelFor(y1 - y0 + 1, 48, [&](int rb, int re) {
     for (int y = y0 + rb; y < y0 + re; y++) {
@@ -676,13 +679,21 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (tintBank31 && std::max(map.lifeTintAt(ti), pinkLakes ? map.waterTintAt(ti) : 0.0) > 0.5) tintPb = 31;
                     if (milkyGlow || waterLights) glowW = map.waterTintAt(ti);
                 }
-                if (growthPb >= 0 && madeGrowthMaterial(mat)) {   // J-09: the cover itself is the stain; its veins a ridge of noise, broad enough to
+                const int mln = madeGrowth || madeLooks ? (ph.ok ? plateMadeLine(ph) : (haveMap ? map.madeLineAt(map.texelIndex(lon, lat)) : -1)) : -1;
+                if (madeGrowth && madeGrowthMaterial(mat)) {   // J-09: the cover itself is the stain; its veins a ridge of noise, broad enough to
                     // keep their light through the frame's smoothing (a pixel-wide line is averaged into the dark round it)
-                    tintPb = growthPb;
-                    if (growthGlows) glowW = 0.8 * smoothstep(0.24, 0.06, std::fabs(fbm3(StarSystem::bodyFromLatLon(lat, lon) * 12.0, b.seed ^ 0x6E0E30ULL, 3)));
-                } else if (madeBank >= 0 && (bgen.made.tinted ? (mat == MAT_WATER) == madeOnWater : mat < MAT_COUNT && madeClassOfMat[mat] == madeCls)) {
-                    const double mtw = ph.ok ? plateMadeTint(ph) : (haveMap ? map.madeTintAt(map.texelIndex(lon, lat)) : 0.0);
-                    if (mtw > 0.5) { tintPb = madeBank; if (madeGlow) glowW = std::max(glowW, mtw); }
+                    tintPb = dm.of(dm.stain, mln);
+                    if (dm.glowOf(dm.stain, dm.stainGlow, mln)) glowW = 0.8 * smoothstep(0.24, 0.06, std::fabs(fbm3(StarSystem::bodyFromLatLon(lat, lon) * 12.0, b.seed ^ 0x6E0E30ULL, 3)));
+                } else if (madeLooks && mat < MAT_COUNT) {
+                    int mb = -1; bool mg = false;
+                    const int cls = madeClassOfMat[mat];
+                    if (bgen.made.tinted && madeOnWater) { if (mat == MAT_WATER) { mb = dm.of(dm.water, mln); mg = dm.glowOf(dm.water, dm.waterGlow, mln); } }
+                    else if (bgen.made.tinted) { if (mat != MAT_WATER) mb = dm.land; }   // (the test layer's land)
+                    if (mb < 0 && cls != MC_WATER && !(bgen.made.tinted && !madeOnWater)) { mb = dm.of(dm.look[cls], mln); mg = dm.glowOf(dm.look[cls], dm.lookGlow[cls], mln); }
+                    if (mb >= 0) {
+                        const double mtw = ph.ok ? plateMadeTint(ph) : (haveMap ? map.madeTintAt(map.texelIndex(lon, lat)) : 0.0);
+                        if (mtw > 0.5) { tintPb = mb; if (mg) glowW = std::max(glowW, mtw); }
+                    }
                 }
                 if ((ph.ok || haveMap) && gasGiant) {   // storms grow and fade over about a day, band by band
                     double st = ph.ok ? plateVeg(ph) : map.veg[map.texelIndex(lon, lat)] / 255.0;
@@ -722,6 +733,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (mat == MAT_LAVA) v = std::max(v, 50.0 + 10.0 * alb);
                 }
                 bool cloudy = false;
+                int deckPb = -1; double deckCl = 0;   // (J-14: its bank and its deck's cloud)
                 if (atmosphere) {
                     double cl = 0.0; bool gotCl = false;
                     for (int k = 0; k < npl && !gotCl; k++) {   // the plate's cloud, the point turned by the drift since the build
@@ -739,7 +751,15 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                         }
                     }
                     if (madeSmoke > 0 && mat == MAT_WATER) cl = std::max(cl, 0.5 * madeSmoke);   // J-04: the seas pale under their fog
-                    if (deck) { v = 63.0 * (0.6 + 0.4 * cl) * shade; }
+                    if (deck) {
+                        v = 63.0 * (0.6 + 0.4 * cl) * shade; deckCl = cl;
+                        if (deckDyePb >= 0 && lit > -0.05) {   // J-14: a cloud line's dye in dark streaks along the latitudes its wind runs on, drifting with
+                            // the deck, from the equator to the mid-latitudes (Venus's own: Limaye et al. 2018), by how much of it there is; unlit, the deck's own
+                            const double sl = lon + cloudDrift, cz = std::cos(lat);
+                            const double sn = 0.5 + 0.5 * fbm3(Vec3(cz * std::cos(sl) * 2.0, cz * std::sin(sl) * 2.0, std::sin(lat) * 8.0), bgen.seed + 93, 3);
+                            if (0.65 * sn + 0.35 * cl < (0.26 + 0.3 * bgen.made.cloudTintK) * smoothstep(1.1, 0.5, std::fabs(lat))) { deckPb = deckDyePb; v *= 0.85; }
+                        }
+                    }
                     else if (gasGiant) { v = 63.0 * std::pow(alb, 0.7) * shade * 1.05; }
                     else { v = v + (63.0 * 0.92 * shade - v) * cl; cloudy = cl > 0.6; }
                     if (lit + 0.2 > 0) {   // else the term is +0 (the night side)
@@ -759,6 +779,16 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     else if (bgen.made.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm3(bf * 14.0, bgen.seed + 92, 3)));
                     const double gv = form * bgen.made.cloudGlow * smoothstep(0.05, -0.15, lit);
                     if (gv > 0.05) v = std::max(v, 44.0 + 4.0 * gv);   // (the ramp's glow from 44: faint)
+                }
+                if (deckGlowPb >= 0 && lit < 0.05) {   // J-14: a deck's glow on the night side, by its form, brightest where the deck is thickest; the whole
+                    // night side in its bank, as a world's glowing clouds are (the frame's smoothing keeps a pixel's bank: a dark one of the deck's among lit
+                    // ones would come out in the deck's own colour)
+                    double form = 1;
+                    if (bgen.made.cloudGlowForm == MG_PATCHES) form = smoothstep(0.56, 0.74, 0.5 + 0.5 * fbm3(bf * 9.0, bgen.seed + 91, 3));
+                    else if (bgen.made.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm3(bf * 14.0, bgen.seed + 92, 3)));
+                    const double gv = form * smoothstep(0.2, 0.9, deckCl) * bgen.made.cloudGlow * smoothstep(0.05, -0.15, lit);
+                    if (gv > 0.05) v = std::max(v, 38.0 + 10.0 * gv);
+                    deckPb = deckGlowPb;
                 }
                 if (waterLights && glowW > 0.06) v = std::max(v, 37.0 + 35.0 * std::min(glowW, 0.2));   // the shoals' faint sheen, toward the light's own stops (from 44)
                 if (nightGlow && lit < 0.12) {   // the hot giant's night side glowing (the ramp's low end), coming up through the terminator
@@ -804,6 +834,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     int pb = matBank[cloudy ? MAT_CLOUD : mat];
                     if (tintPb >= 0 && !cloudy) pb = tintPb;
                     if (cloudy && madeCloudPb >= 0) pb = madeCloudPb;   // J-04
+                    if (deckPb >= 0) pb = deckPb;   // J-14
                     fb.idx[o] = auroraPix >= 0 ? pix(12, auroraPix) : pix(pb, sphereVal); fb.invz[o] = (float)iz;
                 }
             } else if (atmosphere && !c.skyMode) {

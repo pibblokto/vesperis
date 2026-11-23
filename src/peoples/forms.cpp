@@ -860,6 +860,25 @@ void blobMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double skir
 }
 }   // namespace
 
+// KI-478: an arch's bays left standing (`archMesh`'s geometry)
+void archOpenings(const Form& e, std::vector<FormOpening>& out) {
+    if (e.kind != FK_ARCH || e.tilt != 0 || e.absolute) return;
+    const int N = std::max(1, (int)std::lround(e.p[0] > 0 ? e.p[0] : 1));
+    const double W = 2 * e.hx / N, w = W * clampd(e.p[1] > 0 ? e.p[1] : 0.32, 0.08, 0.46), Hh = e.y1 - e.y0;
+    const double rise = e.sub == 2 ? 0.0 : (e.sub == 1 ? 1.35 * w : w);
+    double s = e.p[2] > 0 ? e.p[2] : 0.5 * Hh;   // (as `archMesh` springs it)
+    s = std::min(s, Hh - rise - std::min(0.6, 0.15 * Hh)); s = std::max(s, 0.3);
+    const double ch = std::cos(e.heading), sh = std::sin(e.heading);
+    for (int j = 0; j < N; j++) {
+        if (e.broken > 0 && (N == 1 ? e.broken > 0.3 : H01(e.seed, j) < e.broken * 0.75)) continue;   // a fallen bay
+        const double ac = -e.hx + W * (j + 0.5);
+        FormOpening o;
+        o.x = e.x + ch * ac; o.z = e.z - sh * ac; o.heading = e.heading; o.half = w; o.y0 = e.y0; o.y1 = e.y0 + s + rise; o.thick = 2 * e.hz;
+        o.building = e.building; o.door = true; o.arch = e.sub; o.spring = s; o.rise = rise;
+        out.push_back(o);
+    }
+}
+
 // C-17: a flat body of a drawn outline, its sides upright, its top flat (a fan from its middle) or domed (rings rising to it)
 static void plateMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot) {
     Build B(m, e, foot);

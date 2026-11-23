@@ -90,7 +90,7 @@ Space (`SpaceRenderer::setupPalette`):
 | 15 | body A's grass |
 | 16 / 17 / 18 / 19 | body B's forest / sand / snow / grass (O0-02, B-305: the family banks used to be shared between A and B, tinted by whichever body had the family first, so the smaller world borrowed the bigger one's sand and snow and changed colour as you approached its neighbour) |
 | 20 | belt rocks (O3): a warm dark grey under the star's light; Z-05: aboard, the incubator's screen's home key (amber; dealt as the microscope's) |
-| 21-27 | the cabin's other computers (R-404): the GOES console amber, the star map screen blue, the landing map screen pink, the target data screen cyan, the shard decoder violet, the signal radar red, the telescope's set ice-white (`cabinPalette`, the screens' ramp shape); I-03: the ship's finishes are dealt from this pool too (their homes 11-17 are keys, the panels, the floor, fabric, brass, plants, glass and the hull outside), the nearest asks first; I-04: the photographs' print (18) and the garden's second green (19), and the shelves' shards in the decoder's. J-02: in the space view's own palette 25 holds the first disc's made tint over its land and 26 the second's (a seeded world, `MadeWorld::tint`, the map's or the plate's `mtint` over a half), sunk with the rest of the outside aboard (B-437); J-03: a tint over its waters (a line's dye) in a water's ramp, a glowing line's light in its upper stops, lit on the night side as a milky sea's |
+| 21-27 | the cabin's other computers (R-404): the GOES console amber, the star map screen blue, the landing map screen pink, the target data screen cyan, the shard decoder violet, the signal radar red, the telescope's set ice-white (`cabinPalette`, the screens' ramp shape); I-03: the ship's finishes are dealt from this pool too (their homes 11-17 are keys, the panels, the floor, fabric, brass, plants, glass and the hull outside), the nearest asks first; I-04: the photographs' print (18) and the garden's second green (19), and the shelves' shards in the decoder's. J-02: in the space view's own palette 25 holds the first disc's made tint over its land and 26 the second's (a seeded world, `MadeWorld::tint`, the map's or the plate's `mtint` over a half), sunk with the rest of the outside aboard (B-437); J-03: a tint over its waters (a line's dye) in a water's ramp, a glowing line's light in its upper stops, lit on the night side as a milky sea's; B-458: the space view's own palette (the outside's, B-437: the ship deals its own) gives 21-24 and 27-30 to the discs' made colours |
 | 28 | in space, the cabin's instruments' case (C-11, R-404's scheme: its shelves' glass in lime); X-01 had drawn the probe's sun here before X-02 composited the probe's picture in RGB |
 | 29 | in space, the cabin's drone bay (C-18, R-404's scheme: its screen's cells in a pale yellow; the drones' stripe and arms, their number lamps) |
 | 30 | in space, the bay's drones' paint (C-18: a light warm grey under the cabin's light, `cabinPalette`) |
@@ -128,9 +128,9 @@ Surface (`SurfaceView::setupPalette`, colours from `lookFor(gen, star)`):
 | 8 | snow family on every type: snow, ice (bank 2 stays water only, which the reflection pass relies on) (N1-03) |
 | 9 | sand family: sand, dust, sulphur, quartz (N1-03); also mushrooms and lichen points (N2); C-08's drifts against a settlement's walls; A-03's earth (a mound, a bank, a spoil heap, a wreck's furrow) on a desert world |
 | 10 | grass (N1-03); tall grass, reeds and the straw variant of 15% of the trees (N2); A-03's earth on a world that is not a desert |
-| 11 | aurora (M4-06; B-403: curtains on the cloud grid, drawn after the stars on sky pixels only; its stop 0 is the night sky's zenith colour so the curtains fade into the sky; R-402: the lower curtain's colour per world, bank 21 the tops'); fireflies reuse its green (N2-05) |
-| 12 | the companion star's disc and glow in its own colour (M5-01); J-06: with no second sun, an animals' hide bank where 24 or 20 is taken |
-| 13 | a glowing parent in the sky, its colour toward amber (M5-02); J-06: with no glowing body in the system, an animals' hide bank |
+| 11 | aurora (M4-06; B-403: curtains on the cloud grid, drawn after the stars on sky pixels only; its stop 0 is the night sky's zenith colour so the curtains fade into the sky; R-402: the lower curtain's colour per world, bank 21 the tops'); fireflies reuse its green (N2-05); B-456: where no aurora can show, a made colour's or a hide's bank |
+| 12 | the companion star's disc and glow in its own colour (M5-01); J-06: with no second sun, an animals' hide bank where 24 or 20 is taken; B-456: else a made colour's |
+| 13 | a glowing parent in the sky, its colour toward amber (M5-02); J-06: with no glowing body in the system, an animals' hide bank; B-456: else a made colour's |
 | 14 | warning red: tail lights, the antenna light, the dial needles {0 black, 14 dark red, 40 red, 63 salmon} (N4-01) |
 | 15 | on comets only (O4): the ion tail's blue {0 black, 18 deep blue, 40 blue, 63 pale blue}; P-03 the chemotroph's spores; Q-02 a milky sea's glow at night (its dark end the night sea's, its top the bacteria's pale blue); Z-03 the living films under the lamp's ultraviolet (`drawFilmGlow`, after the old result: the glow's light added to the pixel's, in this bank where it is the brighter; its own ramp in the films' colour where none of the above holds the bank, set only while it is on) |
 | 16 | bark (B-315): a brown of the planet's own, toward the second flora colour, through `matRamp` (trunks, branches, logs, stubs, roots; on the ground bank the dark stops took the sky's colour and trunks came out black) |
@@ -138,42 +138,50 @@ Surface (`SurfaceView::setupPalette`, colours from `lookFor(gen, star)`):
 | 18 / 19 / 20 / 24 | A-02: the first people's palette (`FORM_BANKS[0]`): the structure, the accent, metal and glass through `matRamp` (a slot of the ground's own material takes that bank's colour, so C-01's walls of rock or adobe look as they did), and light, a ramp that glows whatever the sun (`{0 black, 24 0.3c, 46 c, 56 c->white 45%, 63 fog}`); A-03: the age's materials in them (`agePalette`: the rock, timber and thatch and a post hole's dark; the rock, the roofs, timber; brick, slate, rust; concrete, an accent, steel; composite, an accent, diamond glass; the far future's one material, its accent, black); A-04: the people's genome through its age (`culturePalette`): the structure (the ground's rock tinted a quarter toward the people's base colour, `FormPalette::tint`, or painted in it; its brick, concrete, composite), the accent (where the people put it), the roofing or the glass in the people's tint, and timber and rust in bank 24 where the age has no light (`FormPalette::glow` false: a material ramp lit as the rest), the light's ramp only in the futuristic and the far future's; a pool's water draws in bank 2, a great tree's trunk in bank 16 and its crown in bank 3 (`Form::part` 9, 10, 11) J-06: where no people built, 24 and 20 are the animals' two hide banks (`hideBanks`, the world's two colours through `matRamp`) |
 | 25-28 | A-02: the second people's palette (`FORM_BANKS[1]`), as 18-20 and 24. Q-02 (2026-10-22): on a world without a people (its traits that take them never come to a people's) 25 is a pink lake's water or the hot springs' mats, 26 a bloom's or a reef lagoon's water or the petrified trunks' jasper, 27 the rainbow strata's accent (`setupPalette`; where the harness stages a people's forms they keep theirs). Z-03: the springs' mats in one ramp whose colour turns along it (`matRampTurning`: the coolest bands' brown in its dark end, orange, the hottest's yellow in its light end), 28 red snow's algae. J-02: a made world's tint over the land (`tintBankMade`) takes 28, else 27, where its traits leave one free on a world of one people or none; a vertex whose `mtint` is over a half goes to it, before any other bank. J-03: a tint over the waters takes the same bank in a water's ramp (the water's cells split with it as with a pink lake's, before the traits' colours); a glowing line's at night is the milky seas' ramp in its light, the water's shade set by its share in drifting patches. J-04: a dyed rain falls in the same bank, and its puddles lie in it |
 | 23 | W-03: a front's deck and the rain under it: the sky's stops from the horizon up, a storm's grey in its dark end. J-04: a seeded world's clouds: by day coloured toward a dye's or the spores' colour (three quarters of the made share), a cloud of over half a pixel drawn in it; at night a glowing line's faint light (12 to 22 of the ramp: patches, veins or whole decks); spores' motes round the eye by day |
-| 21 | the aurora's tops (R-402): the high part of the curtains' profile in the world's second colour, the same ramp shape as bank 11 |
+| 21 | the aurora's tops (R-402): the high part of the curtains' profile in the world's second colour, the same ramp shape as bank 11; B-456: where no aurora can show, a made colour's or a hide's bank |
 | 22 | the galactic band and the nebula patches (G-03): from the night sky's colour (black on an airless world) to a pale star-grey at 40, toward a protostar's cloud tone under one (S-04). B-408: an airless sky lies in it all over and its sun is drawn in it, so the ramp keeps the star-grey under 20, turns to the sun's colour above it at the grey's light and takes the sky bank's sun stops from 55 (a protostar's sky keeps the cloud's ramp). Q-02: the noctilucent clouds and the moon's ice halo drawn in it (the sky's colour to a pale silver, where the night sky's own ramp is darker in its middle than at its ends: they had dark outlines in bank 1) |
 
 `SurfaceView::materialLook` maps `matFamily(material)` to these banks; a terrain quad takes the majority bank of its four corners (vote over 16 banks); the far floor ring uses the type's dominant family (water, ice on icy worlds, sand on cratered/thin-atmosphere/quartz/volcanic worlds, else rock). Objects: rocks bank 3 (bank 0 on living worlds, so they are rock-coloured and not forest-coloured), quartz crystals bank 2, trees/bushes/grass bank 3, birds bank 1 (dark silhouettes), grazers bank 3, capsule bank 1, rain bank 1. Lightning adds a flash to the whole palette. All colours come from `BodyGen::matColor` (N1); `lookFor` only chooses sky, fog, night and cloud parameters per type.
 
 Distance fog is expressed inside the ramp: shade moves toward 63 (the fog colour) with `1 - exp(-dist / fogDistance)`.
 
-J-04 (2026-11-21), a seeded world's made air: the sky pair (`typeSky`) takes it, so the ground's sky, the globe's sky light and the maps
-agree (an ozone's blue overhead, a thin one's violet, a thick air's pale horizon, a haze's colour, a sulphur air's yellow horizon). On
-the ground a haze filters the light that lights the ground toward its colour, its luminance kept (`lookFor`), dims the sun's light by up to
-two fifths and closes the fog by up to 55%; a thin ozone lets a harder, whiter light through. From space the disc's banks (2, 6, the
-family banks, 25 and 31; 3, 7, 16-19 and 26 for the second) are veiled toward the made air's colour, each stop's luminance kept, up to
-three quarters; the made clouds take the made bank (25 or 26) over the waters' stops (from 36: a dye's colour; a glow's faint light at 44
-on the night side); a fog on the seas pales them. The plants a made heat dried take `madeMatColour` in every view.
+A seeded world's made colours (J-04 to J-11; their banks since B-456 to B-458). The sky pair (`typeSky`) takes the made air, so the
+ground's sky, the globe's sky light and the maps agree (an ozone's blue overhead, a thin one's violet, a thick air's pale horizon, a
+haze's colour, a sulphur air's yellow horizon). On the ground a haze filters the light that lights the ground toward its colour, its
+luminance kept (`lookFor`), dims the sun's light by up to two fifths and closes the fog by up to 55%; a thin ozone lets a harder, whiter
+light through. The plants a made heat dried take `madeMatColour` in every view, as do the world-wide colours (a sulphide's waters, a
+rusted ground, lush or bleached plants, bleached reefs, through `madeLifeTint` too), and a made hothouse's and a made snowball's sand and
+snow families take their dead kind's colours (the scorched felisian's sand and salt, the frozen felisian's dead soil and frost); a made
+snowball's sea ice is the frozen felisian's blue, drawn in the grass family's bank (`matFamilyOnGen`).
 
-J-05 (2026-11-21), a seeded world's made waters, ground and plants: each class of ground (the land, the snow and ice, the plants) has a
-colour of its own beside the waters' tint, and on the ground each takes a lent bank of its own after the waters' (`madeBanks`: 28, 27, 26
-and 25 in turn where the traits and the waters leave them, on a world of one people or none), a foam's colour the next; a vertex whose
-share is over a half goes to its class's bank (`materialLook`), the trees and the undergrowth standing in a plants' look put their leaves
-in it, and a glowing forest's bank carries its light at night (fainter than the luminous flora's). The globe gives its one made bank to
-one class (`madeGlobeClass`: the waters' tint first, else, where no made cloud's colour holds the bank, the land's, the plants' with a
-glow in its upper stops, the snow's). The maps keep a made ramp for every material (`MAP_MADE + material`: its class's colour, else its
-own). The world-wide colours (a sulphide's waters, a rusted ground, lush or bleached plants, bleached reefs) turn the world's own ramps
-through `madeMatColour` and `madeLifeTint`. The tide's flooded flats take their sea's made share, and a shore's sparkle the made bank.
+Each line's colours are its own (its waters', its land's, snow's and plants' looks, its overgrowth's), and the made pass gives each point
+its share and the line whose look lies there (`SurfaceSample::madeLine`; the planet map's `mline`, the plates', the ground's vertices').
+On the ground `setupPalette` deals every made colour a bank from one pool, the banks the world leaves free this frame: the lent four
+(25-28, the second people's) where no second people's forms stand and the traits leave them, the first people's 24 and 20 where nobody
+built, 13 with no glowing body in the sky, 12 with no second sun, the aurorae's 11 and 21 where none can show (no air, an opaque deck,
+or under 36 degrees of latitude without great aurorae). In turn: the overgrowth (`growthBank`, its colour through `matRamp`, a wet one's
+top stops whiter, its upper stops in its light at night where it glows), the waters' tint (`tintBankMade`, a water's ramp, a glowing
+line's light at night), the animals' hides (J-06's order, the aurorae's last), each class's look (`madeBanks`), the foam, a dyed rain (the
+dyed waters' bank, else its own, else its dyed clouds' 23); then each other line's own colour where it differs (`growthLineBank`,
+`tintLineBank`, `madeLineBank`), a colour past the pool taking the latest line's. A vertex whose share is over a half goes to its line's
+bank (`materialLook`), the trees and the undergrowth standing in a plants' look put their leaves in it, a glowing forest's bank carries
+its light at night; the overgrowth's structures, the trees it wraps, the rocks and remains it takes in and a ruin's cover (its second
+bank under the climb, B-311's two-material path) take the bank of the line where they stand. The tide's flooded flats take their sea's
+made share, and a shore's sparkle the made bank.
 
-J-09, a seeded world's overgrowth: its cover (TISSUE, THREADS, HARD GROWTH) takes a lent bank on the ground before the classes' looks
-(`growthBank`, the first of 28, 27, 26, 25 that the traits, the hides and the fates' bank leave free; the rock's where none is), which
-its structures, the trees it wraps and the remains it takes in share: its colour through `matRamp`, a wet one's top stops whiter, and at
-night where it glows its upper stops (45 on) in its light, the near ring's veins and the structures' spots lifted into them. The globe
-gives the made bank (25 or 26) to the stain first (`madeGlobeGrowth`), its veins' light on the night side where it glows; the first
-disc's waters' made tint then takes bank 31 where no trait holds it (else the waters keep their own colour), and a made cloud's colour
-gives way. The maps draw the cover in its own colour (`madeMatColour` of the three materials is the overgrowth's). J-10: a ruin's forms
-take the same bank as their second (B-311's two-material path) under the cover's climb, a face wholly under it five shades darker; the
-growth bank is lent while the harness's staged settlements are the first people's (`placedCells`). J-11: a made hothouse's and a made
-snowball's sand and snow families take their dead kind's colours in every view (`madeMatColour`: the scorched felisian's sand and salt,
-the frozen felisian's dead soil and frost), their rock, water and plants the world's own; the ground's snow bank comes through it too.
+From space each disc deals its made colours banks of its own (`SpaceRenderer::discMade`): the first disc from 25, 27, 29, 21, 23 and 31
+(where no water trait holds 31), the second from 26, 28, 30, 22 and 24; in turn its stain (its veins' light on the night side where it
+glows), its waters' tint (a glow at night) or the test layer's land, each class's latest look, its made clouds (a dye's or the spores'
+colour, a glow on the night side), then the other lines' colours; a pixel takes its bank by its class and its texel's line. The disc's
+banks (2, 6 and the family banks; 3, 7 and 16-19) and its made banks are veiled toward the made air's colour, each stop's luminance kept,
+up to three quarters; a fog on the seas pales them. The maps keep a ramp for every material, every material under a made look
+(`MAP_MADE`) and every line's own (`MAP_LINE`). J-14: a deck world (the venusian) deals its made clouds two banks of their own: a cloud
+line's dye in its deck's colour toward the dye's, drawn in dark streaks along the latitudes (a noise stretched east and west at the
+deck's drift, with the deck's own pattern, to the middle latitudes, 0.85 of the deck's value) on the lit side; and its glow (`deckGlow`)
+over the night side, 38 to 48 of its ramp, brightest where the deck is thickest. The whole night side lies in the glow's bank: the frame's
+smoothing keeps a pixel's bank, and a dark pixel of the deck's own among glowing ones came out in the deck's colour. J-15: a desert's
+grass and shrubs, grown from a carpet, take its own grass family's banks in every view (free on a desert: `madeMatColour` of grass is the
+line's pigment's colour), its land look hidden under them; two lines' share the latest's colour (KI-509).
 
 ## Draw order
 

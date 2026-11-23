@@ -11,7 +11,7 @@
 
 constexpr int MADE_LINES = 3;            // a world takes three seedings at most, each acting on the world the ones before left
 constexpr int MADE_STEPS = 24;           // a seeding's spread is read in 24 steps, as the seasons are
-constexpr double MADE_STEP_S = 300.0;    // a step's seconds on the guide's clock: the whole world in two hours
+constexpr double MADE_STEP_S = 75.0;     // a step's seconds on the guide's clock: the whole world in half an hour (R-449; J-02's 300)
 
 // J-03: what a made colour lies on: the land (the test layer's tint) or the waters (a dye's, a glow's)
 enum MadeOn { MADE_ON_LAND = 1, MADE_ON_WATER = 2 };
@@ -20,8 +20,9 @@ enum MadeWaters { MADE_FRESH = 1, MADE_SEA = 2, MADE_BRINE = 4, MADE_ALL_WATERS 
 // J-04: the made air's traits (`MadeWorld::air`'s bits), in the order the data sheet names them (life/seeding's words)
 enum MadeAirTrait { MA_THICK = 1, MA_RUNAWAY = 2, MA_ORANGE_HAZE = 4, MA_SULPHUR = 8, MA_OZONE = 16, MA_THIN_OZONE = 32, MA_COLD_HAZE = 64,
                     MA_GLOW_CLOUDS = 128, MA_DYE_CLOUDS = 256, MA_DYE_RAIN = 512, MA_SEA_SMOKE = 1024, MA_ENDLESS_RAIN = 2048, MA_SPORE_CLOUDS = 4096,
-                    MA_FREEZING = 8192 };   // (J-11: the ice running to the equator)
-constexpr int MADE_AIR_TRAITS = 14;
+                    MA_FREEZING = 8192,     // (J-11: the ice running to the equator)
+                    MA_SILVER_CLOUDS = 16384 };   // (KI-483: methane an oxygen air burns, its water frozen high: noctilucent clouds)
+constexpr int MADE_AIR_TRAITS = 15;
 // J-04: a glowing cloud's form (`MadeWorld::cloudGlowForm`): patches, veins, whole decks
 enum MadeGlowForm { MG_PATCHES = 0, MG_VEINS, MG_DECKS };
 // J-05: the classes of ground a made look lies on, each with a colour and a bank of its own in every view: the waters (J-03's tint), the
@@ -31,9 +32,13 @@ enum MadeClass { MC_WATER = 0, MC_LAND, MC_SNOW, MC_PLANTS, MC_COUNT };
 // (life/seeding's words: a coloured snow and new leaves are named by their dye)
 enum MadeSeaTrait { MS_PURPLE = 1, MS_BLACK = 2, MS_MILK = 4, MS_FOAM = 8, MS_JELLY = 16, MS_SOUP = 32, MS_SOUR = 64, MS_RUST_RIVERS = 128, MS_BOILING = 256 };
 constexpr int MADE_SEA_TRAITS = 9;
+// J-13 (R-454): a sea under the ice's line colouring the cracks and stains its water comes up through (named by its dye: RED CRACKS), appended
 enum MadeGroundTrait { MGT_COLOURED_SNOW = 1, MGT_DARK_ICE = 2, MGT_CRUSTS = 4, MGT_MATS = 8, MGT_STROMATOLITES = 16, MGT_RUST = 32, MGT_CHALK = 64,
-                       MGT_GLASS = 128, MGT_SULPHUR = 256, MGT_PITTED = 512, MGT_SLIME = 1024 };
-constexpr int MADE_GROUND_TRAITS = 11;
+                       MGT_GLASS = 128, MGT_SULPHUR = 256, MGT_PITTED = 512, MGT_SLIME = 1024, MGT_COLOURED_CRACKS = 2048 };
+constexpr int MADE_GROUND_TRAITS = 12;
+// J-13: where a spread's line lives under the ground (`MadeSpread::deep`): none (on its surface), the rock's pores, a sea under the ice; J-14:
+// or over it, in the clouds (appended)
+enum MadeDeep { MADE_SURFACE = 0, MADE_DEEP_ROCK, MADE_UNDER_ICE, MADE_CLOUDS };
 enum MadePlantTrait { MP_BLIGHT = 1, MP_ROT = 2, MP_FROST_BURN = 4, MP_GALLS = 8, MP_NEW_LEAVES = 16, MP_GLOWING = 32, MP_LUSH = 64, MP_BLEACHED = 128 };
 constexpr int MADE_PLANT_TRAITS = 8;
 // J-05: what a made waters' colour is (`MadeWorld::waterLook`): a dye's (J-03), a chalk's milk, a soup, a jelly, a rust's (the fresh waters
@@ -91,8 +96,11 @@ inline bool madeGrowthBreathes(int type) { return type == OG_FLESH || type == OG
 // J-11: a world's made kind once its change passed a line (IDEAS-seeded-worlds.md section 10), the data sheet's kind line: its seas boiled away
 // (MADE HOTHOUSE), frozen from pole to pole (MADE SNOWBALL), under a thick orange haze, purple seas under a sulphur air, a rusted ground under an
 // oxygen sky, an overgrowth over the whole world (named by its type: FLESH WORLD and the rest), every animal and plant dead (CHARNEL WORLD), a
-// cold or dry world made warmer or wetter (GREENED WORLD). Its heights and rivers stay as generated
-enum MadeKind { MDK_NONE = 0, MDK_HOTHOUSE, MDK_SNOWBALL, MDK_HAZE, MDK_PURPLE, MDK_RUST, MDK_OVERGROWN, MDK_CHARNEL, MDK_GREENED, MDK_COUNT };
+// cold or dry world made warmer or wetter (GREENED WORLD). Its heights and rivers stay as generated. J-15 (R-454): a dry world whose carpet grew
+// grass and shrubs over most of its land (GREENED DESERT), appended
+enum MadeKind { MDK_NONE = 0, MDK_HOTHOUSE, MDK_SNOWBALL, MDK_HAZE, MDK_PURPLE, MDK_RUST, MDK_OVERGROWN, MDK_CHARNEL, MDK_GREENED, MDK_GREENED_DESERT, MDK_COUNT };
+// J-15: a carpet on a dry world grows grass and shrubs where it lies, from this many steps after its edge passed, thick this many after
+constexpr int MADE_GREEN_AFTER = 4, MADE_GREEN_THICK = 12;
 // J-09: a line's overgrowth: its type and texture, its colour and its veins' (a clear one's dark), its grain (smooth 0 .. knobbly 1: its cell's
 // size), its wetness (dry and leathery 0 .. dripping 1: its slime), its hardness (soft 0, leathery 1, plated 2, bony 3: its shell), its glow at
 // night (veins or spots, 0 none) and its colour, whether it is furred with cilia (its motion), how far it has crept round its line's place
@@ -109,7 +117,24 @@ struct MadeGrowth {
     double reach = 0;
     int material = -1;
     double land = 0;   // J-11: the share of the world's land it can lie on (its line's band of warmth, no snow or ice: an overgrown world's past a half)
+    // J-15: a light-feeder's carpet or lichen on a desert (`madeGreens`) grows grass and shrubs where it lies: the reach behind which they have
+    // begun (its edge's reach MADE_GREEN_AFTER steps before) and behind which they are thick (MADE_GREEN_THICK steps before), 0 none; their
+    // colour (its pigment's, else its own, turned by its dye)
+    bool greens = false;
+    double greenReach = 0, thickReach = 0;
+    RGB plants;
     bool on() const { return type != OG_NONE && reach > 0; }
+};
+
+// J-05: a made look over one class of the ground (the land, the snow and ice, the plants): whether a line makes it (its share is set by the
+// made pass where that line lives), its colour (none: the ground's own, its effects alone), the trait it is (`kind`, a `Made*Trait` bit) and
+// its form (`variant`: a crust's polygons, ripples or rosettes; a blight's spots, stands or all), the dye it is named by (a coloured snow's,
+// new leaves'; 0 none), an albedo over the ground's (0: its own)
+struct MadeLook {
+    bool on = false, tinted = false;
+    RGB tint;
+    int kind = 0, variant = 0, dye = 0;
+    double albedo = 0;
 };
 
 // one seeding's spread: where the line was let go (a unit vector in the body's frame) and how far it has reached (radians of arc). J-03:
@@ -138,18 +163,16 @@ struct MadeSpread {
     MadeFate fate;
     MadeGrowth growth;
     int pits = 0;   // J-10: a stone rotter's steps since it was let go, to MADE_GROWTH_STEPS (0: its line pits no stone): the ruins in its reach crumble
+    int deep = MADE_SURFACE;   // J-13: a line under the ground (`MadeDeep`) lives in no water and on no land of the surface; a sea's colours its cracks
+                               // (J-14: a cloud line's dye and glow are the air's, `MadeWorld::cloudTint` and `cloudGlow`)
+    // KI-460: its own colours where its looks lie (two lines' looks of one class each in its own): its waters' (a dye's, a milk's, a rust's, else
+    // the world's water under its glow) and its land's, snow's and plants' looks by `MadeClass` (the waters' unused)
+    bool waterTinted = false; RGB waterTint;
+    bool waterColours = false;   // (its waters' colour its own: a dye's or a look's; one that only glows keeps the world's water's)
+    MadeLook look[MC_COUNT];
+    double glow = 0; RGB glowTint;   // its own night light in its waters (a glowing line's) and its plants' (a glowing host's)
+    double plantsGlow() const { return look[MC_PLANTS].on && look[MC_PLANTS].kind == MP_GLOWING ? glow : 0; }   // (its plants' alone: a glowing host's)
     bool j05() const { return makes != 0 || plants || landOn != 0 || lookWaters != MADE_ALL_WATERS || cover >= 0 || coldC < 1e8; }
-};
-
-// J-05: a made look over one class of the ground (the land, the snow and ice, the plants): whether a line makes it (its share is set by the
-// made pass where that line lives), its colour (none: the ground's own, its effects alone), the trait it is (`kind`, a `Made*Trait` bit) and
-// its form (`variant`: a crust's polygons, ripples or rosettes; a blight's spots, stands or all), the dye it is named by (a coloured snow's,
-// new leaves'; 0 none), an albedo over the ground's (0: its own)
-struct MadeLook {
-    bool on = false, tinted = false;
-    RGB tint;
-    int kind = 0, variant = 0, dye = 0;
-    double albedo = 0;
 };
 
 struct MadeWorld {
@@ -192,6 +215,9 @@ struct MadeWorld {
     double rainTintK = 0; RGB rainTint; int rainDye = 0;
     double seaSmoke = 0;
     double spores = 0; RGB sporeTint;
+    double worldC = 0;   // KI-483: the world's mean as generated (what a made climate is read against: a milder world is more livable)
+    double silver = 0;   // KI-483: silver clouds high in the summer twilights (TR_NOCTILUCENT's), of the methane an oxygen air burns (0..1)
+    double green = 0;    // J-15: the share of its land a carpet's grass and shrubs cover (0..1; a dry world's: GREENED DESERT past a half)
     // J-05: the waters, the ground and the plants (IDEAS-seeded-worlds.md sections 5 and 6). The traits the data sheet names (`Made*Trait`
     // bits); what the waters' colour is (`MadeWaterLook`); a foam on their shores (its colour), their waves slowed by a jelly, the seas
     // boiling (a runaway's steam); every water's colour turned by a sulphide (purple, black without a sun) and that colour, the reefs bleached
@@ -223,6 +249,7 @@ struct MadeWorld {
     double freeze = 0;
     int kind = MDK_NONE, kindGrowth = OG_NONE;
     bool kindCold = false;
+    bool kindFlora = true;   // KI-458: whether its world has plants (a made hothouse's sentence: an ocean world's has no forests to turn to stone)
     bool grown() const { return growths != 0; }
     bool frozen() const { return freeze >= 2; }
     // J-11: the dead cover a made kind lays over its living ground (`DeadCover`): a made hothouse the scorched felisian's, a made snowball the
@@ -250,7 +277,7 @@ double madeReachAt(const MadeWorld& m, const Vec3& unit, uint64_t seed);
 // J-03: one spread's (`i`) share of a point, as above
 double madeSpreadAt(const MadeWorld& m, int i, const Vec3& unit, uint64_t seed);
 // J-03: whether a spread's line lives at a point of this kind: in water of this salt (0 fresh, 1 the sea's, 2 brine) or on the land, at this
-// mean warmth (C; read only where the spread has a band)
+// mean warmth (C; read only where the spread has a band). J-13: a deep line nowhere on the surface, a sea under the ice's under all its land
 bool madeLives(const MadeSpread& s, bool wet, int salt, double meanC);
 // a spread's reach at a step on a world of this radius: the place (2 km) at step 1, the region (150 km, the landing map's zoom) at step 6,
 // the whole world at MADE_STEPS (J-03 makes it follow the warmth, the waters and the land the line can live in)
@@ -267,8 +294,15 @@ double madeGrowthAt(const MadeWorld& m, const Vec3& unit, uint64_t seed, int& li
 // J-10: the steps an overgrowth has lain at a point since its edge passed there (0 at the edge, the fraction by how far past the step's reach
 // the point lies; -1 where none covers it): the latest line's that covers it, its edge read as `madeGrowthAt` reads it
 double madeGrowthSince(const MadeWorld& m, const Vec3& unit, uint64_t seed);
+// J-15: whether a carpet grows grass and shrubs on a world of this kind: a dry world with no plants of its own whose grass bank is free (the
+// desert; the scorched felisian lends its to its clay)
+bool madeGreens(int type);
+// J-15: how much of a point a line's grass and shrubs cover, 0..1 (its growth's `greenReach` read with `madeGrowthAt`'s edge), and how thick
+// they stand there (0 where they began .. 1 behind `thickReach`)
+double madeGreenAt(const MadeWorld& m, int line, const Vec3& unit, uint64_t seed, double& thick);
 // J-11: a made kind's words: its name ("PURPLE WORLD"; an overgrown world's by its type, "FLESH WORLD"; empty for none), the data sheet's
 // sentence in its kind's place ("LIVING TISSUE COVERS THE LAND FROM COAST TO COAST.") and `describeBody`'s phrase in place of its kind's
 std::string madeKindName(const MadeWorld& m);
+std::string madeKindShort(const MadeWorld& m);   // ten characters at most, the analyzer's and the telescope's ("FLESH", "HOTHOUSE")
 std::string madeKindSentence(const MadeWorld& m);
 std::string madeKindPhrase(const MadeWorld& m);

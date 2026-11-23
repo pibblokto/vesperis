@@ -385,7 +385,7 @@ void Game::renderLandingMap() {
     drawText(canvas, 8, ry + 8, l2.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     {
         const BodyGen& g = spaceR.genFor(b);
-        const RGB base = g.made.on() ? madeColourAt(g, mat, tvp.mtint / 255.0) : g.matColor[mat];   // J-02: a made world's tint, as the map's (J-03: a water's too; J-05: its looks)
+        const RGB base = g.made.on() ? madeColourAt(g, mat, tvp.mtint / 255.0, tvp.mline - 1) : g.matColor[mat];   // J-02: a made world's tint, as the map's (J-03: a water's too; J-05: its looks)
         RGB gc = materialRampColor(base * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, noSun ? 1.0 : clampd(si.lightFactor, 0, 1.15), g.hasAir));
         int sx0 = 8 + textWidth(l2.c_str()) + 8;
         drawText(canvas, sx0, ry + 8, "GROUND", HUD_DIM);

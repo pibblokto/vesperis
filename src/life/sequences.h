@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-constexpr double SEQUENCE_S = 90;        // the sequencer's reading of a genome (the plan's 8: about 90 seconds on the lab's clock)
+constexpr double SEQUENCE_S = 10;        // the sequencer's reading of a genome: ten seconds on the lab's clock (R-449; the plan's 8 had 90)
 constexpr int MARKER_LETTERS = 1536;     // the marker's length (16S rRNA's about 1,500)
 const char* alphabetOf(int letters);     // "ACGT", "ACGTZP", "ACGTZPSB"
 

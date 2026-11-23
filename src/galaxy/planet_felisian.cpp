@@ -434,16 +434,19 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     s.relief = clampd(relief0 + 0.5 * o.slope, 0, 1);
     // biomes from temperature (latitude, altitude, the body's climate) and moisture
     double T = climateTempC(g, absLatDeg, h, winter, sub);
-    // J-04: the made climate's warmth here (the frozen ground and waters follow it; a biome moves only across the ice's edge)
-    const double Tm = T + madeC, Tb = (T < -8) != (Tm < -8) ? Tm : T;
+    // J-04: the made climate's warmth here (the frozen ground and waters follow it; a biome moves only across the ice's edge). KI-484: a greened
+    // world's biomes follow its warmth (a cold world's) or its rain (a dry one's), in the biome table alone (its rivers and heights as generated)
+    const bool greened = g.made.kind == MDK_GREENED;
+    const double Tm = T + madeC, Tb = greened || (T < -8) != (Tm < -8) ? Tm : T;
     if (g.locked && !(K.tags & KT_FIXED_SUN)) moist -= 0.35 * std::max(0.0, sub - 0.15);   // deserts under a permanent sun (P-03: a fixed sun's kind has its own, `felisianGround`)
+    const double moistB = greened && !g.made.kindCold ? moist + 0.3 * g.made.rainMore : moist;
     int biome = BIO_GRASSLAND;
     if (Tb < -8) biome = BIO_ICE;
     else if (Tb < 2) biome = BIO_TUNDRA;
-    else if (Tb < 10) biome = moist > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // a kind's grass band wider (forest wetter, desert drier)
-    else if (Tb < 20) biome = moist > 0.55 + g.grassBand ? BIO_TEMPERATE : (moist > 0.28 - g.grassBand ? BIO_GRASSLAND : BIO_DESERT);
-    else biome = moist > 0.55 + g.grassBand ? BIO_TROPICAL : (moist > 0.35 - g.grassBand ? BIO_SAVANNA : BIO_DESERT);
-    if (moist > 0.72 && h < 120 && relief0 < 0.2 && biome != BIO_ICE) biome = BIO_WETLAND;
+    else if (Tb < 10) biome = moistB > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // a kind's grass band wider (forest wetter, desert drier)
+    else if (Tb < 20) biome = moistB > 0.55 + g.grassBand ? BIO_TEMPERATE : (moistB > 0.28 - g.grassBand ? BIO_GRASSLAND : BIO_DESERT);
+    else biome = moistB > 0.55 + g.grassBand ? BIO_TROPICAL : (moistB > 0.35 - g.grassBand ? BIO_SAVANNA : BIO_DESERT);
+    if (moistB > 0.72 && h < 120 && relief0 < 0.2 && biome != BIO_ICE) biome = BIO_WETLAND;
     if (relief0 > 0.45 && h > std::max(700.0, 0.5 * snowLine0)) biome = BIO_ALPINE;   // the zone between the treeline and the snow (it began at 700 m everywhere: 13% of the land was bare rock)
     bool inland = level > -1e8 && h < level;   // under a river, a lake or a pool
     if (h < 0) {
@@ -487,6 +490,8 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     } else if (absLatDeg > capEdge || h > snowLine || biome == BIO_ICE || o.iceSheet > 1) {   // an ice sheet's ground is its ice whatever the season
         s.material = MAT_SNOW; s.albedo = 0.92; s.biome = BIO_ICE;
         if (o.iceSheet > 1 && o.sheetWall) { s.material = MAT_ICE; s.albedo = 0.7; }   // the sheet's wall bare blue ice (P-03: its own wall, not the bedrock's slope under it)
+        else if (o.iceSheet > 1 && madeC > 0 && !(absLatDeg > capEdge || h > snowLine || biome == BIO_ICE)) { s.material = MAT_ICE; s.albedo = 0.62; }   // KI-456:
+        // a sheet a made warmth moved the caps, the snow line and the ice's edge off, its snow melted to bare ice (its heights the ice's as generated)
         if (waterZone > 0) s.water = level;
     } else if (o.caldera && h > 0) {
         s.material = MAT_WATER; s.albedo = 0.3; s.water = h + 2.0; s.biome = BIO_WETLAND;   // crater lake
@@ -510,7 +515,9 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     if (s.biome == BIO_NONE) s.biome = biome;
     // the landforms' materials: glacier ice, and rock, basalt, sand or salt where a landform says so (never over water)
     if (dryLake && s.material != MAT_WATER && s.material != MAT_SNOW) { s.material = MAT_SALT; s.albedo = 0.86; s.veg = 0; }   // a dry basin's playa
-    if (o.land.glacier > 0.5 && s.material != MAT_WATER) { s.material = MAT_ICE; s.albedo = 0.8; s.veg = 0;
+    if (o.land.glacier > 0.5 && s.material != MAT_WATER && madeC > 0 && Tm > 2.0) { s.material = MAT_ROCK; s.albedo = 0.42; s.veg = 0;   // KI-456: a tongue a
+        // made warmth melted back, its bed's moraine (its valley as generated)
+    } else if (o.land.glacier > 0.5 && s.material != MAT_WATER) { s.material = MAT_ICE; s.albedo = 0.8; s.veg = 0;
     } else if (o.land.mat >= 0 && s.material != MAT_WATER && s.material != MAT_ICE && s.material != MAT_SNOW) {
         s.material = o.land.mat;
         if (o.land.albedo >= 0) s.albedo = o.land.albedo;

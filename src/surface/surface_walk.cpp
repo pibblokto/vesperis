@@ -595,6 +595,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                         const double rx = R.x, rz = R.z, size = R.size, gy = R.gy;
                         const uint64_t hr = R.h;
                         RasterParams& rk = grown && madeGrowthMaterial(site.lod0.at(cx, cz).material) ? rpG : rp;   // (J-09: wrapped)
+                        if (&rk == &rpG) rpG.bank = growthBankOf(site.lod0.at(cx, cz).mline - 1) >= 0 ? growthBankOf(site.lod0.at(cx, cz).mline - 1) : rp.bank;   // (KI-473: its line's)
                         double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
                         double a0 = hash01(mix64(hr + 3)) * TAU;
                         Vec3 base(rx, gy - size * 0.15, rz);

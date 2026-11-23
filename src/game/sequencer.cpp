@@ -234,11 +234,10 @@ std::string Game::sequencerResult() {
         Q.result.push_back(fitText("EDITED: " + lineMoveWords(flaskStrainKey(Q.who)), UW - 12));
         line += " (" + lineTag(Q.who) + ", EDITED: " + lineMoveWords(flaskStrainKey(Q.who)) + ")";
     } else if (Q.who.strain > 0) {   // a strain: the one gene its move was in
-        uint64_t genesis = 0;
-        const int p = strainGene(Q.who, genesis);
+        const int p = strainGene(Q.who);
         if (p >= 0) {
-            const std::string words = geneWords(genesis, p);
-            Q.result.push_back(fitText(fmt("GENE %d DIFFERS FROM THE PARENT'S", p + 1) + (words == "NOT KNOWN" || words == "NOTHING SEEN" ? "" : ": " + words), UW - 12));
+            const std::string words = geneWords(Q.who, p);
+            Q.result.push_back(fitText(fmt("GENE %d DIFFERS FROM THE PARENT'S", p + 1) + (words == "NOT KNOWN" ? "" : ": " + words), UW - 12));
         }
     }
     return line;

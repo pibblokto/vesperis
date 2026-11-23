@@ -206,7 +206,8 @@ void Game::drawDroneRack(CabinFrame& f) {
     };
     const double flick = f.flick;
     // ---- the rack: its back against the hull (a port behind each shelf, open while its drone is away), its sides, its shelves, its head
-    // with the bay's screen across it (three cells, a drone's each: bright aboard and ready, breathing while the bay charges, dim while away)
+    // with the bay's screen across it (three cells, a drone's each: bright aboard and ready, breathing aboard while the others are away, dim
+    // while away)
     quad(solid, Vec3(RACK_X0 + 0.02, BASE, RACK_Z0), Vec3(RACK_X0 + 0.02, BASE, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z0), hullShade * 0.55);
     for (const double z : {RACK_Z0, RACK_Z1}) quad(solid, Vec3(RACK_X0, BASE, z), Vec3(RACK_X1, BASE, z), Vec3(RACK_X1, RACK_TOP, z), Vec3(RACK_X0, RACK_TOP, z), hullShade * 0.7);
     quad(solid, Vec3(RACK_X0, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z1), Vec3(RACK_X0, RACK_TOP, RACK_Z1), hullShade * 0.9);
@@ -224,7 +225,7 @@ void Game::drawDroneRack(CabinFrame& f) {
             quad(dark, Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z0 + 0.06), Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z1 - 0.06), Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z1 - 0.06),
                     Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z0 + 0.06), 2);
         }
-        // the shelf's lamp: green aboard and ready, amber charging, red blinking while its drone is out
+        // the shelf's lamp: green aboard and ready, amber aboard while the others are away, red blinking while its drone is out
         const Vec3 lampP(RACK_X1 + 0.004, y - 0.015, RACK_Z1 - 0.07);
         if (docked && here) lampAt(lampP, ready ? dealt(BANK_SCREEN) : dealt(BANK_AMBER), ready ? 58 : 40 + 14 * std::sin(realTime * 2.4), 2);
         else lampAt(lampP, dealt(BANK_RED), std::fmod(realTime, 1.0) < 0.5 ? 60 : 22, 2);
@@ -443,7 +444,7 @@ void Game::buildDroneMap(int body) {
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1, m.madeTintAt(i));
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1, m.madeTintAt(i), m.madeLineAt(i));
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);

@@ -41,6 +41,11 @@ int matFamilyOn(int type, int material) {
     return matFamily(material);
 }
 
+int matFamilyOnGen(const BodyGen& g, int material) {
+    if (material == MAT_ICE && g.made.on() && g.made.deadCover() == DC_FROZEN) return FAM_GRASS;
+    return matFamilyOn(g.type, material);
+}
+
 int familyRep(int type, int family) {
     const KindDef& K = KINDS[type];
     if (family == FAM_GRASS && K.accent[0] >= 0) return K.accent[0];

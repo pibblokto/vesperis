@@ -167,6 +167,10 @@ struct Flock {
     bool perched = false;                                 // resting in a tree
     double perchX = 0, perchZ = 0, perchY = 0, perchR = 2;
     int wraps = 0;                                        // J-07: a floater's comings in again upwind
+    // B-469: its fate where it flies (none on a world nobody seeded): the sickness its sick show and their share (each member by its own hash,
+    // as a herd's), its young born changed (their share, the size a giant's or a dwarf's change gives them)
+    int sickness = 0;
+    double sick = 0, changed = 0, changedK = 1;
 };
 // N3 creature behaviour states. J-07: the ways' (a browser's neck up in a tree, a hunter stalking and chasing, a scavenger trailing a
 // hunter, a burrower under the ground, a climber up a trunk, one on its ground facing the explorer and charging)
@@ -191,6 +195,7 @@ enum GrowthShape { GS_MOUND = 0, GS_RIDGE, GS_BLISTER, GS_SAC, GS_STALK, GS_FOLD
 // the veins'), its hash; whether the explorer walks round it (`collides`: what stands over a step)
 struct GrowthInst {
     int shape = GS_MOUND;
+    int line = -1;   // KI-473: the line whose cover it grew from (its type, colour and bank)
     double x = 0, z = 0, gy = 0, r = 0, h = 0, heading = 0, len = 0;
     uint64_t hs = 0;
     bool collides = false;
@@ -208,6 +213,8 @@ extern const char* const REMAINS_NAMES[RS_COUNT];
 // J-08: remains: a die-off's (its habitat cell's, a pure function of the cell: `SurfaceView::cellRemains`), a kill's, old bones on any world. Its
 // species, where it lies and which way, its size, its stage, its own hash, its cell (dropped with the cell); on high ground with stalks (a
 // sprouting one's), a kill (the hunters feed at it: `eaten` the seconds they fed, past which it is sunk to its ribs), old bones
+// B-470: staged again by the clock (`SurfaceView::restageRemains`): a cell's dead by their fate's age where they lie at the landing (`age0`, steps)
+// and the time since; a kill's or a fall's by its death on the landing's clock (`diedAt`, seconds, under 0 before the landing; -1e18 none)
 struct Remains {
     int species = -1;
     double x = 0, z = 0, heading = 0, size = 1;
@@ -216,6 +223,7 @@ struct Remains {
     int gLat = 0, gLon = 0;
     bool cell = true, stalks = false, kill = false, old = false;
     double eaten = 0;
+    double age0 = 0, diedAt = -1e18;
 };
 struct Critter {
     double x = 0, z = 0, heading = 0, speed = 0, timer = 0, size = 1;
@@ -249,6 +257,11 @@ struct Critter {
     double fallT = 0;
     bool rolled = false, killed = false;
     int64_t fallWin = -1;                     // the four seconds' window its last fall came in
+    // B-469: a sprouting one's death, seconds on the landing's clock (`SurfaceView::lifeClock`; 1e18 none): it falls dead on its high ground
+    double dieAt = 1e18;
+    // B-468: its trunk as drawn (`SurfaceView::trunkOf`): the side it clings to (radians), the radius at the foot and at the trunk's top, the
+    // top's height, the top's lean off the foot
+    double treeA = 0, trunkR0 = 0, trunkR1 = 0, trunkTopY = 0, trunkLx = 0, trunkLz = 0;
 };
 // N2: one tree, placed by SurfaceView::forTrees (drawing, colliders, coverage and creatures read the same list)
 struct TreeInst {
@@ -261,6 +274,7 @@ struct TreeInst {
     bool stump = false;            // a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
     bool made = false, galls = false;   // J-05: in a made plants' look (its leaves in its bank: a blight, new leaves, a glow), swellings on it
     bool wrapped = false;          // J-09: wrapped in an overgrowth (its trunk and canopy in its bank and tile)
+    int line = -1;                 // KI-460, KI-473: the line whose plants' look or overgrowth lies at its foot (its bank's)
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };

@@ -653,8 +653,7 @@ int labGenes() {
         const MicrobeGene* Wm = nullptr;
         for (const MicrobeGene& G : g0.genes) {
             if (G.kind == GN_WARMTH) Wm = &G;
-            if (G.kind == GN_WARMTH || G.kind == GN_SHAPE || G.kind == GN_VITAL) { GeneKnown k; k.kind = G.kind; k.how = GENE_SEEN_EDIT; g.guide.genes[g.testGeneKey(g0.genesis.id, G.place)] = k; }
-            if (G.kind == GN_QUIET) { GeneKnown k; k.how = GENE_SEEN_NOTHING; g.guide.genes[g.testGeneKey(g0.genesis.id, G.place)] = k; }
+            if (G.kind == GN_WARMTH || G.kind == GN_SHAPE || G.kind == GN_VITAL || G.kind == GN_QUIET) { GeneKnown k; k.kind = G.kind; g.guide.genes[g.testGeneKey(X, G.place)] = k; }
         }
         std::vector<std::pair<std::vector<uint32_t>, std::string>> shots;
         auto grab = [&](const std::string& label) {
@@ -671,10 +670,13 @@ int labGenes() {
         EditorState& E = g.testEditor();
         {   // J-01: Page Down, the world genes' page: its gas gene known, chosen
             for (const MicrobeGene& G : g0.genes)
-                if (G.kind == GN_GAS || G.kind == GN_STOP) { GeneKnown k; k.kind = G.kind; k.how = GENE_SEEN_EDIT; g.guide.genes[g.testGeneKey(g0.genesis.id, G.place)] = k; }
+                if (G.kind == GN_GAS || G.kind == GN_STOP) { GeneKnown k; k.kind = G.kind; g.guide.genes[g.testGeneKey(X, G.place)] = k; }
             pressKey(g, in, KEY_PAGE_DOWN);
             for (const MicrobeGene& G : g0.genes) if (G.kind == GN_GAS) E.sel = G.place;
             grab("PAGE DOWN: ITS WORLD GENES, ITS GAS");
+            pressKey(g, in, KEY_ENTER); pressKey(g, in, KEY_UP);   // R-450: its letters open, the first changed: the guide to its pick
+            grab("ITS GAS'S GUIDE, ITS FIRST LETTER");
+            pressKey(g, in, KEY_BACKSPACE); pressKey(g, in, KEY_ENTER);   // (its parent's letter again, the map)
             pressKey(g, in, KEY_PAGE_UP);
         }
         if (Wm) {
@@ -688,7 +690,7 @@ int labGenes() {
         pressKey(g, in, KEY_ENTER);
         grab("THEN THE NAME, PARENT'S TO START");
         pressKey(g, in, KEY_ENTER);
-        g.testLabSkip(45);
+        g.testLabSkip(EDIT_S / 2);
         grab("WRITING ITS LINE");
         g.testLabSkip(EDIT_S);
         g.closeScreen(); g.openScreen(GameState::INCUBATOR);
@@ -787,7 +789,7 @@ int labGenes() {
             g.guide.microbes[lkey].seen |= SEEN_FORM | SEEN_KIN;
             CultureKind k0; Morph f0; MicrobeGenes g0;
             g.testFlaskKind(Lw, k0, f0, &g0);
-            { GeneKnown k; k.kind = GN_GLOW; k.how = GENE_SEEN_EDIT; g.guide.genes[g.testGeneKey(g0.genesis.id, lg)] = k; }
+            { GeneKnown k; k.kind = GN_GLOW; g.guide.genes[g.testGeneKey(Lw, lg)] = k; }
             auto bestIn = [](const CultureKind& k, int light) {
                 Medium m; m.cell = chemistryCell(k.chemistry); m.tempC = std::round(k.s.tOpt); m.salt = k.s.saltLo; m.light = light;
                 m.energy = k.s.way == LW_CHEMICAL ? k.s.substrate : CE_BROTH;
@@ -815,7 +817,7 @@ int labGenes() {
             g.testLabSkip(EDIT_S + 1);
             g.closeScreen();
             flaskIn(2, Lw, bestIn(Lk, CL_DARK));   // its species beside it, in the dark too
-            g.testLabSkip(240);
+            g.testLabSkip(48);   // (R-449: a fifth of the four minutes it was, the flask five times as quick)
             g.openScreen(GameState::INCUBATOR);
             g.testIncub().sel = 1;
             grab("ITS LINE IN THE DARK: GLOWING");
@@ -826,12 +828,14 @@ int labGenes() {
             StrainRecord r; r.what = SM_EDIT; r.edits = fmt("%d~LIGHT", rp + 1);
             g.guide.strains[rkey + "/S1"] = r;
             FlaskSpecies Rl = Rw; Rl.strain = Rl.strainIn = 1;
-            flaskIn(3, Rl, bestIn(Rk, CL_WHITE));
-            flaskIn(4, Rl, bestIn(Rk, CL_DARK));
+            Medium starvedLit = bestIn(Rk, CL_WHITE), starvedDark = bestIn(Rk, CL_DARK);   // R-449: a full flask is fed for good, so nothing it eats
+            starvedLit.energy = starvedDark.energy = CE_NONE;
+            flaskIn(3, Rl, starvedLit);
+            flaskIn(4, Rl, starvedDark);
             g.testLabSkip(50 * 60);
             g.openScreen(GameState::INCUBATOR);
             g.testIncub().sel = 3;
-            grab("A REST IN THE LIGHT, LIT: SPORES");
+            grab("A REST IN THE LIGHT, LIT, STARVED: SPORES");
             g.testIncub().sel = 4;
             grab("THE SAME IN THE DARK: DYING");
             const CultureOne lit = g.testFlaskNow(3).one[0], unlit = g.testFlaskNow(4).one[0];
@@ -841,7 +845,7 @@ int labGenes() {
             sw.label(4, 3, fmt("lab genes: the switches, M%d's glow IN THE DARK and M%d's rest IN THE LIGHT", Lw.species, Rw.species));
             for (size_t i = 0; i < shots.size(); i++) { sw.blit(shots[i].first, FBW, FBH, gap + (int)i * (FBW + gap), head + gap); sw.label(gap + (int)i * (FBW + gap) + 2, head + gap + FBH - 11, shots[i].second); }
             sw.save("shots/tests/lab_genes_switch.png");
-            printf("the switches: M%d's glow (gene %d) by S %s, written: its line in the dark %s at four minutes, its species %s; M%d's rest (gene %d) IN THE LIGHT at fifty "
+            printf("the switches: M%d's glow (gene %d) by S %s, written: its line in the dark %s at 48 s, its species %s; M%d's rest (gene %d) IN THE LIGHT, starved, at fifty "
                    "minutes: lit %s (%.1e spores), dark %s (%.0f spores)\n", Lw.species, lg + 1, edits.c_str(), lineGlows ? "glowing" : "DARK",
                    wildGlows ? "GLOWING" : "not yet", Rw.species, rp + 1, CULTURE_STAGE_NAMES[lit.stage], lit.spores, CULTURE_STAGE_NAMES[unlit.stage], unlit.spores);
             remove(g.guidePath.c_str()); remove(g.settingsPath.c_str());

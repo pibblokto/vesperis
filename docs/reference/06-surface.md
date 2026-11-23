@@ -425,7 +425,7 @@ most twice its size; a hunter with none scavenges. The herds follow: one alone, 
 soarers 1-3, swarms 20-40. `Bestiary::words(i)`: the species' kind ("QUADRUPED", a swimmer's "EEL") with the first word of its look
 (coat, ornament, back, hide, tail, eyes; else its size) that none of its world's others of that kind share: "STRIPED QUADRUPED".
 
-**Spawning** (`planLife`, deterministic from the site seed; `spawnLife` at `init`): 1-3 flocks of a flyer species (none on ice); a herd with the biome's encounter chance (tropical, temperate, grassland, savanna, wetland 0.85; taiga 0.55; desert, tundra 0.35; alpine 0.15; ice and open sea 0), then a second at 50% and a third at 30%, each centred on land within 180 m with `herdMin..herdMax` animals spread over `4 + 2 n` m, sizes 0.85-1.15 of the species. **B-316 (2026-09-28): habitat cells.** Beyond the landing's herds (`Herd::origin`), 512 m squares of the body's latitude and longitude (`lifeCellAt`, like the ruins' cells, so a re-anchor changes nothing) each hold a herd or not by hash (`planCellHerd`: one of six hashed spots on dry land, the biome's chance there: grassland and savanna 0.55, temperate, tropical and wetland 0.4, taiga 0.3, desert and tundra 0.18, alpine 0.1, else none; the species by `pickLand`, the size by the species). `updateHabitat` (from `updateLife`, every half second) spawns the herds whose spot lies within 900 m of the explorer or the buggy and forgets those beyond 1300 m (their animals go with them; a herd you return to starts afresh, KI-317); `SurfaceView::herds` lists every herd and `Critter::herd` indexes it; a herd stays within 300 m of its spot (400 m of the origin before). The grassland herd site holds 2 landing herds and 7 habitat herds, 49 animals; `encounters` prints the habitat herds within 900 m per site (0.7 over random sites, most of which are ice).
+**Spawning** (`planLife`, deterministic from the site seed; `spawnLife` at `init`): 1-3 flocks of a flyer species (none on ice); a herd with the biome's encounter chance (tropical, temperate, grassland, savanna, wetland 0.85; taiga 0.55; desert, tundra 0.35; alpine 0.15; ice and open sea 0), then a second at 50% and a third at 30%, each centred on land within 180 m with `herdMin..herdMax` animals spread over `4 + 2 n` m, sizes 0.85-1.15 of the species. **B-316 (2026-09-28): habitat cells.** Beyond the landing's herds (`Herd::origin`), 512 m squares of the body's latitude and longitude (`lifeCellAt`, like the ruins' cells, so a re-anchor changes nothing) each hold a herd or not by hash (`planCellHerd`: one of six hashed spots on dry land, the biome's chance there: grassland and savanna 0.55, temperate, tropical and wetland 0.4, taiga 0.3, desert and tundra 0.18, alpine 0.1, else none; the species by `pickLand`, the size by the species). `updateHabitat` (from `updateLife`, every half second) spawns the herds whose spot lies within 900 m of the explorer or the buggy and forgets those beyond 1300 m (their animals go with them; a herd you return to starts afresh, KI-317, but a member caught or fallen dead this landing stays dead, B-470); `SurfaceView::herds` lists every herd and `Critter::herd` indexes it; a herd stays within 300 m of its spot (400 m of the origin before). The grassland herd site holds 2 landing herds and 7 habitat herds, 49 animals; `encounters` prints the habitat herds within 900 m per site (0.7 over random sites, most of which are ice).
 
 **Behaviour** (`updateLife`, `CritterState`): idle, walking, grazing, drinking, resting, alert, fleeing, curious; J-07's browsing,
 stalking, chasing, trailing, under the ground, climbing, displaying and charging (below). Decisions when the timer runs out: rest (20-40 s, lying) at midday (local time 0.46-0.54) or when the sky is dark for day species, by day for night species, in full day or deep night for dusk species; in the afternoon (0.55-0.78) grass and water eaters walk to the nearest water within 150 m and drink within 5 m; else graze 40%, walk 35% (followers keep 3-12 m from their herd's leader, the first animal of the herd, and take its heading with noise; the herd centre pulls back beyond 60 m), idle 25%; the leader calls now and then. Threat: the explorer within 25 m (15 m for curious species, never for indifferent ones), the buggy moving over 3 m/s within 60 m: alert for 0.8-1.6 s (frozen, head up, a call at most every 6 s), then flight (run speed away for 5-8 s, the herd mates within 40 m startled too) or, for curious species, an approach to 10 m facing the explorer. Movement keeps off water and slopes over about 0.3 m per step, adds stride cycles (`gaitPhase`, stride 0.75 or 1.3 leg lengths), drops a track every 0.7 m on sand and snow (16 kept), and feeds `hoofLevel` within 20 m. Flocks: circling, gliding, landing to rest every minute or two; at dusk (day species) or in full day (dusk species) they land until the light changes, perching in the tallest tree within two cells of their circle (`forTrees`) or on the ground.
@@ -440,10 +440,12 @@ of its kind chasing within 40 m or stalking within 12 m, its herd mates within 4
 fresh, bloated or sunken remains within 300 m where no hunter feeds (J-08), else keeps 25-60 m from the nearest hunter within 300 m, nose
 to the ground; a hungry hunter feeds at remains within 120 m before it hunts. A burrower goes under at a threat (anyone within 18 m) or to
 rest: it sinks in 1.2 s, stays under 12-40 s (longer while the explorer is near) and comes up where it went down. A climber runs to the
-nearest trunk within 25 m and climbs it, each a side and a height of its own, holding on while the explorer is near and coming down 8 s
-after; it rests in trees too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up,
-calling; within 14 m it charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night
-walkers are the species active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a
+nearest trunk within 25 m and climbs the trunk as drawn (`trunkOf`: its girth tapering to the top, its axis leaning with the crown), each
+a side and a height of its own, clear of those on the trunk already by its body's width at the girth (a body's length up or down where the
+trunk is too thin for two side by side: `climbSide`, B-468), holding on while the explorer is near and coming down 8 s after; it rests in
+trees too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up, calling; within 14 m
+it charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night walkers are the species
+active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a
 few metres across, settling at rest; a soarer circles 70-150 m up and drifts over the nearest hunter within 600 m; a floater goes with the
 wind at most of its speed and comes in again 600 m upwind once it is 700 m off.
 
@@ -460,16 +462,19 @@ serpent's a wave, a body length over 1.5). A foot stays where it was put for its
 trot 0.5, a gallop 0.36, a wave of legs 0.7; less where the stride outreaches the leg) while the body goes over it, then swings forward
 lifted. A gallop or a bound arches the back and stretches it once a cycle, the head nods to a walk, a hop's arc comes while its feet are
 up, the serpent's waves run back as fast as it goes (they stay where they lie) and a swimmer's run back by the clock. A browser's neck
-reaches up (`reach`), a stalker goes low (`crouch`), a burrower sinks (`sink`), a climber is posed on level ground and turned onto its
-trunk (`climbing`, `turnPose`), a leaper is tilted along its arc (`tilt`). How much is drawn depends on the animal's height in pixels: under about 7 at 1x a few lines, under 24 a coarse mesh,
-else the whole (an 8-sided trunk rounded at its ends, tapered legs, the beak or trunk, eyes, horns, spots, warts, quills, hair). Hides
+reaches up (`reach`), a stalker goes low (`crouch`), a burrower sinks (`sink`), a climber is posed on level ground whose round is the bark's
+(`trunkR`: its feet on it, within the girth's sides) and turned onto its trunk (`climbing`, `turnPose`), a leaper is tilted along its arc
+(`tilt`). How much is drawn depends on the animal's height in pixels: under about 7 at 1x a few lines, under 24 a coarse mesh, else the
+whole (an 8-sided trunk rounded at its ends, tapered legs, the beak or trunk, eyes, horns, spots, warts, quills, hair). Hides
 take the world's two hide banks (`setupPalette`: 24 and 20 where no people built, 13 with no glowing body in the sky, 12 with no second
 sun, then a lent bank no trait holds; the forest's 3 and the rock's 0 where none is free); horns, tusks, claws and beaks the bone bank 29,
 hooves and mandibles the dark 30, eyes and insect wings the snow's 8. Flyers within 160 m that show 3 pixels get a body (flapping,
 gliding or folded when perched); farther they are a point and two strokes (a swarm's members dart about their places, and a soarer
 mostly glides). Floaters drift on day and night. Swimmers (`swimmersNear`, J-07: also where no herd or flock is near) within 120 m show
 their body breaking the surface, and the water hides the rest; farther, a fin and a back. A shoal's spot holds three in line, a
-shallows species circles the first of eight places of its cell 0.3-1.5 m deep, and a leaper jumps an arc out of the water every 7-13 s
+swimmer of the shallows swims back and forth along a stretch of its cell's water 0.9 m deep (`shallowsPathOf`, B-467: halved from the cell's
+deep places toward its shallower, on the 16 m ground and the mean water, so it holds from anywhere and whatever the tide; gone while the
+tide is out there), and a leaper jumps an arc out of the water every 7-13 s
 with a splash where it leaves and where it comes down. A burrower's hole is a dark disc while it is under. Cost: the bench's herd (J-07:
 a pack of four hunters at 18 m) 0.08 ms at 1x, its update 0.01 (`bench`).
 
@@ -481,7 +486,8 @@ nearest it came and the most at once (`lifeSeen`); a species' first of the landi
 them in the guide's `animal` lines, keyed `<body key>/A<index>`; a species new to the guide is logged (SIGHTING), counted
 (`creaturesSeen`) and said ("NEW SPECIES: A STRIPED HOPPER"), one seen before is said by its name or its words. The animal nearest the
 middle of the screen within its size (12 pixels at least) and 40 m (50 on the water, 80 in the air) is the crosshair's (`lifeTarget`):
-the HUD says it ("A STRIPED HOPPER - N") and N names it (`TEXT_ANIMAL`, the guide's `names`); without one N opens the map as before. A
+the HUD says it ("A STRIPED HOPPER - SHIFT+N") and Shift+N names it (`TEXT_ANIMAL`, the guide's `names`; R-452: N alone always opens
+the map, and so does Shift+N with no animal there). A
 name travels in a friend's export as every name does (the inbox's, the explorer's own winning). The data sheet's LIFE line lists the
 species seen there, named ones as "NAME (WORDS)", counting the ones it has no room for; X's labels and the landing map's LIFE (once seen;
 "A HERD" before) use the same words. J-08: remains seen record their species (`DO_DEAD`, "REMAINS OF A STRIPED HOPPER" said) and its
@@ -503,13 +509,21 @@ share (a changed rig built once a species: two heads, an extra leg or tail, a le
 tusks, eyes more or none, a twisted spine, a new pattern, woolly, hairless, pale, dark; marks: ribs, sores, bare patches, flayed, tumours,
 stalks, stone plates, horn growths, glowing spots and stripes, iridescent, see-through to its bones; ways: calm, bold, by night,
 circling, stumbling, climbing, swarming, limping), a giant 1.6 times its size and a dwarf 0.55. Flocks lose their dead; a swimmer's spot
-is empty by its share. **Remains** are a pure function of their cell (`cellRemains`, read from the planet function, never the drawn
-ground): a herd's dead where they lived, two in five by the water within 150 m of its spot (where the sick go), half of a sprouting
+is empty by its share. Where a line meets the air's or the water's animals (their class harmed, or a host's glow or dye on the skin), a
+flock's members and a shoal's are sick and born changed by their own hash as a herd's are (B-469), with the body's and the hide's changes
+alone (a flyer's wings stunted or long with its legs), a crazed flyer erratic and a crazed swimmer twice as fast; none sprouts there. A
+sprouting one falls dead on its high ground at its time (four to sixteen steps after its fate came, by its hash), its stalks up. **Remains**
+are a pure function of their cell (`cellRemains`, read from the planet function, never the drawn ground): a herd's dead where they lived,
+two in five by the water within 150 m of its spot (where the sick go), half of a sprouting
 one's on the highest of twelve points within 100 m with their stalks; up to three of each flyer fallen over the cell and each swimmer
-washed up on its shore by their dead; and on any world, seeded or not, old bones by a herd's cell in eight. A kill's remains are kept
-till the explorer is 1,300 m off. Their stage (`remainsStageOf`) follows their fate's age where they lie, each death a share of the
-first 18 steps: fresh under 2 steps, bloated under 5, sunken under 10, bones under 20, then scattered; three times as fast with a flesh
-rotter; old bones are bones or scattered. Posed dead (`poseAnimal`'s `dead`): standing stiff at the origin, legs straight, the neck
+washed up on its shore by their dead, a sprouting one fallen since on the high ground; and on any world, seeded or not, old bones by a
+herd's cell in eight. A kill's or a fall's remains are kept on the body for the landing (`deadKept`, B-470): they leave past 1,300 m and
+come back where they fell within 900 m, and their cell comes back without them. Their stage follows the landing's clock (`lifeClock`, the
+real seconds the guide's clock runs by on the ground), staged again every half second (`restageRemains`): a cell's dead by their fate's age
+where they lie and the time since the landing (`remainsStageOf`, each death a share of the first 18 steps), a kill or a fall by the time
+since it died: fresh under 2 steps, bloated under 5, sunken under 10, bones under 20, then scattered; three times as fast with a flesh
+rotter; old bones are bones or scattered. A new anchor plans the flocks round the explorer again and leaves the old frame's remains (the
+cells' come again with their cells). Posed dead (`poseAnimal`'s `dead`): standing stiff at the origin, legs straight, the neck
 thrown back, then laid on its side and draped over the ground (a flyer nearly flat with its wings spread, a legless one on its belly);
 bloated 1.45 times its girth, sunken 0.78 with its ribs and its hide dark; bones a skeleton (spine, ribs, skull, legs, tail, the bone bank
 29), scattered apart and half buried with a few gone. A dried-blood stain lies under the fresh and the bloated, and flies circle them
@@ -523,9 +537,11 @@ with a pore at their tops, muscle's fibres, a brain's folds, gut's coils, all ve
 plates, knobs or rings (`growthTexture`). It takes a lent bank of its own before the made looks (`growthBank`, the first free of 28, 27, 26,
 25; the rock's where none is free) in its colour, a wet one's top stops whiter and its faces glossy in the sun, and at night where it
 glows its upper stops in its light. The cover is mottled in 40 m lobes; on the near ring its veins run dark by day and lit at night.
-Its structures (`forGrowths`) are a pure function of a 16 m cell whose four corners it covers: 0.6 to 6 a cell by its type (a carpet's
-and a film's few), their sizes by its grain and its age, none in a room, on a road, a street or a work's ground, in water, overlapping
-another or past the cell's edge. Eighteen shapes (`GrowthShape`): mounds, ridges, blisters, sacs, stalks with a knob, folds, vents
+Its structures stand on a lattice fixed to the world (`growthCellOf`: an equal-angle cube map's cells about 16 m across, each cell's
+placed once a landing in its local metres), so any landing sees the same ones in the same places: 0.6 to 6 a cell by its type (a
+carpet's and a film's few), their sizes by its grain and its age, each inside its cell by its reach, none overlapping another.
+`forGrowths` gives a local 16 m cell whose four corners the cover holds those whose middles lie in it, none in a room, on a road, a street
+or a work's ground, or in water. Eighteen shapes (`GrowthShape`): mounds, ridges, blisters, sacs, stalks with a knob, folds, vents
 whose lip breathes, rib arches (three to five ribs), rows of teeth, membranes sagging between two posts, clusters of polyps waving
 their tentacles, caps on stalks, shelves stacked on a stump, creeping veins over the ground, spires (a coral's branching), vases, tufts
 of hair waving with the wind, bladders floating on their tethers and rising and sinking slowly. Each type has its own mix: a flesh's
@@ -539,26 +555,43 @@ teeth, a membrane's posts, veins, hair) standing on that plane, a far one (under
 each stands on (`growthFeet`: a round one's foot, a row's teeth, each rib's two feet, along a ridge, a fold or a membrane) are its colliders (`growthColliders`, in `collectColliders`) where it stands over a
 step; veins, hair, polyps and bladders are walked through. Trees on a covered forest are wrapped (`TreeInst::wrapped`: trunk, branches
 and canopy in its bank, the trunk in its tile and half again as thick, the canopy in smooth lumps) and none stands in a structure
-(`growthHolds`); rocks on it are drawn in its bank and tile. A vial on it says SOFT OVERGROWTH, THREADS OVER THE GROUND or HARD
-OVERGROWTH, and the HUD names the ground. The bench's `forest 2x` and `4x overgrown` hold it to the forest's budgets (8.2 and 13 ms),
+(`growthHolds`: its own cell's or one reaching over from a cell beside it); rocks on it are drawn in its bank and tile. J-15: on a desert
+a carpet's or a lichen's grass (`SurfaceView::greenedAt`: grass with a line under it on a world that greens) lets the flora in on a
+world with no plants of its own, there alone: tufts and shrubs a shade darker than the grass, in the grass bank (the line's pigment's
+colour), no trees, logs, flowers or berries; on a scorched or frozen world's ground nothing else grows, as before. A vial on it says
+SOFT OVERGROWTH, THREADS OVER THE GROUND or HARD OVERGROWTH, and one off a structure what it was taken from (TISSUE FROM A MOUND, THREADS
+FROM A CAP, HARD GROWTH FROM A SPIRE: `growthAt`, read on the main thread; the activity vision's reads on the pool leave the name, the
+microhabitat the cover's), and the HUD names the ground. The bench's `forest 2x` and `4x overgrown` hold it to the forest's budgets (8.2 and 13 ms),
 and `open 2x` and `4x overgrown`, a herd's grassland under a coral's, to their own (7.5 and 10.3 ms): the structures cost about what the
 plants they cover did. `bench overgrowth` times each of those views plain and overgrown, by the frame's sections.
 
 **Ruins overgrown** (J-10, `surface/overgrowth_ruins.cpp`). When a settlement's or a work's cell is laid out on an overgrown world, each
 building gets the height its cover has climbed (`RuinCell::climb`, the last for the graves' stones): 0.3 + s + 0.012 s³ metres after s
 steps since the edge passed its middle (`madeGrowthSince`), spread a sixth by its hash; a settlement whose middle is on snow, ice, water
-or lava stays bare. The forms are drawn with the cover in the rasteriser's second bank under it (`drawFormItems`): each vertex weighted
-by its height over the climb, a face its edge crosses drawn in the growth bank and tile below it with the ground's edge noise (about
-0.8 m of wobble), the windows only above it (`RasterParams::patternAbove`), and a face wholly under it the cover alone, five shades under
-the ground's so a building taken whole still stands out. The people's pieces, their earth and their drifts take it; records, instruments
-and lit pieces stay bare. Each building's own pieces of the cover follow its pieces at level 0 (`overgrowCell`, `FORM_PART_GROWTH` and
-`Form::growth`): a membrane across each doorway and window it climbed half way up (the openings the walls and rings leave, which
-`ruinElements` reports as `FormOpening`s), a sheet bulging in or out and a little darker; nodules (lumpy blobs) on the walls round its
-edge; drapes from the tops it nearly reached, cut out under a ragged foot. None has a collider: the explorer pushes through a membrane,
-and it tears (`tearCue`). The streets and roads under the cover keep it. A stone rotter's share of a settlement (`stoneRotOf`) is its
-culture's `stoneRot` when its pieces are laid out: its earth, stone, brick and concrete decay further (`buildingDecay`), so its walls
-stand lower and its roofs and towers fall. The bench's `city 4x overgrown` and `capital 4x overgrown` hold the overgrown city and
-capital, twenty steps on, to their budgets (8.3 ms).
+or lava stays bare. Each piece of a building takes its own (`pieceClimb`): a third more on the building's side toward the way the cover
+came (`RuinCell::towardX`, `towardZ`: toward the place of the line whose cover lies at the settlement's middle), a third less on the far
+side, a tenth either way by its hash. The forms are drawn with the cover in the rasteriser's second bank under it (`drawFormItems`):
+each vertex weighted by its height over its piece's climb, a face its edge crosses drawn in the growth bank and tile below it with the
+ground's edge noise (about 0.8 m of wobble), a little darker than the wall, and a face wholly under it the cover alone, lit as the cover's
+structures are (`growthShade`: the sky, the sun, the lamp, a wet one's gloss), its veins' light at night in patches over it (the second
+bank under the edge noise, lifted into the ramp's glow). Painted windows under the cover grow shut (`RasterParams::patternShut`: their
+shapes a membrane's tone in the cover's bank, nothing lit, their dress gone), on a face wholly under it and on the cover's part of a face
+its edge crosses. Past 4 km a building's silhouette is in the cover's bank under its climb (the slice its climb crosses split there). The
+people's pieces, their earth and their drifts take it; records, instruments and lit pieces stay bare. Each building's own pieces of the
+cover follow its pieces at level 0 (`overgrowCell`, `FORM_PART_GROWTH` and `Form::growth`), lit as the cover is with its glowing faces at
+night (`growthGlowShade`): a membrane across each doorway, window and arch's bay it climbed half way up (the openings the walls and rings
+leave, which `ruinElements` reports as `FormOpening`s, C-01's gate between its piers among them; and each arch piece's bays left
+standing, a gate's, an arcade's, a porch's or a work's, `archOpenings`, the membrane's top the arch's head), a sheet bulging in or out and
+a little darker; nodules (lumpy blobs) on the walls round its edge; drapes from the tops it nearly reached, cut out under a ragged foot.
+None has a collider: the explorer pushes through a membrane, and it tears (`tearCue`) once: it stays torn for the landing, slit up its
+middle as high as the explorer went through (`tornMembranes`, by its cell's key and its opening's index, kept across a re-anchor). The
+streets and roads under the cover keep it. A stone rotter's share of each building (`stoneRotOf`: where its line lives, within its band
+of warmth at the building's place) is the building's `stoneRot` when its cell's pieces are laid out (`layRuinPieces`): its earth, stone,
+brick and concrete decay further (`buildingDecay`), so its walls stand lower and its roofs and towers fall. While the explorer is on the
+ground the game hands the ruins the world now (`setMadeNow`, `ruinsMade`; the terrain and the structures keep the landing's layer): when
+a step passes, the cells grow their cover on and are laid out again where a building's share of a stone rotter moved (`regrowRuins`, the
+ahead worker joined). The bench's `city 4x overgrown` and `capital 4x overgrown` hold the overgrown city and capital, twenty steps on, to
+their budgets (8.3 ms).
 
 **The overgrowth's sounds** (J-10, `updateGrowthSongs`). Round the explorer on foot: the nearest vent within 24 m (`ventSong`), the tall
 and hard structures within 20 m in the wind (`creakSong`; a soft overgrowth's half), the hair within 15 m in the wind (`hairSong`), and a

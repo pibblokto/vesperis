@@ -244,6 +244,66 @@ bool siteNear(StarSystem& sys, int body, const MadeWorld& made, double lat0, dou
     lat = litLat; lon = litLon; t = litT;
     return true;
 }
+// B-471: a coast by the place where the sea's dead wash up: along each of 24 rays out from it every coast (the water's end, marched, then halved
+// to 20 m), the nearest first, lit as `siteNear` wants it over two of its solar days (a world turned to its sun keeps its night: its lit
+// coasts lie on its far side), with a habitat cell within 600 m whose herd's spot (its middle where it holds none) has the water within 150 m,
+// as `cellRemains` reads its shore (the planet function at 16 m); false where there is none
+bool coastNear(StarSystem& sys, int body, const MadeWorld& made, double lat0, double lon0, bool night, double& lat, double& lon, double& t) {
+    const Body& b = sys.bodies[body];
+    const BodyGen g = BodyGen::make(b);
+    auto dry = [&](double la, double lo) {
+        const SurfaceSample s = sampleSurface(g, StarSystem::bodyFromLatLon(la, lo), 16);
+        return !(madeWetAt(s) || s.material == MAT_SNOW || s.material == MAT_ICE || s.material == MAT_LAVA);
+    };
+    const double turn = 1 / b.rotPeriod - 1 / std::max(1.0, b.orbitPeriod);   // (a solar day: its turn against its year; a slow one's long)
+    const double c = std::max(0.05, std::cos(lat0)), day = std::max(600.0, std::min(1e9, std::fabs(1 / (std::fabs(turn) > 1e-12 ? turn : 1e-12))));
+    auto at = [&](double a, double d, double& la, double& lo) { la = lat0 + d / b.radiusKm * std::cos(a); lo = lon0 + d / b.radiusKm * std::sin(a) / c; };
+    std::vector<std::pair<double, double>> coasts;   // (its distance, its ray)
+    for (int k = 0; k < 24; k++) {
+        const double a = k * TAU / 24;
+        double la, lo, wetKm = -1;
+        for (double km = 0.1; km < PI * b.radiusKm; km += km < 2 ? 0.1 : (km < 20 ? 0.25 : std::max(1.0, 0.01 * km))) {
+            at(a, km, la, lo);
+            if (!dry(la, lo)) { wetKm = km; continue; }
+            if (wetKm < 0) continue;   // (inland: the next coast on)
+            double lo2 = wetKm, hi = km;
+            for (int q = 0; q < 6; q++) { const double m = 0.5 * (lo2 + hi); at(a, m, la, lo); (dry(la, lo) ? hi : lo2) = m; }
+            coasts.push_back({hi, a});
+            wetKm = -1;
+        }
+    }
+    std::sort(coasts.begin(), coasts.end());
+    for (const auto& [km, a] : coasts) {
+        double la, lo;
+        at(a, km + 0.02, la, lo);
+        SurfaceSite site; site.made = made; site.init(&sys, body, la, lo, 1000.0);
+        double tt = -1;
+        for (int q = 0; q < 192 && tt < 0; q++) {
+            const double tq = 1000 + day * 2 * q / 192;
+            const SunInfo si = site.sun(tq);
+            if (night ? si.altitude < -12 * DEG : (si.altitude > 25 * DEG && si.altitude < 55 * DEG)) tt = tq;
+        }
+        if (tt < 0) continue;
+        const Bestiary B = Bestiary::make(b, site.gen);
+        int gLat0, gLon0;
+        SurfaceView::lifeCellAt(site, 0, 0, gLat0, gLon0);
+        for (int dl = -2; dl <= 2; dl++)
+            for (int dn = -3; dn <= 3; dn++) {
+                SurfaceView::Herd hd; int spi, n;
+                if (!SurfaceView::planCellHerd(site, B, gLat0 + dl, gLon0 + dn, hd, spi, n)) {
+                    const double dLat = 512.0 / site.R, latc = (gLat0 + dl + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);
+                    site.localAt(StarSystem::bodyFromLatLon(latc, (gLon0 + dn + 0.5) * dLon), hd.cx, hd.cz);
+                }
+                if (std::hypot(hd.cx, hd.cz) > 600) continue;
+                for (int q = 0; q < 12; q++)
+                    for (double d = 8; d <= 150; d += 12) {
+                        const TerrainVertex v = site.sampleAt(hd.cx + std::sin(q * TAU / 12) * d, hd.cz + std::cos(q * TAU / 12) * d, 16);
+                        if (v.material == MAT_WATER || (v.water > -1e8f && v.h < v.water + 0.3)) { lat = la; lon = lo; t = tt; return true; }
+                    }
+            }
+    }
+    return false;
+}
 // remains counted by stage within a reach of a point
 std::string remainsCount(const SurfaceView& sv, double x, double z, double within) {
     int n[RS_COUNT] = {};
@@ -301,8 +361,8 @@ int seedFates() {
     printf("seed fates: %zu worlds with animals, plants and a sea line\n", worlds.size());
     int found = 0, drawn = 0;
     std::string missing;
-    const SeedAirCase* firstWorld = nullptr;
-    MadeWorld firstLayer;
+    const SeedAirCase* firstWorld = nullptr, *dyedWorld = nullptr;
+    MadeWorld firstLayer, dyedLayer;
     Seeding firstSeeding;
     for (const FateRecipe& R : fateRecipes()) {
         const SeedAirCase* W = nullptr;
@@ -344,10 +404,11 @@ int seedFates() {
                    af.changed > 0 ? fmt(", %s born changed (%s)", pct(af.changed).c_str(), changes.c_str()).c_str() : "", af.thrive > 0 ? fmt(", thriving %s", pct(af.thrive).c_str()).c_str() : "");
         }
         if (!firstWorld && R.show == 0) { firstWorld = W; firstLayer = m; firstSeeding = sd; }
+        if (!dyedWorld && R.trait == MF_DYED) { dyedWorld = W; dyedLayer = m; }
         // its frame on that world's ground: a sickness or changed young anywhere at the end; a die-off by the place, at its step 16 (the dead
         // from fresh to bones)
         FateView V;
-        bool placed = false;
+        bool placed = false, watersOnly = false;
         if (R.show == 0 || R.show == 3) {   // (twelve steps after its spread reached the site, the dead from fresh to bones)
             double la, lo, when;
             StarSystem ws = W->sys;
@@ -356,10 +417,13 @@ int seedFates() {
                 int ch[3]; const int nc = animalChangesOf(B.species[i], steer, ch);
                 if (animalFateOf(B.species[i], here, ch, nc).dead >= 0.2) dying.push_back(i);
             }
-            if (dying.empty() && R.trait != MF_THRIVING) {   // (the sea's dead alone: a shore walked to from the sea, the spread over the world by then)
+            watersOnly = dying.empty() && R.trait != MF_THRIVING;
+            const bool near = watersOnly ? coastNear(ws, W->body, m, sd.lat, sd.lon, R.night, la, lo, when)   // (a coast its swimmers wash up on)
+                                         : siteNear(ws, W->body, m, sd.lat, sd.lon, R.night, true, la, lo, when, R.trait == MF_THRIVING ? nullptr : &dying);
+            if (!near && watersOnly) {   // (no herd by a shore near: a shore walked to from the sea, the spread over the world by then)
                 const MadeWorld late = madeWorldOf(W->sys, W->body, {sd}, 26 * MADE_STEP_S / sd.verdict.pace + 1);
                 placed = V.init(W->sys, W->body, late, 3, R.night);
-            } else if (siteNear(ws, W->body, m, sd.lat, sd.lon, R.night, true, la, lo, when, R.trait == MF_THRIVING ? nullptr : &dying)) {
+            } else if (near) {
                 const double d = std::acos(clampd(dot(StarSystem::bodyFromLatLon(sd.lat, sd.lon), StarSystem::bodyFromLatLon(la, lo)), -1, 1));
                 int arrive = 0;
                 while (arrive < MADE_STEPS && madeReachOfStep(arrive, b.radiusKm) < d) arrive++;
@@ -413,7 +477,8 @@ int seedFates() {
             if (R.trait == MF_THRIVING) {
                 for (const Critter& c : sv.critters) { const double d = std::hypot(c.x, c.z); if (d < best) { best = d; bx = c.x; bz = c.z; } }
             } else {
-                for (const Remains& r : sv.remains) {
+                for (const Remains& r : sv.remains) {   // (the sea's dead alone: its swimmers washed up)
+                    if (watersOnly && (r.species < sv.bestiary.firstSwimmer() || r.old)) continue;
                     int near = 0;
                     for (const Remains& o : sv.remains) near += std::hypot(o.x - r.x, o.z - r.z) < 25;
                     const double d = std::hypot(r.x, r.z) - 40.0 * near;   // (nearest with the most round it)
@@ -438,6 +503,41 @@ int seedFates() {
         printf("      drawn: %s (%s)\n", fn.c_str() + 12, what.c_str());
     }
 
+    // ---- B-469: a flock of the dyed hides' world's flyers low over open ground, every member dyed as its herds' are (the air's sick drawn)
+    if (dyedWorld) {
+        FateView V;
+        if (V.init(dyedWorld->sys, dyedWorld->body, dyedLayer, 0, false) && V.sv.bestiary.flyerCount) {
+            SurfaceView& sv = V.sv;
+            sv.critters.clear(); sv.flocks.clear(); sv.herds.clear(); sv.remains.clear(); sv.habitatT = 1e18;
+            const int spi = sv.bestiary.firstFlyer();
+            const Species& sp = sv.bestiary.species[spi];
+            Flock f;
+            f.species = spi; f.seed = mix64(dyedWorld->sys.bodies[dyedWorld->body].seed ^ 0xF10CULL); f.n = 8;
+            f.cx = 0; f.cz = 6 + 4 * sp.size; f.radius = 3; f.phase = 0; f.speed = 0.05; f.alt = f.cruiseAlt = 2 + 2 * sp.size; f.restTimer = 1e9;
+            f.sickness = MF_DYED; f.sick = 1;
+            sv.flocks.push_back(f);
+            V.step(30);
+            // (the camera on the member nearest the flock's middle, where `drawLife` puts it: its offsets drawn from the flock's seed in order)
+            const Flock& g = sv.flocks[0];
+            const double a = g.phase + V.t * g.speed, fcx = g.cx + std::cos(a) * g.radius, fcz = g.cz + std::sin(a) * g.radius;
+            const double base = std::max(sv.site.groundHeight(fcx, fcz), sv.site.waterAt(fcx, fcz)) + g.alt;
+            Rng r(g.seed);
+            double bx = fcx, by = base, bz = fcz, best = 1e9;
+            for (int i = 0; i < g.n; i++) {
+                const double ox = r.sym(18), oz = r.sym(18), oy = r.sym(6), ph = r.range(0, TAU);
+                r.uni();
+                if (std::hypot(ox, oz) < best) {
+                    best = std::hypot(ox, oz);
+                    bx = fcx + ox + 3 * std::sin(V.t * 0.7 + ph); bz = fcz + oz + 3 * std::cos(V.t * 0.5 + ph); by = base + oy + 1.5 * std::sin(V.t * 0.9 + ph);
+                }
+            }
+            const double d = 2.5 + 2.5 * sp.size;
+            V.cam(bx - 0.6 * d, by - 0.4 * d, bz - 0.8 * d, bx, by, bz);
+            V.shot("shots/tests/fates/fate_dyed_flock.png");
+            drawn++;
+            printf("  dyed_flock: eight %s, every one with its dyed hide, %.0f m up (fates/fate_dyed_flock.png)\n", sv.bestiary.words(spi).c_str(), f.alt);
+        }
+    }
     // ---- the five stages of remains, and each of a world's kinds dead (on the first die-off's world)
     if (firstWorld) {
         FateView V;

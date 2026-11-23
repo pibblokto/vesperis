@@ -252,117 +252,215 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             static const RGB S[3] = {RGB(0.94f, 0.66f, 0.70f), RGB(0.90f, 0.56f, 0.58f), RGB(0.95f, 0.70f, 0.62f)};
             tintBankSnow = 28; matRamp(28, S[(int)(hash01(mix64(site.gen.seed ^ 0x5A0A1CAEULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
-        tintBankMade = -1; tintGlowMade = 0;
-        if (site.gen.made.tinted && peoples < 2 && !formsStaged) {   // J-02: a made world's tint over the land, in a lent bank its traits leave free
-            tintBankMade = tintBankSnow != 28 ? 28 : (tintBankStrata != 27 ? 27 : -1);
-            if (tintBankMade >= 0 && site.gen.made.tintOn == MADE_ON_WATER) {   // J-03: over the waters, a water's ramp; a glowing line's light at night
-                tintGlowMade = site.gen.made.glow > 0 ? 1 - smoothstep(0.04, 0.3, day) : 0.0;
-                if (tintGlowMade > 0.02) {
-                    const RGB m = site.gen.made.glowTint, dark = site.gen.made.tint * 0.25f * dayF;
-                    setRamp(fb.pal, tintBankMade,
-                            {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)tintGlowMade)}, {44, lerp(dark, m * 0.85f, (float)tintGlowMade)},
-                                    {63, lerp(dark, lerp(m, white, 0.35f), (float)tintGlowMade)}});
-                } else waterTint(tintBankMade, site.gen.made.tint);
-            } else if (tintBankMade >= 0) matRamp(tintBankMade, site.gen.made.tint * lerp(site.sys->star.color, white, 0.5f));
-        }
         if (site.gen.hasTrait(TR_PETRIFIED) && !formsStaged) {   // the stone trunks' jasper: red-brown, ochre or a purple grey by the world
             static const RGB J[3] = {RGB(0.62f, 0.32f, 0.22f), RGB(0.70f, 0.52f, 0.28f), RGB(0.54f, 0.42f, 0.52f)};
             matRamp(26, J[(int)(hash01(mix64(site.gen.seed ^ 0x9E7AULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
         }
-        // J-06: the animals' two hide banks, each its world's colour (`Bestiary::style`): banks the world leaves free (the first people's 24 and 20
-        // where no people built, 13 with no glowing body in the sky, 12 with no second sun), else lent ones no trait holds; the forest's and the
-        // rock's where none is free
+        // KI-459, KI-464, KI-465, KI-474: the banks this world leaves free this frame for what a seeding made and for the animals' hides, each
+        // handed out once (`takeBank`) in the order its use asks: the second people's lent four where no second people's forms stand and its
+        // traits leave them, the first people's 24 and 20 where nobody built, 13 with no glowing body in its sky, 12 with no second sun, the
+        // aurorae's 11 and 21 where none can show (no air, an opaque deck, under 36 degrees of latitude without great aurorae)
+        bool glowing = false;
+        for (int bi = 0; bi < (int)site.sys->bodies.size(); bi++) if (bi != site.body && kindHas(site.sys->bodies[bi].type, KT_GLOWS)) glowing = true;
+        bool placedSecond = false;   // (J-10: the harness's settlements staged in the first people's banks leave the lent ones to the overgrowth)
+        for (const RuinCell& c : placedCells) placedSecond = placedSecond || c.spec.people == 1;
+        const bool nobodyBuilt = peoplesOf(site.gen) == 0 && !worldHadCivilisation(site.gen) && !formsStaged;
+        const bool noAurora = !site.atmosphere || hasOpaqueDeck(site.gen.type) || (std::fabs(env.latDeg) < 36 && !site.gen.hasTrait(TR_GREAT_AURORAE));
+        uint32_t taken = 0;   // (a bit a bank)
+        auto same = [](const RGB& a, const RGB& b) { return a.r == b.r && a.g == b.g && a.b == b.b; };
+        auto freeBank = [&](int bk, bool lentOk) {
+            if ((taken >> bk) & 1) return false;
+            if (bk >= 25 && bk <= 28)
+                return lentOk && bk != tintBankW && bk != tintBankL && bk != tintBankSprings && bk != tintBankStrata && bk != tintBankSnow &&
+                       !(bk == 26 && site.gen.hasTrait(TR_PETRIFIED));
+            if (bk == 24 || bk == 20) return nobodyBuilt;
+            if (bk == 13) return !glowing;
+            if (bk == 12) return site.sys->companion < 0 && !site.sys->sunless();
+            return (bk == 11 || bk == 21) && noAurora;
+        };
+        static const int MADE_ORDER[10] = {28, 27, 26, 25, 24, 20, 13, 12, 11, 21};   // (the lent first: J-02 to J-09's own picks where they had one)
+        static const int HIDE_ORDER[10] = {24, 20, 13, 12, 28, 27, 26, 25, 11, 21};   // (J-06's order, the aurorae's last)
+        auto takeBank = [&](const int* order, bool lentOk) {
+            for (int i = 0; i < 10; i++) if (freeBank(order[i], lentOk)) { taken |= 1u << order[i]; return order[i]; }
+            return -1;
+        };
+        const bool lentLooks = peoples < 2 && !formsStaged;
+        const RGB lt = lerp(site.sys->star.color, white, 0.5f);
+        const MadeWorld& mw = site.gen.made;
+        // J-09: an overgrowth's cover, its structures and what it wraps in a bank of its own (its colour, a wet one's gloss in the top stops, its
+        // veins' light at night in the upper ones where it glows), first of all (KI-474: on a crowded world the land's cover before the waters'
+        // tint and the hides); KI-473: each growing line its own (the latest's `growthBank`), the latest's where none is left; the rock's where
+        // none is free at all
+        growthBank = -1; growthGlow = 0; growthWet = 0;
+        for (int i = 0; i < MADE_LINES; i++) { growthLineBank[i] = -1; growthLineGlow[i] = 0; growthLineWet[i] = 0; }
+        auto growthRamp = [&](int bank, const MadeGrowth& G, double& glowOut) {
+            const RGB c = G.colour * lt, dk = lerp(G.veins, G.colour, 0.3f) * lt;
+            glowOut = 0;
+            if (G.glow > 0 && day < 0.5) {   // the veins' light (the shade lifts it into the upper stops: `vertexOf`, the structures)
+                glowOut = 1 - 2 * day;
+                const RGB L = G.glowTint;
+                setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.6f}, {40, c * 0.85f}, {45, lerp(c, L * 0.4f, (float)glowOut)},
+                                       {54, lerp(c, L * 0.8f, (float)glowOut)}, {63, lerp(lerp(c, white, 0.5f), lerp(L, white, 0.35f), (float)glowOut)}});
+            } else if (G.wet > 0.3)   // a wet one's gloss: its top stops whiter
+                setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.62f}, {44, c}, {54, lerp(c, white, 0.35f)}, {63, white}});
+            else matRamp(bank, c);
+        };
+        if (mw.on() && mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES) {
+            const int latest = mw.growthLine;
+            const bool lentGrowth = peoples < 2 && !placedSecond;
+            growthBank = takeBank(MADE_ORDER, lentGrowth);
+            if (growthBank >= 0) {
+                growthRamp(growthBank, mw.spread[latest].growth, growthGlow);
+                growthWet = mw.spread[latest].growth.wet;
+                for (int i = 0; i < mw.lines && i < MADE_LINES; i++) {   // (each other line's own after the rest: below)
+                    const MadeGrowth& G = mw.spread[i].growth;
+                    if (!G.on()) continue;
+                    growthLineWet[i] = G.wet;
+                    if (i == latest || (same(G.colour, mw.spread[latest].growth.colour) && G.glow == mw.spread[latest].growth.glow && G.wet == mw.spread[latest].growth.wet)) {
+                        growthLineBank[i] = growthBank; growthLineGlow[i] = growthGlow;
+                    }
+                }
+            }
+        }
+        // J-02: a made world's tint over the land (the test layer's) or, J-03, its waters (a water's ramp; a glowing line's light at night); KI-460:
+        // each line's own waters' colour in a bank of its own where it differs, the latest's in `tintBankMade`
+        tintBankMade = -1; tintGlowMade = 0;
+        for (int i = 0; i < MADE_LINES; i++) { tintLineBank[i] = -1; tintLineGlow[i] = 0; }
+        auto waterBank = [&](int bank, const RGB& colour, double glow, const RGB& glowTint) {   // (its glow's share tonight)
+            const double gl = glow > 0 ? 1 - smoothstep(0.04, 0.3, day) : 0.0;
+            if (gl > 0.02) {
+                const RGB m = glowTint, dark = colour * 0.25f * dayF;
+                setRamp(fb.pal, bank,
+                        {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)gl)}, {44, lerp(dark, m * 0.85f, (float)gl)}, {63, lerp(dark, lerp(m, white, 0.35f), (float)gl)}});
+            } else waterTint(bank, colour);
+            return gl;
+        };
+        if (mw.tinted) {
+            tintBankMade = takeBank(MADE_ORDER, lentLooks);
+            if (tintBankMade >= 0 && mw.tintOn == MADE_ON_WATER) tintGlowMade = waterBank(tintBankMade, mw.tint, mw.glow, mw.glowTint);
+            else if (tintBankMade >= 0) matRamp(tintBankMade, mw.tint * lt);
+            if (tintBankMade >= 0 && mw.tintOn == MADE_ON_WATER)   // (the lines of the latest's colour; each other's own after the rest: below)
+                for (int i = 0; i < mw.lines && i < MADE_LINES; i++)
+                    if (mw.spread[i].waterTinted && same(mw.spread[i].waterTint, mw.tint) && (mw.spread[i].glow > 0) == (mw.glow > 0)) { tintLineBank[i] = tintBankMade; tintLineGlow[i] = tintGlowMade; }
+        }
+        // J-06: the animals' two hide banks, each its world's colour (`Bestiary::style`), and J-08's third for a dyed hide or a changed young's new
+        // colour (one of five by the world); the forest's and the rock's where none is free, one shared where one is
         hideBanks[0] = 3; hideBanks[1] = 0; fateBank = -1;
         if (kindHas(site.gen.type, KT_FAUNA)) {
-            bool glowing = false;
-            for (int bi = 0; bi < (int)site.sys->bodies.size(); bi++) if (bi != site.body && kindHas(site.sys->bodies[bi].type, KT_GLOWS)) glowing = true;
-            int cand[10], nc = 0;
-            if (peoplesOf(site.gen) == 0 && !worldHadCivilisation(site.gen) && !formsStaged) { cand[nc++] = 24; cand[nc++] = 20; }
-            if (!glowing) cand[nc++] = 13;
-            if (site.sys->companion < 0 && !site.sys->sunless()) cand[nc++] = 12;
-            if (peoples < 2 && !formsStaged)
-                for (int lb : {28, 27, 26, 25})
-                    if (lb != tintBankW && lb != tintBankL && lb != tintBankSprings && lb != tintBankStrata && lb != tintBankSnow && lb != tintBankMade &&
-                        !(lb == 26 && site.gen.hasTrait(TR_PETRIFIED)))
-                        cand[nc++] = lb;
-            const RGB lt = lerp(site.sys->star.color, white, 0.5f);
+            int cand[3], nc = 0;
+            for (int h = 0; h < 3; h++) { const int bk = takeBank(HIDE_ORDER, peoples < 2 && !formsStaged); if (bk < 0) break; cand[nc++] = bk; }
             for (int h = 0; h < 2 && h < nc; h++) { hideBanks[h] = cand[h]; matRamp(cand[h], bestiary.style.colour[h] * lt); }
             if (nc == 1) hideBanks[1] = hideBanks[0];
-            // J-08: a third free bank for a dyed hide (its dye's colour) or a changed young's new colour (one of five by the world)
-            fateBank = -1;
-            const MadeWorld& fw = site.gen.made;
             bool newColour = false;
             for (const SpeciesChanges& sc : speciesChanges) newColour = newColour || ((sc.drawn >> CHG_NEW_COLOUR) & 1);
-            if (fw.on() && fw.fated() && nc >= 3 && ((fw.fauna & MF_DYED) || newColour)) {
-                int dye = fw.fate.dye;
-                for (int i = 0; i < fw.lines && i < MADE_LINES; i++) if (fw.spread[i].fate.dye) dye = fw.spread[i].fate.dye;
+            if (mw.on() && mw.fated() && nc >= 3 && ((mw.fauna & MF_DYED) || newColour)) {
+                int dye = mw.fate.dye;
+                for (int i = 0; i < mw.lines && i < MADE_LINES; i++) if (mw.spread[i].fate.dye) dye = mw.spread[i].fate.dye;
                 static const RGB NEW_COLOURS[5] = {RGB(0.62f, 0.12f, 0.14f), RGB(0.36f, 0.20f, 0.58f), RGB(0.18f, 0.34f, 0.66f), RGB(0.86f, 0.78f, 0.30f), RGB(0.92f, 0.92f, 0.90f)};
                 const RGB c = dye > WD_NONE ? dyeColour(dye) : NEW_COLOURS[(int)(hash01(mix64(site.gen.seed ^ 0xC010ULL)) * 5) % 5];
                 fateBank = cand[2];
                 matRamp(fateBank, c * lt);
-            }
+            } else if (nc >= 3) taken &= ~(1u << cand[2]);   // (the third left to the rest)
         }
-        // J-09: an overgrowth's cover, its structures and what it wraps in a bank of its own (the latest line's that grows: its colour, a wet one's
-        // gloss in the top stops, its veins' light at night in the upper ones where it glows), lent before the looks it covers; the rock's where
-        // none is free
-        growthBank = -1; growthGlow = 0; growthWet = 0;
-        const MadeWorld& gw = site.gen.made;
-        bool placedSecond = false;   // (J-10: the harness's settlements staged in the first people's banks leave the lent ones to it)
-        for (const RuinCell& c : placedCells) placedSecond = placedSecond || c.spec.people == 1;
-        if (gw.on() && gw.grown() && gw.growthLine >= 0 && gw.growthLine < MADE_LINES && peoples < 2 && !placedSecond) {
-            for (int lb : {28, 27, 26, 25})
-                if (lb != tintBankMade && lb != tintBankSnow && lb != tintBankStrata && lb != tintBankL && lb != tintBankW && lb != tintBankSprings &&
-                    !(lb == 26 && site.gen.hasTrait(TR_PETRIFIED)) && lb != hideBanks[0] && lb != hideBanks[1] && lb != fateBank) { growthBank = lb; break; }
-            if (growthBank >= 0) {
-                const MadeGrowth& G = gw.spread[gw.growthLine].growth;
-                const RGB c = G.colour * lerp(site.sys->star.color, white, 0.5f), dk = lerp(G.veins, G.colour, 0.3f) * lerp(site.sys->star.color, white, 0.5f);
-                growthWet = G.wet;
-                if (G.glow > 0 && day < 0.5) {   // the veins' light (the shade lifts it into the upper stops: `vertexOf`, the structures)
-                    growthGlow = 1 - 2 * day;
-                    const RGB L = G.glowTint;
-                    setRamp(fb.pal, growthBank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.6f}, {40, c * 0.85f}, {45, lerp(c, L * 0.4f, (float)growthGlow)},
-                                                 {54, lerp(c, L * 0.8f, (float)growthGlow)}, {63, lerp(lerp(c, white, 0.5f), lerp(L, white, 0.35f), (float)growthGlow)}});
-                } else if (G.wet > 0.3)   // a wet one's gloss: its top stops whiter
-                    setRamp(fb.pal, growthBank, {{0, RGB(0, 0, 0)}, {14, dk * 0.3f}, {30, c * 0.62f}, {44, c}, {54, lerp(c, white, 0.35f)}, {63, white}});
-                else matRamp(growthBank, c);
-            }
-        }
-        // J-05: the land's, the plants' and the snow's made looks, each in a lent bank the traits and the waters' tint leave free (28, 27, 26,
-        // 25 in turn); a glowing forest's leaves carry its light at night (the luminous flora's ramp, in its colour)
+        // J-05: the land's, the plants' and the snow's made looks, each in a bank the traits and the waters' tint leave free; a glowing forest's
+        // leaves carry its light at night (the luminous flora's ramp, in its colour); KI-460: each line's own in a bank of its own where its
+        // colour differs (each class's latest line's first, then the others'), the class's latest's where none is left
         for (int& mb : madeBanks) mb = -1;
+        for (int c = 0; c < MC_COUNT; c++) for (int i = 0; i < MADE_LINES; i++) madeLineBank[c][i] = -1;
         madeGlowPlants = 0; madeFoamBank = -1;
-        const MadeWorld& mw = site.gen.made;
         madeOnSea = false;
         for (int i = 0; i < mw.lines && i < MADE_LINES; i++) madeOnSea = madeOnSea || (mw.spread[i].looks && (mw.spread[i].waters & mw.spread[i].lookWaters & MADE_SEA));
-        if (mw.on() && (mw.land.on || mw.snow.on || mw.plant.on || mw.foam > 0) && peoples < 2 && !formsStaged) {
-            static const int LENT[4] = {28, 27, 26, 25};
-            auto taken = [&](int bk) {
-                return bk == tintBankMade || bk == tintBankSnow || bk == tintBankStrata || bk == tintBankL || bk == tintBankW || bk == tintBankSprings ||
-                       (bk == 26 && site.gen.hasTrait(TR_PETRIFIED)) || bk == madeBanks[MC_LAND] || bk == madeBanks[MC_PLANTS] || bk == madeBanks[MC_SNOW] ||
-                       bk == hideBanks[0] || bk == hideBanks[1] || bk == fateBank || bk == growthBank;
-            };
-            const RGB lt = lerp(site.sys->star.color, white, 0.5f);
-            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {
-                const MadeLook& ml = *mw.lookOf(cls);
-                const bool glows = cls == MC_PLANTS && mw.plantGlow > 0;
-                if (!ml.on || (!ml.tinted && !glows)) continue;
-                int bk = -1;
-                for (int lb : LENT) if (!taken(lb)) { bk = lb; break; }
-                if (bk < 0) break;
-                madeBanks[cls] = bk;
+        if (mw.on() && (mw.land.on || mw.snow.on || mw.plant.on || mw.foam > 0)) {
+            auto lookRamp = [&](int bk, int cls, const MadeLook& ml, double glowK, const RGB& glowTint) {
                 const RGB c = (ml.tinted ? ml.tint : madeMatColour(site.gen, familyRep(site.gen.type, FAM_FOREST))) * lt;   // (an undyed glow: the forest's own by day)
                 matRamp(bk, c);
-                if (glows && day < 0.5) {   // (fainter than the luminous flora's: a seeded glow in the leaves, the floor's dimmer)
-                    madeGlowPlants = 1 - day * 2;
-                    const float k = (float)(0.7 * madeGlowPlants);
-                    const RGB g3 = lerp(c, mw.plantGlowTint, 0.6f), gl = lerp(g3, white, 0.2f);
+                if (cls == MC_PLANTS && glowK > 0 && day < 0.5) {   // (fainter than the luminous flora's: a seeded glow in the leaves, the floor's dimmer)
+                    const double gk = 1 - day * 2;
+                    madeGlowPlants = std::max(madeGlowPlants, gk);
+                    const float k = (float)(0.7 * gk);
+                    const RGB g3 = lerp(c, glowTint, 0.6f), gl = lerp(g3, white, 0.2f);
                     setRamp(fb.pal, bk, {{0, RGB(0, 0, 0)}, {14, lerp(c * 0.25f, g3 * 0.2f, k)}, {34, lerp(c * 0.6f, g3 * 0.6f, k)}, {47, lerp(c, gl, k)},
                                          {56, lerp(c, white, 0.5f)}, {63, white}});
                 }
+            };
+            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || (cls == MC_PLANTS && glow > 0)); };
+            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // each class's latest line's (`MadeWorld::lookOf`)
+                const MadeLook& ml = *mw.lookOf(cls);
+                if (!shows(cls, ml, mw.plantGlow)) continue;
+                const int bk = takeBank(MADE_ORDER, lentLooks);
+                if (bk < 0) break;
+                madeBanks[cls] = bk;
+                lookRamp(bk, cls, ml, mw.plantGlow, mw.plantGlowTint);
+            }
+            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // the lines of each class's latest colour
+                if (madeBanks[cls] < 0) continue;
+                const MadeLook& latest = *mw.lookOf(cls);
+                for (int i = 0; i < mw.lines && i < MADE_LINES; i++) {
+                    const MadeLook& ml = mw.spread[i].look[cls];
+                    if (shows(cls, ml, mw.spread[i].plantsGlow()) && ml.tinted == latest.tinted && (!ml.tinted || same(ml.tint, latest.tint))) madeLineBank[cls][i] = madeBanks[cls];
+                }
             }
             if (mw.foam > 0) {   // the foam's colour last (else the snow's white)
-                for (int lb : LENT) if (!taken(lb)) { madeFoamBank = lb; break; }
+                madeFoamBank = takeBank(MADE_ORDER, lentLooks);
                 if (madeFoamBank >= 0) matRamp(madeFoamBank, mw.foamTint * lt);
+            }
+        }
+        // KI-459: a dyed rain in the dyed waters' bank, else one of its own, else the made clouds' (their dye's colour in bank 23); none: the sky's
+        madeRainBank = -1;
+        if (mw.on() && mw.rainTintK > 0) {
+            madeRainBank = tintBankMade >= 0 && mw.tintOn == MADE_ON_WATER ? tintBankMade : takeBank(MADE_ORDER, lentLooks);
+            if (madeRainBank >= 0 && madeRainBank != tintBankMade) waterTint(madeRainBank, mw.rainTint);
+        }
+        // KI-460, KI-473: then each other line's own colour where it differs, from what is left (its overgrowth's, its waters', its looks'),
+        // two of one colour sharing a bank; none left, the latest line's
+        for (int i = 0; i < mw.lines && i < MADE_LINES && growthBank >= 0; i++) {
+            const MadeGrowth& G = mw.spread[i].growth;
+            if (!G.on() || growthLineBank[i] >= 0) continue;
+            for (int j = 0; j < i && growthLineBank[i] < 0; j++)
+                if (growthLineBank[j] >= 0 && j != mw.growthLine && same(mw.spread[j].growth.colour, G.colour) && mw.spread[j].growth.glow == G.glow) { growthLineBank[i] = growthLineBank[j]; growthLineGlow[i] = growthLineGlow[j]; }
+            if (growthLineBank[i] >= 0) continue;
+            growthLineBank[i] = takeBank(MADE_ORDER, peoples < 2 && !placedSecond);
+            if (growthLineBank[i] >= 0) growthRamp(growthLineBank[i], G, growthLineGlow[i]);
+            else { growthLineBank[i] = growthBank; growthLineGlow[i] = growthGlow; growthLineWet[i] = growthWet; }
+        }
+        for (int i = 0; i < mw.lines && i < MADE_LINES && tintBankMade >= 0 && mw.tintOn == MADE_ON_WATER; i++) {
+            const MadeSpread& sp = mw.spread[i];
+            if (!sp.waterTinted || tintLineBank[i] >= 0) continue;
+            for (int j = 0; j < i && tintLineBank[i] < 0; j++)
+                if (tintLineBank[j] >= 0 && tintLineBank[j] != tintBankMade && same(mw.spread[j].waterTint, sp.waterTint) && (mw.spread[j].glow > 0) == (sp.glow > 0)) { tintLineBank[i] = tintLineBank[j]; tintLineGlow[i] = tintLineGlow[j]; }
+            if (tintLineBank[i] >= 0) continue;
+            tintLineBank[i] = takeBank(MADE_ORDER, lentLooks);
+            if (tintLineBank[i] >= 0) tintLineGlow[i] = waterBank(tintLineBank[i], sp.waterTint, sp.glow, sp.glowTint);
+            else { tintLineBank[i] = tintBankMade; tintLineGlow[i] = tintGlowMade; }
+        }
+        if (mw.on() && (mw.land.on || mw.snow.on || mw.plant.on)) {
+            auto lookRamp = [&](int bk, int cls, const MadeLook& ml, double glowK, const RGB& glowTint) {
+                const RGB c = (ml.tinted ? ml.tint : madeMatColour(site.gen, familyRep(site.gen.type, FAM_FOREST))) * lt;
+                matRamp(bk, c);
+                if (cls == MC_PLANTS && glowK > 0 && day < 0.5) {
+                    const double gk = 1 - day * 2;
+                    madeGlowPlants = std::max(madeGlowPlants, gk);
+                    const float k = (float)(0.7 * gk);
+                    const RGB g3 = lerp(c, glowTint, 0.6f), gl = lerp(g3, white, 0.2f);
+                    setRamp(fb.pal, bk, {{0, RGB(0, 0, 0)}, {14, lerp(c * 0.25f, g3 * 0.2f, k)}, {34, lerp(c * 0.6f, g3 * 0.6f, k)}, {47, lerp(c, gl, k)},
+                                         {56, lerp(c, white, 0.5f)}, {63, white}});
+                }
+            };
+            auto shows = [&](int cls, const MadeLook& ml, double glow) { return ml.on && (ml.tinted || (cls == MC_PLANTS && glow > 0)); };
+            for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {   // each other line's own
+                if (madeBanks[cls] < 0) continue;
+                const MadeLook& latest = *mw.lookOf(cls);
+                for (int i = 0; i < mw.lines && i < MADE_LINES; i++) {
+                    const MadeLook& ml = mw.spread[i].look[cls];
+                    if (!shows(cls, ml, mw.spread[i].plantsGlow())) continue;
+                    if (ml.tinted == latest.tinted && (!ml.tinted || same(ml.tint, latest.tint))) { madeLineBank[cls][i] = madeBanks[cls]; continue; }
+                    for (int j = 0; j < i && madeLineBank[cls][i] < 0; j++)
+                        if (madeLineBank[cls][j] >= 0 && mw.spread[j].look[cls].tinted == ml.tinted && same(mw.spread[j].look[cls].tint, ml.tint)) madeLineBank[cls][i] = madeLineBank[cls][j];
+                    if (madeLineBank[cls][i] >= 0) continue;
+                    madeLineBank[cls][i] = takeBank(MADE_ORDER, lentLooks);
+                    if (madeLineBank[cls][i] >= 0) lookRamp(madeLineBank[cls][i], cls, ml, mw.spread[i].plantsGlow(), mw.spread[i].glowTint);
+                    else madeLineBank[cls][i] = madeBanks[cls];
+                }
             }
         }
     }

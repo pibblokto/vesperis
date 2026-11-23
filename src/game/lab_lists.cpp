@@ -201,7 +201,7 @@ bool Game::microscopeStageKept(int k) {
     scope.forms = forms;
     scope.sample = S;
     scope.mount = mountOf(B, scope.forms, S, hab);
-    cellRange(c.medium.cell, scope.stageLo, scope.stageHi);
+    cellRange(c.medium.cell, scope.stageLo, scope.stageHi, c.medium.salt);
     scope.vial = -1; scope.flask = -1; scope.kept = k; scope.life.reset(); scope.body = -1; scope.lineState[0] = scope.lineState[1] = -1;
     scope.title = flaskSpeciesName(c.who);
     scope.line = fmt("COLLECTION, %.0f C", c.medium.tempC);
@@ -417,13 +417,12 @@ void apartRows(std::vector<std::string>& looks, const std::vector<std::string>& 
     }
 }
 // B-442: a kept culture's row in a chooser: one species' look and size (or its name), a pair's two looks; its traits for `apartRows`. `one`:
-// its first species (0) or its partner (1) alone, as its species (the sequencer reads one)
+// its first species (0) or its partner (1) alone (the sequencer and the editor take one), by its strain's name (B-472)
 std::string Game::keptRow(int k, std::string* traits, int one) {
     if (k < 0 || k >= (int)lab.kept.size()) return "";
     const KeptCulture& c = lab.kept[k];
     if (c.paired && one < 0) { if (traits) traits->clear(); return keptName(k); }
-    FlaskSpecies w = one == 1 && c.paired ? c.partner : c.who;
-    if (one >= 0) w.strain = 0;
+    const FlaskSpecies w = one == 1 && c.paired ? c.partner : c.who;
     CultureKind kind; Morph form; double slept = 0;
     if (!flaskKind(w, kind, form, slept)) { if (traits) traits->clear(); return flaskSpeciesName(w); }
     if (traits) *traits = formTraits(form);

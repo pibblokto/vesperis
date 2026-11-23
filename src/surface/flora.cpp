@@ -48,12 +48,17 @@ void SurfaceView::buildLooks() {
     for (int f = 0; f < 10; f++) looks[f] = treeLookOf(site.gen.seed, f);
 }
 
-// The forest's density: the terrain's veg times a clearing mask (worley-ish fbm cells with low density inside)
-double SurfaceView::canopyDensityAt(double x, double z, double veg) const {
+// The forest's density: the terrain's veg times a clearing mask (worley-ish fbm cells with low density inside); KI-463: a lush world's denser
+double SurfaceView::canopyDensityAt(double x, double z, double veg, bool lush) const {
     double n = 0.5 + 0.5 * fbm2(x / 110.0, z / 110.0, site.gen.seed ^ 0xC1EAULL, 2, 2.0, 0.5);
     double clr = smoothstep(0.30, 0.55, n);
-    return veg * (0.12 + 0.88 * clr);
+    const double k = lush ? lushK() : 1.0;
+    return k == 1 ? veg * (0.12 + 0.88 * clr) : std::min(1.0, veg * (0.12 + 0.88 * clr) * k);
 }
+
+// KI-463: how much more a seeded world's plants grow where a line made them lush (`MadeWorld::lush`): its trees, its undergrowth and its
+// logs, 1 on any other world (and so bit for bit as before)
+double SurfaceView::lushK() const { return site.gen.made.lush > 0 && kindHas(site.gen.type, KT_FLORA) ? 1 + 0.6 * site.gen.made.lush : 1.0; }
 
 double SurfaceView::seasonPhaseLocal() const {
     const Body& b = site.sys->bodies[site.body];
@@ -69,18 +74,20 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld) return;
     const TerrainVertex& tv = site.lod0.at(cx, cz);
     if (tv.water > -1e8f && tv.h < tv.water + 0.5) return;
+    if (greenedAt(tv)) return;   // J-15: a carpet's grass and shrubs: no tree (nor a dead world's old stump) stands in them
     const bool wrapped = madeGrowthMaterial(tv.material);   // J-09: a forest an overgrowth covered (it kept the density), its trees wrapped in it
     if (deadWorld ? tv.veg < 0.3 : (tv.material != MAT_FOREST && tv.material != MAT_GRASS && !wrapped)) return;
     if (tv.veg < 0.2) return;
     const double cs = 16;
     uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0BULL);
-    double dens = canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg);
+    double dens = canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg, false);
     double per = tv.material == MAT_FOREST ? 6.5 : 2.2;
     if (tv.biome == BIO_SAVANNA) per = 3.0;
     if (tv.biome == BIO_TUNDRA) per = 1.5;
     if (deadWorld) per = stone ? 2.0 : 4.5;   // the stone forest's stumps sparse, the frozen one's skeletons a thinned wood
     if (wrapped) per = 6.5;   // (only a forest keeps its density under the cover)
     double nx = (tv.material == MAT_FOREST || deadWorld || wrapped ? dens : tv.veg) * per * (0.6 + 0.8 * hash01(mix64(h + 5)));
+    if (!deadWorld) nx *= lushK();   // KI-463: a lush world's trees as many again by its share (a full forest's too: a jungle's)
     int n = (int)nx + (hash01(mix64(h + 6)) < nx - (int)nx ? 1 : 0);   // fractional counts as a probability: scattered trees on grass
     if (n <= 0) return;
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);
@@ -91,8 +98,16 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     const bool madeHere = mw.plant.on && tv.mtint > 127 && (tv.material == MAT_FOREST || tv.material == MAT_GRASS);   // J-05: a made plants' look
     // no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone);
     // a twentieth of them two centuries after the end, a third after ten thousand years
-    GrowthInst grows[10]; int nGrows = 0;   // J-09: no tree stands in a structure
-    if (wrapped) forGrowths(cx, cz, [&](const GrowthInst& S) { if (nGrows < 10) grows[nGrows++] = S; });
+    GrowthInst grows[32]; int nGrows = 0;   // J-09: no tree stands in a structure (KI-476: its own cell's or one reaching over from beside it)
+    if (wrapped)   // (the cells round it laid as the drawing lays them, what the landing lays not tested: a tree by a road's structure stays out of it)
+        for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++) {
+                if (!growthCellHolds(cx + dx, cz + dz)) continue;
+                for (const GrowthInst& S : growthsOwned(cx + dx, cz + dz)) {
+                    const double r = growthReachOf(S) + 1.0, ox = std::max({cx * cs - S.x, 0.0, S.x - (cx + 1) * cs}), oz = std::max({cz * cs - S.z, 0.0, S.z - (cz + 1) * cs});
+                    if (nGrows < 32 && ox * ox + oz * oz < r * r) grows[nGrows++] = S;
+                }
+            }
     const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = 0;
     if (worldHadCivilisation(site.gen))
         forNearbyRuins(cx * cs + 8, cz * cs + 8, 1, [&](const Ruin& r, const RuinCell& c, int) {
@@ -157,10 +172,10 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         bool autumn = !fungal && deciduous(T.fam) && f < 0 && f >= -0.6;
         double v = hash01(mix64(ht + 12));
         T.bank = (second || autumn) ? 5 : (v < 0.15 ? 10 : 3);
-        T.wrapped = wrapped;
+        T.wrapped = wrapped; T.line = tv.mline - 1;
         if (madeHere) {   // J-05: its leaves in the look's bank (a blight's spots and stands are the made pass's share), a rot's trees dead, galls on most
             T.made = true;
-            if (madeBanks[MC_PLANTS] >= 0) T.bank = madeBanks[MC_PLANTS];
+            if (madeBanks[MC_PLANTS] >= 0) T.bank = plantsBankOf(T.line);
             if (mw.rot > 0 && hash01(mix64(ht + 93)) < 0.6 * mw.rot) T.dead = true;
             T.galls = mw.galls > 0 && hash01(mix64(ht + 95)) < 0.75;
         }
@@ -186,6 +201,7 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
         L.stone = true;
     } else {
         if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld) return;
+        if (greenedAt(tv)) return;   // (J-15: nor a fallen trunk)
         if ((!deadWorld && tv.material != MAT_FOREST) || tv.veg < 0.3) return;
         const double rotted = site.gen.made.rot > 0 && site.gen.made.plant.on && tv.mtint > 127 ? site.gen.made.rot : 0.0;   // J-05: a rot's forests fallen
         if (hash01(mix64(h + 88)) > (stone ? 0.5 : 0.12 + 0.5 * rotted) * canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg) / 0.5) return;   // most of a petrified forest lies fallen
@@ -236,7 +252,7 @@ static int floraBands() { return std::min(8, FBH / 32); }
 void SurfaceView::drawFlora(Framebuffer& fb, double t) {
     lastFloraBandN = 0;
     const bool deadWorld = deadGroundOf(site.gen);   // a dead world's old forests (their trees and fallen trunks alone; J-11: a made cover's too)
-    if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld && !site.gen.hasTrait(TR_PETRIFIED)) return;   // a petrified forest's trunks
+    if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld && !site.gen.hasTrait(TR_PETRIFIED) && !greening()) return;   // a petrified forest's trunks; J-15: a carpet's grass
     lastTreesDrawn = 0; lastFloraPoints = 0; lastFloraPolys = 0; lastNearTrees = lastMidTrees = lastFarTrees = 0; lastTreesHidden = 0; lastTreesVisited = 0;
     for (double& m : lastFloraMs) m = 0;
     const auto tl0 = std::chrono::steady_clock::now();
@@ -300,6 +316,25 @@ void SurfaceView::drawFlora(Framebuffer& fb, double t) {
     std::sort(lastFloraBands, lastFloraBands + lastFloraBandN, [](const BandTrace& a, const BandTrace& b) { return a.y0 < b.y0; });
 }
 
+// a tree's trunk as `drawTree` draws it: its width factor at the foot (`w0`, the limb's half width there 1.15 of it) and at the top (`w1`), the
+// top's height over the foot (a dead tree's 0.85 of its height)
+void SurfaceView::trunkGirth(const TreeInst& T, double& w0, double& w1, double& trunkTop) const {
+    const TreeLook& L = looks[T.fam];
+    w0 = T.h * (T.fam == 3 ? 0.04 : (T.fam == 6 ? 0.12 : (T.fam == 9 ? 0.015 : 0.02))) * L.trunkW; w1 = T.fam == 6 ? w0 * 0.85 : w0 * 0.45;
+    trunkTop = T.fam == 1 ? T.h * 0.35 : (T.fam == 3 ? T.h * 0.55 : (T.fam == 8 ? T.h * 0.45 : (T.fam == 9 ? T.h * 0.5 : T.cy)));
+    if (T.dead) trunkTop = T.h * 0.85;
+}
+// B-468: the trunk a climber clings to, as drawn: its radius at the foot and at the top (a wrapped one's sheath round both; a stone stump's
+// girth its canopy's measure), the top's height over the ground and where the top leans off the foot
+void SurfaceView::trunkOf(const TreeInst& T, double& r0, double& r1, double& top, double& lx, double& lz) const {
+    if (T.stump) { r0 = T.r * 0.14; r1 = T.r * 0.11; top = T.h; lx = lz = 0; return; }
+    double w0, w1;
+    trunkGirth(T, w0, w1, top);
+    const double sheath = T.wrapped && growthBank >= 0 ? 1.5 : 1.0;
+    r0 = w0 * 1.15 * sheath; r1 = w1 * sheath;
+    lx = T.lx * (top / std::max(T.cy, 1e-6)); lz = T.lz * (top / std::max(T.cy, 1e-6));
+}
+
 void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY1, FloraStats& st) {
     const double cs = 16;
     const Vec3& sd = env.sun.dirLocal;
@@ -326,6 +361,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     double wdx = std::sin(env.windDir), wdz = std::cos(env.windDir);
     double f = seasonPhaseLocal();
     bool bloom = f > 0.05;                       // flowers in spring and summer
+    const bool ownFlora = kindHas(site.gen.type, KT_FLORA) || deadGroundOf(site.gen) || site.gen.hasTrait(TR_PETRIFIED);   // (J-15: else a carpet's grass alone)
     bool dusk = env.skyBrightness < 0.35;
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);
     const int TILE = 8 * FB_SCALE, TX = (FBW + TILE - 1) / TILE, TY = (FBH + TILE - 1) / TILE;
@@ -515,18 +551,22 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     };
     // ---- trees (the frame's list, near to far; only those whose rows reach this band)
     const bool fungalWorld = site.gen.hasTrait(TR_FUNGAL);
+    auto treeGlows = [&](const TreeInst& T) {   // KI-460: the canopies of a line whose plants glow (where none lies, the class's latest line's)
+        const MadeWorld& mw = site.gen.made;
+        return T.line >= 0 && T.line < MADE_LINES ? mw.spread[T.line].plantsGlow() > 0 : mw.plantGlow > 0;
+    };
     auto drawTree = [&](const TreeInst& T, double dist) {
         wallHere = rainWall(T.x, T.z, dist) + fogSeaWall(T.x, T.gy + 0.4 * T.h, T.z, dist);   // Q-02: a tree in the fog sea
         double rPx = T.r / dist * proj.f / FB_SCALE;   // 1x pixels
         double cx = T.x + T.lx, cz = T.z + T.lz;       // the canopy's centre
         const double lampT = lampOn(Vec3(cx, T.gy + T.cy, cz));
-        if (T.made && madeGlowPlants > 0.02 && T.bank == madeBanks[MC_PLANTS]) leafBase = std::max(leafBase, 34 * madeGlowPlants);   // J-05: a glowing forest's canopies
+        if (T.made && madeGlowPlants > 0.02 && madeBanks[MC_PLANTS] >= 0 && treeGlows(T)) leafBase = std::max(leafBase, 34 * madeGlowPlants);   // J-05: a glowing forest's canopies
         bool counts = inBand(cx, T.gy + T.cy, cz);
         if (dist > 40 && covered(cx, T.gy + T.cy, cz, T.r)) { if (counts) st.treesHidden++; return; }
         if (counts) st.treesDrawn++;
         const TreeLook& L = looks[T.fam];
         const bool wrap = T.wrapped && growthBank >= 0;   // J-09: its trunk and canopy in the overgrowth's bank, its tile on the trunk
-        barkNow = wrap ? growthBank : BANK_BARK;
+        barkNow = wrap ? growthBankOf(T.line) : BANK_BARK;
         barkTexNow = wrap && growthTex ? growthTex : &barkTile;
         double trunkShade = fogShade((T.dead ? 24 : 17) + (wrap ? 10 : 0) + 11 * env.skyBrightness * sunUp + 20 * std::min(1.0, lampT), dist);   // bark: the dark to mid stops of its own bank (B-315); D-04: the lamp's
         // the canopy sways with the wind (cluster centres shift along the wind, more at the top)
@@ -534,15 +574,14 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         // blob shadows only where trees stand apart: under a closed canopy the darker floor (N2-02) is the shade,
         // and stacked darkening polygons would go black
         if (dist < 120 && !T.dead && T.dens < 0.5) drawBlobShadow(fb, cx, cz, T.r * 0.9, T.cy);
-        int leafBank = wrap ? growthBank : (T.bare ? 0 : T.bank);
+        int leafBank = wrap ? growthBankOf(T.line) : (T.bare ? 0 : T.bank);
         double tone0 = (T.bare ? 0.5 : 1.0) * L.tone;
         double ragged = L.ragged * (fungalWorld && (T.fam == 6 || T.fam == 2) ? 0.25 : 1.0) * (wrap ? 0.3 : 1.0);   // a fungus' cap smooth-edged; J-09: a wrapped one in lumps
         // a cluster's share of the light from its place in the canopy: the top and the sun's side bright, the far side and
         // the underside dark
         auto litOf = [&](double ox, double oy, double oz) { Vec3 d = normalize(Vec3(ox, oy + T.r * 0.35, oz)); return clampd(0.5 + 0.5 * dot(d, sd), 0, 1) * sunUp + 0.5 * (1 - sunUp); };
-        double w0 = T.h * (T.fam == 3 ? 0.04 : (T.fam == 6 ? 0.12 : (T.fam == 9 ? 0.015 : 0.02))) * L.trunkW, w1 = T.fam == 6 ? w0 * 0.85 : w0 * 0.45;
-        double trunkTop = T.fam == 1 ? T.h * 0.35 : (T.fam == 3 ? T.h * 0.55 : (T.fam == 8 ? T.h * 0.45 : (T.fam == 9 ? T.h * 0.5 : T.cy)));
-        if (T.dead) trunkTop = T.h * 0.85;
+        double w0, w1, trunkTop;
+        trunkGirth(T, w0, w1, trunkTop);
         if (T.stump) {   // a stone stump, thick and broken, no branches
             if (rPx < 3.5) { line(T.x, T.gy, T.z, T.x, T.gy + T.h, T.z, trunkShade, barkNow, 1); return; }
             // the trunk's girth (its canopy's measure)
@@ -770,6 +809,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0BULL);
             bool underwater = tv.water > -1e8f && tv.h < tv.water + 0.5;
             const bool madeCell = madeBanks[MC_PLANTS] >= 0 && site.gen.made.plant.on && tv.mtint > 127 && (tv.material == MAT_GRASS || tv.material == MAT_FOREST);   // J-05
+            const bool greenCell = greenedAt(tv);   // J-15: a carpet's grass and shrubs, in the grass bank (their colour: `madeMatColour`)
+            if (!ownFlora && !greenCell) continue;
             // ---- fallen logs (B-315): a six-sided trunk along its heading, sunk a third into the ground, bark-textured,
             // the faces toward the camera and the sky drawn with their own light, a cut end toward the camera (pale wood
             // in a dark bark ring), one or two broken stubs, a root plate on some, moss on the upper faces of others
@@ -861,7 +902,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         }
                     }
                 });
-            if (deadGroundOf(site.gen)) continue;   // on a dead world nothing else grows
+            if (deadGroundOf(site.gen) && !greenCell) continue;   // on a dead world nothing else grows (J-15: but a carpet's grass and shrubs)
             if (underwater && !(tv.material == MAT_WATER && tv.biome == BIO_WETLAND)) continue;
             // ---- undergrowth in forests: ferns, bushes with berries, mushrooms
             if (tv.material == MAT_FOREST && cellDist < 60 && tv.veg > 0.3) {
@@ -901,9 +942,10 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             // with 0-2 bushes a cell within 200 m
             if ((tv.material == MAT_GRASS || (tv.material == MAT_FOREST && tv.veg < 0.6) || (tv.material == MAT_SAND && tv.biome == BIO_DESERT)) && (tv.veg > 0.2 || tv.biome == BIO_DESERT) &&
                     cellDist < 320) {
-                double per = tv.biome == BIO_SAVANNA ? 1.6 : (tv.biome == BIO_TUNDRA ? 0.7 : (tv.biome == BIO_DESERT ? 0.35 : 1.0));
+                double per = greenCell ? 1.0 : (tv.biome == BIO_SAVANNA ? 1.6 : (tv.biome == BIO_TUNDRA ? 0.7 : (tv.biome == BIO_DESERT ? 0.35 : 1.0)));
                 double nb = (0.5 + tv.veg * 3.5) * per * hash01(mix64(h + 7)) * 1.6;
                 if (tv.material == MAT_FOREST) nb *= 0.6;
+                nb *= lushK();   // KI-463
                 int nbush = (int)nb + (hash01(mix64(h + 8)) < nb - (int)nb ? 1 : 0);
                 for (int i = 0; i < nbush; i++) {
                     uint64_t hb = mix64(h + 700 + i);
@@ -914,11 +956,12 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     double gy = site.groundHeight(bx, bz);
                     if (gy < site.waterAt(bx, bz) + 0.3) continue;
                     int bbank = hash01(mix64(hb + 5)) < 0.2 ? 10 : (hash01(mix64(hb + 9)) < 0.25 ? 5 : 3);
-                    if (madeCell) bbank = madeBanks[MC_PLANTS];   // J-05: a made plants' look
-                    double tone = tv.biome == BIO_DESERT ? 0.75 : 0.95;
+                    if (madeCell) bbank = plantsBankOf(tv.mline - 1);   // J-05: a made plants' look (KI-460: its line's)
+                    if (greenCell) bbank = 10;
+                    double tone = greenCell ? 0.7 : (tv.biome == BIO_DESERT ? 0.75 : 0.95);   // (J-15: a carpet's shrubs darker than its grass)
                     cluster(hb, bx, gy + bh * 0.5, bz, bh * 0.55, bh * 0.45, dist, bbank, tone, 0.5 + 0.35 * sunUp * clampd(sd.y, 0, 1), 1.1);
                     if (bh > 1.4 && dist < 120) cluster(mix64(hb + 11), bx + bh * 0.35, gy + bh * 0.42, bz + bh * 0.2, bh * 0.4, bh * 0.35, dist, bbank, tone * 0.92, 0.45 + 0.3 * sunUp, 1.2);
-                    if (dist < 40 && hash01(mix64(hb + 6)) < 0.3) {   // berries
+                    if (dist < 40 && !greenCell && hash01(mix64(hb + 6)) < 0.3) {   // berries
                         int nberry = 3 + (int)(5 * hash01(mix64(hb + 7)));
                         for (int k = 0; k < nberry; k++) {
                             uint64_t hk = mix64(hb + 40 + k);
@@ -930,7 +973,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             }
             // ---- R-306: mounds on warm open ground (one cell in six: a cluster of 1-3 earth cones 0.8-2.5 m), and grass tufts
             // out to 120 m, so a plain has something standing on it at every distance
-            if (tv.material == MAT_GRASS && (tv.biome == BIO_SAVANNA || tv.biome == BIO_GRASSLAND) && cellDist < 260 && hash01(mix64(h + 79)) < 0.16) {
+            if (tv.material == MAT_GRASS && !greenCell && (tv.biome == BIO_SAVANNA || tv.biome == BIO_GRASSLAND) && cellDist < 260 && hash01(mix64(h + 79)) < 0.16) {
                 int nm = 1 + (int)(2.99 * hash01(mix64(h + 80)));
                 for (int i = 0; i < nm; i++) {
                     uint64_t hm = mix64(h + 2000 + i);
@@ -945,8 +988,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 }
             }
             // ---- meadows: tall swaying grass and flowers close by (J-05: in a made plants' look's bank where it lies)
-            if ((tv.material == MAT_GRASS || tv.material == MAT_FOREST) && cellDist < 120 && tv.veg > 0.3 && tv.biome != BIO_DESERT) {
-                const int gb = madeCell ? madeBanks[MC_PLANTS] : 10;
+            if ((tv.material == MAT_GRASS || tv.material == MAT_FOREST) && cellDist < 120 && tv.veg > 0.3 && (tv.biome != BIO_DESERT || greenCell)) {
+                const int gb = madeCell && !greenCell ? plantsBankOf(tv.mline - 1) : 10;
                 bool tall = tv.material == MAT_GRASS && tv.veg > 0.45 && cellDist < 45;
                 int nt = tall ? 8 + (int)(tv.veg * 8) : (cellDist < 60 ? 5 + (int)(tv.veg * 8) : 3 + (int)(tv.veg * 4));   // R-306: fewer, farther
                 if (tv.material == MAT_FOREST) nt /= 2;
@@ -966,7 +1009,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         line(mx, gy + hh * 0.6, mz, gx + wdx * sway, gy + hh * 0.95, gz + wdz * sway, sh, gb, 1);
                     } else line(gx, gy, gz, gx + wdx * sway, gy + hh, gz + wdz * sway, sh, gb, 1);
                 }
-                if (bloom && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) &&
+                if (bloom && !greenCell && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) &&
                         hash01(mix64(h + 64)) < 0.5) {
                     int nfl = 3 + (int)(6 * hash01(mix64(h + 65)));
                     int fbank = hash01(mix64(h + 66)) < 0.5 ? 5 : 8;

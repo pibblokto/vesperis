@@ -96,6 +96,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
+    ruinsMade = site.gen.made; ruinsKey = ruinsMade.key;   // KI-480: the ruins' layer the landing's until the game hands on another
     setupFilmGlow();   // Z-03: the world's films under the lamp's ultraviolet
     clearSight();      // R-434: the activity vision's square metres (the local metres' own)
     site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the old roads round the site, before anything samples the ground
@@ -156,6 +157,8 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // nothing of the last landing shows on this one's map
     quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);
     ventSong = creakSong = hairSong = tearCue = 0;   // J-10
+    tornMembranes.clear();   // KI-479
+    growthLattice.clear(); growthOwned.clear();   // KI-476: in the new landing's metres
     tick("capsule+misc");
     joinScan(); echoes.clear(); scanned = false;   // the last site's echoes are gone; the scanner asks again
     tick("scan");
@@ -286,6 +289,7 @@ void SurfaceView::reanchor() {
     siteEpoch++;
     // the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
     ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();
+    growthLattice.clear(); growthOwned.clear();   // KI-476: the structures' too
     refreshPlanNear();   // the plan's places in the new frame's metres
     ensureTownMarks();
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
@@ -314,7 +318,7 @@ void SurfaceView::reanchor() {
     drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);
     const auto ta5 = std::chrono::steady_clock::now();
     for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // the same echoes, in the new frame (a scan under way is taken in it)
-    flocks.clear(); critters.clear(); herds.clear(); habitatT = -1e9;   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs)
+    lifeAnchored(lat, lon);   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs; B-470: the flocks and the kept dead too)
     prefetchStage = 0; prefetchRing = 0;
     anchorFrame = frameStamp;   // the next frames' warm lines are traced (the rings' refill)
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
@@ -391,6 +395,7 @@ void SurfaceView::updateFreeCam(double dt, const Input& in) {
 
 void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnabled) {
     if (!valid) return;
+    lifeClock += dt;   // B-470: the landing's clock, the real seconds the guide's runs by on the ground (before the step's cap)
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
     waterRecords();
@@ -425,6 +430,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         double reach = std::min(50e3, 0.35 * site.R);
         if (player.x * player.x + player.z * player.z > reach * reach) reanchor();
     }
+    if (ruinsMade.key != ruinsKey) regrowRuins();   // KI-480: a step passed while on the ground: the ruins' cover and crumble follow it
     if (!worksHere && worldHadCivilisation(site.gen) && (worksHere = worldWorksIfReady(site.gen))) { refreshPlanNear(); markCheckX = markCheckZ = 1e18; }   // the works come in when built
     if (worldHadCivilisation(site.gen) && std::hypot(player.x - planNearX, player.z - planNearZ) > 1000) refreshPlanNear();
     if (worldHadCivilisation(site.gen) && std::hypot(player.x - markCheckX, player.z - markCheckZ) > 250) ensureTownMarks();   // the towns coming into reach

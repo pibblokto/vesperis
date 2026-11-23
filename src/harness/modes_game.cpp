@@ -924,7 +924,7 @@ void Flow::genes() {
 
 // J-03: a world seeded from the drone bay, the flow's game's last stage (after the gene editor: nothing of its own after it moves in time,
 // and before the games of their own the stages after it make, KI-450): the dye line (`seed worlds`', a strain the explorer wrote) grown
-// full in an empty flask, the ship parked at its world, the bay charged, E at it, S (the seed page), its sea's first place where the line takes,
+// full in an empty flask, the ship parked at its world, E at the bay, S (the seed page), its sea's first place where the line takes,
 // Enter; the bay's clock on past the culture let go and the dock, the guide's on half an hour: the report, the log, the data sheet's lines
 void Flow::seed() {
     StarSystem ls; int lb = -1, sp = -1;
@@ -943,7 +943,6 @@ void Flow::seed() {
     FlaskSpecies w; w.sx = ls.star.sx; w.sy = ls.star.sy; w.sz = ls.star.sz; w.body = lb; w.species = sp; w.strain = n;
     const bool full = labFlaskFull(game, flask, w, seedBestMedium(line.kind));
     game.testParkAt(ls.star, lb, false); game.setState(GameState::SPACE);
-    if (game.testBay().clock >= 0) game.testDronesSkip(game.testBay().back + DRONE_COOLDOWN_S + 1);   // the bay charged since the drones' trip
     game.testCabinAtDevice(FACE_BAY); run(0.2); press(KEY_E); run(0.1);
     press(KEY_S); run(0.1); shot("seed_page");
     game.testSeedPage(la, lo); run(0.1); shot("seed_place");

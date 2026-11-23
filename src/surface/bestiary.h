@@ -84,11 +84,13 @@ int speciesGait(const Species& sp, double k, double speed, double g, bool runnin
 bool speciesShelled(const Species& sp);
 // J-08: a species' fate under a point's (`madeFateAt`): its class's harm by how it resists (a hash of its seed: a middling one loses the harm's
 // share, the hardiest half of it, the frailest half again as much; past 0.95 none is spared), a shell rotter's on the shelled, the food lost on
-// the plant eaters (half on the hunters, whose prey thins), the sickness on the land's survivors, the changed young's share of a herd and its
-// changes (`changes`: the species' own, from the world's steering), the thriving
+// the plant eaters (half on the hunters, whose prey thins), the sickness on the survivors, the changed young's share of a herd and its changes
+// (`changes`: the species' own, from the world's steering), the thriving. B-469: in the air and the water only where the line meets them (its
+// class harmed, or a host's glow or dye on the skin); no sprouting there
 AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes, int nChanges);
 // J-08: a species' changes on its world: one to three, the first steered by the lines' genes (`MadeSteer` bits) where one fits its body, the rest
-// by a hash of the species, none clashing (a giant never a dwarf) and each one its body takes (no extra leg on a serpent)
+// by a hash of the species, none clashing (a giant never a dwarf) and each one its body takes (no extra leg on a serpent). B-469: a flyer's and
+// a swimmer's too, of the body and the hide alone (no ways; a swimmer no legs, no wool)
 int animalChangesOf(const Species& sp, int steer, int out[3]);
 // J-08: the body its changed young are born with: its own with the changes that shape a body (no eyes, more eyes, legs short or long, a long
 // neck, overgrown tusks, a new pattern, woolly, hairless, bloated, a twisted spine, two heads, an extra tail, a joined pair, a leg more or less)

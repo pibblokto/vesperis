@@ -331,12 +331,30 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed, int variant) {
                     v += 1.5 * pvalue(x, y, 16, sB);
                     break;
                 }
-                case MAT_CRUST: {   // lichen rosettes with lobed rims, a few black thalli among them, bare grain between
-                    pworley(x, y, 12, sA, f1, f2, id);
-                    const double r = 0.28 + 0.25 * unitFromHash(mix64(id + 11)) + 0.06 * pvalue(x, y, 32, sC);
-                    if (f1 < r) v += 5 * (1 - f1 / r) + ((id % 5) == 0 ? -14 : 0);
-                    else v -= 3;
-                    v += 2 * pvalue(x, y, 24, sB);
+                case MAT_CRUST: {
+                    // a world's own crust: lichen rosettes with lobed rims, a few black thalli among them, bare grain between. KI-463: a seeded
+                    // line's crust in its form (`MadeLook::variant`, given): 0 polygons (a soil crust dried and cracked, each plate's rim curled
+                    // up dark), 1 ripples (a rugose crust's low ridges, bent and broken, dark pits along their troughs), 2 the rosettes
+                    const int form = variant >= 0 ? var % 3 : 2;
+                    if (form == 0) {
+                        pworley(x, y, 8, sA, f1, f2, id);
+                        v += (double)((int)(id % 5) - 2) * 1.2 + 2.5 * clampd(f1 / 0.45, 0, 1);
+                        if (f2 - f1 < 0.08) v -= 11 * (1 - (f2 - f1) / 0.08);
+                        else if (f2 - f1 < 0.16) v += 3 * (1 - (f2 - f1 - 0.08) / 0.08);
+                        if (pvalue(x, y, 6, sC) > 0.55) v -= 4;
+                        v += 1.5 * pvalue(x, y, 20, sB);
+                    } else if (form == 1) {
+                        const double rr = ripples(x, y, windA, 7.0, 0.9, sA);
+                        v += 4.5 * rr + 1.5 * pvalue(x, y, 16, sB);
+                        pworley(x, y, 20, sC, f1, f2, id);
+                        if (rr < -0.55 && f1 < 0.2 && (id % 3) == 0) v -= 8 * (1 - f1 / 0.2);
+                    } else {
+                        pworley(x, y, 12, sA, f1, f2, id);
+                        const double r = 0.28 + 0.25 * unitFromHash(mix64(id + 11)) + 0.06 * pvalue(x, y, 32, sC);
+                        if (f1 < r) v += 5 * (1 - f1 / r) + ((id % 5) == 0 ? -14 : 0);
+                        else v -= 3;
+                        v += 2 * pvalue(x, y, 24, sB);
+                    }
                     break;
                 }
                 case MAT_TISSUE: {   // J-09: an overgrowth's soft tissue by its texture, veined: blisters, muscle's fibres, a brain's folds, gut's coils

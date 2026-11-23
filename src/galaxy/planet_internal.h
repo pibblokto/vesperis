@@ -209,8 +209,17 @@ static constexpr double PLUME_CELL = 120.0, SPIDER_CELL = 0.8, SPIDER_DENS = 0.4
 inline double plumeDensity(const BodyGen& g) { return 0.35 * g.volcanoes; }
 inline double plumeStreakKm(double u) { return 45.0 + 65.0 * u; }   // a streak's length, within a cell (`visitFeatures` reaches no further)
 // the edge of a cryovolcanic cap (degrees of latitude, south of it the cap) and the dry ice cap's (poleward of it) at a point
-inline double cryoCapEdge(const BodyGen& g, const Vec3& unit) { return g.iceCapLat + 4.0 * gnoise3(unit * 6.0, g.sF + 51); }
-inline double dryCapEdge(const BodyGen& g, const Vec3& unit) { return g.iceCapLat + 5.0 * gnoise3(unit * g.R / (g.R * 0.15), g.sF + 7); }   // `groundThinAir`'s
+// KI-456: what a seeded world's made climate moves on every kind, as on a living world (`felisianSample`): a cap's edge 1.6 degrees toward the
+// pole a degree warmer, a snow or frost line 154 m higher, a frost field thinner; nothing where the world has no air or nobody seeded it (its
+// `warmC` 0, and the edges read as before to the bit)
+inline double madeCapDeg(const BodyGen& g) { return 1.6 * g.made.warmC; }
+inline double madeSnowM(const BodyGen& g) { return 154.0 * g.made.warmC; }
+inline double madeFrostLess(const BodyGen& g) { return 0.04 * g.made.warmC; }
+inline double cryoCapEdge(const BodyGen& g, const Vec3& unit) { const double e = g.iceCapLat + 4.0 * gnoise3(unit * 6.0, g.sF + 51); return g.made.warmC != 0 ? e + madeCapDeg(g) : e; }
+inline double dryCapEdge(const BodyGen& g, const Vec3& unit) {   // `groundThinAir`'s
+    const double e = g.iceCapLat + 5.0 * gnoise3(unit * g.R / (g.R * 0.15), g.sF + 7);
+    return g.made.warmC != 0 ? e + madeCapDeg(g) : e;
+}
 // the seasonal frost's reach past the cap (degrees): 12 in winter, none by midsummer
 inline double dryFrostDeg(const BodyGen& g, bool north) { return 12.0 * smoothstep(0.6, -0.4, north ? g.season : -g.season); }
 // P-06: the patchwork's coronae: up to three ovals 0.26-0.38 of the radius across their long axis, squared off at the corners (a superellipse

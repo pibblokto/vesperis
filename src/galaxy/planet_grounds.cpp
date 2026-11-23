@@ -131,6 +131,7 @@ void groundThinAir(GroundCtx& c) {
     s.height = h;
     s.relief = clampd(relief0 + 0.5 * rf.slope, 0, 1);
     double capEdge = g.iceCapLat + 5.0 * gnoise3(p / (R * 0.15), g.sF + 7);
+    if (g.made.warmC != 0) capEdge += madeCapDeg(g);   // (KI-456: a made climate's)
     if (absLatDeg > capEdge) { s.material = MAT_ICE; s.albedo = 0.85; }
     else if (DA.playa > 0.3) { s.material = MAT_DUST; s.albedo = 0.56 + 0.06 * base; }   // a dust flat in a closed basin
     else if (relief0 + 0.5 * rf.slopeM > 0.6 && h > 1500) { s.material = MAT_ROCK; s.albedo = 0.35; }   // the material chain's slope, not `s.relief` (whose slope is the ring's own)
@@ -176,6 +177,17 @@ void groundQuartz(GroundCtx& c) {
     s.relief = clampd(rel + 0.25 * hf + 0.5 * rf.slope, 0, 1) * 0.6;
 }
 
+// KI-458: an ocean's floor its seas boiled off (a made hothouse's, `MadeWorld::deadCover`): the salt the sea held crusting most of it (a
+// global sea 150 m deep leaves metres of it), dust on the swell's rises, at the open floor's heights as generated (the floes, their shelf and
+// the sea glacier gone with the sea)
+static void driedSeaFloor(GroundCtx& c, double swell) {
+    const BodyGen& g = c.g; SurfaceSample& s = c.s; const Vec3& p = c.p;
+    s.height = -150.0 + swell; s.water = -1e9; s.waterKind = 0; s.biome = BIO_DESERT; s.oldSea = 1;
+    const double pan = -swell / std::max(1.0, g.hillAmp) + 0.5 * fbm3(p / 40.0, g.sG + 88, 2) + (matVisible(1.0, c.detailM) ? 0.2 * fbm3(p / 2.0, g.sG + 89, 2) : 0.0);
+    if (pan > -0.05) { s.material = MAT_SALT; s.albedo = 0.84; }
+    else { s.material = MAT_DUST; s.albedo = 0.42 + 0.1 * clampd(pan + 0.5, 0, 1); }
+}
+
 // P-00: one global sea and its floes (ocean worlds)
 void groundOcean(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& unit = c.unit; const Vec3& p = c.p; SurfaceSample& s = c.s;
@@ -185,7 +197,9 @@ void groundOcean(GroundCtx& c) {
     // ice foot, so the shore is the water plane's contour on a continuous surface at every ring (not a jump from +1 m
     // to -150 m between two vertices: a stair of cells from the air and a cliff face from the water)
     double swell = c.fb(2.0, g.sB, 4) * g.hillAmp;
+    if (g.made.on() && g.made.deadCover() == DC_SCORCHED) { driedSeaFloor(c, swell); return; }   // KI-458
     double capEdge = g.iceCapLat + 8.0 * gnoise3(p / (R * 0.2), g.sF + 7) - 8.0 * clampd(lat >= 0 ? -g.season : g.season, 0, 1);
+    if (g.made.warmC != 0) capEdge += madeCapDeg(g);   // (KI-456: the floes' zone follows a made climate)
     double nightIce = g.locked && !c.K.evenClimate ? clampd((-dot(unit, g.lockedDir) - 0.05) / 0.3, 0, 1) : 0.0;   // the night side freezes over (P-03: not under a hycean's air)
     double cover = std::max(smoothstep(capEdge - 12, capEdge + 6, absLatDeg), nightIce);       // the share of the plates that are ice
     double shelf = smoothstep(0.0, 0.04, cover);   // the whole floe zone (the plates appear at any cover) lies on the shelf
@@ -619,7 +633,8 @@ void groundSteam(GroundCtx& c) {
     }
     applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.6, DA);   // scalding rivers, boiling lakes
     s.height = h;
-    const double capEdge = g.iceCapLat + 4.0 * gnoise3(p / (R * 0.2), g.sF + 7);   // the polar seas from here poleward
+    double capEdge = g.iceCapLat + 4.0 * gnoise3(p / (R * 0.2), g.sF + 7);   // the polar seas from here poleward
+    if (g.made.warmC != 0) capEdge += madeCapDeg(g);   // (KI-456)
     if (h < 0 && absLatDeg > capEdge) { s.material = MAT_WATER; s.water = 0; s.albedo = 0.24; }
     else if (DA.level > -1e8 && h < DA.level) { s.material = MAT_WATER; s.water = DA.level; s.albedo = 0.24; }
     else if (sinter > 0.5) { s.material = MAT_SALT; s.albedo = 0.75; }
@@ -681,7 +696,8 @@ void groundLichen(GroundCtx& c) {
     groundThinAir(c);
     const BodyGen& g = c.g; SurfaceSample& s = c.s; const DrainApply& DA = c.DA;
     if (s.material == MAT_ICE) return;
-    const double capEdge = g.iceCapLat + 5.0 * gnoise3(c.p / (c.R * 0.15), g.sF + 7);   // `groundThinAir`'s
+    double capEdge = g.iceCapLat + 5.0 * gnoise3(c.p / (c.R * 0.15), g.sF + 7);   // `groundThinAir`'s
+    if (g.made.warmC != 0) capEdge += madeCapDeg(g);
     const double melt = smoothstep(capEdge - 3.5, capEdge - 0.3, c.absLatDeg);
     const double wet = std::max(std::max(DA.playa, DA.bed), std::max(0.7 * DA.bank, std::max(0.8 * DA.wetness, melt)));
     const double patch = fbm3(c.p / 0.09, g.sG + 41, 2), hollow = fbm3(c.p / 0.6, g.sG + 42, 2);
@@ -698,8 +714,11 @@ void groundEyeball(GroundCtx& c) {
     const double R = c.R, detailM = c.detailM;
     const Vec3 sub = g.locked ? g.lockedDir : Vec3(1, 0, 0);
     const double ang = std::acos(clampd(dot(unit, sub), -1, 1)) / DEG;   // degrees from the substellar point
-    const double edge = g.seaReachDeg + 4.0 * gnoise3(p / (R * 0.2), g.sF + 7), front = edge + 0.05;   // the front 5-7 km past the pupil's edge
+    double edge = g.seaReachDeg + 4.0 * gnoise3(p / (R * 0.2), g.sF + 7);
+    if (g.made.warmC != 0) edge += madeCapDeg(g);   // (KI-456: a warmer pupil wider, a colder narrower)
+    const double front = edge + 0.05;   // the front 5-7 km past the pupil's edge
     const double swell = c.fb(2.0, g.sB, 4) * g.hillAmp;
+    if (g.made.on() && g.made.deadCover() == DC_SCORCHED) { driedSeaFloor(c, swell); return; }   // KI-458
     const double cover = 0.3 * smoothstep(edge - 3.0, edge, ang) + 0.6 * smoothstep(edge - 0.02, front, ang);   // the share of the plates that are ice
     const double shelf = smoothstep(0.0, 0.04, cover);         // the iris lies on a shelf (the ocean's B-322: the plates rise through an ice foot)
     const double floor = (-150.0 + swell) + ((-6.5 + 0.3 * swell) - (-150.0 + swell)) * shelf;
@@ -753,7 +772,8 @@ void groundAmmonia(GroundCtx& c) {
     }
     applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.5, DA);   // rivers of ammonia water to the sea, lakes in the hollows
     s.height = h;
-    const double frostLine = g.snowLine * (1.0 - 0.7 * smoothstep(20.0, 80.0, absLatDeg)) + 90.0 * gnoise3(p / 6.0, g.sF + 15);
+    double frostLine = g.snowLine * (1.0 - 0.7 * smoothstep(20.0, 80.0, absLatDeg)) + 90.0 * gnoise3(p / 6.0, g.sF + 15);
+    if (g.made.warmC != 0) frostLine += madeSnowM(g);   // (KI-456)
     if (slab) { s.material = MAT_ICE; s.albedo = 0.80; }
     else if (DA.level > -1e8 && h < DA.level) { s.material = MAT_WATER; s.water = DA.level; s.albedo = 0.24; }
     else if (h > frostLine) { s.material = MAT_SNOW; s.albedo = 0.82 + 0.06 * base; }

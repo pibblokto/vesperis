@@ -30,6 +30,9 @@ const char* waterPlace(int waterKind) {
     }
 }
 bool rockFamily(int m) { return m == MAT_ROCK || m == MAT_BASALT || m == MAT_METAL || m == MAT_GRAPHITE || m == MAT_GLASS || m == MAT_QUARTZ; }
+// KI-476: what a vial scraped off an overgrowth's structure was taken from (its shape)
+const char* const GROWTH_SHAPE_WORDS[GS_COUNT] = {"A MOUND", "A RIDGE", "A BLISTER", "A SAC", "A STALK", "A FOLD", "A VENT'S LIP", "AN ARCH'S RIB", "A ROW OF TEETH",
+                                                  "A MEMBRANE", "POLYPS", "A CAP", "A SHELF", "A VEIN", "A SPIRE", "A VASE", "A TUFT OF HAIR", "A BLADDER'S TETHER"};
 }   // namespace
 
 // the sea's level here now (its tide), -1e9 on a world with none: a beach's wet edge is within 0.6 m of it (its vertices carry no water)
@@ -45,9 +48,11 @@ const Biota& SurfaceView::biota() const {
 }
 
 // the site's own formula (`computeEnvironment`) with the year's season at its mean and the day's swing averaged out, at the place's height
-// and latitude (J-03: galaxy's `placeMeanC`, which a seeding's place reads too; the site's air is its generator's)
+// and latitude (J-03: galaxy's `placeMeanC`, which a seeding's place reads too; the site's air is its generator's), and the warmth a seeded
+// world's air made, as the HUD's TEMP reads it (KI-457: a vial of a world made 20 C warmer is read at its warmth now)
 double SurfaceView::placeMeanC(double x, double z, double h) const {
-    return ::placeMeanC(site.gen, site.sys->bodies[site.body].tempK, site.sys->sunless(), site.unitAt(x, z), h);
+    const double c = ::placeMeanC(site.gen, site.sys->bodies[site.body].tempK, site.sys->sunless(), site.unitAt(x, z), h);
+    return site.atmosphere ? c + site.gen.made.warmC : c;
 }
 
 SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls) {
@@ -176,9 +181,15 @@ SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls)
         case MAT_STROMATOLITE: put(NI_MAT, "STROMATOLITE REEF FLAT", H.meanC, readC); break;
         case MAT_CRUST: put(NI_CRUST, kindHas(b.type, KT_FLORA) || b.type == PT_LICHEN ? "LICHEN CRUST ON STONE" : "CRUST ON THE DRY GROUND", H.meanC, readC); break;
         case MAT_MOSS: put(NI_CRUST, "MOSS IN A WET HOLLOW", H.meanC, readC); break;
-        case MAT_TISSUE: H.bloom = true; put(NI_MAT, "SOFT OVERGROWTH", H.meanC, readC); break;   // J-09: an overgrowth's cover
-        case MAT_THREADS: H.bloom = true; put(NI_MAT, "THREADS OVER THE GROUND", H.meanC, readC); break;
-        case MAT_HARD: H.bloom = true; put(NI_MAT, "HARD OVERGROWTH", H.meanC, readC); break;
+        case MAT_TISSUE: case MAT_THREADS: case MAT_HARD: {   // J-09: an overgrowth's cover; KI-476: or a structure of it, the world's own (a read on
+            // the main thread: the pool's leaves the name, its microhabitat the cover's)
+            H.bloom = true;
+            const int shape = walls ? growthAt(x, z, 0.2) : -1;
+            const char* cover = v.material == MAT_TISSUE ? "SOFT OVERGROWTH" : (v.material == MAT_THREADS ? "THREADS OVER THE GROUND" : "HARD OVERGROWTH");
+            const char* stuff = v.material == MAT_TISSUE ? "TISSUE" : (v.material == MAT_THREADS ? "THREADS" : "HARD GROWTH");
+            put(NI_MAT, shape >= 0 ? std::string(stuff) + " FROM " + GROWTH_SHAPE_WORDS[shape] : std::string(cover), H.meanC, readC);
+            break;
+        }
         case MAT_FOREST: H.shade = true; put(NI_SOIL, "SOIL UNDER THE TREES", H.meanC, readC); break;
         case MAT_GRASS: put(NI_SOIL, "SOIL UNDER THE GRASS", H.meanC, readC); break;
         case MAT_MUD: put(NI_SILT, "MUD", H.meanC, readC); break;

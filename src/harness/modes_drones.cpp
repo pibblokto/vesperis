@@ -138,17 +138,12 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
                 "%d aboard, the guide %d more; %d found twice, %d held before; %s",
                     searching.c_str(), searches.c_str(), searchOk, total, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], wantedSum, perOk, aboard, grew, dup, old,
                     trunc(game.testStatus(), 40).c_str()));
-    // ---- the charge: refused until five minutes from the return (not from the launch), then a second trip that brings none of the first's,
-    // watched on the decoder: the world's records listed open there grow as the drones dock (the user's: "when drones arrive everything
-    // immediately appears on shard decoder")
-    const bool refused = !game.testDronesLaunch();
-    const std::string why = game.testStatus();
-    const double back1 = game.testDronesBack();
-    game.testDronesSkip(DRONE_COOLDOWN_S + 0.1); const bool refusedAtOld = !game.testDronesLaunch();   // five minutes from the launch: still charging
-    game.testDronesSkip(back1 + DRONE_COOLDOWN_S - 2); const bool stillRefused = !game.testDronesLaunch();
-    game.testDronesSkip(back1 + DRONE_COOLDOWN_S + 0.1);
+    // ---- no charge (R-449): sent again the moment the trip ends, a second trip that brings none of the first's, watched on the decoder: the
+    // world's records listed open there grow as the drones dock (the user's: "when drones arrive everything immediately appears on shard decoder")
+    const double back1 = game.testDronesClock();
     const std::set<std::string> before2 = held();
     const bool second = game.testDronesLaunch();
+    const std::string why = game.testStatus();
     game.testDronesSettle();
     game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_DECODER); run(0.1);
     press(KEY_E); run(0.1);
@@ -170,14 +165,12 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     press(KEY_ESCAPE); run(0.05); press(KEY_ESCAPE); run(0.05);
     int again = 0, n2 = 0;
     for (int k = 0; k < DRONE_COUNT; k++) for (int i = 0; i < game.testDronesOfDrone(k); i++) { n2++; if (before2.count(game.testDronesFindKey(k, i))) again++; }
-    ck("the drone bay: five minutes charging from the return (C-18)", refused && refusedAtOld && stillRefused && second && !game.testDronesOut() && n2 >= 6 && again == 0,
-            fmt("refused after the trip (%s), at %.0f s from the launch still, and at %.0f s (back at %.1f), sent at %.1f; the second brought %d, %d of them held before", trunc(why, 40).c_str(),
-                    DRONE_COOLDOWN_S + 0.1, back1 + DRONE_COOLDOWN_S - 2, back1, back1 + DRONE_COOLDOWN_S + 0.1, n2, again));
+    ck("the drone bay: sent again as the trip ends, no charging (R-449)", second && !game.testDronesOut() && n2 >= 6 && again == 0,
+            fmt("sent again at %.1f s, as the first trip ended (%s); the second brought %d, %d of them held before", back1, trunc(why, 40).c_str(), n2, again));
     ck("the decoder open as the drones dock (C-18)", decoderOpen && levelBefore == 1 && levelAfter == 1 && which >= 0 && listedAfter == heldNow && listedAfter >= listedBefore,
             fmt("the decoder %s; people %d's records listed %d before the docks, %d after (the guide %d), at the world's records %s", decoderOpen ? "open" : "NOT OPEN", which + 1, listedBefore,
                     listedAfter, heldNow, levelBefore == 1 && levelAfter == 1 ? "throughout" : "NOT THROUGHOUT"));
     // ---- a recall: the ship leaves its parking mid-trip; what was found comes aboard, the rest stays down there
-    game.testDronesSkip(game.testDronesBack() + DRONE_COOLDOWN_S + 0.1);
     const std::set<std::string> before3 = held();
     const bool third = game.testDronesLaunch();
     game.testDronesSettle();
@@ -192,7 +185,6 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
             fmt("sent %s; %d of the %d planned aboard when the ship left at %.0f s; %s", third ? "yes" : "NO", brought, wantedAll, arrive + 40, trunc(game.testStatus(), 44).c_str()));
     // ---- saved in a trip and loaded: it goes on and docks
     game.setState(GameState::SPACE); game.testParkAt(st, W.body); run(0.1); game.setState(GameState::SPACE);
-    game.testDronesSkip(game.testDronesClock() + DRONE_COOLDOWN_S + 1);
     const bool fourth = game.testDronesLaunch();
     game.testDronesSettle();
     game.testDronesSkip(25);

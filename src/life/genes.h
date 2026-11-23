@@ -1,8 +1,8 @@
 #pragma once
 // Y-02 (2026-11-19): a species' genes (R-443; docs/ideas/IDEAS-genes.md section 1, ITERATION-1.5.0.md Y-02). A genesis has one map of its genes'
 // places (eighteen, each a gene's number: three vital, three quiet, a warmth, a salt, a size, a pigment, a food, a motion, three senses, a rest, a
-// glow, a shape) and one code (its letters' weights, its tables), the same for all its kin: what is learned of gene 3 in one species holds in
-// every species of its genesis. A species has the genes it uses, read from what it is (its `Microbe` and its form): nothing of generation 17
+// glow, a shape) and one code (its letters' weights, its tables), the same for all its kin (R-450: the explorer learns a gene by its species,
+// game/editor.cpp). A species has the genes it uses, read from what it is (its `Microbe` and its form): nothing of generation 17
 // moves, and its wild letters are chosen so that its genesis's code gives its own values (a heat-lover's warmth heavy in the heavy letters). A
 // gene's working part is the run of letters its effect lies in: a sum of weights sets an amount (a warmth, a salt, a size, a motion's pace, a
 // rest, a glow, a shape's length), a short run chooses from a table (a pigment, a food, a motion's kind, a sense's target, a small cell's
@@ -52,6 +52,7 @@ struct GeneCode {
     int weight[8] = {};
     std::vector<int> pigment, food, motion, sense, shape;
     std::vector<int> gas, dye, shell, rot, poison, host;
+    std::vector<int> dyeJ01;   // R-453: the dye's table as J-01 drew it (a wild species' run is picked from it, so its letters stay)
 };
 const std::vector<int>* worldTable(const GeneCode& c, int kind);   // J-01: a world gene's table (none: a weight gene)
 // J-01: what a weight gene's (or a world table's) weight gives, 0 to 1: nothing to a quarter of its heaviest, then its share past it
@@ -162,3 +163,11 @@ void strainGenes(MicrobeGenes& g, const GeneCode& c, const CultureKind& before, 
 // editor's, once the gene is known)
 std::vector<int> genesDiffer(const MicrobeGenes& a, const MicrobeGenes& b);
 std::string geneValueWords(const CultureKind& k, const Morph& m, const MicrobeGene& gene, const GeneCode& c);
+// R-450: what each kind of gene is for, in the editor's words ("THE WARMTHS IT GROWS AT"); how its letters set it ("ITS LETTERS' WEIGHTS ADD UP:
+// HEAVIER, WARMER"); its value in a few words, for the editor's guide to the letters at its cursor ("BEST 38 C", "GREEN", "SPORES")
+extern const char* const GENE_KIND_PURPOSE[GN_COUNT];
+std::string geneLettersWords(const GeneCode& c, int kind);
+std::string geneValueShort(const CultureKind& k, const Morph& m, const MicrobeGene& gene, const GeneCode& c);
+// R-450: the letters at the front of a gene's working part that choose from its table (a pigment's or a sense's two, a food's three, a motion's
+// kind's and a shape's two, a world table's two; none for a pure amount, a vital or a quiet gene); the rest are its amount's weights
+int geneChoiceLetters(const GeneCode& c, int kind);

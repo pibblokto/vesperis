@@ -1924,6 +1924,7 @@ double shipGlassToward(int room, const Vec3& dir) {
 
 void ShipBanks::deal(const std::vector<ShipBankAsk>& asks, uint32_t kept) {
     for (int& b : of) b = -1;
+    for (int& b : near) b = -1;
     bool used[32] = {}, pooled[32] = {};
     auto own = [&](int home) { return home < 32 && pooled[home]; };   // Z-05: a home past the banks has no bank of its own
     for (int b = 0; b < 32; b++) pooled[b] = !((kept >> b) & 1u);
@@ -1947,5 +1948,18 @@ void ShipBanks::deal(const std::vector<ShipBankAsk>& asks, uint32_t kept) {
         if (i < take) for (int b = 0; b < 32 && free < 0; b++) if (pooled[b] && !used[b]) free = b;
         if (free >= 0) { of[a[i].home] = free; used[free] = true; dealt++; }
         else dimmed++;
+    }
+    borrowed = 0;
+    for (int i = 0; i < asked; i++) {   // KI-455: each dimmed home's nearest dealt colour, where one is near
+        const int h = a[i].home;
+        if (of[h] >= 0) continue;
+        double best = 0.2 * 0.2 * 3;
+        for (int j = 0; j < asked; j++) {
+            const int o = a[j].home;
+            if (of[o] < 0) continue;
+            const double dr = col[h].r - col[o].r, dg = col[h].g - col[o].g, db = col[h].b - col[o].b, d2 = dr * dr + dg * dg + db * db;
+            if (d2 < best) { best = d2; near[h] = of[o]; }
+        }
+        borrowed += near[h] >= 0;
     }
 }

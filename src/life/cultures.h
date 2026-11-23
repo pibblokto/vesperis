@@ -24,7 +24,9 @@ int cellChemistry(int cell);
 int chemistryCell(int chemistry);   // the cell a chemistry's life grows in (none: water's)
 // a species' rate against its three temperatures, 0 to 1 (Rosso et al. 1993); R-438: the slide's pace reads it too
 double cardinalRate(double T, double lo, double opt, double hi);
-void cellRange(int cell, double& loC, double& hiC);
+// J-13 (R-454): a brine flask's water (salt 2) goes down to BRINE_COLDEST_C, a supercooled brine that freezes only round a culture's ice
+void cellRange(int cell, double& loC, double& hiC, int salt = 0);
+constexpr double WATER_COLDEST_C = -20, BRINE_COLDEST_C = -45;
 // J-01: and the ultraviolet lamp (a shield's test: little of it feeds a pigment, and it kills a cell with none)
 enum CultureLight { CL_DARK = 0, CL_WHITE, CL_RED, CL_BLUE, CL_UV, CL_COUNT };
 extern const char* const CULTURE_LIGHT_NAMES[CL_COUNT];   // "DARK", "WHITE", "RED", "BLUE", "UV"
@@ -72,8 +74,9 @@ struct CultureSwitch { int place = 0, when = GW_ALWAYS, work = CX_NONE; double p
 // quarter of its gene's weight); `FROST_NONE` no ice
 enum WorldGas { WG_NONE = 0, WG_CO2, WG_METHANE, WG_OXYGEN, WG_H2S, WG_DMS, WG_N2O, WG_AMMONIA, WG_HYDROGEN, WG_COUNT };
 extern const char* const WORLD_GAS_NAMES[WG_COUNT];     // "NO GAS", "CO2", "METHANE", "OXYGEN", "HYDROGEN SULPHIDE", ..., "HYDROGEN"
-enum WorldDye { WD_NONE = 0, WD_RED, WD_CRIMSON, WD_ORANGE, WD_YELLOW, WD_VIOLET, WD_BLUE, WD_BLACK, WD_FLUORESCENT, WD_COUNT };
-extern const char* const WORLD_DYE_NAMES[WD_COUNT];     // "NO DYE", "RED", "CRIMSON", "ORANGE", "YELLOW", "VIOLET", "BLUE", "BLACK", "FLUORESCENT"
+// R-453: GREEN (a green alga's chlorophyll) and PINK (a salt lake's carotenoids) after J-01's, appended so nothing before them moves
+enum WorldDye { WD_NONE = 0, WD_RED, WD_CRIMSON, WD_ORANGE, WD_YELLOW, WD_VIOLET, WD_BLUE, WD_BLACK, WD_FLUORESCENT, WD_GREEN, WD_PINK, WD_COUNT };
+extern const char* const WORLD_DYE_NAMES[WD_COUNT];     // "NO DYE", "RED", "CRIMSON", ... "BLACK", "FLUORESCENT", "GREEN", "PINK"
 enum WorldShell { SHL_NONE = 0, SHL_CHALK, SHL_GLASS, SHL_RUST, SHL_SULPHUR, SHL_COUNT };
 extern const char* const WORLD_SHELL_NAMES[SHL_COUNT];  // "NONE", "CHALK", "GLASS", "RUST", "SULPHUR"
 enum WorldRot { ROT_NONE = 0, ROT_WOOD, ROT_FLESH, ROT_SHELL, ROT_STONE, ROT_COUNT };
@@ -109,6 +112,10 @@ constexpr double UV_SHIELD = 0.35;         // the shield a cell needs to grow un
 double freezingC(int salt);                // where a flask's water freezes: fresh 0 C, the sea's -2, brine -20
 // a flask frozen: water's cell, colder than its salt's freezing, at or under the ice's warmth of the culture that forms it (none: liquid)
 bool flaskIce(const Medium& m, double frostC);
+// J-13 (R-454): a line that lives in brine and makes no ice of its own (its FROST none, cut or switched off): its warmth gene can take it down
+// to BRINE_COLDEST_C, where other water life stops at WATER_COLDEST_C (perchlorate brines stay liquid far colder: Toner et al. 2014)
+struct CultureKind;
+bool brineAntifreeze(const CultureKind& k);
 // the looks' colours: a dye's in water, a shell's sediment (chalk, glass, rust, sulphur), a culture grown into tissue, a flask's ice
 RGB dyeColour(int dye);
 RGB shellColour(int shell);
@@ -229,5 +236,6 @@ CultureNow cultureAt(const FlaskCulture& c, const CultureRun& r, double t);
 // the stages a species has passed by a time (LifeCycle bits), seen on its curve
 uint32_t cultureStagesBy(const CultureRun& r, int who, double t);
 
+constexpr double FLASK_QUICK = 0.2;         // R-449: a flask's times (its lag, its rise to its crowd, its spores' waking) a fifth of Z-05's
 constexpr double STRAIN_GENERATIONS = 12;   // the generations at its range's edge a strain takes
 constexpr double CULTURE_EXTINCT = 0.01;    // under a cell in a hundred millilitres: none left

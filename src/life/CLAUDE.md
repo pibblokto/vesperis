@@ -44,7 +44,15 @@ since Z-03 the surface and the game do too.
   air's (`madeFaunaOf`), `MADE_FAUNA_NAMES`, `MADE_DEATH_NAMES`. J-09: a line's overgrowth (`growthOf`: its type by its genes and way,
   its looks, from its eighth step), `MADE_GROWTH_NAMES`, `madeGrowthCover`. J-11: the snowball's ice run beside the runaway's
   (`stepsPast`), the made kind (`madeKindOf`, after the fauna), `madeHarms` and `madeLivable`, `SeedVerdict::growLand`. J-12: how each
-  native was beaten (`SeedVerdict::beatenHow`), the natives a line drove out once it covered the world (`seedingDiedOut`), `diedOutWords`)
+  native was beaten (`SeedVerdict::beatenHow`), the natives a line drove out once it covered the world (`seedingDiedOut`), `diedOutWords`.
+  B-449 to B-455: `seedingRun`'s `earlier` (a line run on the world the ones before it left), `seedingLivesIn` (a vial's lines), the
+  runaway's and the ice's memory (`stepsPast`), `coldFelt`, SILVER CLOUDS, `madeLivable`'s milder world. J-13: the depths down a drill
+  hole (`seedDepthsOf`, `deepGradientC`, `iceShellKm`, `SeedPlace::depthKm`, `Seeding::depthKm`), a place read at its own warmth, a deep
+  line's spread (`MadeSpread::deep`) and its cracks. J-14: the clouds' heights (`seedCloudDeck`, `seedHeightsOf`, a negative `depthKm`,
+  `SeedPlace::aloft`), their acid droplets, a cloud line's spread (`MADE_CLOUDS`) and its dye and glow in the air at its whole answer.
+  J-15: a light-feeder's carpet or lichen on a desert grows grass and shrubs (`MadeGrowth::greens`, `greenReach`, `thickReach`, `plants`,
+  `MadeWorld::green`; GREENED DESERT in `madeKindOf`, before the overgrown worlds), and harms nothing; `overgrowthTypeOf`, the
+  overgrowth's type by a line's genes, which the gene editor says too)
 - `morph_draw.h` (the slide's public interface: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`,
   `seeingsFor`, `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands and waves in slide micrometres, and the slide's banks),
@@ -119,6 +127,11 @@ since Z-03 the surface and the game do too.
   incubator's own (the unit holds the verdict to a flask in that medium), and the natives are the place's sample, each taken as a
   flask takes it. The drift hashes the world's seed, the line's key and the place: it never draws on a world's stream, and it never
   touches a vital gene. The life code hashes a line's key but never parses one (the game reads the line: `Game::seedLineOf`).
+- J-13's cold limits: water life to `WATER_COLDEST_C`, a line in brine with no ice of its own (`brineAntifreeze`) to `BRINE_COLDEST_C`,
+  read at the end of `applyCore` (any edits' order). `cellRange` takes the salt: only a brine flask goes under -20 C; the genes' letters
+  read the range without a salt, so no wild warmth moved. The verdict reads a place at its own warmth (`seedPlaceFacts`), not the cell's.
+- J-14's clouds: a line is in the clouds by its place (`SeedPlace::aloft`, from a negative depth on a world with a deck), never by the
+  number alone: a guide's height on a world without a deck reads its ground. Their droplets are acid whatever the world's life.
 - J-01's world genes: places 1 to 18 and the old tables must draw as before, so the world places and each new table take salts of their
   own (`SALT_GENE_WORLD_MAP`, `SALT_GENE_GAS` and on); a new place among the first 18, or a longer old table, would move every saved
   edit (the unit's digest of the cell genes, e58ae38013b383cd, catches it). `cultureKindOf` leaves `CultureKind::world` empty: a flask

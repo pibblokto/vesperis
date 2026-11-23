@@ -219,7 +219,7 @@ bool Game::microscopeStageFlask(int i) {
     scope.forms = forms;
     scope.sample = S;
     scope.mount = mountOf(B, scope.forms, S, h);
-    cellRange(F.medium.cell, scope.stageLo, scope.stageHi);
+    cellRange(F.medium.cell, scope.stageLo, scope.stageHi, F.medium.salt);
     scope.vial = -1; scope.flask = i; scope.kept = -1; scope.life.reset(); scope.body = -1;
     scope.title = fmt("FLASK %d", i + 1);
     scope.line = upper(CULTURE_STAGE_NAMES[now.one[0].stage]) + fmt(", %.0f C", F.medium.tempC);

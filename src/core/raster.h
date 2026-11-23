@@ -80,6 +80,10 @@ struct RasterParams {   // (a field added here joins `sameParams` in raster.cpp)
     double shadeMin = 0, shadeMax = 63;
     const FacePattern* pattern = nullptr;    // windows on the face (u and v in metres)
     bool patternAbove = false;    // J-10: the windows only on the first bank's pixels (an overgrowth's cover in the second takes them)
+    // KI-478: windows an overgrowth grew shut: 1 on the second bank's pixels (with `patternAbove`), 2 on every pixel (a face wholly under the
+    // cover): each window drawn `shutTone` shades off the cover, its dress, its courses and its light gone under it
+    int patternShut = 0;
+    double shutTone = -6;
 };
 
 constexpr double NEAR_Z = 0.05;

@@ -41,11 +41,14 @@ struct BoxAt {
 // black), a crowd's own light, the incubator's red and blue lights, a broth's cloud; J-01: the ultraviolet's light, a flask's ice, its tissue,
 // its dyes (a home a dye) and its sediments (a home a mineral)
 constexpr int LAB_TONE = 32, LAB_GLOW = 40, LAB_RED_LIGHT = 41, LAB_BLUE_LIGHT = 42, LAB_UV_LIGHT = 43, LAB_ICE = 44, LAB_CLOUD = 45;
-constexpr int LAB_TISSUE = 49, LAB_DYE = 50, LAB_SEDIMENT = LAB_DYE + WD_COUNT - 1;
-static_assert(LAB_SEDIMENT + SHL_COUNT <= SHIP_HOMES, "the lab's homes past the banks");
+// (R-453: GREEN's and PINK's after the sediments', so no home of J-01's moves)
+constexpr int LAB_TISSUE = 49, LAB_DYE = 50, LAB_SEDIMENT = LAB_DYE + WD_FLUORESCENT, LAB_DYE_MORE = LAB_SEDIMENT + SHL_COUNT;
+static_assert(LAB_DYE_MORE + WD_COUNT - WD_GREEN <= SHIP_HOMES, "the lab's homes past the banks");
+int labDyeHome(int dye) { return dye < WD_GREEN ? LAB_DYE + dye : LAB_DYE_MORE + dye - WD_GREEN; }
 RGB labToneColour(int home) {
     if (home > LAB_TONE && home < LAB_TONE + PG_COUNT) return pigmentColour(home - LAB_TONE);
-    if (home > LAB_DYE && home < LAB_DYE + WD_COUNT) return dyeColour(home - LAB_DYE);
+    if (home > LAB_DYE && home <= LAB_DYE + WD_FLUORESCENT) return dyeColour(home - LAB_DYE);
+    if (home >= LAB_DYE_MORE && home < LAB_DYE_MORE + WD_COUNT - WD_GREEN) return dyeColour(WD_GREEN + home - LAB_DYE_MORE);
     if (home > LAB_SEDIMENT && home < LAB_SEDIMENT + SHL_COUNT) return shellColour(home - LAB_SEDIMENT);
     switch (home) {
         case LAB_GLOW: return RGB(0.3f, 0.95f, 0.8f);
@@ -78,7 +81,7 @@ FlaskLook flaskLook(const Flask& F, const CultureNow& now, const FlaskShow& S) {
               (F.medium.light == CL_UV ? LAB_UV_LIGHT : -1)));
     if (S.frozen) { L.liquid = LAB_ICE; L.solid = true; }
     else if (S.overgrown) { L.overgrown = true; L.solid = true; if (S.tissue) L.liquid = LAB_TISSUE; L.cloud = 1; }
-    else if (S.dyed > 0.15) { L.liquid = LAB_DYE + S.dye; L.solid = true; }
+    else if (S.dyed > 0.15) { L.liquid = labDyeHome(S.dye); L.solid = true; }
     if (S.sediment > 0.05) { L.sediment = LAB_SEDIMENT + S.shell; L.settled = S.sediment; }
     L.scum = S.frozen || S.overgrown ? 0 : S.scum;
     return L;
@@ -363,7 +366,8 @@ void Game::drawIncubator(CabinFrame& f, const ShipFixture& F, const CabinDraw& d
         auto paint = [&](int h, double& sh) {
             RasterParams p = h == BANK_LIGHT ? *d.light : d.plain[FIN_GLASS];
             if (h == LAB_ICE) { sh = 54; return p; }   // J-01: ice in the glass's tone, bright
-            if (h != BANK_LIGHT) { const int b = f.banks.bankOf(h); if (b < 0) { p = d.plain[FIN_GLASS]; sh *= 0.6; } else p.bank = b; }
+            if (h != BANK_LIGHT) { const int b = f.banks.bankNear(h); if (b < 0) { p = d.plain[FIN_GLASS]; sh *= 0.6; } else p.bank = b; }   // (KI-455: else the
+            // nearest dealt colour's)
             return p;
         };
         const RasterParams lp = paint(home, shade);

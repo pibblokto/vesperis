@@ -7,6 +7,7 @@ incubator in `rules-life-cultures.md`, sending a culture down and a seeded world
 ## The world genes
 - Every species carries fourteen world genes at places 19 to 32: gas, dye, lift, frost, slime, shell, stop, bind, rot, poison, carrier, host, dry, shield [J-01]
 - Places 1 to 18 are drawn as Y-02 drew them; the world places and their six tables take salts of their own (the unit's digest holds it) [J-01]
+- GREEN and PINK follow the nine dyes: two of J-01's synonyms in each dye table; a wild species keeps J-01's letters and leaks neither [R-453]
 - A table gene has 2 letters of choice and 4 of weight, a weight gene 4; an amount works past a quarter of its weight, as a rest's does [J-01]
 - Wild values are read from what a species is (way, food, niche, form, dose), never drawn; a table reading NONE keeps a working weight [J-01]
 - No wild poison works, no wild species overgrows or has a host, and a species' own world genes cost it nothing [J-01]
@@ -38,9 +39,14 @@ incubator in `rules-life-cultures.md`, sending a culture down and a seeded world
 - A made tint has a bank of its own: the globe's 25 (the first disc) or 26, the ground's 28, else 27, where the world's traits leave it [J-02]
 - The guide's clock counts the real seconds the game runs, across saves and expeditions; the warp never hurries it [J-02]
 - `seeded` and `clock` lines are written once a world is seeded (a guide without them saves as before); a loan carries none [J-02]
-- A seeding's step comes every five minutes of the clock at its pace, 24 in all; three lines live on a world at most [J-02], [J-03]
+- A seeding's step comes every 75 s of the clock at its pace (R-449; five minutes before), 24 in all; three lines live on a world at most [J-02], [J-03] [R-449]
 - The air's greenhouse and whether a world has air are read through the generator (`airWarmthC`, `hasAir`), not the kind's row [J-02]
+- A deep line (`MadeSpread::deep`) lives in no water and on no land of the surface, grows over nothing, its gases at half its share [J-13]
+- A `seeded` line ends with its depth where it went down a drill hole (km; a line on the ground reads as before) [J-13]
 
 [J-01]: log/7-1.5.0.md
 [J-02]: log/7-1.5.0.md
 [J-03]: log/7-1.5.0.md
+[R-449]: log/7-1.5.0.md
+[R-453]: log/7-1.5.0.md
+[J-13]: log/7-1.5.0.md

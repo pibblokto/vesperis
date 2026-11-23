@@ -38,7 +38,7 @@ void Game::renderSystemList() {
         if (i >= n) break;
         const Body& b = sys.bodies[i];
         double d = length(sys.bodyPos(i, t) - ship.pos);
-        std::string line = fmt("%s%-18.18s %-10s %10s%s%s", b.parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), shortType(b.type),
+        std::string line = fmt("%s%-18.18s %-10s %10s%s%s", b.parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), kindShortNow(i).c_str(),
                                distanceString(d).c_str(), b.rings ? " R" : "", b.moonCount ? fmt(" %dM", b.moonCount).c_str() : "");
         if (b.type == PT_COMET) line += fmt(" %.0f KM/S", length(sys.bodyVel(i, t)));   // comets are the only bodies that visibly hurry
         uint32_t col = i == listSel ? HUD_WHITE : (i == ship.localTarget ? HUD_AMBER : (KINDS[b.type].landable ? HUD_GREEN : HUD_DIM));
@@ -216,7 +216,10 @@ void Game::renderDataSheet() {
             const Seeding& s = ss[i];
             const double ago = std::max(0.0, guide.clock - s.clock);
             const std::string when = ago < 3600 ? fmt("%.0f MIN AGO", ago / 60) : fmt("%.1f H AGO", ago / 3600);
-            put(fmt("%s%s, %s%s", first ? "SEEDED      " : "            ", trunc(seedLineWords(s.line), 22).c_str(), when.c_str(), s.verdict.takes() ? "" : ", DIED"),
+            const std::string deep = s.depthKm > 0 ? (s.verdict.place.where == AT_UNDER_ICE ? std::string(", UNDER ICE") : fmt(", %.0f KM DOWN", s.depthKm))   // J-13
+                                                   : (s.verdict.place.aloft() ? fmt(", %.0f KM UP", -s.depthKm) : std::string());                     // J-14
+            put(fmt("%s%s, %s%s%s", first ? "SEEDED      " : "            ", trunc(seedLineWords(s.line), deep.empty() ? 22 : 15).c_str(), when.c_str(), deep.c_str(),
+                    s.verdict.takes() ? "" : ", DIED"),
                 s.verdict.takes() ? HUD_CYAN : HUD_DIM);
             first = false;
         }

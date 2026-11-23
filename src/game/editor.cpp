@@ -1,17 +1,19 @@
 // Y-02: the gene editor (R-443; docs/ideas/IDEAS-genes.md 1.4 and 1.5, ITERATION-1.5.0.md Y-02; lab_state.h, life/genes.h), the laboratory's
 // fourth device: a screen over the room, E at it on the bow bench past the sequencer. Enter (Tab once one is on) chooses a culture read on the
-// sequencer, a flask's or a kept one; its genes on its genesis's map in two columns of nine places, each NOT KNOWN till seen (then its words,
+// sequencer, a flask's or a kept one; its genes on its genesis's map in two columns of nine places, each NOT KNOWN till changed (then its kind,
 // or its name: N). The arrows choose a gene, Enter opens its working part (Left and Right a letter, Up and Down it through the alphabet), C cuts
 // it out (again: back in), Backspace makes it its parent's again; W writes the line in EDIT_S on the lab's clock, the screen closed or not,
 // into an empty flask in its culture's medium (with none then, into the collection): the guide's `strain` line (SM_EDIT and its edits), said
-// and logged (EDIT). What a gene does is learned as an edited line shows it against its parent: its flask's fit, its end and its glow
-// (`flaskLearn`), its drop's shape, size, colour, motion and answers (`scopeLearn`, `scopeAnswerLearn`), a vital gene's death; and as a strain
-// is read on the sequencer (`strainReadLearn`). Of a line's changed genes, those that could show it (not known to do another thing; NOTHING
-// SEEN in a drop not one a drop shows): one is learned, several are said as candidates. Y-04: S switches the gene chosen (`editorSwitch`); a
-// switched line is learned from as its flask's state has it (`flaskLineIn`), a gene switched alone and on there as its parent's. J-01: the map on
-// two pages, the cell's genes (1 to 18) and the world's (19 to 32): the arrows walk its four columns across both, Page Up and Page Down turn;
-// a world gene learned from its flask's looks (bubbles, dye, scum, slime, sediment, clumps, overgrowth, ice, the ultraviolet light, a poison or
-// genes passed in a mixed flask) and its drop's (gas vesicles, a slime coat, cells bound)
+// and logged (EDIT). R-450: a gene is known for its species the moment it is changed (its letters, a cut, a gene moved in or copied, a switch),
+// and with its letters open the map's place shows its guide: what it is for, how its letters set it, their weights and what each letter at
+// the cursor would make of it; W refuses a line a vital gene's change would kill. An edited line still shows what it does against its parent:
+// its flask's fit, its end and its glow (`flaskLearn`), its drop's shape, size, colour, motion and answers (`scopeLearn`, `scopeAnswerLearn`), a
+// vital gene's death, each said with the known gene that does it; a strain read on the sequencer has its move's gene learned
+// (`strainReadLearn`). Y-04: S switches the gene chosen (`editorSwitch`); a switched line is compared as its flask's state has it
+// (`flaskLineIn`), a gene switched alone and on there as its parent's. J-01: the map on two pages, the cell's genes (1 to 18) and the world's
+// (19 to 32): the arrows walk its four columns across both, Page Up and Page Down turn; a world gene shows in its flask's looks (bubbles, dye,
+// scum, slime, sediment, clumps, overgrowth, ice, the ultraviolet light, a poison or genes passed in a mixed flask) and its drop's (gas
+// vesicles, a slime coat, cells bound)
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -41,7 +43,6 @@ std::string placesWords(const std::vector<int>& p, const char* last) {
     for (size_t i = 0; i < p.size(); i++) s += (i == 0 ? "" : (i + 1 == p.size() ? std::string(" ") + last + " " : std::string(", "))) + std::to_string(p[i] + 1);
     return s;
 }
-bool dropShows(int kind) { return kind == GN_SHAPE || kind == GN_SIZE || kind == GN_PIGMENT || kind == GN_MOTION; }
 double ratio(double a, double b) { return a > 0 && b > 0 ? std::max(a / b, b / a) : (a == b ? 1 : 1e9); }
 const char* planName(int p) { return p == MP_SPHERE ? "SPHERES" : (p == MP_ROD ? "RODS" : (p == MP_CURVED ? "CURVED" : (p == MP_SPIRAL ? "SPIRALS" : "CELLS"))); }
 // Y-03: what a gene needs, as said once it shows nothing for want of it (`GeneNeed`)
@@ -100,44 +101,42 @@ std::string Game::lineMoveWords(const std::string& lineKey) const {
 
 // ---- what a gene does, as learned ------------------------------------------------------------------------------------------------------
 
-std::string Game::geneKey(uint64_t genesis, int place) const { return fmt("%016llx/%d", (unsigned long long)genesis, place + 1); }
-const GeneKnown* Game::geneKnown(uint64_t genesis, int place) const {
-    const auto it = guide.genes.find(geneKey(genesis, place));
+// R-450: a gene is known by its species (its lines' with it), once the explorer changed it on the editor: `<species key>/G<number>`
+std::string Game::geneKey(const FlaskSpecies& w, int place) const { return flaskSpeciesKey(w) + "/G" + std::to_string(place + 1); }
+const GeneKnown* Game::geneKnown(const FlaskSpecies& w, int place) const {
+    const auto it = guide.genes.find(geneKey(w, place));
     return it == guide.genes.end() ? nullptr : &it->second;
 }
-std::string Game::geneWords(uint64_t genesis, int place) const {
-    const std::string named = nameOfKey("G" + geneKey(genesis, place));
+std::string Game::geneWords(const FlaskSpecies& w, int place) const {
+    const std::string named = nameOfKey(geneKey(w, place));
     if (named != "UNKNOWN") return upper(named);
-    const GeneKnown* g = geneKnown(genesis, place);
-    if (!g) return "NOT KNOWN";
-    return g->kind >= 0 && g->kind < GN_COUNT ? GENE_KIND_NAMES[g->kind] : "NOTHING SEEN";
+    const GeneKnown* g = geneKnown(w, place);
+    return g && g->kind >= 0 && g->kind < GN_COUNT ? GENE_KIND_NAMES[g->kind] : "NOT KNOWN";
+}
+// a gene learned: its kind kept for its species (true when new; the caller saves the guide)
+bool Game::geneLearn(const FlaskSpecies& w, int place, int kind) {
+    if (place < 0 || place >= GENE_PLACES || kind < 0 || kind >= GN_COUNT) return false;
+    GeneKnown& g = guide.genes[geneKey(w, place)];
+    if (g.kind == kind) return false;
+    g.kind = kind;
+    return true;
 }
 
-void Game::geneSeen(int flask, int who, int kind, const std::string& what, int how, int state) {
+// what an edited line was seen to do against its parent, in its flask or its drop: logged at once (the lab's notebook) and said in its turn
+// (`geneSay`), with the gene that does it where one of its changed genes is known to be of that kind
+void Game::geneSeen(int flask, int who, int kind, const std::string& what, int state) {
     if (flask < 0 || flask >= INCUBATOR_FLASKS || who < 0 || who > 1) return;
     Flask& F = lab.flasks[flask];
     if (!F.edited[who] || (F.geneTold[who] & (1u << kind))) return;
     F.geneTold[who] |= 1u << kind;
-    std::vector<int> cand;
     int known = -1;
     for (int p : F.changed[who]) {
         if (switchedOn(F, who, p, state)) continue;   // Y-04: a switch alone, on: as its parent's there
-        const GeneKnown* g = geneKnown(F.genesis[who], p);
+        const GeneKnown* g = geneKnown(F.who[who], p);
         if (g && g->kind == kind) { known = p; break; }
-        if (g && g->kind >= 0) continue;                                         // known to do another thing
-        if (g && g->how == GENE_SEEN_NOTHING && dropShows(kind)) continue;      // nothing seen in a drop: not what a drop shows
-        cand.push_back(p);
     }
-    // what was seen and what it says of the genes: logged at once (the lab's notebook), said in its turn (`geneSay`)
     const std::string seen = fmt("FLASK %d: ", flask + 1) + what;
-    std::string says;
-    if (known >= 0) says = fmt("GENE %d: %s GENE", known + 1, GENE_KIND_NAMES[kind]);
-    else if (cand.size() == 1) {
-        GeneKnown g; g.kind = kind; g.how = how;
-        guide.genes[geneKey(F.genesis[who], cand[0])] = g;
-        says = fmt("GENE %d IS THE %s GENE", cand[0] + 1, GENE_KIND_NAMES[kind]);
-        lab.edit.made = false;   // the editor's map says it
-    } else if (!cand.empty()) says = std::string(GENE_KIND_NAMES[kind]) + " GENE: " + placesWords(cand, "OR");
+    const std::string says = known >= 0 ? fmt("GENE %d: %s GENE", known + 1, GENE_KIND_NAMES[kind]) : std::string();
     logEvent("GENE", says.empty() ? seen : seen + ": " + says);
     guide.save(guidePath);
     lab.edit.said.push_back({fitText(seen, UW - 12), fitText(says, UW - 12)});
@@ -175,13 +174,13 @@ void Game::flaskLearn(int i) {
     const CultureNow now = flaskNow(i);
     for (int k = 0; k < F.n && k < 2; k++) {
         if (!F.edited[k] || F.changed[k].empty()) continue;
-        if (F.culture.kind[k].dead) { geneSeen(i, k, GN_VITAL, "DID NOT LIVE", GENE_SEEN_DEATH); continue; }
+        if (F.culture.kind[k].dead) { geneSeen(i, k, GN_VITAL, "DID NOT LIVE"); continue; }
         const CultureOne& o = now.one[k];
         const int st = o.state;   // Y-04: a switched line (and its parent) as its flask's state has it now
         CultureKind L, P; Morph lf, pf;
         flaskLineIn(i, k, st, L, lf); flaskLineIn(i, k, st, P, pf, true);
-        if (L.dead && !P.dead) { geneSeen(i, k, GN_VITAL, "DIES HERE, PARENT LIVES", GENE_SEEN_DEATH, st); continue; }
-        auto seenW = [&](int kind, const std::string& what) { geneSeen(i, k, kind, what, GENE_SEEN_EDIT, st); };
+        if (L.dead && !P.dead) { geneSeen(i, k, GN_VITAL, "DIES HERE, PARENT LIVES", st); continue; }
+        auto seenW = [&](int kind, const std::string& what) { geneSeen(i, k, kind, what, st); };
         if (F.n == 2 && lab.clock - t0 >= 5) {   // J-01: with another in its flask, its poison and its genes passed against its parent's
             const int other = 1 - k;
             const FlaskShow S = flaskShow(i);
@@ -198,7 +197,7 @@ void Game::flaskLearn(int i) {
         const Growth gl = growthIn(L, m), gp = growthIn(P, m);
         const bool lg = gl.fit == GF_GROWS, pg = gp.fit == GF_GROWS;
         auto warm = [](int f) { return f == GF_HOT || f == GF_COLD; };
-        auto seen = [&](int kind, const std::string& what) { geneSeen(i, k, kind, what, GENE_SEEN_EDIT, st); };
+        auto seen = [&](int kind, const std::string& what) { geneSeen(i, k, kind, what, st); };
         if ((lg && warm(gp.fit)) || (warm(gl.fit) && pg) || (warm(gl.fit) && warm(gp.fit) && gl.fit != gp.fit))
             seen(GN_WARMTH, lg ? fmt("GROWS AT %.0f C, PARENT %s", m.tempC, gp.fit == GF_HOT ? "DIES" : "WAITS")
                                : fmt("TOO %s AT %.0f C, PARENT %s", gl.fit == GF_HOT ? "HOT" : "COLD", m.tempC, pg ? "GROWS" : (gp.fit == GF_HOT ? "DIES" : "WAITS")));
@@ -251,7 +250,7 @@ void Game::flaskLearn(int i) {
         // Y-03: a food or a pigment known, moved into one that lives another way: what it needs, once it grows
         for (size_t j = 0; j < F.changed[k].size() && j < F.changedKind[k].size() && lg; j++) {
             const int p = F.changed[k][j], kind = F.changedKind[k][j];
-            const GeneKnown* g = geneKnown(F.genesis[k], p);
+            const GeneKnown* g = geneKnown(F.who[k], p);
             if (!g || g->kind != kind) continue;
             MicrobeGene t; t.kind = kind;
             const int need = geneNeeds(L, t);
@@ -262,7 +261,7 @@ void Game::flaskLearn(int i) {
 }
 
 // a flask's edited line in view on the microscope: its cells' shape, size, colour (in a bright field), motion (where its kind moves) against its
-// parent's; nothing different there, grown past its lag: its changed genes not known NOTHING SEEN
+// parent's, said as seen
 void Game::scopeLearn() {
     if (scope.page != 1 || scope.flask < 0 || scope.flask >= INCUBATOR_FLASKS) return;
     Flask& F = lab.flasks[scope.flask];
@@ -272,7 +271,7 @@ void Game::scopeLearn() {
         CultureKind LK, PK; Morph L, P;
         flaskLineIn(scope.flask, k, st, LK, L); flaskLineIn(scope.flask, k, st, PK, P, true);
         if (LK.dead) continue;
-        auto seen = [&](int kind, const std::string& what) { geneSeen(scope.flask, k, kind, what, GENE_SEEN_EDIT, st); };
+        auto seen = [&](int kind, const std::string& what) { geneSeen(scope.flask, k, kind, what, st); };
         bool looked = false, active = false;
         for (size_t j = 0; j < scope.mount.kinds.size() && j < scope.told.size(); j++) {
             const SlideKind& K = scope.mount.kinds[j];
@@ -283,70 +282,35 @@ void Game::scopeLearn() {
         // Y-03: a known gene that cannot work in it (a sense in a still cell, a shape outside the four small cells', a motion in a still form)
         for (size_t j = 0; j < F.changed[k].size() && j < F.changedKind[k].size(); j++) {
             const int p = F.changed[k][j], kind = F.changedKind[k][j];
-            const GeneKnown* g = geneKnown(F.genesis[k], p);
+            const GeneKnown* g = geneKnown(F.who[k], p);
             if (!g || g->kind != kind) continue;
             MicrobeGene t; t.kind = kind;
             const int need = geneNeeds(LK, t);
             if (need == NEED_MOTION || need == NEED_SHAPE || need == NEED_MOVER)
                 geneNeedSay(scope.flask, k, p, fmt("GENE %d (%s): NO EFFECT IN THE DROP", p + 1, GENE_KIND_NAMES[kind]), needWords(need));
         }
-        bool differs = false;
         if (L.plan != P.plan || ratio(L.aspect, P.aspect) > 1.3) {
-            differs = true;
             seen(GN_SHAPE, L.plan != P.plan ? fmt("CELLS: %s, PARENT: %s", planName(L.plan), planName(P.plan))
                                             : fmt("CELLS %s THAN PARENT'S", L.aspect > P.aspect ? "LONGER" : "SHORTER"));
         }
         if (ratio(L.widthUm, P.widthUm) > 1.2) {   // its cells' width (a new shape keeps it)
-            differs = true;
             seen(GN_SIZE, fmt("CELLS %s PARENT'S", L.widthUm > P.widthUm ? (L.widthUm > 1.8 * P.widthUm ? "TWICE AS WIDE AS" : "WIDER THAN")
                                                                               : (L.widthUm < P.widthUm / 1.8 ? "HALF AS WIDE AS" : "NARROWER THAN")));
         }
-        if (L.pigment != P.pigment) {
-            differs = true;
-            if (scope.seeing == WS_BRIGHT)
-                seen(GN_PIGMENT, std::string(L.pigment ? PIGMENT_NAMES[L.pigment] : "PALE") + ", PARENT " + (P.pigment ? PIGMENT_NAMES[P.pigment] : "PALE"));
-        }
-        if (L.motion != P.motion || ratio(L.speed, P.speed) > 1.4) {
-            differs = true;
-            if (active)
-                seen(GN_MOTION, L.motion == MO_NONE ? std::string("CELLS STILL, PARENT'S MOVE")
-                               : (P.motion == MO_NONE ? std::string("CELLS MOVE, PARENT'S STILL")
-                               : (L.motion != P.motion ? std::string("MOVES ANOTHER WAY: ") + MOTION_NAMES[L.motion]
-                               : fmt("MOVES %s THAN PARENT", L.speed > P.speed ? "FASTER" : "SLOWER"))));
-        }
-        if (L.taxis != P.taxis || LK.s.flees != PK.s.flees) differs = true;   // a sense: its answers show it
+        if (L.pigment != P.pigment && scope.seeing == WS_BRIGHT)
+            seen(GN_PIGMENT, std::string(L.pigment ? PIGMENT_NAMES[L.pigment] : "PALE") + ", PARENT " + (P.pigment ? PIGMENT_NAMES[P.pigment] : "PALE"));
+        if ((L.motion != P.motion || ratio(L.speed, P.speed) > 1.4) && active)
+            seen(GN_MOTION, L.motion == MO_NONE ? std::string("CELLS STILL, PARENT'S MOVE")
+                           : (P.motion == MO_NONE ? std::string("CELLS MOVE, PARENT'S STILL")
+                           : (L.motion != P.motion ? std::string("MOVES ANOTHER WAY: ") + MOTION_NAMES[L.motion]
+                           : fmt("MOVES %s THAN PARENT", L.speed > P.speed ? "FASTER" : "SLOWER"))));
         // J-01: the world genes a drop shows: its gas vesicles, its slime's coat, its cells bound
-        if (std::fabs(L.gas - P.gas) > 0.2) { differs = true; seen(GN_LIFT, L.gas > P.gas ? "CELLS FULL OF GAS VESICLES, PARENT'S NOT" : "NO GAS VESICLES, PARENT'S FULL"); }
-        if (std::fabs(L.capsule - P.capsule) > 0.25) {
-            differs = true;
+        if (std::fabs(L.gas - P.gas) > 0.2) seen(GN_LIFT, L.gas > P.gas ? "CELLS FULL OF GAS VESICLES, PARENT'S NOT" : "NO GAS VESICLES, PARENT'S FULL");
+        if (std::fabs(L.capsule - P.capsule) > 0.25)
             seen(GN_SLIME, L.capsule > P.capsule ? "CELLS IN A THICK SLIME COAT, PARENT'S BARE" : "CELLS BARE, PARENT'S IN SLIME");
-        }
-        if (L.arrangement != P.arrangement) {
-            differs = true;
+        if (L.arrangement != P.arrangement)
             seen(GN_BIND, L.arrangement == AR_SINGLE ? std::string("CELLS APART, PARENT'S BOUND")
                                                      : std::string("CELLS BOUND IN ") + ARRANGEMENT_NAMES[L.arrangement] + ", PARENT'S APART");
-        }
-        if (differs || (F.geneTold[k] & (1u << GN_QUIET)) || !(cultureStagesBy(F.run, k, lab.clock) & LC_GROWING)) continue;
-        F.geneTold[k] |= 1u << GN_QUIET;   // grown and looked at, nothing different: NOTHING SEEN
-        std::vector<int> fresh;
-        for (size_t j = 0; j < F.changed[k].size(); j++) {
-            const int p = F.changed[k][j];
-            const GeneKnown* g = geneKnown(F.genesis[k], p);
-            if (g || switchedOn(F, k, p, st)) continue;   // (Y-04: a switch alone, on: its work its parent's there)
-            MicrobeGene t; t.kind = j < F.changedKind[k].size() ? F.changedKind[k][j] : GN_QUIET;
-            const int need = geneNeeds(LK, t);
-            if (need != NEED_NONE && need != NEED_LIGHT) continue;   // Y-03: one that cannot work in it shows nothing: nothing seen of it said
-            GeneKnown n; n.how = GENE_SEEN_NOTHING;
-            guide.genes[geneKey(F.genesis[k], p)] = n;
-            fresh.push_back(p);
-        }
-        if (fresh.empty()) continue;
-        const std::string nothing = fmt("FLASK %d: NOTHING DIFFERENT IN THE DROP", scope.flask + 1);
-        const std::string says = fmt("GENE%s %s: NOTHING SEEN", fresh.size() == 1 ? "" : "S", placesWords(fresh, "AND").c_str());
-        lab.edit.said.push_back({nothing, fitText(says, UW - 12)});
-        logEvent("GENE", nothing + ": " + says);
-        guide.save(guidePath);
-        lab.edit.made = false;
     }
 }
 
@@ -362,7 +326,7 @@ void Game::scopeAnswerLearn(int kind, uint32_t bits, int unanswered) {
     flaskLineIn(scope.flask, k, st, PK, pf, true);
     const Microbe& P = PK.s;
     const bool pLight = (P.taxis & TX_LIGHT) != 0, pFlees = fleesLight(P), pFood = (P.taxis & TX_FOOD) != 0, pField = (P.taxis & TX_FIELD) != 0;
-    auto seen = [&](const char* what) { geneSeen(scope.flask, k, GN_SENSE, what, GENE_SEEN_EDIT, st); };
+    auto seen = [&](const char* what) { geneSeen(scope.flask, k, GN_SENSE, what, st); };
     if ((bits & SA_LIGHT) && !pLight) seen("GATHERS IN LIGHT, PARENT DOES NOT");
     else if ((bits & SA_FLEES) && !pFlees) seen("FLEES LIGHT, PARENT DOES NOT");
     else if ((bits & SA_FOOD) && !pFood) seen("SWIMS TO FOOD, PARENT DOES NOT");
@@ -372,9 +336,8 @@ void Game::scopeAnswerLearn(int kind, uint32_t bits, int unanswered) {
     else if (unanswered == SD_MAGNET && pField) seen("IGNORES THE MAGNET, PARENT DOES NOT");
 }
 
-// a strain's one gene whose letters differ from its parent's (its move's: -1 none, or an edited line), and its genesis
-int Game::strainGene(const FlaskSpecies& w, uint64_t& genesis) const {
-    genesis = 0;
+// a strain's one gene whose letters differ from its parent's (its move's: -1 none, or an edited line)
+int Game::strainGene(const FlaskSpecies& w) const {
     if (w.strain <= 0) return -1;
     const auto it = guide.strains.find(flaskSpeciesKey(w) + "/S" + std::to_string(w.strain));
     if (it == guide.strains.end() || it->second.what == SM_EDIT) return -1;
@@ -385,22 +348,18 @@ int Game::strainGene(const FlaskSpecies& w, uint64_t& genesis) const {
     MicrobeGenes ga, gb;
     if (!flaskKind(a, ka, fa, slept, &ga) || !flaskKind(b, kb, fb, slept, &gb) || !ga.valid) return -1;
     const std::vector<int> d = genesDiffer(ga, gb);
-    genesis = ga.genesis.id;
     return d.size() == 1 ? d[0] : -1;
 }
 
-// the sequencer's reading of a strain (its move a flask's): the gene its move was in learned (its kind the move's), said after the reading
+// the sequencer's reading of a strain (its move a flask's): the gene its move was in learned for its species (its kind the move's), said after
+// the reading
 std::string Game::strainReadLearn() {
     const SequencerState& Q = lab.seq;
-    uint64_t genesis = 0;
-    const int p = strainGene(Q.who, genesis);
+    const int p = strainGene(Q.who);
     if (p < 0) return "";
     const int what = guide.strains.at(flaskSpeciesKey(Q.who) + "/S" + std::to_string(Q.who.strain)).what;
     const int kind = what == SM_HOT || what == SM_COLD ? GN_WARMTH : (what == SM_SIZE ? GN_SIZE : (what == SM_PIGMENT ? GN_PIGMENT : GN_SALT));
-    const GeneKnown* g = geneKnown(genesis, p);
-    if (g && g->kind >= 0) return "";
-    GeneKnown n; n.kind = kind; n.how = GENE_SEEN_STRAIN;
-    guide.genes[geneKey(genesis, p)] = n;
+    if (!geneLearn(Q.who, p, kind)) return "";
     const std::string line = fmt("STRAIN READ: GENE %d IS THE %s GENE", p + 1, GENE_KIND_NAMES[kind]);
     logEvent("GENE", fmt("STRAIN READ: ONLY GENE %d DIFFERS FROM THE PARENT - THE %s GENE", p + 1, GENE_KIND_NAMES[kind]));
     lab.edit.made = false;
@@ -570,6 +529,17 @@ void Game::editorMake() {
     E.name = flaskSpeciesWords(w, E.form, false);
     for (std::vector<GeneEdit>* v : {&E.edits, &E.writ})
         for (GeneEdit& e : *v) if (e.how == GX_MOVED && !e.read) geneDonor(E.who, e);
+    if (E.who.strain > 0) {   // R-450: a line's own changes from its species known with it (a line written before they were known so too)
+        FlaskSpecies s = E.who; s.strain = s.strainIn = 0;
+        CultureKind sk; Morph sf; MicrobeGenes sg; double ss = 0;
+        bool learned = false;
+        if (flaskKind(s, sk, sf, ss, &sg) && sg.valid)
+            for (const MicrobeGene& G : E.genes.genes) {
+                const MicrobeGene* W = sg.at(G.place);
+                if (!W || W->cut != G.cut || (!G.cut && (W->part != G.part || W->sw != G.sw))) learned = geneLearn(E.who, G.place, E.code.kind[G.place]) || learned;
+            }
+        if (learned) guide.save(guidePath);
+    }
     if (E.kinOn) {
         FlaskSpecies k = E.kin; k.strainIn = k.strain;
         double ks = 0;
@@ -585,6 +555,40 @@ void Game::editorEdited() {
     EditorState& E = lab.edit;
     E.editedKind = E.kind; E.editedForm = E.form; E.editedGenes = E.genes;
     applyEdits(E.editedKind, E.editedForm, E.editedGenes, E.writing ? E.writ : E.edits);
+    // R-450: a gene changed is known at once, for its species (one moved in from a kin, for the kin's too)
+    bool learned = false;
+    for (const std::vector<GeneEdit>* v : {&E.edits, &E.writ})
+        for (const GeneEdit& e : *v) {
+            if (e.place < 0 || e.place >= GENE_PLACES) continue;
+            learned = geneLearn(E.who, e.place, E.code.kind[e.place]) || learned;
+            FlaskSpecies d;
+            if (e.how == GX_MOVED && speciesOfKey(e.donor, d)) learned = geneLearn(d, e.place, E.code.kind[e.place]) || learned;
+        }
+    if (learned) guide.save(guidePath);
+}
+
+// R-450: what each letter of the alphabet at the cursor would make of the gene chosen, in a few words (the letters open: the guide's choices)
+const std::vector<std::string>& Game::editorLetterChoices() {
+    EditorState& E = lab.edit;
+    const std::string key = geneEditsText(E.edits) + fmt("|%d|%d", E.sel, E.cursor);
+    if (key == E.guideKey) return E.guideIf;
+    E.guideKey = key; E.guideIf.clear();
+    const MicrobeGene* H = E.editedGenes.at(E.sel);
+    if (!H || H->cut || E.cursor < 0 || E.cursor >= (int)H->part.size()) return E.guideIf;
+    const char* abc = alphabetOf(E.genes.letters);
+    for (int i = 0; abc[i]; i++) {
+        std::string part = H->part;
+        part[E.cursor] = abc[i];
+        std::vector<GeneEdit> ed = E.edits;
+        const auto it = std::find_if(ed.begin(), ed.end(), [&](const GeneEdit& e) { return e.place == E.sel; });
+        if (it != ed.end()) it->part = part;
+        else { GeneEdit e; e.place = E.sel; e.part = part; ed.push_back(e); }
+        CultureKind k = E.kind; Morph f = E.form; MicrobeGenes g = E.genes;
+        applyEdits(k, f, g, ed);
+        const MicrobeGene* A = g.at(E.sel);
+        E.guideIf.push_back(A ? geneValueShort(k, f, *A, E.code) : std::string());
+    }
+    return E.guideIf;
 }
 
 // a gene's edit made: its letters or its cut, dropped where it is its parent's again; the edited line made again. Y-03: a gene moved in or
@@ -647,6 +651,7 @@ bool Game::editorWrite() {
     if (!E.on) return false;
     if (E.writing) { refuse("BUSY WRITING THE NEW STRAIN", 2); return false; }
     if (E.edits.empty()) { refuse("NOTHING CHANGED - EDIT A GENE FIRST", 3); return false; }
+    if (E.editedKind.dead) { refuse("A VITAL GENE IS CHANGED - THE STRAIN WOULD DIE", 4); return false; }   // R-450
     bool empty = false;
     for (const Flask& F : lab.flasks) empty = empty || F.n == 0;
     if (!empty) { refuse("NO EMPTY FLASK - EMPTY ONE IN THE INCUBATOR", 3); return false; }
@@ -675,7 +680,7 @@ bool Game::editorWriteBegin(const std::string& name) {
     if (!E.on || E.writing || E.edits.empty()) return false;
     E.writing = true; E.t0 = lab.clock; E.writ = E.edits; E.letters = false; E.writeName = name;
     editorEdited();
-    status(name.empty() ? std::string("WRITING THE STRAIN - TWO MINUTES") : "WRITING " + name + " - TWO MINUTES", 4);
+    status(name.empty() ? std::string("WRITING THE STRAIN - TEN SECONDS") : "WRITING " + name + " - TEN SECONDS", 4);
     audio.beep = BEEP_UI;
     return true;
 }
@@ -797,7 +802,7 @@ void Game::updateEditor(const Input& in, double dt, double realDt) {
         E.sel = pageFirst(np) + (col % 2) * pageRows(np) + std::min(row, pageRows(np) - 1);
     }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // the gene named (its genesis's: every kin's)
-        textGeneKey = "G" + geneKey(E.genesis.id, E.sel);
+        textGeneKey = geneKey(E.who, E.sel);
         const std::string named = nameOfKey(textGeneKey);
         beginTextEntry(fmt("NAME GENE %d", E.sel + 1), TEXT_GENE, named == "UNKNOWN" ? std::string() : upper(named));
         return;
@@ -852,13 +857,14 @@ void Game::renderEditor() {
         // Y-03: with a kin beside it, how many of their working parts' letters differ there, + where its kin has one and it has none; Y-04: ~ a
         // switch set, after the mark (B-445 drew the tilde)
         const int my = 33, rh = 8, cw = (UW - 12) / 2, first = pageFirst(page), rows = pageRows(page);
-        for (int p = first; p < first + 2 * rows; p++) {
+        if (E.letters) renderEditorGuide(my);   // R-450: the gene's guide over the map's place while its letters are open
+        else for (int p = first; p < first + 2 * rows; p++) {
             const int x = 6 + ((p - first) / rows) * cw, y = my + ((p - first) % rows) * rh;
             const MicrobeGene* H = E.editedGenes.at(p);
             const auto ed = std::find_if(E.edits.begin(), E.edits.end(), [&](const GeneEdit& e) { return e.place == p; });
             if (p == E.sel) fillRectRGB(canvas, x - 2, y - 1, x + cw - 6, y + 6, editColour(0.35f));
             drawText(canvas, x, y, fmt("%2d", p + 1).c_str(), H ? editText() : HUD_DIM);
-            const std::string w = !H ? std::string("-") : (H->cut ? std::string("CUT OUT") : geneWords(E.genesis.id, p));
+            const std::string w = !H ? std::string("-") : (H->cut ? std::string("CUT OUT") : geneWords(E.who, p));
             const uint32_t col = !H ? HUD_DIM : (H->cut ? HUD_RED : (w == "NOT KNOWN" ? HUD_DIM : HUD_GREEN));
             drawText(canvas, x + 16, y, fitText(w, cw - (E.kinOn ? 50 : 34)).c_str(), col);
             if (E.kinOn) {
@@ -886,8 +892,14 @@ void Game::renderEditor() {
         if (!H) drawText(canvas, 6, y, fmt(K ? "GENE %d: NONE - M MOVES THE KIN'S IN" : (E.kinOn ? "GENE %d: NONE HERE OR IN THE KIN" : "GENE %d: NONE - A KIN MAY HAVE ONE"),
                                            E.sel + 1).c_str(), HUD_DIM);
         else {
-            const std::string words = geneWords(E.genesis.id, E.sel);
-            drawText(canvas, 6, y, fitText(fmt("GENE %d, %s LETTERS: ", E.sel + 1, thousands(H->length).c_str()) + (words == "NOT KNOWN" ? "FUNCTION NOT KNOWN" : words), UW - 12).c_str(), HUD_WHITE);
+            // R-450: its kind and what it is for once known (its name first where the explorer gave one); not known till changed
+            const GeneKnown* k = geneKnown(E.who, E.sel);
+            const std::string named = nameOfKey(geneKey(E.who, E.sel));
+            std::string head = fmt("GENE %d: ", E.sel + 1);
+            if (named != "UNKNOWN") head += upper(named) + (k ? std::string(" (") + GENE_KIND_NAMES[k->kind] + ")" : std::string());
+            else if (k) head += std::string(GENE_KIND_NAMES[k->kind]) + " - " + GENE_KIND_PURPOSE[k->kind];
+            else head += "NOT KNOWN - CHANGE IT TO SEE WHAT IT DOES";
+            drawText(canvas, 6, y, fitText(head, UW - 12).c_str(), k ? HUD_WHITE : HUD_DIM);
             y += 10;
             drawText(canvas, 6, y, "WORKING PART:", HUD_DIM);
             const int lx = 6 + textWidth("WORKING PART: ");
@@ -926,7 +938,6 @@ void Game::renderEditor() {
                 y += 9;
             }
             y += 1;
-            const GeneKnown* k = geneKnown(E.genesis.id, E.sel);
             if (k && k->kind >= 0 && !H->cut) {   // its value as its letters give it, beside its parent's and its kin's where they differ
                 auto bare = [](std::string w) { return w.compare(0, 3, "IT ") == 0 ? w.substr(3) : w; };
                 const std::string now = bare(geneValueWords(E.editedKind, E.editedForm, *H, E.code));
@@ -937,8 +948,13 @@ void Game::renderEditor() {
                     const std::string kv = bare(geneValueWords(E.kinKind, E.kinForm, *K, E.code));
                     if (kv != now) { drawText(canvas, 6, y, fitText("KIN: " + kv, UW - 12).c_str(), HUD_CYAN); y += 9; }
                 }
-            } else if (k && k->kind >= 0) { drawText(canvas, 6, y, "CUT OUT", HUD_RED); y += 9; }
-            else { drawText(canvas, 6, y, k ? "NOTHING SEEN WHEN CHANGED" : "UNKNOWN - CHANGE IT AND GROW THE STRAIN TO SEE", HUD_DIM); y += 9; }
+            } else if (k && k->kind >= 0) {   // J-15: STOP cut says what the line overgrows the land as (a carpet or a lichen greens a desert)
+                std::string cw = "CUT OUT";
+                const int t = k->kind == GN_STOP ? overgrowthTypeOf(E.editedKind) : (int)OG_NONE;
+                if (t != OG_NONE) cw += std::string(": OVERGROWS AS ") + MADE_GROWTH_NAMES[t] + (t == OG_CARPETS || t == OG_LICHEN ? ", GREENS A DESERT" : "");
+                drawText(canvas, 6, y, fitText(cw, UW - 12).c_str(), HUD_RED); y += 9;
+            }
+            if (E.editedKind.dead && !E.writing) { drawText(canvas, 6, y, "A VITAL GENE IS CHANGED: THE STRAIN WOULD DIE", HUD_RED); y += 9; }   // R-450
         }
         // the edits, the writing (Y-04: the edits' line left to the map's marks where the gene's lines fill the screen)
         y = std::max(y + 2, my + MAP_ROWS * rh + 49);
@@ -982,6 +998,67 @@ void Game::renderEditor() {
         drawChooser(canvas, x0 - 6, y0, UW - x0, y0 + rowsN * 9 + 14, E.pages, E.choiceSel, E.pages.top, lines, editColour());
     }
     renderKeepPick(editColour());   // R-445
+}
+
+// R-450: the gene chosen with its letters open, over the map's place (its kind and what it is for in the line under it): how its letters set
+// it, its letters' weights (heaviest last), its pick and its weight now beside the parent's, and what each letter at the cursor would make of it
+// (the current bright). Not known yet (nothing changed), it says how to learn it
+// J-13 (R-454): the warmth's, the salt's and the frost's guides say how cold the line can go: water life to WATER_COLDEST_C, a line that lives in
+// brine and makes no ice of its own to BRINE_COLDEST_C (`brineAntifreeze`), and what it lacks for that
+std::string Game::editorColdWords(int kind) const { return coldGuideWords(lab.edit.editedKind, kind, lab.edit.kind.s.tMin); }
+std::string coldGuideWords(const CultureKind& k, int kind, double parentMinC) {
+    if (k.chemistry != CH_WATER || (kind != GN_WARMTH && kind != GN_SALT && kind != GN_FROST)) return "";
+    const bool brine = k.s.saltHi >= 2, frost = k.world.frostC > FROST_NONE + 1;
+    const double water = std::min(WATER_COLDEST_C, std::round(parentMinC)), salt = std::min(BRINE_COLDEST_C, std::round(parentMinC));   // (its parent's own, if colder)
+    if (brineAntifreeze(k)) return fmt("BRINE AND NO FROST: ITS WARMTH CAN GO DOWN TO %.0f C", salt);
+    if (brine) return fmt("ITS FROST FREEZES IT OVER %.0f C - CUT IT FOR %.0f C", water, salt);
+    if (frost) return fmt("COLDEST %.0f C; IN BRINE, FROST CUT, %.0f C", water, salt);
+    return fmt("COLDEST %.0f C; IN BRINE WITH NO FROST, %.0f C", water, salt);
+}
+
+void Game::renderEditorGuide(int y) {
+    EditorState& E = lab.edit;
+    const MicrobeGene* G = E.genes.at(E.sel);
+    const MicrobeGene* H = E.editedGenes.at(E.sel);
+    if (!H || H->cut) return;
+    const int x = 6, w = UW - 12, rh = 8, kind = E.code.kind[E.sel];
+    if (!geneKnown(E.who, E.sel)) {
+        drawText(canvas, x, y, fmt("GENE %d: NOT KNOWN", E.sel + 1).c_str(), HUD_DIM);
+        drawText(canvas, x, y + rh, "CHANGE A LETTER TO SEE WHAT IT DOES", HUD_DIM);
+        return;
+    }
+    drawText(canvas, x, y, fitText(geneLettersWords(E.code, kind), w).c_str(), HUD_GREEN); y += rh;
+    const std::string cold = editorColdWords(kind);   // J-13: how cold a water line can go, and what takes it colder
+    if (!cold.empty()) { drawText(canvas, x, y, fitText(cold, w).c_str(), HUD_CYAN); y += rh; }
+    const char* abc = alphabetOf(E.genes.letters);
+    const int L = (int)std::strlen(abc);
+    std::vector<int> order(L);
+    for (int i = 0; i < L; i++) order[i] = i;
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return E.code.weight[a] < E.code.weight[b]; });
+    std::string ws = "WEIGHTS:";
+    for (int i : order) ws += fmt("  %c %d", abc[i], E.code.weight[i]);
+    drawText(canvas, x, y, fitText(ws, w).c_str(), HUD_DIM); y += rh;
+    const int choice = geneChoiceLetters(E.code, kind), n = (int)H->part.size();
+    const bool parent = G && !G->cut && (int)G->part.size() == n;
+    if (kind != GN_VITAL && kind != GN_QUIET) {
+        std::string t;
+        if (choice > 0) t = "PICK NOW " + H->part.substr(0, choice) + (parent ? ", PARENT " + G->part.substr(0, choice) : std::string());
+        if (choice < n) {
+            t += (t.empty() ? "" : "; ") + fmt("WEIGHT %d OF %d", geneWeight(E.code, H->part, choice, n - choice), (n - choice) * (E.code.letters - 1));
+            if (parent) t += fmt(", PARENT %d", geneWeight(E.code, G->part, choice, n - choice));
+        }
+        drawText(canvas, x, y, fitText(t, w).c_str(), HUD_DIM);
+    }
+    y += rh;
+    drawText(canvas, x, y, fmt("LETTER %d SET TO:", E.cursor + 1).c_str(), HUD_DIM); y += rh;
+    const std::vector<std::string>& alt = editorLetterChoices();
+    for (int i = 0; i < L && i < (int)alt.size(); i++) {
+        const int cx = x + (i % 2) * (w / 2), cy = y + (i / 2) * rh;
+        const bool now = E.cursor < n && H->part[E.cursor] == abc[i];
+        const char c1[2] = {abc[i], 0};
+        drawText(canvas, cx, cy, c1, letterDye(abc[i], now ? 1.0f : 0.6f));
+        drawText(canvas, cx + 10, cy, fitText(alt[i], w / 2 - 16).c_str(), now ? HUD_WHITE : editText());
+    }
 }
 
 void Game::editorPad(PadMenu& m) const {

@@ -165,12 +165,13 @@ bool Game::save(const std::string& path) {
     if (bay.clock >= 0) {   // the drone bay: its clock (the cooldown), a trip on and what the last one found
         f << "bay " << bay.clock << " " << (bay.out ? 1 : 0) << " " << (bay.planned ? 1 : 0) << " " << (bay.recalled ? 1 : 0) << " " << bay.starSeed << " " << bay.body << " " << bay.seed << " "
           << bay.subLat << " " << bay.subLon << " " << (bay.worldKey.empty() ? "-" : bay.worldKey) << " " << bay.worldName << "\n";
-        f << "bayback " << bay.back << "\n";   // the user's five minutes of charging run from the trip's end
         if (bay.seedTrip) {   // J-03: a seed trip's culture and place (its `seeded` line is the guide's once let go)
             const Medium& m = bay.seedMedium;
             f << "bayseed " << (bay.seedLet ? 1 : 0) << " " << bay.seedFate << " " << bay.seedLat << " " << bay.seedLon << " " << m.cell << " " << m.tempC << " " << m.light << " "
               << m.energy << " " << m.salt << " " << bay.seedLine << " " << (bay.seedEdits.empty() ? "-" : bay.seedEdits) << "\n";
             f << "bayseedname " << bay.seedName << "\n" << "bayseedplace " << bay.seedPlace << "\n";
+            if (!bay.seedWhy.empty()) f << "bayseedwhy " << bay.seedWhy << "\n";   // R-451
+            if (bay.seedDepth != 0) f << "bayseeddepth " << bay.seedDepth << "\n";   // J-13 (J-14: under 0, up in the clouds)
         }
         for (int k = 0; k < DRONE_COUNT; k++) {
             const DroneRun& R = bay.run[k];
@@ -226,7 +227,7 @@ bool Game::load(const std::string& path) {
     ShipWall nwall;                                 // R-428: a save without the line shows the newest twelve
     ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;
     ShipState ns;
-    DroneBay nbay; bool nbayBack = false;
+    DroneBay nbay;
     double nt = t, warp = 1;
     while (std::getline(f, line)) {
         std::istringstream is(line);
@@ -270,11 +271,13 @@ bool Game::load(const std::string& path) {
             is >> let >> nbay.seedFate >> nbay.seedLat >> nbay.seedLon >> nbay.seedMedium.cell >> nbay.seedMedium.tempC >> nbay.seedMedium.light >> nbay.seedMedium.energy >>
                     nbay.seedMedium.salt >> nbay.seedLine >> ed;
             if (!is.fail()) { nbay.seedTrip = true; nbay.seedLet = let != 0; nbay.seedEdits = ed == "-" ? std::string() : ed; }
-        } else if (key == "bayseedname" || key == "bayseedplace") {
+        } else if (key == "bayseedname" || key == "bayseedplace" || key == "bayseedwhy") {
             std::string v; std::getline(is, v); if (!v.empty() && v[0] == ' ') v.erase(0, 1);
-            (key == "bayseedname" ? nbay.seedName : nbay.seedPlace) = v;
-        } else if (key == "bayback") {   // (a save of the first trips has none: their end read from the docks)
-            double v = 0; is >> v; if (!is.fail()) { nbay.back = v; nbayBack = true; }
+            (key == "bayseedname" ? nbay.seedName : (key == "bayseedplace" ? nbay.seedPlace : nbay.seedWhy)) = v;
+        } else if (key == "bayseeddepth") {   // J-13
+            is >> nbay.seedDepth;
+            if (is.fail() || !std::isfinite(nbay.seedDepth) || std::fabs(nbay.seedDepth) >= 200) nbay.seedDepth = 0;
+        } else if (key == "bayback") {   // R-449: an older save's charge, dropped
         } else if (key == "bayrun") {
             int k = -1, docked = 1; DroneRun R;
             is >> k >> R.out >> R.down >> R.up >> R.dock >> docked >> R.wanted;
@@ -389,7 +392,6 @@ bool Game::load(const std::string& path) {
         if (npWatch) state = GameState::PROBE;
     }
     if (nbay.clock >= 0) {   // the bay as it was (a trip on goes on if the ship is still over its world; else it is called back at once)
-        if (!nbayBack && !nbay.out) for (const DroneRun& R : nbay.run) nbay.back = std::max(nbay.back, std::min(R.dock, nbay.clock));   // a save before the charge ran from the return
         bay = nbay;
         if (bay.out && !bay.planned) for (DroneRun& R : bay.run) R.docked = false;
         if (bay.out && !bay.seedTrip && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() &&

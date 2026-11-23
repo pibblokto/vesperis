@@ -321,7 +321,7 @@ bool Game::incubatorTypeKeys(const Input& in) {
     if (!enterKey(in)) return true;
     if (incub.typed.empty() || incub.typed == "-") { incub.typing = false; return true; }
     double lo, hi;
-    cellRange(F.medium.cell, lo, hi);
+    cellRange(F.medium.cell, lo, hi, F.medium.salt);   // (J-13: a brine's to -45 C)
     const int v = atoi(incub.typed.c_str());
     if (v < lo || v > hi) { refuse(fmt("%s CELL: %.0f TO %.0f C ONLY", CULTURE_CELL_NAMES[F.medium.cell], lo, hi), 3); return true; }
     incub.typing = false;
@@ -531,11 +531,11 @@ void Game::updateIncubator(const Input& in, double dt, double realDt) {
             Medium m = F.medium;
             double lo, hi;
             switch (incub.field) {
-                case 0: m.cell = (m.cell + step + CC_COUNT) % CC_COUNT; cellRange(m.cell, lo, hi); m.tempC = clampd(m.tempC, lo, hi); break;
-                case 1: cellRange(m.cell, lo, hi); m.tempC = clampd(m.tempC + step * (in.shift() ? 10 : 1), lo, hi); break;
+                case 0: m.cell = (m.cell + step + CC_COUNT) % CC_COUNT; cellRange(m.cell, lo, hi, m.salt); m.tempC = clampd(m.tempC, lo, hi); break;
+                case 1: cellRange(m.cell, lo, hi, m.salt); m.tempC = clampd(m.tempC + step * (in.shift() ? 10 : 1), lo, hi); break;
                 case 2: m.light = (m.light + step + CL_COUNT) % CL_COUNT; break;
                 case 3: m.energy = (m.energy + step + CE_COUNT) % CE_COUNT; break;
-                default: m.salt = (m.salt + step + 3) % 3; break;
+                default: m.salt = (m.salt + step + 3) % 3; cellRange(m.cell, lo, hi, m.salt); m.tempC = clampd(m.tempC, lo, hi); break;   // (J-13: out of brine, -20 C)
             }
             flaskSet(incub.sel, m);
             audio.beep = BEEP_UI;

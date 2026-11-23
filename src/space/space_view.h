@@ -72,6 +72,7 @@ struct DetailPlate {
     int body = -1; uint64_t seed = 0; int seasonBucket = -1;
     uint64_t madeKey = 0;      // J-02: the made layer it was sampled with (`MadeWorld::key`), and the layer's tint over its cells (empty: none)
     std::vector<uint8_t> mtint;
+    std::vector<uint8_t> mline;   // KI-460: the line whose look or overgrowth lies on each cell (`SurfaceSample::madeLine` + 1; empty: none)
     Vec3 u0, e1, e2;
     double texel = 0, texelM = 0;
     int W = 0, H = 0;
@@ -185,6 +186,32 @@ private:
     uint64_t bandGen = 0;         // moved on by every write of bandMap (the replay's key holds it)
     double bandSH[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; uint64_t bandSHGen = ~0ULL;   // the band's light on a sunless system's globes, kept with its build
     bool auroraBank12 = false;    // the palette's bank 12 is a drifter's aurorae (a system with no sun has no second sun to hold it)
+public:
+    // KI-461, KI-475: each disc's made colours in banks of their own (`setupPalette`: the first disc's from 25, 27, 29, 21, 23 and 31 where no
+    // water trait holds it, the second's from 26, 28, 30, 22, 24): its overgrowth's stain, its waters' tint and its land's, plants' and snow's
+    // looks, each by line, the test layer's land and its made clouds; -1 none dealt (as generated), and whether a bank's colour glows at night
+    struct DiscMade {
+        int stain[MADE_LINES], water[MADE_LINES], look[MC_COUNT][MADE_LINES], land = -1, cloud = -1;
+        int deckGlow = -1;   // J-14: a deck world's glowing clouds at night (its dyed lanes are `cloud`)
+        bool stainGlow[MADE_LINES], waterGlow[MADE_LINES], lookGlow[MC_COUNT][MADE_LINES];
+        int banks[6]; int nBanks = 0;   // (the banks dealt, the veil's)
+        void clear() {
+            land = cloud = deckGlow = -1; nBanks = 0;
+            for (int i = 0; i < MADE_LINES; i++) { stain[i] = water[i] = -1; stainGlow[i] = waterGlow[i] = false; for (int c = 0; c < MC_COUNT; c++) { look[c][i] = -1; lookGlow[c][i] = false; } }
+        }
+        int of(const int* byLine, int line) const {   // a line's, else the first dealt (another line's colour where none was left)
+            if (line >= 0 && line < MADE_LINES && byLine[line] >= 0) return byLine[line];
+            for (int i = MADE_LINES - 1; i >= 0; i--) if (byLine[i] >= 0) return byLine[i];
+            return -1;
+        }
+        bool glowOf(const int* byLine, const bool* glows, int line) const {
+            if (line >= 0 && line < MADE_LINES && byLine[line] >= 0) return glows[line];
+            for (int i = MADE_LINES - 1; i >= 0; i--) if (byLine[i] >= 0) return glows[i];
+            return false;
+        }
+    };
+    DiscMade discMade[2];
+private:
     // the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
     // the pass outside a flight and without nebula patches: the camera, the projection, the frame's size and the band map. A frame
     // whose key matches the last one's keeps its layer; one whose key matches the kept layer's copies it

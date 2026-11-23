@@ -148,7 +148,6 @@ public:
     double testDronesClock() const { return bay.clock; }
     bool testDronesOut() const { return bay.out; }
     bool testDronesPlanned() const { return bay.planned; }
-    double testDronesBack() const { return bay.back; }
     int testShardsListed() const { return (int)shardHeld.size(); }            // C-18: the open world's records the decoder lists
     int testDronesWorldItems(int kind = -1, bool unheld = false);   // the parked world's items (of a kind; not held), read now
     double testDroneRackX(int k) const;          // where a drone stands in the cabin (its rack's slot, the launch moving it), its height
@@ -263,6 +262,7 @@ public:
     const char* testReliefClass(double lat, double lon);         // FLAT / HILLS / MOUNTAINS at a site of the parked body
     // ---- the status, the explorer, the vehicles, the cabin, flight and the aim
     std::string testStatus() const { return statusMsg; }
+    bool testStatusOn() const { return realTime < statusUntil && !statusMsg.empty(); }   // J-13: a status line showing
     std::string testStatusNext() const { return statusNext; }   // T-04: what is said when the status now shown expires
     std::string testDebugInfo() const;
     std::string testHealth() const;   // "" when every number is finite
@@ -356,12 +356,13 @@ public:
         return editorWriteBegin(name);
     }
     std::vector<EditorChoice>& testEditorChoices() { editorChoices(); return lab.edit.choices; }
+    std::vector<std::string> testEditorLetterChoices() { return editorLetterChoices(); }   // R-450
     void testEditorSave(std::string& lines) const { editorSave(lines); }
     bool testEditorLoad(const std::string& line) { return editorLoad(line); }
     bool testFlaskKind(const FlaskSpecies& w, CultureKind& k, Morph& m, MicrobeGenes* g) const { double slept = 0; return flaskKind(w, k, m, slept, g); }
     std::string testLineTag(const FlaskSpecies& w) const { return lineTag(w); }
-    std::string testGeneWords(uint64_t genesis, int place) const { return geneWords(genesis, place); }
-    std::string testGeneKey(uint64_t genesis, int place) const { return geneKey(genesis, place); }
+    std::string testGeneWords(const FlaskSpecies& w, int place) const { return geneWords(w, place); }
+    std::string testGeneKey(const FlaskSpecies& w, int place) const { return geneKey(w, place); }
     // Y-01: a page of the tree shown (its rows made again), a species' page, the page's years
     void testTreePage(int p) { tree.page = p; tree.sel = tree.top = 0; treePage(); }
     void testTreeShow(const std::string& key) { treeShow(key); }
@@ -546,12 +547,15 @@ public:
     std::string testAlmanacInfo() const;                 // the place, its state line, the events with their countdowns
     bool testAlmanacSelect(int kind, int body = -1);     // the open menu's selection onto the first event of a kind (of a body; kind -1 any); false when none
     // ---- J-02: the seeded worlds' layers (game.cpp's `madeTick`): the harness's test layer on a world of the system, the guide's clock
+    SpaceRenderer& testSpaceR() { return spaceR; }   // KI-461, KI-475: its discs' made banks
     void testMadeSet(int bi, const MadeWorld& m) { madeTest[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi)] = m; madeTick(0); }
     void testMadeClear() { madeTest.clear(); madeTick(0); }
     void testClockSkip(double s) { madeTick(s); }   // the guide's clock moved on in one step (a frame moves it by its real seconds)
     MadeWorld testMadeNow(int bi) { return madeNow(bi); }
     // J-03: the seed page's cursor set (and what lies there read); the bay; a world's seedings worked out; a vial's seeded lines
     void testSeedPage(double lat, double lon) { bay.pageLat = lat; bay.pageLon = lon; seedPagePlace(); }
+    std::string testSeedCulture() const { return seedCultureWords(bay.pagePick); }
+    std::string testSeedWhere() const { return bay.pageWhere; }   // R-451: the page's THERE
     void testUnpark() { ship.mode = ShipState::STANDBY; ship.parkedBody = -1; }   // out of orbit, where it was
     bool testBayReady() const { return droneBayReady(); }
     using Game::VialLine;
@@ -570,6 +574,8 @@ public:
     int testTelescopeTrack() const { return tele.track; }
     std::string testTelescopeInfo() const;                           // the magnification, the field, the reticle's line, what is tracked, the attitude
     std::string testTelescopeLine(bool plain = false) const { return telescopeTargetLine(plain); }
+    std::string testTelescopeLineOf(int bi) { const int was = tele.target; tele.target = bi; const std::string l = telescopeTargetLine(); tele.target = was; return l; }
+    std::string testTreeWorldWords(const std::string& world, int kind) { tree.kinds[world] = kind; return treeWorldWords(world); }   // KI-482
     bool testBodyScreen(int body, double& sx, double& sy, double& rpx) const;   // where the last frame drew a body (framebuffer pixels); false when behind
     int testParkedBody() const { return ship.parkedBody; }
     int testLocalTarget() const { return ship.localTarget; }   // D-02: the drifter targeted on arrival

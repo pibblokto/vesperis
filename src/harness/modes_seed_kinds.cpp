@@ -1,3 +1,5 @@
+// J-15 (R-454): and a greened desert's recipe, a green light-feeder tuned for the first desert of the forty (`seedDesertLine`), its carpet's grass
+// by the steps (`shots/tests/kinds/desert_*.png`).
 // J-11 (R-448): the made kinds. `seed kinds`: six lines on forty worlds (`seed climate`'s worlds of the living and the wet kinds, each with its
 // own sea line and a place of its sea where that takes): the line with its gas set to CO2, methane, oxygen, hydrogen sulphide or dimethyl
 // sulphide, or never stopping with its cells bound, each to its 64th step (an overgrowth's last). The made kind each world ends as, what it
@@ -20,7 +22,8 @@ const std::vector<std::pair<int, int>> KIND_LINES[6] = {{{GN_GAS, WG_CO2}}, {{GN
 struct KindRecipe {
     int kind;
     int growth;   // (OG_NONE any)
-    int way;      // its species: -1 the world's own line (`seedNativeLine`'s), -2 each of its living sea species in turn
+    int way;      // its species: -1 the world's own line (`seedNativeLine`'s), -2 each of its living sea species in turn, -3 (J-15) the first
+                  // felisian world's sea light-feeder (`seedSource`) tuned for each dry world's place of the forty (`seedCases`, `madeGreens`)
     const char* tag;
     std::vector<std::vector<std::pair<int, int>>> lines;
 };
@@ -35,6 +38,7 @@ std::vector<KindRecipe> kindRecipes() {
         {MDK_OVERGROWN, OG_CORAL, -1, "coral", {{{GN_STOP, -2}, {GN_BIND, -1}, {GN_SHELL, SHL_CHALK}}}},
         {MDK_CHARNEL, OG_NONE, -1, "charnel", {{{GN_GAS, WG_H2S}}, {{GN_POISON, PZ_BLOOD}, {GN_HOST, HO_ANIMALS}, {GN_ROT, ROT_WOOD}, {GN_DRY, -1}}}},
         {MDK_GREENED, OG_NONE, -1, "greened", {{{GN_GAS, WG_CO2}}}},
+        {MDK_GREENED_DESERT, OG_NONE, -3, "desert", {{{GN_STOP, -2}, {GN_BIND, -1}, {GN_SHELL, -2}, {GN_LIFT, -2}}}},
     };
 }
 // a recipe's species on a world: its own line, or each of its living sea species in turn (twelve at most)
@@ -59,6 +63,35 @@ int shareOf(const MadeWorld& m, bool seas) {
     return madeTraitWords(m, seas).empty() ? 3 : 1;
 }
 }   // namespace
+
+bool seedDesertLine(const std::vector<std::pair<int, int>>& wants, SeedAirCase& world, std::vector<GeneEdit>& edits, Seeding& sd) {
+    const std::vector<SeedCase> worlds = seedCases();
+    StarSystem ls; int lb = -1, lsp = -1;   // (the first light-feeder of water with a green pigment living on the forty worlds: its grass green)
+    for (const SeedCase& c : worlds) {
+        if (lsp >= 0) break;
+        const auto life = lifeOf(c.sys);
+        if (life->bodies[c.body].chemistry != CH_WATER) continue;
+        for (const Microbe& mb : life->bodies[c.body].species)
+            if (mb.state == SS_LIVING && mb.way == LW_LIGHT && mb.pigment == PG_GREEN) { ls = c.sys; lb = c.body; lsp = mb.index; break; }
+    }
+    if (lsp < 0) return false;
+    const SeedLine wild = seedLineFor(ls, lb, lsp, {});
+    if (!wild.valid) return false;
+    for (const SeedCase& c : worlds) {
+        if (!madeGreens(c.sys.bodies[c.body].type)) continue;
+        std::vector<GeneEdit> e = seedTunedEdits(ls, lb, lsp, seedPlaceFacts(c.sys, c.body, c.lat, c.lon));
+        for (const GeneEdit& x : seedGeneEdits(wild.genes, wants)) e.push_back(x);
+        SeedLine line = seedLineFor(ls, lb, lsp, e);
+        line.key += "/S1";
+        if (!line.valid) continue;
+        const Seeding s = seedingFor(c.sys, c.body, line, c.lat, c.lon, 0);
+        if (!s.verdict.takes()) continue;
+        world.sys = c.sys; world.body = c.body; world.lat = c.lat; world.lon = c.lon; world.wild = line;
+        edits = e; sd = s;
+        return true;
+    }
+    return false;
+}
 
 int seedKinds() {
     const double t0 = nowSec();
@@ -101,17 +134,28 @@ int seedKinds() {
            cases.size(), took, shares[0], pct(shares[0]), shares[1], pct(shares[1]), shares[2], pct(shares[2]), shares[3], pct(shares[3]), took - kinds[MDK_NONE],
            ks.empty() ? "" : ": ", ks.c_str());
 
-    // the frames: each kind's recipe on the first world of `seed climate`'s where its lines take and make it
+    // the frames: each kind's recipe on the first world of `seed climate`'s where its lines take and make it (J-15: a greened desert's on the
+    // first dry world of the forty where the tuned light-feeder takes and greens it)
     int drawn = 0;
     std::string missing;
     const std::vector<KindRecipe> recipes = kindRecipes();
+    SeedAirCase desert;   // (J-15's world, kept while its recipe draws)
     for (const KindRecipe& R : recipes) {
         const SeedAirCase* W = nullptr;
         std::vector<Seeding> sds;
         std::vector<std::vector<GeneEdit>> edits;
         MadeWorld m;
         SeedLine rw;
+        if (R.way == -3) {   // J-15: a green light-feeder tuned for the first dry world's place (its warmth, DRY), the recipe's genes on top
+            std::vector<GeneEdit> e; Seeding sd;
+            if (seedDesertLine(R.lines[0], desert, e, sd)) {
+                sds = {sd}; edits = {e}; rw = desert.wild;
+                m = madeWorldOf(desert.sys, desert.body, sds, endClock(sd));
+                if (m.kind == R.kind) W = &desert;
+            }
+        }
         for (const SeedAirCase& c : cases) {
+            if (R.way == -3) break;
             for (const SeedLine& w : recipeWilds(c, R.way)) {
                 sds.clear(); edits.clear();
                 rw = w;
@@ -148,6 +192,7 @@ int seedKinds() {
             if (R.kind == MDK_RUST) return q.material == MAT_ROCK || q.material == MAT_SAND || q.material == MAT_DUST || q.material == MAT_MUD || q.material == MAT_BASALT;
             if (R.kind == MDK_OVERGROWN) return madeGrowthMaterial(q.material);
             if (R.kind == MDK_GREENED) return q.material == MAT_GRASS || q.material == MAT_FOREST;
+            if (R.kind == MDK_GREENED_DESERT) return q.material == MAT_GRASS;
             return true;
         };
         auto at = [&](double laDeg, double loDeg, double km, double a) {
@@ -155,7 +200,7 @@ int seedKinds() {
             return StarSystem::bodyFromLatLon(laDeg * DEG + d * std::cos(a), loDeg * DEG + d * std::sin(a) / std::max(0.05, std::cos(laDeg * DEG)));
         };
         double siteLa = 0, siteLo = 0, yaw = 0;
-        coastSite(g0, b.radiusKm, siteLa, siteLo);
+        if (R.way == -3 || !coastSite(g0, b.radiusKm, siteLa, siteLo)) { siteLa = sds[0].lat / DEG; siteLo = sds[0].lon / DEG; }   // (J-15: a dry world's, its place)
         const bool drained = drainageEnabled();
         setDrainageEnabled(false);   // (the rivers left out of the search)
         if (!onKind(sampleSurface(gm, at(siteLa, siteLo, 0, 0), 64))) {
@@ -187,8 +232,21 @@ int seedKinds() {
         double tDay = 20000, sunBest = -2;   // (the first time the sun stands 37 degrees up, else its highest)
         for (int k = 0; k < 192 && sunBest <= 0.6; k++) {
             const double tt = 20000 + turn * k / 192;
-            const double sun = dot(normalize(ws.bodyFrame(wb, tt) * normalize(ws.star.pos - ws.bodyPos(wb, tt))), site);
+            const StarSystem::Light L = ws.lightAt(ws.bodyPos(wb, tt), tt);   // (J-15: a second sun's world lit by its own)
+            const double sun = dot(normalize(ws.bodyFrame(wb, tt) * (L.fromCompanion ? L.dir : normalize(ws.star.pos - ws.bodyPos(wb, tt)))), site);
             if (sun > sunBest) { sunBest = sun; tDay = tt; }
+        }
+        if (R.way == -3 && sunBest < 0.3) {   // (J-15: a moon whose place never sees its sun that turn: the sunniest green ground of the world then)
+            double best = -2;
+            for (int j = 0; j < 24; j++)
+                for (int i = 0; i < 48; i++) {
+                    const double la = (j + 0.5) / 24 * 180 - 90, lo = (i + 0.5) / 48 * 360 - 180;
+                    const Vec3 u = StarSystem::bodyFromLatLon(la * DEG, lo * DEG);
+                    const StarSystem::Light L = ws.lightAt(ws.bodyPos(wb, 20000), 20000);
+                    const double sun = dot(normalize(ws.bodyFrame(wb, 20000) * L.dir), u);
+                    if (sun > best && onKind(sampleSurface(gm, u, 64))) { best = sun; siteLa = la; siteLo = lo; }
+                }
+            tDay = 20000; sunBest = best;
         }
         TestGame g;
         g.savePrefix = "shots/tests/kinds_save"; g.settingsPath = "shots/tests/test_settings.txt"; g.keysPath = "shots/tests/test_keys.txt";
@@ -243,6 +301,17 @@ int seedKinds() {
                KINDS[b.type].name, wordsOf(now, kindHas(b.type, KT_SEA)).c_str(), changed, landed ? "" : "; NOT LANDED");
         BodyGen gn = g0; gn.made = now;
         printf("  %-10s \"%s\" \"%s\"\n", "", upper(madeKindSentence(now)).c_str(), upper(describeBody(b, gn)).c_str());
+        if (R.kind == MDK_GREENED_DESERT) {   // J-15: the carpet and its grass by the steps: the place's ground, the share of the land green, the kind
+            std::string by;
+            const Vec3 place = StarSystem::bodyFromLatLon(sds[0].lat, sds[0].lon);
+            for (int st = 8; st <= 40; st += 4) {
+                const MadeWorld ms = madeWorldOf(ws, wb, sds, (st * MADE_STEP_S + 1) / std::max(0.05, sds[0].verdict.pace));
+                BodyGen gs = g0; gs.made = ms;
+                const std::string kn = madeKindName(ms);
+                by += fmt("%s%d %s %.0f%%%s", by.empty() ? "" : ", ", st, MATERIAL_NAMES[sampleSurface(gs, place, 64).material], 100 * ms.green, kn.empty() ? "" : (" " + kn).c_str());
+            }
+            printf("  %-10s by its steps (the place's ground, the land green): %s\n", "", by.c_str());
+        }
     }
     printf("seed kinds: %d of %zu kinds' recipes found a world and drew it%s  (%.1f s)\n", drawn, recipes.size(), missing.empty() ? "" : (", none for " + missing).c_str(),
            nowSec() - t0);

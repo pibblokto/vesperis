@@ -1380,13 +1380,14 @@ of one star dot in Salyiesesh's sky, a pulsar that is a black hole now (dimmer a
   letters, ours and mirrored: `geneWorlds`), each genesis's map and its letters' weights, each species' values and genes (its number, its
   kind, its working part, its letters in all, what its letters give); every gene's edit (a letter one heavier, a table's run its next) and
   cut on the four letters' species with the most genes, its values before and after; the gene editor in a game (`lab_genes.png`: empty,
-  its chooser, a rod on it, its warmth's letters changed (its value beside its parent's), R-445's two prompts (the folder, then the name
-with the parent's typed in), its line writing, the line in flask 2); Y-03:
+  its chooser, a rod on it, R-450: its gas gene's guide with its first letter changed, its warmth's letters changed with their guide (its
+  value beside its parent's), R-445's two prompts (the folder, then the name with the parent's typed in), its line writing, the line in
+  flask 2); Y-03:
   each gene of its world's other species moved into it (its letters, its value after, its price) and a gene's price by how far it came (its
   best doubling at each); the editor beside a kin (`lab_genes_kin.png`: K's chooser, the map beside its kin, its kin's warmth moved in, a
   gene into a gap, the line on its world's tree from the kin's leaf); Y-04: the switches (`lab_genes_switch.png`: a luminous species' glow
-  switched by S to IN THE DARK, its line glowing in a dark flask at four minutes beside its species not yet, a spore former's rest IN THE
-  LIGHT at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group holds (`geneLaws`, Y-03's gene moved in
+  switched by S to IN THE DARK, its line glowing in a dark flask at 48 s beside its species not yet, a spore former's rest IN THE LIGHT,
+  starved (R-449: a full flask is fed), at fifty minutes resting lit and dying in the dark); then the laws the unit's `genes` group holds (`geneLaws`, Y-03's gene moved in
   and Y-04's own switches among them). Under a second; exit 1 on a law failing (output: stdout, `shots/tests/lab_genes.png`,
   `lab_genes_kin.png`, `lab_genes_switch.png`)
 * `seed test` (`modes_seed.cpp`): J-02: the first desert world of the scan region, parked at, its landing site the test game's: the
@@ -1439,7 +1440,9 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   layer read with the remains' age run out. Prints the world, the traits, what killed them, the harms by class, and each species' dead,
   sick, changed (its changes) and thriving. Draws each fate on that world's ground (`fates/fate_<tag>.png`): a sickness or changed young
   on four of a land species side on; a die-off's remains as the cells laid them, at the lit land nearest the place whose herd cell holds a
-  dying species, twelve steps after the spread reached it, framed on the three nearest remains; thriving on its herds. Then the five
+  dying species, twelve steps after the spread reached it, framed on the three nearest remains (the waters' dead alone: at the nearest lit
+  coast out from the place along 24 rays whose cell has its shore within 150 m, framed on the swimmers washed up: `coastNear`); thriving
+  on its herds. The dyed hides' world's flyers too, a flock every member of it dyed, its nearest framed (`fates/fate_dyed_flock.png`). Then the five
   stages of remains in a row (`fates/remains.png`), remains of each kind (`fates/remains_kinds.png`), each change on a young with one born
   whole beside it (`fates/change_<name>.png`, all 42 in rows of seven in `fates/changes.png`), and a blood poison's die-off over its
   steps on the first world where a herd stands 0.8 m or more (`fates/steps_NN.png`, steps 0 to 48, the living and the remains by stage
@@ -1448,11 +1451,14 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
 * `seed kinds` (`modes_seed_kinds.cpp`): J-11: six lines (a world's own sea line with its gas set to CO2, methane, oxygen, a sulphide or
   a cold haze's, or cut never to stop with its cells bound) on forty of `seed climate`'s worlds (its kinds' first to twelfth), each to
   its 64th step: the made kind each ends as, whether it harmed the world's life, changed only its looks or made it more livable
-  (`madeHarms`, `madeLivable`), and the shares. Then each kind's recipe (nine: a hothouse, a snowball, a haze, purple, rust, flesh and
+  (`madeHarms`, `madeLivable`), and the shares. Then each kind's recipe (a hothouse, a snowball, a haze, purple, rust, flesh and
   coral, charnel's two lines, greened) on the first of those worlds where its lines take and make it (a flesh's among its sea species,
   not a pale one): the globe from the parking orbit before and after, the data sheet and the ground by day, at the coast or on the
   ground the kind is drawn on (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`). Prints each world, its kind line, sentence and
-  phrase. Exit 1 when a recipe found no world (about 11 s)
+  phrase. J-15: a tenth recipe, a greened desert: the first light-feeder of water with a green pigment on the forty worlds, tuned for
+  the first desert's place (its warmth, DRY), its STOP, SHELL and LIFT cut and its BIND set (`seedDesertLine`, the unit's too), drawn
+  on the sunniest grass of a moon that its place never sees its sun from (`kinds/desert_*.png`), with its place's ground and the land
+  green by its steps. Exit 1 when a recipe found no world (about 14 s)
 * `seed record` (`modes_seed_record.cpp`): J-12: a world's own sea line given a nerve poison (its STOP cut and its cells bound, so it
   overgrows; else the poison alone) let go on the first of `seed climate`'s worlds with plants and animals where it drives a native out
   and makes a made kind (`seedRecordCase`, the unit's too), in a game at its 64th step (`seedRecordGame`). The guide gets the explorer's
@@ -1461,6 +1467,22 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   world, a native's sheet that died out, the line's found wild, an animal's gone and the LIFE page (`record/<catalogue|died_out|
   found_wild|animal_gone|life_page>.png`, all five in `record/record.png`), the system's maps made first. Exit 1 when a count is wrong
   (about a second)
+* `seed cold` (`modes_seed_cold.cpp`): J-13: forty worlds (`seedCases`, `seed worlds`' places): each place's own warmth and its depths'
+  (`seedDepthsOf`), then lines tuned as a player would (`seedTunedEdits`): the sea light-feeder, a hydrogen eater and a fermenter on the
+  ground, at the place and at the world's mildest (a grid of 24 by 12), and the hydrogen eater down each depth, the shallowest that takes.
+  Prints each verdict in full and which worlds took a line on the ground, in the deep or none. Draws the seed page on the thin-aired world
+  on its ground and 5 km down with the hydrogen eater tuned for it in flask 1 (`cold/seed_page_<ground|deep>.png`), and a red hydrogen
+  eater let go in the sea under a europan world's ice: its globe before and at its 24th step, its data sheet's second page and the ice
+  beside a linea (`cold/cracks_<orbit_before|orbit_after|sheet|ground>.png`). Exit 1 when the page or the cracks are not drawn (about a
+  second)
+* `seed clouds` (`modes_seed_clouds.cpp`): J-14: the heights in the clouds (`seedHeightsOf`) of the first venusian worlds and the first
+  acid world, and what each gives; a venusian cloud light-feeder (`seedCloudSource`) wild and tuned at each (`seedTunedEdits`), and the
+  sea light-feeder of `seed worlds` refused at each (WRONG LIQUID). Then the light-feeder tuned, dyed red and given a GLOW gene moved in
+  from the first glowing species of the forty worlds (`seedGlowDonor`) let go at the height nearest 35 C: the first venusian world's globe
+  before and at its 24th step by day and by night (the night side as generated too), its data sheet; the first acid world's globe before
+  and after and its sheet; the seed page in the venusian world's clouds with the line in flask 1, Page Up past the highest refused
+  (`clouds/<venus|acid>_<orbit_before|orbit_after|sheet>.png`, `clouds/venus_orbit_night[_before].png`, `clouds/seed_page_clouds.png`).
+  Exit 1 when a height takes no tuned line, water life takes, or the clouds or the page are not drawn (about a second)
 * `overgrowth plates` (`modes_overgrowth.cpp`): J-09: each of the ten overgrowth types (`type_<name>.png`) and forty variants of them
   (`variant_NN_<tag>.png`: their colours, textures, grains, wetness, hardness, a glow at night, cilia) at 2x, each a layer made by hand
   that covers the whole world (`growthOfType`, `growthLayer`), on the first clear-aired flora world of `seed climate`'s with a forest's
@@ -1475,11 +1497,14 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   `world_32_orbit_night.png`). Prints the overgrowth at each step and the ground landed on. Exit 1 when fewer than three steps showed it
   on the ground (about 5 s)
 * `overgrowth ruins` (`modes_overgrowth.cpp`): J-10: the industrial test world's first city whose middle is dry with the rivers, and its
-  capital, each under a flesh's overgrowth let go 10 km south of its middle (`testMadeSet`, then `growthLayerOn` for each step), landed
-  by a dry day: at its steps 9, 14, 20 and 32 the biggest building near from 40 m (`ruins_city_NN_street.png`) and from 30 m up 90 m off
+  capital, each under a flesh's overgrowth let go 10 km south of its middle (`testMadeSet`, then `growthLayerOn` for each step), landed by
+  a dry day: at its steps 9, 14, 20 and 32 the biggest building near from 40 m (`ruins_city_NN_street.png`) and from 30 m up 90 m off
   (`ruins_<city|capital>_NN.png`), a doorway grown shut at step 14 from 3.5 m (`ruins_doorway.png`), and the city twenty steps after a
-  stone rotter beside the city as generated (`ruins_crumbled.png`, `ruins_uncrumbled.png`). Prints the buildings covered, how high, and
-  the membranes, nodules and drapes. Exit 1 when a frame is missing (about 10 s)
+  stone rotter beside the city as generated (`ruins_crumbled.png`, `ruins_uncrumbled.png`); then the scene's town as if left 300 years
+  ago, at night under a wet flesh whose veins glow, fourteen steps on (`ruins_night.png`: the test world's cities lie in a day that does
+  not end). Prints the buildings covered, how high and how far apart one building's walls are, the membranes (the doorways and windows,
+  the arches' bays of those standing), nodules and drapes, and for each frame the faces drawn wholly under the cover, those with windows
+  grown shut and those lit at night. Exit 1 when a frame is missing (about 10 s)
 * `life made [n]` (`modes_tree.cpp`): Z-06: the made species of the n worlds of late peoples nearest home (40 sectors round): each world,
   its people and age, the species, the year they made it, its genesis's letters, its watermark's letters and its text whole (the first
   five also as the decoder reads it with none and three of their records held, in their tongue); then the counts (asleep, by way of
@@ -1823,9 +1848,8 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   the rack), the launch at 1.2 s (drone 1 backing through its port, drone 3 waiting), the drones past the front window at 4 s and
   as strobes at 6.5 s, the screen descending and searching, the rack empty, every drone docked: two minutes searching each (its
   first place to its last), its finds what it wanted (2 to 8), none held before, none twice, the guide grown by them; R-414: the
-  screen closed after the docks, the rack lists none of them (`screen_seen`), the guide's unchanged; the charge (refused five
-  minutes from the launch and two seconds short of five from the return, sent after them; the second trip none of the first's)
-  watched on the decoder (open at the world's records as the drones dock: its list the guide's at once); a recall (the ship leaves
+  screen closed after the docks, the rack lists none of them (`screen_seen`), the guide's unchanged; no charge (R-449: sent again
+  the moment the first trip ends; the second trip none of the first's) watched on the decoder (open at the world's records as the drones dock: its list the guide's at once); a recall (the ship leaves
   the parking: what was found aboard, the rest not); a save in a trip loaded and docked; the case's worlds (a second world's
   instrument added: Enter opens the ship's world, Esc back, Esc out; an instrument of each of the ship's world's two peoples
   added: a folder each people, each opening its people's alone). `check`: the unit's (a world's items: every record of both

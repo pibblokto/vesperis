@@ -18,6 +18,8 @@ std::string traitList(const BodyGen& g);   // R-304: "CANYON LANDS, SALT FLATS" 
 // on a kind (its bank in every view): a kind without flora may lend the grass and forest families to its two accents
 int matFamily(int material);
 int matFamilyOn(int type, int material);
+// KI-484: and by the world now: a made snowball's sea ice in the grass family (its bank the frozen felisian's blue: `madeMatColour`)
+int matFamilyOnGen(const BodyGen& g, int material);
 // the material that stands for a family on a kind (rock: basalt on volcanic worlds, graphite on carbon worlds...: the row's `famRep`, an accent for grass and forest)
 int familyRep(int type, int family);
 // N1-05: the one exposure rule: palette stop (0..63) of a fully lit surface of this albedo at noon, in every view
@@ -63,6 +65,7 @@ struct SurfaceSample {
                             // dunes' hum; the dune field's share times the lee's, whatever the face's steepness; not a gypsum's dunes, nor snow's drifts)
     double snowTint = 0;    // Z-03: red snow's algae on the snow here, 0..1 (TR_SNOW_ALGAE: its patches where the eye resolves them)
     double madeTint = 0;    // J-02: a made world's tint over the land here, 0..1 (`MadeWorld::tint`: how much of the point its spreads reached)
+    int madeLine = -1;      // KI-460: the line whose look or overgrowth lies here (the spread's index; -1 none): its colour is its own
 };
 
 struct BodyGen {
@@ -228,8 +231,9 @@ inline int madeSaltAt(const BodyGen& g, const SurfaceSample& s) { return g.hasTr
 double madeMeanAt(const BodyGen& g, const MadeWorld& m, const Vec3& unit, const SurfaceSample& s, bool wet, int salt);
 // J-04: a material's colour as a seeded world's made climate leaves it (the globe, the maps and the ground read it): a world's plants (its
 // grass and its forest, where it has plants) dried toward straw by the heat (`MadeWorld::wilt`), its second flora's leaves with them; every
-// other colour, and every world's without a wilt, as generated
-RGB madeMatColour(const BodyGen& g, int mat);
+// other colour, and every world's without a wilt, as generated. KI-473: an overgrowth's cover in `line`'s colour where it lies (-1: the
+// latest line's that grows)
+RGB madeMatColour(const BodyGen& g, int mat, int line = -1);
 // J-09: an overgrowth's cover (a soft tissue, threads, a hard one)
 inline bool madeGrowthMaterial(int mat) { return mat == MAT_TISSUE || mat == MAT_THREADS || mat == MAT_HARD; }
 RGB madeFlora2(const BodyGen& g);
@@ -258,8 +262,9 @@ inline int madeGlobeClass(const MadeWorld& m) {
 // moves to bank 31 on the first disc where no trait holds it, and a made cloud keeps its bank's colour no more)
 inline bool madeGlobeGrowth(const MadeWorld& m) { return m.on() && m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES; }
 // J-05: a material's colour where a made share lies over a half (the class's colour: the waters' tint, the land's, the snow's, the plants';
-// the test layer's over the land), else `madeMatColour` (the landing map's zoom)
-RGB madeColourAt(const BodyGen& g, int mat, double share);
+// the test layer's over the land), else `madeMatColour` (the landing map's zoom). KI-460: `line`'s own look where it lies there (-1: the class's,
+// the latest line's)
+RGB madeColourAt(const BodyGen& g, int mat, double share, int line = -1);
 double tideRangeAt(const BodyGen& g, const Vec3& unit);   // Q-02: the spring range at a place (the trait's at the equator, by cos^2 of the latitude)
 // P-03: how far a point lies inside an ice sheet's edge (0 at the edge, 1 where the sheet is full, under 0 outside): the tundra's and
 // the snowball's by latitude (14 degrees from the edge to the full sheet), a terminator world's by its climate at the sea's level (the edge
@@ -297,6 +302,7 @@ struct PlanetMap {
     std::vector<uint8_t> veg;
     std::vector<uint8_t> wtint, ltint;   // the water's trait colours (`SurfaceSample::waterTint`, `lifeTint`), 0..255; empty on a world with none
     std::vector<uint8_t> mtint;          // J-02: a made world's tint (`SurfaceSample::madeTint`), 0..255; empty on a world with none
+    std::vector<uint8_t> mline;          // KI-460: the line whose look lies there (`SurfaceSample::madeLine` + 1, 0 none), with `mtint`
     uint64_t seed = 0;
     uint64_t madeKey = 0;                // J-02: the made layer it was made with (`MadeWorld::key`; 0 the world as generated), set as the season's
     std::atomic<bool> valid{false};     // set when a (possibly background) generation finished
@@ -322,6 +328,7 @@ struct PlanetMap {
     double waterTintAt(int i) const { return wtint.empty() ? 0.0 : wtint[i] / 255.0; }   // (a texel's index)
     double lifeTintAt(int i) const { return ltint.empty() ? 0.0 : ltint[i] / 255.0; }
     double madeTintAt(int i) const { return mtint.empty() ? 0.0 : mtint[i] / 255.0; }
+    int madeLineAt(int i) const { return mline.empty() ? -1 : mline[i] - 1; }
 
 private:
     template <class T>

@@ -27,9 +27,14 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   orbit and on the ground; `seedGeneEdits`, `seedNativeLine`, `seedAirCases`), `modes_seed_looks` (J-05: `seed looks`, each made
   water's, ground's and plants' trait from orbit and on the ground, `look_*.png`; its sites by the drawn ground's water and the drainage),
   `modes_seed_fates` (J-08: `seed fates`, each fate drawn, the changes, a herd over its steps, `fates/`; `fateRecipes`, `siteNear`,
-  `writeSheet`), `modes_seed_kinds` (J-11: `seed kinds`, the made kinds of forty worlds and six lines and the shares, each kind drawn,
-  `kinds/`), `modes_seed_record` (J-12: `seed record`, a seeded world's record in the catalogue and on the LIFE page, `record/`;
-  `seedRecordCase`, `seedRecordGame`: the world and line the unit's record checks send too), `modes_overgrowth` (J-09: `overgrowth
+  `coastNear`, `writeSheet`), `modes_seed_kinds` (J-11: `seed kinds`, the made kinds of forty worlds and six lines and the shares, each
+  kind drawn, `kinds/`; J-15: a greened desert's recipe, `seedDesertLine`), `modes_seed_record` (J-12: `seed record`, a seeded world's
+  record in the catalogue and on the LIFE page, `record/`; `seedRecordCase`, `seedRecordGame`: the world and line the unit's record
+  checks send too), `modes_seed_cold` (J-13: `seed cold`, forty worlds' warmth on the ground and down, lines tuned for each, the seed
+  page 5 km down and a europan world's cracks, `cold/`;
+  `seedTunedEdits`, a line tuned for a place as a player would), `modes_seed_clouds` (J-14: `seed clouds`, the cloud decks' heights, a cloud
+  line tuned for each, a venusian world's clouds dyed and glowing by day and night, an acid world's, the seed page in the clouds, `clouds/`;
+  `seedCloudSource`, `seedGlowDonor`: a GLOW gene moved in as a player moves one), `modes_overgrowth` (J-09: `overgrowth
   plates`, each type and forty variants on a forest's edge, and `overgrowth world`, a world overgrown at its steps, `overgrowth/`;
   `growthOfType`, `growthLayer`, `growthGround`; J-10: `overgrowth ruins`, a city and a capital overgrown and a city crumbled;
   `growthAtStep`, `growthLayerOn`),
@@ -50,9 +55,16 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   flask's, the drift, the trip, home refused, an unseeded world, samples; J-04: the air by its world, after the looks, the made
   climate's reads, a runaway's seas; J-05: the looks by their world, where they lie, the made ground drawn, the words; J-09: the
   overgrowth by its genes, its cover by place and step, its structures walked round and no tree in one; J-10: the ruins' cover by place
-  and step, the ruins under it, a stone rotter's ruins, the silence, the sounds' words; J-11, in `unit_seeding_kinds`: the made kinds by
-  their lines, a made hothouse's and a made snowball's ground, the ice's run; J-12, in `unit_seeding_record`: natives died out, a line
-  found wild, the record), `unit_animals`
+  and step, the ruins under it, a stone rotter's ruins, the silence, the sounds' words; in `unit_seeding_grown`: a crust's forms and a
+  lush forest, the structures fixed to the world, the ruins where a stone rotter lives and as the steps pass; J-11, in
+  `unit_seeding_kinds`: the made kinds by their lines, a made hothouse's and a made snowball's ground, the ice's run; J-12, in
+  `unit_seeding_record`: natives died out, a line found wild, the record, a made kind named; in `unit_seeding_climate` the made climate's
+  known issues: every kind's caps, a later line at the warmth made, an ocean run away, a line's plants, a snowball's ice and a greened
+  world's biomes, a kind that remembers, the cold by the mean; in `unit_seeding_banks` the made colours': a colour a line, every free bank,
+  each line's banks on the ground and the globe, a flask's borrowed bank; J-13, in `unit_seeding_cold`: the cold limits, a place at its own
+  warmth, the depths, a deep line's spread, the seed page's depths and a trip down a drill hole; J-14, in `unit_seeding_clouds`: a deck's
+  heights, acid life up there and water life never, a cloud line's spread, a deck world's globe, a trip up into the clouds; J-15, in
+  `unit_seeding_desert`: a carpet's grass behind its edge, a greened desert's kind, its ground's grass and shrubs), `unit_animals`
   (the group `animals`, J-06: the bestiary pure, no two of a world alike, every plan's poses, the herds' cells as generation 17's, an older
   save's notice; `VESPERIS_PLAYER_DIR` loads copies of the player's guide and save too; J-07: the gaits within bounds and the feet put
   down, the record and its names: a herd seen, N's name, the guide's bytes, a loan's names; J-08: the fates' shares fixed by world and

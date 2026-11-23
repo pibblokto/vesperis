@@ -174,24 +174,24 @@ static const Mode MODES[] = {
                 "Z-07: `catalogue`, a guide as the lab fills it and a friend's file lent: the catalogue by world (the lent in cyan) and by kin, a sheet's form "
                 "live, a name given from it; the statistics' LIFE page, the data sheet's microbes, a micrograph in the gallery. Y-02 (modes_genes.cpp): `genes`, "
                 "a world's species' genes for each alphabet and hand (each genesis's map and code), every gene's edit and cut on a species (its values before "
-                "and after), the gene editor's screen (`lab_genes.png`: its chooser, its map, a known gene's letters changed, its line writing and in its flask), "
+                "and after), the gene editor's screen (`lab_genes.png`: its chooser, its map, R-450's letter guides, its line writing and in its flask), "
                 "the genes' laws. Y-03: genes moved in from a world's kin (their values, their price by how far they came), the editor beside a kin "
                 "(`lab_genes_kin.png`: its chooser, the map beside it, its warmth moved in, a gene into a gap, the line on its world's tree). Y-04: "
                 "`lab_genes_switch.png` (a glow IN THE DARK by S, aglow in a dark flask; a rest IN THE LIGHT, resting lit, dying dark). J-01: the world "
                 "genes, forty species' world values, the editor's world page; `cultures`: `lab_cultures_world.png`",
                 "modes_lab.cpp", runLab},
-        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds | record", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
+        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds | record | cold | clouds", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
                 "layer's tint, with its cover, and as generated again (the first pictures pixel for pixel): `seed_test_<view>_<none|tint|cover>.png`. J-03 `worlds`: six lines "
                 "(wild, warm, cold, a dye, a methane-maker, STOP cut) let go on forty worlds: each verdict and why, the drift, the spread's steps and what each shows. `sea`: the "
                 "dye line in a sea off a coast, before and at its eighth step: `seed_sea_<map|zoom|globe|ground>_<before|after>.png`. J-04 `climate`: each gas on twenty worlds, "
-                "the mean warmth, pressure and air before and after (modes_seed_air.cpp). `traits`: each made air's trait from orbit and on the ground, before and after: "
+                "the mean warmth, pressure and air before and after. `traits`: each made air's trait from orbit and on the ground, before and after: "
                 "`made_<trait>_<orbit|ground>_<before|after>.png` (a runaway's `_dry` an hour on). J-05 `looks`: each made water's, ground's and plants' trait the same way, "
-                "`look_<trait>_<map|orbit|ground>_<before|after>.png` (modes_seed_looks.cpp). J-08 `fates`: each fate a line brings a world's animals, what each "
-                "species came to, each drawn on the ground (`fates/fate_<tag>.png`), the remains' five stages and kinds, each change on a young (`fates/change_<name>.png`, "
-                "`fates/changes.png`), a seeded world's herd over its steps (`fates/steps_NN.png`; modes_seed_fates.cpp). J-11 `kinds`: the made kind each of the forty worlds and "
-                "six lines ends as at its 64th step, whether it harmed, changed only the looks or made the world more livable, and the shares; then each made kind's "
-                "recipe on a world: the globe before and after, the data sheet and the ground (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`; modes_seed_kinds.cpp). "
-                "J-12 `record`: a poisoned world's record in the catalogue, three sheets and the LIFE page (`record/*.png`; modes_seed_record.cpp)",
+                "`look_<trait>_<map|orbit|ground>_<before|after>.png`. J-08 `fates`: each fate a line brings a world's animals, each drawn on the ground "
+                "(`fates/fate_<tag>.png`), the remains' stages, each change on a young (`fates/change_<name>.png`), a seeded world's herd over its steps "
+                "(`fates/steps_NN.png`). J-11 `kinds`: the made kind forty worlds and six lines end as, the shares; each made kind's recipe on a world, J-15's greened "
+                "desert too (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`). J-12 `record`: a poisoned world's record in the catalogue and on the LIFE page (`record/*.png`). "
+                "J-13 `cold`: forty worlds' warmth on the ground and down, a line tuned for each, the seed page 5 km down, a europan world's cracks (`cold/*.png`). "
+                "J-14 `clouds`: the cloud decks' heights, a cloud line tuned for each, a venusian and an acid world's clouds dyed, the seed page (`clouds/*.png`)",
          "modes_seed.cpp", runSeed},
         {"overgrowth", "life", "plates | world | ruins",
          "J-09 `plates`: each overgrowth type and forty variants on a test ground (`overgrowth/type_<name>.png`, `overgrowth/variant_NN_<tag>.png`, the sheets "

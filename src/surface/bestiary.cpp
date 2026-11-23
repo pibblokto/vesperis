@@ -296,8 +296,11 @@ AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes
     const double frail = 0.5 + hash01(mix64(sp.seed ^ 0xFA7E0001ULL));   // how it resists: 0.5 the hardiest, 1.5 the frailest
     a.dead = h >= 0.95 ? 1.0 : clampd(h * frail, 0, 1);
     a.death = a.dead > 0 ? f.death : 0;
-    if (land && !a.gone() && f.sickness && f.sick > 0) { a.sickness = f.sickness; a.sick = f.sick; }
-    if (land && !a.gone() && f.changed > 0 && nChanges > 0) {
+    // B-469: a flyer's and a swimmer's survivors sick and their young changed too where the line meets them: its class harmed, or a host on
+    // the skin (a glow, a dye), which meets every animal; a sprouting one's climb to the high ground is the land's alone
+    const bool meets = land || h > 0 || f.sickness == MF_GLOWING || f.sickness == MF_DYED;
+    if (meets && !a.gone() && f.sickness && f.sick > 0 && (land || f.sickness != MF_SPROUTING)) { a.sickness = f.sickness; a.sick = f.sick; }
+    if (meets && !a.gone() && f.changed > 0 && nChanges > 0) {
         a.changed = f.changed;
         a.nChanges = std::min(nChanges, 3);
         for (int i = 0; i < a.nChanges; i++) a.changes[i] = changes[i];
@@ -309,10 +312,20 @@ AnimalFate animalFateOf(const Species& sp, const MadeFate& f, const int* changes
 }
 
 namespace {
-// whether a change fits a species' body and ways (a land animal's), and whether two clash
+// whether a change fits a species' body and ways, and whether two clash. B-469: a flyer's or a swimmer's young take the body's and the hide's
+// changes alone (the ways are a herd's members'), a swimmer's no leg's nor wool
 bool changeFits(const Species& sp, int ch) {
     const AnimalBody& b = sp.body;
     const bool legs = b.pairs > 0;
+    if (planFlies(sp.plan) || planSwims(sp.plan))
+        switch (ch) {
+            case CHG_CALM: case CHG_BOLD: case CHG_NIGHT: case CHG_CIRCLES: case CHG_STUMBLES: case CHG_CLIMBS: case CHG_SWARMS: case CHG_LIMPS: case CHG_JOINED:
+                return false;
+            case CHG_EXTRA_LEG: case CHG_MISSING_LEG: case CHG_SHORT_LEGS: case CHG_LONG_LEGS: case CHG_WOOLLY:
+                if (planSwims(sp.plan)) return false;
+                break;
+            default: break;
+        }
     switch (ch) {
         case CHG_TUSKS: return sp.plan != PLAN_SLUG && b.head != HEAD_BEAK && b.head != HEAD_MANDIBLES;
         case CHG_EXTRA_LEG: case CHG_SHORT_LEGS: case CHG_LONG_LEGS: case CHG_CIRCLES: case CHG_STUMBLES: case CHG_LIMPS: return legs;
@@ -342,7 +355,6 @@ bool changesClash(int a, int b) {
 }
 
 int animalChangesOf(const Species& sp, int steer, int out[3]) {
-    if (planFlies(sp.plan) || planSwims(sp.plan)) return 0;   // (the herds' young)
     const uint64_t h = mix64(sp.seed ^ 0xC4A9E0ULL);
     const int want = 1 + (int)(h % 3);
     int n = 0;
@@ -387,8 +399,14 @@ AnimalBody changedBody(const AnimalBody& b0, const int* changes, int nChanges) {
             case CHG_NO_EYES: b.eyes = 0; break;
             case CHG_TWISTED: b.twist = 0.35; break;
             case CHG_JOINED: b.joined = true; break;
-            case CHG_SHORT_LEGS: b.size = std::max(0.35 * b.size, b.size - 0.4 * b.leg); b.leg *= 0.6; break;
-            case CHG_LONG_LEGS: b.size += 0.4 * b.leg; b.leg *= 1.4; break;
+            case CHG_SHORT_LEGS:
+                b.size = std::max(0.35 * b.size, b.size - 0.4 * b.leg); b.leg *= 0.6;
+                if (b.wings != WINGS_NONE) b.span *= 0.7;   // (B-469: a flyer's wings stunted with them)
+                break;
+            case CHG_LONG_LEGS:
+                b.size += 0.4 * b.leg; b.leg *= 1.4;
+                if (b.wings != WINGS_NONE) b.span *= 1.25;
+                break;
             case CHG_LONG_NECK: b.neck = std::max(2.0 * b.neck, 0.6 * b.size); b.neckUp = std::max(b.neckUp, 0.6); break;
             case CHG_EXTRA_TAIL: b.extraTail = true; break;
             case CHG_NEW_PATTERN: b.coat = (b.coat + 1 + (int)((h >> 9) % (COAT_COUNT - 1))) % COAT_COUNT; break;

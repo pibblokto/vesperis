@@ -49,6 +49,9 @@ Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the 
 Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
 fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10
 to J-12 2026-11-22: all twelve done.
+Added 2026-11-22 on R-454 (a culture for any world): J-13 to J-15 (the cold worlds, the clouds, greening a desert), no generation change.
+J-13 done 2026-11-22. J-14 and J-15 done 2026-11-23: all three done.
+Added 2026-11-23 on the user's word: J-16, the known issues 1.5.0 found and left open, fixed or closed (planned).
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a

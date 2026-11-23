@@ -143,7 +143,7 @@ void Game::renderSectorMap() {
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
                 if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // a tidal flat its wet sand
-                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1, v.mtint / 255.0);
+                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1, v.mtint / 255.0, v.mline - 1);
             }
         if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // the tide lines, the high water's pale along the flat's landward edge, the low water's dark
             const double S = surf.site.seaLevel;

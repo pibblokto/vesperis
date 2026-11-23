@@ -11,6 +11,7 @@
 // switched line's drop
 #include "harness/harness.h"
 #include "harness/test_game.h"
+#include <fstream>
 #include <map>
 #include <set>
 
@@ -158,6 +159,39 @@ bool near(double a, double b, double tol = 1e-9) { return std::fabs(a - b) <= to
 }   // namespace
 
 void unitLabGenes(const Check& check) {
+    {   // R-453: GREEN and PINK in every genesis's dye table (the six worlds' alphabets and hands): each of the eleven dyes read by a run, the two
+        // new ones a run each, taken from J-01's synonyms, so every other run reads the dye J-01's table gave it (drawn again here as genes.cpp
+        // drew it: its runs shuffled on the genesis's dye salt, the nine dyes first, the rest at random among them)
+        TestGame g;
+        labGame(g);
+        GeneWorld W[6];
+        geneWorlds(W);
+        int tables = 0, right = 0;
+        std::string detail;
+        for (const GeneWorld& w : W) {
+            if (w.body < 0) continue;
+            for (const Cult& cu : culturesOf(g, w.sys, w.body)) {
+                const MicrobeGenes& ge = cu.g;
+                if (!ge.valid) continue;
+                const GeneCode c = geneCodeOf(ge.genesis);
+                const int runs = c.letters * c.letters;
+                std::vector<int> j01(runs), order(runs);
+                Rng r(ge.genesis.id ^ 0x6E4E50000000000AULL);   // (genes.cpp's SALT_GENE_DYE)
+                for (int i = 0; i < runs; i++) order[i] = i;
+                for (int i = runs - 1; i > 0; i--) std::swap(order[i], order[r.irange(i + 1)]);
+                for (int i = 0; i < runs; i++) j01[order[i]] = i < WD_FLUORESCENT + 1 ? i : r.irange(WD_FLUORESCENT + 1);
+                int count[WD_COUNT] = {}, moved = 0;
+                for (int i = 0; i < runs && i < (int)c.dye.size(); i++) { count[clampi(c.dye[i], 0, WD_COUNT - 1)]++; moved += c.dye[i] != j01[i]; }
+                bool ok = (int)c.dye.size() == runs && count[WD_GREEN] == 1 && count[WD_PINK] == 1 && moved == 2;
+                for (int d = 0; d < WD_COUNT; d++) ok = ok && count[d] >= 1;
+                tables++; right += ok;
+                detail += fmt("%s%d letters%s: %d runs, %d moved%s", tables > 1 ? "; " : "", c.letters, w.mirrored ? " mirrored" : "", runs, moved, ok ? "" : " WRONG");
+                break;
+            }
+        }
+        check("genes: GREEN and PINK in every genesis's dye table, a run each from its synonyms, the rest as J-01 drew them (R-453)", tables >= 5 && right == tables,
+              fmt("%d of %d tables right: %s", right, tables, detail.c_str()));
+    }
     {   // Y-01 (R-444): the tree by world and by folder. Twelve living worlds' species seen, every one read but one of the world with the most
         // (W); one of W's read (X) given three strains (S2 of S1); a folder MINE holding another world's species (Y), X's S2 alone and W's
         // unread one. The pages: the ship's, one a world with a species read, MINE (UNSORTED empty, none). W's page: its species read and no
@@ -304,7 +338,7 @@ void unitLabGenes(const Check& check) {
         }
         bool chosen = false, letters = false, undone = false, refusedUnread = false, refusedNone = false, written = false, inFlask = false, recorded = false,
              cultured = false, dropped = false, shapeLearned = false, readIt = false, keptIt = false, twig = false;
-        std::string twigWords, readLine;
+        std::string twigWords, readLine, edRow, seqRow;
         if (!key.empty()) {
             CultureKind k0; Morph f0; MicrobeGenes g0;
             g.testFlaskKind(X, k0, f0, &g0);
@@ -342,11 +376,11 @@ void unitLabGenes(const Check& check) {
                 const Flask& F = g.testLab().flasks[1];
                 inFlask = F.n == 1 && F.who[0].sameSpecies(X) && F.who[0].strain == 1 && F.edited[0] && !E.writing;
                 cultured = inFlask && F.culture.kind[0].s.plan == MP_SPHERE && F.forms.size() == 1 && F.forms[0].plan == MP_SPHERE && F.parentForm[0].plan == MP_ROD;
-                // its drop: spheres, its shape learned (one gene changed)
+                // its drop: spheres; its shape known since it was changed (R-450)
                 g.testLabSkip(30);
                 dropped = g.testScopeStageFlask(1) && g.testScope().forms.size() == 1 && g.testScope().forms[0].plan == MP_SPHERE;
-                const GeneKnown* gk = g.guide.genes.count(g.testGeneKey(E.genesis.id, S->place)) ? &g.guide.genes[g.testGeneKey(E.genesis.id, S->place)] : nullptr;
-                shapeLearned = gk && gk->kind == GN_SHAPE && gk->how == GENE_SEEN_EDIT && g.testGeneWords(E.genesis.id, S->place) == "SHAPE";
+                const GeneKnown* gk = g.guide.genes.count(g.testGeneKey(X, S->place)) ? &g.guide.genes[g.testGeneKey(X, S->place)] : nullptr;
+                shapeLearned = gk && gk->kind == GN_SHAPE && g.testGeneWords(X, S->place) == "SHAPE";
                 // read on the sequencer: its edits said
                 FlaskSpecies line = X; line.strain = line.strainIn = 1;
                 g.testSeqPutLine(line);
@@ -356,6 +390,10 @@ void unitLabGenes(const Check& check) {
                 // kept as it grows; its twig on its world's tree
                 for (int t = 0; t < 40; t++) g.testLabSkip(30);
                 for (const KeptCulture& K : g.testLab().kept) keptIt = keptIt || (K.who.sameSpecies(X) && K.who.strain == 1);
+                // B-472: the kept line in the editor's and the sequencer's choosers by its own name, as the microscope's list has it
+                for (const EditorChoice& c : g.testEditorChoices()) if (c.from == "THE COLLECTION" && c.who.sameSpecies(X) && c.who.strain == 1) edRow = c.line;
+                for (const SequencerChoice& c : g.testSequencerChoices())
+                    if (c.who.sameSpecies(X) && c.who.strain == 1 && c.line.compare(0, 6, "FLASK ") != 0) seqRow = c.line;
                 TreeState& T = g.testTree();
                 g.testTreeShow(key);
                 for (const TreeLeaf& L : T.shown) if (L.key == key + "/S1" && L.lab && L.depth == 1) { twig = true; twigWords = L.name; }
@@ -372,6 +410,9 @@ void unitLabGenes(const Check& check) {
                   inFlask ? "yes" : "NO", cultured ? "yes" : "NO", dropped ? "spheres" : "WRONG", shapeLearned ? "yes" : "NO", readLine.c_str(),
                   keptIt ? "yes" : "NO", twigWords.c_str()));
         remove(GUIDE);
+        check("genes: a kept line by its own name in the editor's and the sequencer's choosers, as on the microscope (B-472)",
+              edRow.compare(0, 5, "ROUND") == 0 && seqRow.compare(0, 5, "ROUND") == 0,
+              fmt("the editor's row '%s', the sequencer's '%s'", edRow.c_str(), seqRow.c_str()));
     }
     {   // R-445: W asks for the new strain's folder, then its name. The same rod, named ROD by the player, kept in a folder MINE, one gene
         // changed: W opens the folders at MINE (the parent's); Esc writes nothing. W, Enter: the name entry holds "ROD E1" (the parent's name
@@ -466,75 +507,84 @@ void unitLabGenes(const Check& check) {
                   emptyRefused ? "yes" : "NO"));
         remove(GUIDE);
     }
-    {   // Y-02: what a gene does, learned. Of a six letters' world (ours): a line of its warmth and a quiet gene changed, in a flask past its
-        // parent's top warmth: its warmth seen, the two said, nothing learned; one of its warmth alone there: learned (ITS WARMTH, by an edit);
-        // one of a vital gene: dead at once, VITAL; one of a quiet gene alone, grown and its drop looked at: NOTHING SEEN. Of an eight letters'
-        // world: a strain of a hotter top read on the sequencer: its warmth gene, the one its letters differ in (by a strain read)
+    {   // R-450 (Y-02's learning by experiment before it): a gene is known for its species the moment it is changed. Of a six letters' world
+        // (ours), a species on the editor: its warmth NOT KNOWN, then changed by hand: WARMTH at once, before anything is written; the letters
+        // open, the guide's choice for each letter at the cursor, the current one as the line has it and heavier letters warmer; a kin of its
+        // world and genesis still NOT KNOWN there. Its vital gene cut: VITAL at once, the line would die and W refuses it. Undone, the warmth
+        // line written into a flask past its parent's top warmth: its flask says what it saw with its warmth gene. Of an eight letters' world:
+        // a strain of a hotter top read on the sequencer: its warmth gene learned for its species. A guide's lines by genesis (the old way, a
+        // `gene` line and a gene's name) are dropped as it loads
         TestGame g; Input in;
         labGame(g);
         GeneWorld W[6];
         geneWorlds(W);
-        bool candidates = false, warmth = false, vital = false, nothing = false, strain = false;
-        std::string said[4];
-        auto speciesOf = [&](const GeneWorld& w, FlaskSpecies& X, std::string& key) {
+        bool atOnce = false, guided = false, perSpecies = false, vital = false, flaskSays = false, strain = false, dropped = false;
+        std::string choices, refusal, flaskSaid, strainSaid;
+        auto speciesOf = [&](const GeneWorld& w, FlaskSpecies& X, std::string& key, int skip) {
             for (const Microbe& m : lifeOf(w.sys)->bodies[w.body].species) {
-                if (m.state != SS_LIVING || (m.cycle & LC_DORMANT)) continue;
+                if (m.state != SS_LIVING || (m.cycle & LC_DORMANT) || m.index == skip) continue;
                 X.sx = w.sys.star.sx; X.sy = w.sys.star.sy; X.sz = w.sys.star.sz; X.body = w.body; X.species = m.index; X.strain = X.strainIn = 0;
                 CultureKind k; Morph f; MicrobeGenes ge;
-                if (!g.testFlaskKind(X, k, f, &ge) || !geneOfKind(ge, GN_QUIET) || growthIn(k, bestOf(k)).fit != GF_GROWS) continue;
+                if (!g.testFlaskKind(X, k, f, &ge) || !geneOfKind(ge, GN_WARMTH) || !geneOfKind(ge, GN_VITAL) || growthIn(k, bestOf(k)).fit != GF_GROWS) continue;
                 key = Guide::bodyKey(X.sx, X.sy, X.sz, w.body) + "/M" + std::to_string(m.index);
                 g.guide.microbes[key].seen |= SEEN_FORM | SEEN_KIN;
                 return true;
             }
             return false;
         };
-        auto write = [&](const FlaskSpecies& X, const Medium& m, const std::vector<GeneEdit>& edits) {
-            g.testEditorPut(X, m, true);
-            for (const GeneEdit& e : edits) g.testEditorSet(e.place, e.cut, e.part);
-            g.testEditorWrite();
-            g.testLabSkip(EDIT_S + 1);
-            for (int i = 0; i < INCUBATOR_FLASKS; i++) if (g.testLab().flasks[i].n == 1 && g.testLab().flasks[i].who[0].strain > 0 && g.testLab().flasks[i].who[0].sameSpecies(X) &&
-                                                         g.testLab().flasks[i].events.size() == 1 && g.testLab().flasks[i].events[0].t > g.testLab().clock - 2) return i;
-            return -1;
-        };
-        FlaskSpecies X; std::string key;
-        if (W[2].body >= 0 && speciesOf(W[2], X, key)) {
+        FlaskSpecies X, Z; std::string key, zkey;
+        if (W[2].body >= 0 && speciesOf(W[2], X, key, -1)) {
             CultureKind k0; Morph f0; MicrobeGenes g0;
             g.testFlaskKind(X, k0, f0, &g0);
             const GeneCode c = geneCodeOf(g0.genesis);
             const MicrobeGene* Wm = geneOfKind(g0, GN_WARMTH);
-            const MicrobeGene* Q = geneOfKind(g0, GN_QUIET);
             const MicrobeGene* V = geneOfKind(g0, GN_VITAL);
             const Medium best = bestOf(k0);
+            g.testEditorPut(X, best, true);
+            EditorState& E = g.testEditor();
+            const bool before = g.testGeneWords(X, Wm->place) == "NOT KNOWN";
+            g.testEditorSet(Wm->place, false, heavier(c, Wm->part, 3));
+            atOnce = before && g.testGeneWords(X, Wm->place) == "WARMTH" && !E.writing;
+            // its letters open at the first letter: what each letter of the alphabet makes of it there
+            E.sel = Wm->place; E.letters = true; E.cursor = 0;
+            const std::vector<std::string> alt = g.testEditorLetterChoices();
+            const MicrobeGene* H = E.editedGenes.at(Wm->place);
+            const char* abc = alphabetOf(c.letters);
+            int cur = -1, lightest = -1, heaviest = -1;
+            for (int i = 0; abc[i]; i++) {
+                if (H && H->part[0] == abc[i]) cur = i;
+                if (lightest < 0 || c.weight[i] < c.weight[lightest]) lightest = i;
+                if (heaviest < 0 || c.weight[i] > c.weight[heaviest]) heaviest = i;
+                choices += fmt("%s%c %s", i ? ", " : "", abc[i], i < (int)alt.size() ? alt[i].c_str() : "?");
+            }
+            auto bestC = [](const std::string& t) { return t.compare(0, 5, "BEST ") == 0 ? atof(t.c_str() + 5) : -999.0; };
+            guided = (int)alt.size() == c.letters && cur >= 0 && H && alt[cur] == geneValueShort(E.editedKind, E.editedForm, *H, E.code) &&
+                     bestC(alt[heaviest]) > bestC(alt[lightest]);
+            E.letters = false;
+            for (const Microbe& m : lifeOf(W[2].sys)->bodies[W[2].body].species) {   // a kin of its world and genesis, its warmth gene at the same place
+                FlaskSpecies K = X; K.species = m.index;
+                CultureKind kk; Morph kf; MicrobeGenes kg;
+                if (m.index == X.species || m.state != SS_LIVING || !g.testFlaskKind(K, kk, kf, &kg) || !kg.valid || kg.genesis.id != g0.genesis.id) continue;
+                if (const MicrobeGene* KW = kg.at(Wm->place)) if (KW->kind == GN_WARMTH) { Z = K; break; }
+            }
+            perSpecies = Z.species >= 0 && Z.species != X.species && g.testGeneWords(Z, Wm->place) == "NOT KNOWN";
+            // its vital gene cut: known at once, the line would die, W refused
+            g.testEditorSet(V->place, true, V->part);
+            const bool dies = E.editedKind.dead && g.testGeneWords(X, V->place) == "VITAL";
+            g.testEditorWrite();
+            refusal = g.testStatus();
+            vital = dies && !E.writing && refusal.find("THE STRAIN WOULD DIE") != std::string::npos;
+            g.testEditorSet(V->place, false, V->part);   // put back in: only its warmth changed
+            g.testEditorWrite();
+            g.testLabSkip(EDIT_S + 1);
+            int f = -1;
+            for (int i = 0; i < INCUBATOR_FLASKS; i++) if (g.testLab().flasks[i].n == 1 && g.testLab().flasks[i].who[0].strain > 0 && g.testLab().flasks[i].who[0].sameSpecies(X)) f = i;
             Medium hot = best; hot.tempC = std::floor(k0.s.tMax) + 1;
-            GeneEdit ew; ew.place = Wm->place; ew.part = heavier(c, Wm->part, 3);
-            GeneEdit eq; eq.place = Q->place; eq.part = Q->part; eq.part[0] = eq.part[0] == 'A' ? 'C' : 'A';
-            GeneEdit ev; ev.place = V->place; ev.cut = true; ev.part = V->part;
-            // warmth and a quiet gene: said as candidates, nothing learned
-            int f = write(X, best, {ew, eq});
-            if (f >= 0) { g.testFlaskSet(f, hot); g.testLabSkip(6); said[0] = lastGene(g); }
-            candidates = f >= 0 && !g.guide.genes.count(g.testGeneKey(g0.genesis.id, Wm->place)) && said[0].find("WARMTH GENE: ") != std::string::npos;
-            // warmth alone: learned
-            f = write(X, best, {ew});
-            if (f >= 0) { g.testFlaskSet(f, hot); g.testLabSkip(6); said[1] = lastGene(g); }
-            const auto kw = g.guide.genes.find(g.testGeneKey(g0.genesis.id, Wm->place));
-            warmth = f >= 0 && kw != g.guide.genes.end() && kw->second.kind == GN_WARMTH && kw->second.how == GENE_SEEN_EDIT && said[1].find("IS THE WARMTH GENE") != std::string::npos;
-            // a vital gene cut: dead at once
-            f = write(X, best, {ev});
-            said[2] = lastGene(g);
-            const auto kv = g.guide.genes.find(g.testGeneKey(g0.genesis.id, V->place));
-            vital = f >= 0 && g.testLab().flasks[f].culture.kind[0].dead && kv != g.guide.genes.end() && kv->second.kind == GN_VITAL && kv->second.how == GENE_SEEN_DEATH;
-            // a quiet gene alone, grown and looked at: nothing seen
-            for (int i = 0; i < INCUBATOR_FLASKS; i++) if (g.testLab().flasks[i].n && g.testLab().flasks[i].who[0].strain > 0) g.testFlaskEmpty(i);
-            f = write(X, best, {eq});
-            g.testLabSkip(150);
-            if (f >= 0) g.testScopeStageFlask(f);
-            said[3] = lastGene(g);
-            const auto kq = g.guide.genes.find(g.testGeneKey(g0.genesis.id, Q->place));
-            nothing = f >= 0 && kq != g.guide.genes.end() && kq->second.kind < 0 && kq->second.how == GENE_SEEN_NOTHING && g.testGeneWords(g0.genesis.id, Q->place) == "NOTHING SEEN";
+            if (f >= 0) { g.testFlaskSet(f, hot); g.testLabSkip(6); flaskSaid = lastGene(g); }
+            flaskSays = f >= 0 && flaskSaid.find(fmt("GENE %d: WARMTH GENE", Wm->place + 1)) != std::string::npos;
         }
-        FlaskSpecies Y; std::string ykey; std::string strainSaid;
-        if (W[4].body >= 0 && speciesOf(W[4], Y, ykey)) {
+        FlaskSpecies Y; std::string ykey;
+        if (W[4].body >= 0 && speciesOf(W[4], Y, ykey, -1)) {
             CultureKind k0; Morph f0; MicrobeGenes g0;
             g.testFlaskKind(Y, k0, f0, &g0);
             StrainRecord r; r.what = SM_HOT; r.value = k0.s.tMax + 5;
@@ -543,15 +593,24 @@ void unitLabGenes(const Check& check) {
             g.testSeqPutLine(line);
             g.testLabSkip(SEQUENCE_S + 1);
             const MicrobeGene* Wm = geneOfKind(g0, GN_WARMTH);
-            const auto ks = Wm ? g.guide.genes.find(g.testGeneKey(g0.genesis.id, Wm->place)) : g.guide.genes.end();
             for (const std::string& l : g.testLab().seq.result) if (l.find("DIFFERS FROM THE PARENT'S") != std::string::npos) strainSaid = l;
-            strain = ks != g.guide.genes.end() && ks->second.kind == GN_WARMTH && ks->second.how == GENE_SEEN_STRAIN && strainSaid.find(": WARMTH") != std::string::npos;
+            strain = Wm && g.testGeneWords(Y, Wm->place) == "WARMTH" && strainSaid.find(": WARMTH") != std::string::npos;
         }
-        check("genes: what a gene does learned: one change seen, candidates from two, a vital death, nothing seen, a strain read (Y-02)",
-              candidates && warmth && vital && nothing && strain,
-              fmt("two changed: %s (%s); its warmth alone: %s (%s); a vital cut: %s (%s); a quiet one: %s (%s); a strain read: %s (%s)", candidates ? "candidates" : "WRONG",
-                  said[0].c_str(), warmth ? "learned" : "NOT LEARNED", said[1].c_str(), vital ? "VITAL" : "WRONG", said[2].c_str(), nothing ? "NOTHING SEEN" : "WRONG",
-                  said[3].c_str(), strain ? "its warmth" : "WRONG", strainSaid.c_str()));
+        {   // an older guide's gene line and gene name, by genesis: dropped
+            const std::string OLD = "shots/tests/unit_genes_old_guide.txt";
+            g.guide.save(OLD);
+            { std::ofstream o(OLD, std::ios::app); o << "gene 00000000deadbeef/3 2 1\nname G00000000deadbeef/3 MY GENE\n"; }
+            Guide h; h.load(OLD);
+            dropped = !h.genes.count("00000000deadbeef/3") && !h.names.count("G00000000deadbeef/3") && h.genes.size() == g.guide.genes.size();
+            remove(OLD.c_str());
+        }
+        check("genes: a gene known for its species the moment it is changed; its letters' guide; a vital change refused (R-450)",
+              atOnce && guided && perSpecies && vital && flaskSays && strain && dropped,
+              fmt("its warmth changed: %s; its letters' guide %s (%s); its kin M%d %s; its vital gene cut: %s ('%s'); its flask past its parent's top %s ('%s'); "
+                  "a strain read: %s ('%s'); an older guide's lines %s",
+                  atOnce ? "WARMTH at once" : "NOT KNOWN", guided ? "right" : "WRONG", choices.c_str(), Z.species, perSpecies ? "not known" : "KNOWN TOO",
+                  vital ? "refused" : "NOT REFUSED", refusal.c_str(), flaskSays ? "said it" : "DID NOT SAY IT", flaskSaid.c_str(), strain ? "its warmth learned" : "WRONG",
+                  strainSaid.c_str(), dropped ? "dropped" : "KEPT"));
         remove(GUIDE);
     }
     {   // Y-02: over a save and a load: the editor (its culture, its edits, its writing begun), a line's flask and its record; the writing ends after
@@ -578,7 +637,7 @@ void unitLabGenes(const Check& check) {
             g.testLabSkip(EDIT_S + 1);   // E1 in a flask
             g.testEditorSet(Wm->place, false, heavier(c, Wm->part, 1));
             g.testEditorWrite();
-            g.testLabSkip(30);           // E2 writing, 90 s to go
+            g.testLabSkip(EDIT_S / 2);   // E2 writing, half its time to go
             g.save(SAVE);
             const EditorState E = g.testEditor();
             CultureNow before = g.testFlaskNow(0);
@@ -894,8 +953,8 @@ void unitLabGenes(const Check& check) {
             g.testLabSkip(EDIT_S + 1);
             int f = -1;
             for (int i = 0; i < INCUBATOR_FLASKS && f < 0; i++) if (g.testLab().flasks[i].n == 1 && g.testLab().flasks[i].who[0].sameSpecies(A->w) && g.testLab().flasks[i].who[0].strain == 1) f = i;
-            GeneKnown k; k.kind = GN_SENSE; k.how = GENE_SEEN_EDIT;
-            g.guide.genes[g.testGeneKey(A->g.genesis.id, place)] = k;
+            GeneKnown k; k.kind = GN_SENSE;
+            g.guide.genes[g.testGeneKey(A->w, place)] = k;
             if (f >= 0) {
                 turns = (g.testLab().flasks[f].culture.kind[0].s.taxis & TX_LIGHT) != 0 && g.testLab().flasks[f].culture.kind[0].s.motion == MO_NONE;
                 g.testLabSkip(150);
@@ -983,7 +1042,8 @@ void unitLabGenes(const Check& check) {
         // its world's kin (a quiet gene, a sense, a shape or a rest: 3%): WHEN CROWDED, its growth two laws, its species' rate up to its crowd's
         // quorum share and 1/0.97 as slow past it; IN THE DARK, its species' rate lit and paying in the dark; NEVER, its species' rate lit and dark
         // (the price listed, never paid). Its vital gene IN THE LIGHT: it grows lit, lyses at once in the dark. A spore former's rest WHEN COLD
-        // (the warmth against its best): spores at its end 3 C under its best, none 1 C over it (its species' there). A luminous one's glow WHEN
+        // (the warmth against its best), starved (R-449: a flask at its crowd is fed for good): spores at its end 3 C under its best, none 1 C
+        // over it (its species' there). A luminous one's glow WHEN
         // STARVING: dark as it grows past its quorum share (its species aglow there), glowing at its crowd
         TestGame g;
         labGame(g);
@@ -1039,7 +1099,9 @@ void unitLabGenes(const Check& check) {
                     return (m.cycle & (LC_SPORULATING | LC_DORMANT)) && !(m.cycle & LC_GATHERING) && geneOfKind(c.g, GN_REST) && m.tOpt - 3 > m.tMin + 1 &&
                            m.tOpt + 1 < m.tMax - 1 && growthIn(c.k, bestOf(c.k)).fit == GF_GROWS;
                 }, R)) {
-                Medium under = bestOf(R.k), over = under;
+                Medium under = bestOf(R.k);
+                if (R.k.s.way == LW_LIGHT) under.light = CL_DARK; else under.energy = CE_NONE;   // nothing it eats: its hold, then its decline
+                Medium over = under;
                 under.tempC = R.k.s.tOpt - 3; over.tempC = R.k.s.tOpt + 1;
                 const CultureKind kr = lineOf(g, R, 1, fmt("%d~COLD", geneOfKind(R.g, GN_REST)->place + 1));
                 auto at4h = [](const CultureKind& k, const Medium& m) { const FlaskCulture c = aloneIn(k, m); return cultureAt(c, runCulture(c), 4 * 3600.0).one[0]; };
@@ -1177,7 +1239,8 @@ void addIn(TestGame& g, int i, const FlaskSpecies& w) {
 }   // namespace
 
 void unitLabWorld(const Check& check) {
-    {   // J-01: each world gene the lab shows, one change in a line alone in its flask: its look, learned against its parent
+    {   // J-01: each world gene the lab shows, one change in a line alone in its flask: its look, said with its gene (R-450: known as the editor
+        // would have it, from its change)
         TestGame g;
         labGame(g);
         int flask = 0, strain = 1, shown = 0, learned = 0, cases = 0;
@@ -1194,6 +1257,7 @@ void unitLabWorld(const Check& check) {
             const std::string p = part(code, *G);
             const int n = strain++;
             lineOf(g, c, n, fmt("%d=%s", G->place + 1, p.c_str()));
+            g.guide.genes[g.testGeneKey(c.w, G->place)].kind = kind;   // (known since its change on the editor)
             FlaskSpecies line = c.w; line.strain = line.strainIn = n;
             Medium m = bestOf(c.k);
             med(m);
@@ -1204,12 +1268,11 @@ void unitLabWorld(const Check& check) {
                 g.testLabSkip(60);
                 saw = saw || shows(g.testFlaskShow(i), g.testFlaskNow(i).one[0]);
             }
-            const auto k = g.guide.genes.find(g.testGeneKey(c.g.genesis.id, G->place));
-            const bool knew = k != g.guide.genes.end() && k->second.kind == kind;
-            shown += saw; learned += knew;
             const std::string said = flaskFinding(g, i);
+            const bool told = said.find(fmt("GENE %d: %s GENE", G->place + 1, GENE_KIND_NAMES[kind])) != std::string::npos;
+            shown += saw; learned += told;
             detail += fmt(" [%s, gene %d %s: %s, %s: %s]", c.key.substr(c.key.rfind('/') + 1).c_str(), G->place + 1, GENE_KIND_NAMES[kind], saw ? "shown" : "NOT SHOWN",
-                          knew ? "learned" : "NOT LEARNED", said.c_str());
+                          told ? "said" : "NOT SAID", said.c_str());
         };
         auto table = [](int value) { return [value](const GeneCode& c, const MicrobeGene& G) { return runReading(c, *worldTable(c, G.kind), value, 2) + G.part.substr(2); }; };
         auto heaviest = [](const GeneCode& c, const MicrobeGene& G) { return heavier(c, G.part, 99); };
@@ -1233,8 +1296,8 @@ void unitLabWorld(const Check& check) {
             heaviest, [](Medium& m) { m.tempC = -4; m.salt = 0; }, [](const FlaskShow& S, const CultureOne& o) { return S.frozen && o.stage == SG_FROZEN; }, 5);
         one(GN_SHIELD, [&](const Cult& x) { return grows(x) && x.k.world.shield < UV_SHIELD && x.k.s.way != LW_LIGHT; }, heaviest, [](Medium& m) { m.light = CL_UV; },
             [](const FlaskShow&, const CultureOne& o) { return o.stage == SG_GROWING || o.stage == SG_CROWD || o.stage == SG_COLONY; }, 30);
-        check("world: each world gene the lab shows, changed once in a line alone, shows in its flask and is learned against its parent (J-01)",
-              shown == cases && learned == cases && cases == 9, fmt("%d of %d shown, %d learned:%s", shown, cases, learned, detail.c_str()));
+        check("world: each world gene the lab shows, changed once in a line alone, shows in its flask and is said with its gene (J-01, R-450)",
+              shown == cases && learned == cases && cases == 9, fmt("%d of %d shown, %d said:%s", shown, cases, learned, detail.c_str()));
         remove(GUIDE);
     }
     {   // J-01: POISON and CARRIER, a line with another of its world in its flask
@@ -1256,6 +1319,7 @@ void unitLabWorld(const Check& check) {
             const MicrobeGene* C = geneOfKind(a.g, GN_CARRIER);
             lineOf(g, a, 1, fmt("%d=%s", P->place + 1, (runReading(c, c.poison, PZ_NERVE, 2) + heavier(c, P->part.substr(2), 99)).c_str()));
             lineOf(g, a, 2, fmt("%d=%s", C->place + 1, heavier(c, C->part, 99).c_str()));
+            g.guide.genes[g.testGeneKey(a.w, P->place)].kind = GN_POISON; g.guide.genes[g.testGeneKey(a.w, C->place)].kind = GN_CARRIER;   // (R-450: known since changed)
             for (int n = 1; n <= 2; n++) {
                 FlaskSpecies line = a.w; line.strain = line.strainIn = n;
                 putIn(g, n - 1, line, bestOf(a.k));
@@ -1267,14 +1331,13 @@ void unitLabWorld(const Check& check) {
                 killed = killed || (g.testFlaskShow(0).poisoned == 1 && g.testFlaskNow(0).one[1].stage == SG_POISONED);
                 passed = passed || g.testFlaskShow(1).passedTo == 1;
             }
-            const auto kp = g.guide.genes.find(g.testGeneKey(a.g.genesis.id, P->place)), kc = g.guide.genes.find(g.testGeneKey(a.g.genesis.id, C->place));
-            poisons = killed && kp != g.guide.genes.end() && kp->second.kind == GN_POISON && g.testLab().flasks[0].run.pair == PA_POISON;
-            passes = passed && kc != g.guide.genes.end() && kc->second.kind == GN_CARRIER;
+            poisons = killed && g.testLab().flasks[0].run.pair == PA_POISON && flaskFinding(g, 0).find(fmt("GENE %d: POISON GENE", P->place + 1)) != std::string::npos;
+            passes = passed && flaskFinding(g, 1).find(fmt("GENE %d: CARRIER GENE", C->place + 1)) != std::string::npos;
             detail = fmt("%s with %s: its NERVE poison %s, %s (%s); its genes %s, %s (%s)", a.key.substr(a.key.rfind('/') + 1).c_str(), b.key.substr(b.key.rfind('/') + 1).c_str(),
-                         killed ? "kills the other" : "KILLS NOTHING", poisons ? "learned" : "NOT LEARNED", flaskFinding(g, 0).c_str(), passed ? "pass to the other" : "PASS NOWHERE",
-                         passes ? "learned" : "NOT LEARNED", flaskFinding(g, 1).c_str());
+                         killed ? "kills the other" : "KILLS NOTHING", poisons ? "said" : "NOT SAID", flaskFinding(g, 0).c_str(), passed ? "pass to the other" : "PASS NOWHERE",
+                         passes ? "said" : "NOT SAID", flaskFinding(g, 1).c_str());
         } else detail = "no pair found";
-        check("world: POISON kills the other in its flask, CARRIER passes its genes to it; each learned against its parent (J-01)", poisons && passes, detail);
+        check("world: POISON kills the other in its flask, CARRIER passes its genes to it; each said with its gene (J-01, R-450)", poisons && passes, detail);
         remove(GUIDE);
     }
     {   // J-01: the editor's two pages: the arrows walk the four columns across both, Page Down and Page Up turn; a line with a world gene written,
