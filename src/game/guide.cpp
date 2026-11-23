@@ -136,6 +136,7 @@ bool Guide::load(const std::string& path) {
             std::string body, rest; is >> body; std::getline(is, rest); if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
             if (!body.empty()) madeSeen[body] = rest;
         }
+        else if (key == "wild") { std::string k; int read = 0; is >> k >> read; if (!is.fail()) wildFound[k] = read != 0; }   // J-12
         else if (key == "records") is >> recordsScheme;
         else if (key == "log") {
             LogEntry e; std::string rest; is >> e.t >> e.kind; std::getline(is, rest);
@@ -236,6 +237,7 @@ bool Guide::save(const std::string& path) const {
         f << "clock " << clock << "\n";
         for (const SeedRecord& r : seeded) f << seededLine(r) << "\n";
         for (const auto& [body, w] : madeSeen) f << "madeseen " << body << " " << w << "\n";   // J-03
+        for (const auto& [k, read] : wildFound) f << "wild " << k << " " << (read ? 1 : 0) << "\n";   // J-12
     }
     for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "

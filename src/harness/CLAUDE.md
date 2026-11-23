@@ -28,9 +28,11 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   water's, ground's and plants' trait from orbit and on the ground, `look_*.png`; its sites by the drawn ground's water and the drainage),
   `modes_seed_fates` (J-08: `seed fates`, each fate drawn, the changes, a herd over its steps, `fates/`; `fateRecipes`, `siteNear`,
   `writeSheet`), `modes_seed_kinds` (J-11: `seed kinds`, the made kinds of forty worlds and six lines and the shares, each kind drawn,
-  `kinds/`), `modes_overgrowth` (J-09: `overgrowth plates`, each type and forty variants on a forest's edge, and `overgrowth
-  world`, a world overgrown at its steps, `overgrowth/`; `growthOfType`, `growthLayer`, `growthGround`; J-10: `overgrowth ruins`, a city
-  and a capital overgrown and a city crumbled; `growthAtStep`, `growthLayerOn`),
+  `kinds/`), `modes_seed_record` (J-12: `seed record`, a seeded world's record in the catalogue and on the LIFE page, `record/`;
+  `seedRecordCase`, `seedRecordGame`: the world and line the unit's record checks send too), `modes_overgrowth` (J-09: `overgrowth
+  plates`, each type and forty variants on a forest's edge, and `overgrowth world`, a world overgrown at its steps, `overgrowth/`;
+  `growthOfType`, `growthLayer`, `growthGround`; J-10: `overgrowth ruins`, a city and a capital overgrown and a city crumbled;
+  `growthAtStep`, `growthLayerOn`),
   `modes_bestiary` (J-06: `bestiary plates`, 64 worlds' species framed alone and a herd or a school each, `plates/`; J-07: `bestiary
   ways`, each way played and drawn and every plan's gaits, `ways/`; `setupWaysScene`, the hunt's, the flock's and the swimmers' scenes).
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`, `civ_peoples`,
@@ -49,7 +51,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
   climate's reads, a runaway's seas; J-05: the looks by their world, where they lie, the made ground drawn, the words; J-09: the
   overgrowth by its genes, its cover by place and step, its structures walked round and no tree in one; J-10: the ruins' cover by place
   and step, the ruins under it, a stone rotter's ruins, the silence, the sounds' words; J-11, in `unit_seeding_kinds`: the made kinds by
-  their lines, a made hothouse's and a made snowball's ground, the ice's run), `unit_animals`
+  their lines, a made hothouse's and a made snowball's ground, the ice's run; J-12, in `unit_seeding_record`: natives died out, a line
+  found wild, the record), `unit_animals`
   (the group `animals`, J-06: the bestiary pure, no two of a world alike, every plan's poses, the herds' cells as generation 17's, an older
   save's notice; `VESPERIS_PLAYER_DIR` loads copies of the player's guide and save too; J-07: the gaits within bounds and the feet put
   down, the record and its names: a herd seen, N's name, the guide's bytes, a loan's names; J-08: the fates' shares fixed by world and

@@ -43,7 +43,8 @@ since Z-03 the surface and the game do too.
   `MADE_SEA_NAMES`, `MADE_GROUND_NAMES`, `MADE_PLANT_NAMES`. J-08: the animals' fates, a line's (`lineFateOf`, in its spread) and the
   air's (`madeFaunaOf`), `MADE_FAUNA_NAMES`, `MADE_DEATH_NAMES`. J-09: a line's overgrowth (`growthOf`: its type by its genes and way,
   its looks, from its eighth step), `MADE_GROWTH_NAMES`, `madeGrowthCover`. J-11: the snowball's ice run beside the runaway's
-  (`stepsPast`), the made kind (`madeKindOf`, after the fauna), `madeHarms` and `madeLivable`, `SeedVerdict::growLand`)
+  (`stepsPast`), the made kind (`madeKindOf`, after the fauna), `madeHarms` and `madeLivable`, `SeedVerdict::growLand`. J-12: how each
+  native was beaten (`SeedVerdict::beatenHow`), the natives a line drove out once it covered the world (`seedingDiedOut`), `diedOutWords`)
 - `morph_draw.h` (the slide's public interface: `Slide`, `Specimen`, the acts, `slidePalette`, `drawSlide`, `magnificationFor`,
   `seeingsFor`, `specimenExtentUm`, `specimenBox`, `specimenPlace`, `seeingBanks`)
 - `morph_shape.h` (internal: what a specimen is at a time: bodies, dots, strands and waves in slide micrometres, and the slide's banks),

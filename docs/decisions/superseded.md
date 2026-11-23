@@ -200,6 +200,11 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
   replaced by [J-11] (by how warm it now is too: none under a mean of 5 C, all of it from 15 C, so a cold world warmed greens)
 - A runaway's dried waters are drawn by the made pass (salt in the deep basins, dust, the beds' sand, salt and clay) [J-04]; replaced by
   [J-11] (a made hothouse lays the scorched felisian's whole cover over its own ground)
+- The worlds stay as generated: a line lives only aboard, and no culture leaves the ship (`IDEAS-genes.md` 1.8, the gene editor's plan)
+  [Y-02]; replaced by [J-02], [J-03] (a culture sent down changes its world; a world nobody seeded stays as generated, bit for bit) and
+  [J-12] (a native a line beat dies out once the line covers the world)
+- A native a line beat is a hundredth of what it was in a vial where the line spread, always [J-03]; replaced by [J-12] (none in any vial
+  of the world once it died out)
 
 ## The harness and the proof
 
@@ -411,3 +416,4 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [J-09]: log/7-1.5.0.md
 [J-04]: log/7-1.5.0.md
 [J-11]: log/7-1.5.0.md
+[J-12]: log/7-1.5.0.md

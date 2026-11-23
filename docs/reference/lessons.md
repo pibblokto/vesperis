@@ -225,8 +225,12 @@ Contents:
 - A form wholly in the ground's bank vanishes from the air: J-10's taken buildings showed once drawn five shades under the ground.
 - Wait for a worker with its blocking call (`worldPlanOf`), not by running frames till it is done: their count moves the game's clocks
   (the save's lab clock), so the output differs between two runs (J-10's ruins mode, caught by the snapshot's second run).
+- Moving the guide's clock gives a seeded world a new layer, and its maps are made again on their thread: wait for them after the skip,
+  not only at the parking (J-12's `seed record` drew a sheet over a globe whose map came or not, caught by the snapshot's second run).
 - A table of what seedings come to needs lines that take: one world's line let go on forty worlds took on 21 of 240 (J-03's), so J-11's
   `seed kinds` sends each world's own sea line with six edits. A search for a look picks past a pale flesh on pale ground.
+- A mode's case and the unit's are one search (`seedRecordCase`), asked for everything the frames must show (a native driven out and a
+  made kind), so the pictures and the checks see the same world.
 
 ## Pixels and the look
 
@@ -385,6 +389,8 @@ Contents:
   warmed to 26 C. J-11 weighs it by the mean the world reaches.
 - A cover laid after the made climate finds the forests already snow: a made kind's dead cover lies over the world as generated, as a
   dead world's lies over its then-world (J-11's snowball stood no dead trees till then).
+- A species marked gone must be gone from every sample of its world, or the record and the vial disagree: J-12 drives a native out only
+  where it lives in no niche or salt the line does not (80% of those beaten, a scratch count found), then takes it from every vial.
 
 ## Generation: the peoples
 
@@ -468,6 +474,9 @@ Contents:
 - A member named like a free function hides it in every member: name helpers distinctly (`nameOfKey`, not `keyName`).
 - Overlay and page states (STAR_MAP, the galaxy page) skip `drawCommonHUD` and the scene: check that statuses show there;
   render-tied work stops while they are open.
+- An empty value is no flag: the sequencer's drift text is empty for a line the wild left unchanged, so a wild line's reading carries
+  its record's key of its own (`wildKey`). Key a found line by its world and seeding (`<world>/L<k>`), never by the line alone: one line
+  goes down on many worlds, each with its own drift.
 - A key-scheme change needs a marker line in the save, not a generation bump.
 - A pure function's input is saved whole: Z-03's vial line left out the bloom, so a vial loaded held a crowd thirty times thinner;
   a flag added to a field's bits keeps the older lines readable.

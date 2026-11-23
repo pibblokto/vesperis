@@ -330,6 +330,11 @@ std::vector<Game::VialLine> Game::vialLines(const Vial& V, const StarSystem& S, 
         const int step = seedingStep(s, V.clock);
         if (step < 0) continue;
         const int k = spread++;
+        const std::vector<DiedOut> gone = seedingDiedOut(lifeOf(S)->bodies[V.body], s, V.clock);   // J-12: the natives it drove out, in no vial of the world
+        if (!gone.empty())
+            smp.held.erase(std::remove_if(smp.held.begin(), smp.held.end(), [&](const Held& h) {
+                return std::any_of(gone.begin(), gone.end(), [&](const DiedOut& d) { return d.species == h.species; });
+            }), smp.held.end());
         MadeWorld one; one.lines = k + 1;
         one.spread[k].place = StarSystem::bodyFromLatLon(s.lat, s.lon); one.spread[k].reach = madeReachOfStep(step, b.radiusKm);
         const CultureKind& K = s.wild.kind;

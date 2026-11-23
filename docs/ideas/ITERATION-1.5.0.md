@@ -64,7 +64,7 @@ with a culture, left out at first (the worlds stayed as generated), came in with
 | 24 | The overgrowth | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | done 2026-11-21 |
 | 25 | The overgrowth | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | done 2026-11-22 |
 | 26 | The close | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | done 2026-11-22 |
-| 27 | The close | J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | planned |
+| 27 | The close | J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | done 2026-11-22 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md` gets
 `1.5.0, done <date>`. This table is the order.

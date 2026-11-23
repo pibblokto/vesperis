@@ -336,12 +336,13 @@ bool Game::statsKindsOverflow() const {
 void Game::updateStats(const Input& in, double dt, double realDt) {
     bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
     if (any && !statsKinds && !statsLife && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
-    else if (any && !statsKinds && !statsLife && in.pressed[KEY_L]) { statsLife = true; treeBuild(); }
+    else if (any && !statsKinds && !statsLife && in.pressed[KEY_L]) { statsLife = true; treeBuild(); catalogueCountsMake(); }   // (J-12: the seeded worlds)
     else if (any) { statsKinds = statsLife = false; closeScreen(); }
 }
 
 // Z-07: the LIFE page: what was found of the living small, the explorer's own (a friend's lent in no count but its own line), in the other
-// screens' words: the species the catalogue's rows, their forms and stages their sheets', the woken the flasks' words, the geneses the tree's
+// screens' words: the species the catalogue's rows, their forms and stages their sheets', the woken the flasks' words, the geneses the tree's; J-12:
+// the worlds seeded, their made kinds and the species died out the catalogue's (`catalogueCountsMake` as the page opens)
 void Game::renderStatsLife() {
     int y = 8;
     auto line = [&](const std::string& s, uint32_t c) { drawText(canvas, 12, y, s.c_str(), c); y += 10; };
@@ -401,6 +402,14 @@ void Game::renderStatsLife() {
         }
         line(fmt("KIN ACROSS STARS      ") + plural(across, "SPECIES", "SPECIES"), HUD_GREEN);
         if (across > 0) sub(fmt("FARTHEST %.1f LY APART", farLy));
+    }
+    if (cat.counts.worlds > 0) {   // J-12: the worlds seeded and the lines that took, their made kinds, the species seen that died out, the animals gone
+        const CatalogueCounts& N = cat.counts;
+        line(fmt("WORLDS SEEDED         %d, %d OF %d %s TOOK", N.worlds, N.took, N.sent, N.sent == 1 ? "LINE" : "LINES"), HUD_GREEN);
+        std::string kinds;
+        for (const std::string& k : N.kinds) kinds += (kinds.empty() ? "" : ", ") + k;
+        if (!kinds.empty()) sub("MADE: " + kinds);
+        line("DIED OUT              " + plural(N.diedOut, "SPECIES", "SPECIES") + ", " + plural(N.gone, "ANIMAL GONE", "ANIMALS GONE"), HUD_GREEN);
     }
     int lentN = 0;
     for (const auto& kv : guide.lentMicrobes) if (!guide.microbes.count(kv.first)) lentN++;

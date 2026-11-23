@@ -180,7 +180,7 @@ static const Mode MODES[] = {
                 "`lab_genes_switch.png` (a glow IN THE DARK by S, aglow in a dark flask; a rest IN THE LIGHT, resting lit, dying dark). J-01: the world "
                 "genes, forty species' world values, the editor's world page; `cultures`: `lab_cultures_world.png`",
                 "modes_lab.cpp", runLab},
-        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
+        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds | record", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
                 "layer's tint, with its cover, and as generated again (the first pictures pixel for pixel): `seed_test_<view>_<none|tint|cover>.png`. J-03 `worlds`: six lines "
                 "(wild, warm, cold, a dye, a methane-maker, STOP cut) let go on forty worlds: each verdict and why, the drift, the spread's steps and what each shows. `sea`: the "
                 "dye line in a sea off a coast, before and at its eighth step: `seed_sea_<map|zoom|globe|ground>_<before|after>.png`. J-04 `climate`: each gas on twenty worlds, "
@@ -190,7 +190,8 @@ static const Mode MODES[] = {
                 "species came to, each drawn on the ground (`fates/fate_<tag>.png`), the remains' five stages and kinds, each change on a young (`fates/change_<name>.png`, "
                 "`fates/changes.png`), a seeded world's herd over its steps (`fates/steps_NN.png`; modes_seed_fates.cpp). J-11 `kinds`: the made kind each of the forty worlds and "
                 "six lines ends as at its 64th step, whether it harmed, changed only the looks or made the world more livable, and the shares; then each made kind's "
-                "recipe on a world: the globe before and after, the data sheet and the ground (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`; modes_seed_kinds.cpp)",
+                "recipe on a world: the globe before and after, the data sheet and the ground (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`; modes_seed_kinds.cpp). "
+                "J-12 `record`: a poisoned world's record in the catalogue, three sheets and the LIFE page (`record/*.png`; modes_seed_record.cpp)",
          "modes_seed.cpp", runSeed},
         {"overgrowth", "life", "plates | world | ruins",
          "J-09 `plates`: each overgrowth type and forty variants on a test ground (`overgrowth/type_<name>.png`, `overgrowth/variant_NN_<tag>.png`, the sheets "

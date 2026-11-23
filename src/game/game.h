@@ -869,7 +869,7 @@ protected:
     void sequencerEnter(); void updateSequencer(const Input& in, double dt, double realDt); void renderSequencer(); void sequencerPad(PadMenu& m) const;
     void sequencerSave(std::string& lines) const; bool sequencerLoad(const std::string& line); void sequencerReset();
     void sequencerChoices();
-    bool sequencerPut(const FlaskSpecies& w, const std::string& wild = "");
+    bool sequencerPut(const FlaskSpecies& w, const std::string& wild = "", const std::string& wildKey = "");
     void sequencerMake();
     void sequencerTick();             // the reading's end as the lab's clock reaches it (`updateLab`)
     std::string sequencerResult();    // its result's lines (its kin among those read), the log's line
@@ -945,6 +945,15 @@ protected:
     void catalogueName();
     const MicrobeSheet& catalogueSheet(const std::string& key) const;   // the explorer's sheet, else a friend's lent
     std::string catalogueLine(const CatalogueRow& r, bool world = true);
+    // J-12: a world as the catalogue reads it (a seeded one's made kind and natives died out made again each list; its animals when asked); a
+    // seeded line's name; an animal's name ("" none) and marks; whether a row's species is gone from its world (drawn dim); an animal's sheet
+    CatalogueWorld& catalogueWorld(const std::string& worldKey, LabSystems& systems, bool animals);
+    std::string catalogueLineName(const std::string& lineKey) const;
+    std::string catalogueAnimalName(const std::string& key) const;
+    std::string catalogueAnimalMarks(const std::string& key) const;
+    void catalogueCountsMake();   // the LIFE page's seeded worlds (`cat.counts`), as it opens
+    bool catalogueGone(const CatalogueRow& r);
+    void renderCatalogueAnimal();
     void renderCatalogueSheet();
     double renderCatalogueForm(const Morph& m, const MicrobeSheet& seen, uint64_t seed);
     void renderStatsLife();

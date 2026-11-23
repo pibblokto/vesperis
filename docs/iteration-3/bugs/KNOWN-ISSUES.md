@@ -188,11 +188,13 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-479 | S4 | surface | A torn membrane is heard, never seen: it is drawn whole again behind the explorer. Found in J-10. | open, found 2026-11-22 |
 | KI-480 | S4 | surface | A stone rotter crumbles every settlement its spread reached alike, whatever its line lives on there, and a settlement in view keeps its state till the next landing. Found in J-10. | open, found 2026-11-22 |
 | KI-481 | S4 | surface | A ruin's cover has no gloss and no night light (the ground's has both); its nodules and drapes are lit as the walls are. Found in J-10. | open, found 2026-11-22 |
-| KI-482 | S4 | game | A made kind is named on the data sheet alone: the analyzer's list, the IN ORBIT line and the log, the telescope and the catalogue name the kind as generated. Found in J-11. | open, found 2026-11-22 |
+| KI-482 | S4 | game | A made kind is named on the data sheet and the catalogue's head alone (J-12): the analyzer's list, the IN ORBIT line and the log, and the telescope name the kind as generated. Found in J-11. | open, found 2026-11-22 |
 | KI-483 | S4 | life | Over `seed kinds`' six lines 50% of seedings harm, 20% change only the looks, 11% make a world more livable (the design: half, a third, one in five); not tuned. Found in J-11. | open, found 2026-11-22 |
 | KI-484 | S4 | galaxy | A made snowball's sea ice is drawn white like its snow (the frozen felisian's ice is blue in a bank of its own), and a greened world's biomes stay where they were. Found in J-11. | open, found 2026-11-22 |
 | KI-485 | S4 | life | A made kind is read at the clock with no memory: a later line that warms a snowball past its line thaws it at once, and a hothouse's seas come back. Found in J-11. | open, found 2026-11-22 |
 | KI-486 | S4 | life | The cold kills a world's animals by how much colder it is alone (from 4 C), so a hot world cooled into the temperate loses them to the cold; the heat now weighs the mean a world reaches (J-11). Found in J-11. | open, found 2026-11-22 |
+| KI-487 | S4 | life | A native a line beat dies out over its whole world once the line covers it: its niches and salts are read, its band of warmth not, so a vial where the line cannot live holds none either, and a later line's verdict still meets it. Found in J-12. | open, found 2026-11-22 |
+| KI-488 | S4 | game | The catalogue's animals are listed by world alone (by kin lists the microbes), their sheets are words with no picture, and their marks are what the ground showed: a fate never seen there marks nothing. Found in J-12. | open, found 2026-11-22 |
 
 ## The long rows, continued
 

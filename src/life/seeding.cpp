@@ -810,7 +810,7 @@ SeedVerdict seedVerdictOf(const StarSystem& sys, int body, const SeedLine& line,
         }
         if (nv.pair == PA_POISON && nv.lead == 1) { V.native = nv.species; V.pair = nv.pair; V.fate = SF_OUTGROWN; return V; }
         if (!beats) continue;
-        V.beaten.push_back(nv.species);
+        V.beaten.push_back(nv.species); V.beatenHow.push_back(nv.pair);   // (J-12: how)
         if (nv.cells > mostCells) { mostCells = nv.cells; V.native = nv.species; V.pair = nv.pair; }
     }
     // its pace: by its doubling there against two hours' (a slow grower half as fast at most, a quick one half again), its lift's on top
@@ -899,6 +899,29 @@ int seedingStep(const Seeding& s, double clock) {
     const double pace = s.run ? s.verdict.pace : 1.0;
     return (int)std::min<double>(MADE_STEPS, std::floor((clock - s.clock) * pace / MADE_STEP_S));
 }
+
+std::vector<DiedOut> seedingDiedOut(const Biota& B, const Seeding& s, double clock) {
+    std::vector<DiedOut> out;
+    if (!s.run || !s.verdict.takes() || seedingStep(s, clock) < MADE_STEPS) return out;
+    const MadeSpread sp = spreadOf(s);
+    for (size_t k = 0; k < s.verdict.beaten.size(); k++) {
+        const int n = s.verdict.beaten[k];
+        if (n < 0 || n >= (int)B.species.size()) continue;
+        const Microbe& m = B.species[n];
+        bool only = true;   // (it lives in no niche or salt the line does not)
+        for (int ni = 0; ni < NI_COUNT && only; ni++) {
+            const bool wet = ni == NI_LIQUID || ni == NI_SILT || ni == NI_MAT || ni == NI_SPRING || ni == NI_VENT;   // (as a vial's microhabitat reads them)
+            if ((m.niches & nicheBit(ni)) && !wet) only = sp.land;
+        }
+        for (int salt = std::max(0, m.saltLo); salt <= std::min(2, m.saltHi) && only; salt++) only = (sp.waters >> salt) & 1;
+        if (!only) continue;
+        DiedOut d; d.species = n; d.how = k < s.verdict.beatenHow.size() ? s.verdict.beatenHow[k] : PA_COMPETE;
+        out.push_back(d);
+    }
+    return out;
+}
+
+const char* diedOutWords(int how) { return how == PA_POISON ? "POISONED BY" : (how == PA_CYCLE ? "EATEN BY" : "OUTGROWN BY"); }
 
 MadeWorld madeWorldOf(const StarSystem& sys, int body, const std::vector<Seeding>& seedings, double clock) {
     MadeWorld m;

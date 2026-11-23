@@ -374,6 +374,9 @@ public:
     std::vector<std::string>& testShardWorldKeys() { listShardWorlds(); return shardWorldKeys; }
     // Z-07: the catalogue's state (its rows, its page, its way of seeing) and the statistics' LIFE page
     CatalogueState& testCat() { return cat; }
+    std::string testCatLine(const CatalogueRow& r) { return catalogueLine(r); }   // J-12: a row's words
+    void testCatCounts() { catalogueCountsMake(); }   // J-12: the LIFE page's seeded worlds
+    bool testSeqPutWild(const SequencerChoice& c) { return sequencerPut(c.who, c.wild, c.wildKey); }   // J-12: a line found wild put on the sequencer
     bool testStatsLife() const { return statsLife; }
     int testVisionMode() const { return visionMode; }   // R-434: the activity vision's VISION_ACTIVITY
     void testWalkToBuggy() { if (surf.buggy.deployed) { surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z; } }

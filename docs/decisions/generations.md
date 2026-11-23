@@ -40,7 +40,9 @@ after every draw before them (the herds' sizes follow: a lone one, a pack); the 
 (still 18): three ground materials appended (TISSUE, THREADS, HARD GROWTH: no map hash moves) for a seeded world's overgrowth; a world
 nobody seeded is drawn as before. J-10 (still 18): a seeded world's ruins overgrown and crumbled, and its sounds; a world nobody seeded
 draws its ruins and plays its sounds as before. J-11 (still 18): a seeded world's made kind (the data sheet's line, sentence and phrase; a
-made hothouse's or snowball's dead cover over its own ground); a world nobody seeded is drawn and named as before.
+made hothouse's or snowball's dead cover over its own ground); a world nobody seeded is drawn and named as before. J-12 (still 18): a
+seeded world's record (the natives a line drove out gone from its vials, a line found wild, the catalogue's rows and the LIFE page's); a
+world nobody seeded is drawn and sampled as before.
 
 ## 17
 

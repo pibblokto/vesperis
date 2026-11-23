@@ -174,7 +174,7 @@ bool Game::microscopeStageKept(int k) {
     B.stage = LS_SIMPLE;
     Sample S;
     std::vector<Morph> forms;
-    scope.species.clear(); scope.keys.clear(); scope.worlds.clear();
+    scope.species.clear(); scope.keys.clear(); scope.worlds.clear(); scope.wild.clear();
     for (size_t i = 0; i < who.size(); i++) {
         CultureKind kind; Morph form; double slept = 0;
         MicrobeGenes genes;

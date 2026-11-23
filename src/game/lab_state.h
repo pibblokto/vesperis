@@ -87,6 +87,7 @@ struct MicroscopeState {
     // the HUD's two lines for what is on the stage (a vial's world and its line, a flask's number and its stage)
     std::vector<Microbe> species;
     std::vector<std::string> keys, worlds;
+    std::vector<std::string> wild;   // J-12: a vial's seeded line's record key in the guide's `wildFound` ("<world key>/L<k>"), "" for the rest
     std::string title, line;
     int lineState[2] = {-1, -1};  // Y-04: a flask's switched lines' state as their drop was taken (-1 none)
     Sample sample;
@@ -206,7 +207,7 @@ struct IncubatorState {
 // Z-06: the sequencer (game/sequencer.cpp): a species seen in a vial or a flask's read in SEQUENCE_S on the lab's clock (saved: what is on it,
 // when its reading began, whether its result was told), its screen's chooser; made again from those: its lineage, its genome's length, its
 // name and world, a made species' watermark (its letters drawn as they are read), the result's lines
-struct SequencerChoice { FlaskSpecies who; std::string line; std::string wild; };   // J-03: a vial's seeded line, its genes changed in the wild ("23, 29")
+struct SequencerChoice { FlaskSpecies who; std::string line; std::string wild, wildKey; };   // J-03: a vial's seeded line, its genes changed in the wild ("23, 29"); J-12: its record's key (`wildFound`)
 struct SequencerState {
     bool on = false;
     FlaskSpecies who;
@@ -224,6 +225,7 @@ struct SequencerState {
     ChooserPage pages;            // R-432: the chooser's folders (a world's, the flasks', the collection's)
     int lastTab = 0;              // R-441: its tab last shown
     std::string wild;             // J-03: a seeded line from a vial: its genes changed in the wild ("" none; saved, `seqwild`)
+    std::string wildKey;          // J-12: its record in the guide's `wildFound` ("<world key>/L<k>"; saved, `seqwildkey`): read once its reading ends
 };
 // the tree of kin's screen (game/tree_screen.cpp): every species sequenced and the ship's own, a leaf each in the tree's order (home's genesis
 // first, then by genesis, deep branch, a kin cell's boxes, the system's line, the world, its comb), the common ancestor of each with the one
@@ -324,18 +326,36 @@ struct LabState {
 // world (a world's head, its species) or by kin (the sequenced in the tree's order, a genesis's head; then those not read), a species' sheet
 // beside its form drawn live in a way it was seen in. Nothing of it is saved; its worlds are drawn as it opens (their names and the species'
 // read as it draws)
+// J-12: a row's kind: a species seen under the microscope, a seeded line found in the wild, an animal species seen on the ground
+enum CatalogueRowKind { CR_SPECIES = 0, CR_WILD, CR_ANIMAL };
 struct CatalogueRow {
-    std::string key;              // a species' (`<body key>/M<index>`); a head's its world's key, or "" (its line its words)
+    std::string key;              // a species' (`<body key>/M<index>`); a head's its world's key, or "" (its line its words); J-12: a wild
+                                  // line's species' (its sheet's), an animal's (`<body key>/A<index>`)
     std::string line;             // a head's words on the kin page (its genesis, or the unread)
     bool head = false, lent = false;
     uint64_t genesis = 0;         // a kin page's genesis (its head's colour)
+    int kind = CR_SPECIES;        // J-12
+    std::string wild;             // J-12: a wild line's record (the guide's `wildFound` key, "<world key>/L<k>")
 };
+// J-12: a seeded line found in the wild: the world it went down on, its line's key, its species' key (its sheet), the line as the wild left it
+// (its form, its values), what the wild changed in it ("23, 29"), whether the sequencer read it there, the guide's clock when it went down
+struct CatalogueWild { std::string world, line, species, drift; Morph form; Microbe s; bool read = false; double clock = 0; };
+struct CatalogueAnimal { std::string words; int way = 0, social = 0; };   // J-12: an animal species (its words, its way and its company)
 struct CatalogueWorld {           // a world as the catalogue reads it: its kind, its list's species and forms
     bool ok = false;
     int kind = 0;
     std::vector<Microbe> species;
     std::vector<Morph> forms;
+    // J-12: a seeded world's made kind's name ("" none), the lines that took there, and its natives died out (by index: the words of the line
+    // that did it, and how), at the guide's clock as the catalogue opened; its animals, made once one of them was seen
+    std::string made;
+    int took = 0;
+    std::map<int, std::pair<std::string, int>> diedOut;
+    std::vector<CatalogueAnimal> animals; bool animalsMade = false;
 };
+// J-12: the LIFE page's seeded worlds, made as it opens: how many, the lines sent and those that took, the made kinds now (a name a world),
+// the explorer's species seen that died out (the catalogue's DIED OUT rows) and the animals seen gone
+struct CatalogueCounts { int worlds = 0, sent = 0, took = 0, diedOut = 0, gone = 0; std::vector<std::string> kinds; };
 struct CatalogueState {
     int page = 0;                 // 0 the list, 1 a species' sheet
     int order = 0;                // 0 by world, 1 by kin
@@ -344,6 +364,8 @@ struct CatalogueState {
     double t0 = 0;                // its form's clock began (the real clock)
     std::vector<CatalogueRow> rows;
     std::map<std::string, CatalogueWorld> worlds;   // by body key
+    std::map<std::string, CatalogueWild> wilds;     // J-12: by their records' keys
+    CatalogueCounts counts;                         // J-12: the LIFE page's
     std::unique_ptr<Framebuffer> fb;                // the form's slide: a framebuffer of its own (every bank its way's)
     std::vector<uint32_t> rgb;                      // and its colours
     uint64_t still = 0;                             // the still drawn in them (under the electron: its species' and the scale's), 0 none

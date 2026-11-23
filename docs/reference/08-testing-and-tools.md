@@ -1453,6 +1453,14 @@ with the parent's typed in), its line writing, the line in flask 2); Y-03:
   not a pale one): the globe from the parking orbit before and after, the data sheet and the ground by day, at the coast or on the
   ground the kind is drawn on (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`). Prints each world, its kind line, sentence and
   phrase. Exit 1 when a recipe found no world (about 11 s)
+* `seed record` (`modes_seed_record.cpp`): J-12: a world's own sea line given a nerve poison (its STOP cut and its cells bound, so it
+  overgrows; else the poison alone) let go on the first of `seed climate`'s worlds with plants and animals where it drives a native out
+  and makes a made kind (`seedRecordCase`, the unit's too), in a game at its 64th step (`seedRecordGame`). The guide gets the explorer's
+  sheets of the natives (those it beat among them), the line found wild and read there, and four animals seen (gone; dying and changed;
+  named; plain). Prints the natives beaten and those died out, the catalogue's rows and the LIFE page's counts. Draws the catalogue by
+  world, a native's sheet that died out, the line's found wild, an animal's gone and the LIFE page (`record/<catalogue|died_out|
+  found_wild|animal_gone|life_page>.png`, all five in `record/record.png`), the system's maps made first. Exit 1 when a count is wrong
+  (about a second)
 * `overgrowth plates` (`modes_overgrowth.cpp`): J-09: each of the ten overgrowth types (`type_<name>.png`) and forty variants of them
   (`variant_NN_<tag>.png`: their colours, textures, grains, wetness, hardness, a glow at night, cilia) at 2x, each a layer made by hand
   that covers the whole world (`growthOfType`, `growthLayer`), on the first clear-aired flora world of `seed climate`'s with a forest's

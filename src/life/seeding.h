@@ -56,6 +56,7 @@ struct SeedVerdict {
     int native = -1;          // the native it met (its world index): the one that beat it, else the most of those it beat
     int pair = PA_NONE;       // how they met
     std::vector<int> beaten;  // the natives it outgrew, ate or poisoned there
+    std::vector<int> beatenHow;    // J-12: how it beat each (`beaten`'s order): PA_COMPETE outgrew it, PA_CYCLE ate it, PA_POISON poisoned it
     std::vector<GeneEdit> drift;   // its genes changed in the wild: a letter stepped, or the gene broken (cut)
     double pace = 1;          // its spread's pace (1: the whole world in two hours; a slow grower's under, a fast one's and LIFT's over)
     RGB water;                // the world's water as generated (a dye's colour is mixed into it)
@@ -97,6 +98,13 @@ void seedingRun(const StarSystem& sys, int body, Seeding& s);
 // the step a seeding has come to at the clock: 0 as it is let go, one more each MADE_STEP_S at its pace (`SeedVerdict::pace`), MADE_STEPS at
 // most; -1 before it went down
 int seedingStep(const Seeding& s, double clock);
+// J-12: the natives a line beat at its place that died out by the clock (each with how it beat them: `SeedVerdict::beatenHow`). They die out
+// once its spread covers the world (its last step), each that lives only in niches and salts the line lives in too: a water's salts among
+// the line's waters, any other niche only where the line lives on the land. From then no vial of the world holds them
+struct DiedOut { int species = -1, how = PA_NONE; };
+std::vector<DiedOut> seedingDiedOut(const Biota& B, const Seeding& s, double clock);
+// J-12: "OUTGROWN BY", "EATEN BY", "POISONED BY"
+const char* diedOutWords(int how);
 // a world's layer at the clock from its seedings in the order they went down: the first MADE_LINES that took (a culture that died made
 // nothing), each spread where its line lives, the latest dye's colour over the waters and the latest glow's light at night. A layer that
 // draws nothing has no key (0): a world whose lines only spread is drawn as generated

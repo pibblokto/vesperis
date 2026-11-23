@@ -428,11 +428,12 @@ int runSeed(int argc, char** argv) {
     if (what == "looks") return seedLooks();
     if (what == "fates") return seedFates();
     if (what == "kinds") return seedKinds();
+    if (what == "record") return seedRecord();
     if (what != "test") {
-        printf("seed: test | worlds | sea | climate | traits | looks | fates | kinds (J-02: the test layer in every view, and off again; J-03: six lines on forty "
+        printf("seed: test | worlds | sea | climate | traits | looks | fates | kinds | record (J-02: the test layer in every view, and off again; J-03: six lines on forty "
                "worlds, a seeded sea; J-04: each gas on twenty worlds, each made air's trait drawn; J-05: each made water's, ground's and plants' trait drawn; "
                "J-08: each fate of the animals and each change drawn, a seeded world's herds over its steps; J-11: the made kind each of forty worlds and six "
-               "lines ends as, the shares of harm, looks and more livable, each made kind drawn)\n");
+               "lines ends as, the shares of harm, looks and more livable, each made kind drawn; J-12: a seeded world's record in the catalogue and on the LIFE page)\n");
         return 1;
     }
     const double t0 = nowSec();

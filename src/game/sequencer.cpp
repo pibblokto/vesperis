@@ -97,7 +97,7 @@ void Game::sequencerChoices() {
             const std::string key = flaskSpeciesKey(w);
             const auto it = guide.microbes.find(key);
             if (it == guide.microbes.end() || !(it->second.seen & SEEN_FORM) || !listed.insert(L.key + "|" + V.name).second) continue;
-            SequencerChoice c; c.who = w; c.wild = L.wild;
+            SequencerChoice c; c.who = w; c.wild = L.wild; c.wildKey = Guide::bodyKey(V.sx, V.sy, V.sz, V.body) + "/L" + std::to_string(L.seeding);   // (J-12)
             add(c, Guide::bodyKey(V.sx, V.sy, V.sz, V.body), flaskSpeciesWords(w, L.line.form, true), " - SEEDED, FROM " + V.name, formTraits(L.line.form));
         }
         for (const Held& H : smp.held) {
@@ -179,10 +179,10 @@ double Game::sequencerRead() const {
     return Q.on ? clampd((lab.clock - Q.t0) / SEQUENCE_S, 0, 1) : 0;
 }
 
-bool Game::sequencerPut(const FlaskSpecies& w, const std::string& wild) {
+bool Game::sequencerPut(const FlaskSpecies& w, const std::string& wild, const std::string& wildKey) {
     SequencerState& Q = lab.seq;
     Q.on = true; Q.who = w; Q.who.strainIn = Q.who.strain; Q.t0 = lab.clock; Q.told = false; Q.result.clear();   // Y-02: a line read as it is
-    Q.wild = wild;
+    Q.wild = wild; Q.wildKey = wildKey;
     sequencerMake();
     if (!Q.on) { refuse("ITS WORLD NO LONGER EXISTS"); return false; }
     if (!Q.line.valid) { Q.on = false; refuse("NO GENOME TO SEQUENCE", 3); return false; }
@@ -259,7 +259,8 @@ void Game::sequencerTick() {
     const std::string line = sequencerResult();
     status(fitText(Q.artificial ? std::string("SEQUENCED: MADE, A WATERMARK FOR THE DECODER") : "SEQUENCED: " + Q.result[2], UW - 12), 6);
     const std::string wild = Q.wild.empty() ? std::string() : fmt("CHANGED IN THE WILD: GENE%s %s", Q.wild.find(',') != std::string::npos ? "S" : "", Q.wild.c_str());   // J-03
-    logEvent("KIN", wild.empty() ? line : line + "; " + wild);
+    if (!Q.wildKey.empty()) guide.wildFound[Q.wildKey] = true;   // J-12: the record's line read from the wild (the catalogue says what changed)
+    logEvent("KIN", wild.empty() ? (Q.wildKey.empty() ? line : line + "; UNCHANGED IN THE WILD") : line + "; " + wild);
     if (!learned.empty()) { statusNext = fitText(learned, UW - 12); statusNextSecs = 6; guide.save(guidePath); }
     else if (!wild.empty()) { statusNext = fitText(wild, UW - 12); statusNextSecs = 6; }
     audio.beep = BEEP_LOCK;
@@ -277,7 +278,7 @@ void Game::updateSequencer(const Input& in, double dt, double realDt) {
         const int r = Q.choices.empty() ? -2 : chooserKeys(in, Q.pages, Q.choiceSel);
         if (Q.pages.tabbed) Q.lastTab = Q.pages.tab;
         if (r == -2) { Q.choosing = false; return; }
-        if (r >= 0 && r < (int)Q.choices.size()) { Q.choosing = false; sequencerPut(Q.choices[r].who, Q.choices[r].wild); }
+        if (r >= 0 && r < (int)Q.choices.size()) { Q.choosing = false; sequencerPut(Q.choices[r].who, Q.choices[r].wild, Q.choices[r].wildKey); }
         return;
     }
     if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
@@ -393,6 +394,7 @@ void Game::sequencerSave(std::string& lines) const {
     if (Q.who.strain > 0) f << " " << Q.who.strain;   // Y-02: a line read
     f << "\n";
     if (!Q.wild.empty()) f << "seqwild " << Q.wild << "\n";   // J-03
+    if (!Q.wildKey.empty()) f << "seqwildkey " << Q.wildKey << "\n";   // J-12
     lines += f.str();
 }
 
@@ -401,6 +403,7 @@ bool Game::sequencerLoad(const std::string& text) {
     std::string key;
     is >> key;
     if (key == "seqwild") { std::string w; std::getline(is, w); if (!w.empty() && w[0] == ' ') w.erase(0, 1); lab.seq.wild = w; return true; }   // J-03 (after its `seq`)
+    if (key == "seqwildkey") { std::string w; is >> w; if (!is.fail()) lab.seq.wildKey = w; return true; }   // J-12 (after its `seq`)
     if (key != "seq") return false;
     SequencerState Q; int told = 0;
     is >> Q.who.sx >> Q.who.sy >> Q.who.sz >> Q.who.body >> Q.who.species >> Q.t0 >> told;

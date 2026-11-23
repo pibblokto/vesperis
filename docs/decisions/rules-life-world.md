@@ -1,8 +1,8 @@
 # Rules: the world genes and the seeded worlds
 
-Rules for the genes that change worlds and for the worlds they change (1.5.0, R-448: the J series), one line per rule with its log
+Rules for the genes that change worlds and for the seeded worlds' layer (1.5.0, R-448: the J series), one line per rule with its log
 entries (`log/`); a replaced rule moves to `superseded.md`. A genesis's map and the gene editor are in `rules-life-genes.md`, the
-incubator in `rules-life-cultures.md`.
+incubator in `rules-life-cultures.md`, sending a culture down and a seeded world's record in `rules-life-seeding.md`.
 
 ## The world genes
 - Every species carries fourteen world genes at places 19 to 32: gas, dye, lift, frost, slime, shell, stop, bind, rot, poison, carrier, host, dry, shield [J-01]
@@ -40,18 +40,6 @@ incubator in `rules-life-cultures.md`.
 - `seeded` and `clock` lines are written once a world is seeded (a guide without them saves as before); a loan carries none [J-02]
 - A seeding's step comes every five minutes of the clock at its pace, 24 in all; three lines live on a world at most [J-02], [J-03]
 - The air's greenhouse and whether a world has air are read through the generator (`airWarmthC`, `hasAir`), not the kind's row [J-02]
-
-## Sending a culture down
-- S on the drone bay sends drone 1 alone with a flask that shows FULL to a place on the map; the flask keeps its culture [J-03]
-- Refused at home (the pinned star's first felisian planet), a giant, out of orbit, the drones away or charging, three lines living [J-03]
-- The culture is let go as the drone arrives (its `seeded` line then); called back before that, nothing went down [J-03]
-- The verdict is a pure function of world, line and place, its medium and growth the incubator's (`mediumOfPlace`, `growthIn`) [J-03]
-- Its order: furnace, liquid, medium, oxygen, pH, dose (SHIELD raises it), land (DRY), natives; the first failure is said [J-03]
-- A native a tenth quicker there outgrows the line; a slower one it outgrows (fewer in samples); between, they live side by side [J-03]
-- A line that takes drifts by a hash of world, line and place: one or two genes, never a vital one, twice as often under strong UV [J-03]
-- A spread keeps to its line's waters (by salt), its land (DRY, or snow and ice) and its band of warmth, at its doubling's pace [J-03]
-- A dye colours the waters a line lives in (the latest dye's), a glowing line lights them at night, from step 1; a layer of no look has no key [J-03]
-- A vial keeps the guide's clock at its take: it holds a line only where the line had spread by then [J-03]
 
 [J-01]: log/7-1.5.0.md
 [J-02]: log/7-1.5.0.md

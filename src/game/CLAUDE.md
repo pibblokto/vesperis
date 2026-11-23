@@ -31,7 +31,9 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   read, each folder holding a culture. Lab lines are twigs: Backspace takes one off, A puts it back (`treeoff`). Enter on a kin's world
   makes its star the remote target. `cabin_life` has `drawTreeWall`. The decoder takes watermarks through `shardWatermarkAdd`. Z-07:
   `catalogue` is the state `CATALOGUE`, a row of the guide: every species with a sheet, and those on sheets a friend lent, by world or
-  by kin, with a sheet beside its form drawn live. The statistics' LIFE page is in `guide_screens` (`renderStatsLife`). `lab_lists`
+  by kin, with a sheet beside its form drawn live. J-12: by world, a seeded world's head names its made kind, its natives a line drove out
+  read DIED OUT, the lines found wild there follow (`CR_WILD`), then any world's animals seen (`CR_ANIMAL`, a sheet in words). The
+  statistics' LIFE page is in `guide_screens` (`renderStatsLife`; J-12: the seeded worlds, `catalogueCountsMake`). `lab_lists`
   (R-432, R-433) has the lists in folders: vials in a folder per world, culture folders, the choosers' folders with their keys and rows
   (R-441: the choosers' two tabs, `chooserTabs`; B-442: rows that look alike told apart, `apartRows`). It also has the culture
   collection: every species and strain a flask grows is kept (`keepCulture` from `updateLab`, keeping B-441's pair together, once).
@@ -136,7 +138,10 @@ chart_draw, game.h, shards_screen. ship_plan is 125 KB, refused whole by the gua
   into the canvas. It reads sheets through `catalogueSheet` (the explorer's, else one a friend lent: `guide.lentMicrobes`, cyan, in no
   count) and a sheet's lines through `sheetLinesOf` (the microscope's). Every count of microbes is the explorer's own and matches the
   other screens (the LIFE page's geneses are the tree's: it builds the tree first). A sample is counted and logged where it is taken
-  (`sampleTaken`).
+  (`sampleTaken`). J-12: a world's species and forms are drawn once (`catalogueWorld`, kept in `cat.worlds`); its made kind and the
+  natives died out are made again with every list, at the guide's clock. A line found wild is the guide's `wildFound` record
+  (`<world>/L<k>`: the world's k-th seeding), made by the microscope (`scope.wild`, a vial's line's key) and read by the sequencer
+  (`wildKey`, the save's `seqwildkey`). `vialLines` drops the natives a line drove out (`seedingDiedOut`) from every vial of the world.
 - The microscope's slide is made again from its vial (`microscopeStage`), a flask's culture (`microscopeStageFlask`) or a kept culture
   (`microscopeStageKept`, R-433; with its partner since B-441). Each fills `scope.species`, `keys` and `worlds`, which the sheet and the
   record read, and the drop's liquid range (`stageLo`, `stageHi`), which bounds the warmth typed after H (R-438), in digits as for a

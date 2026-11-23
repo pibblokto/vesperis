@@ -1023,7 +1023,7 @@ kinds, each on the decoder at once (an open decoder lists them as they dock); le
 (`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), then five
 minutes charging from their return, on real time. The footer: `ENTER SENDS DRONES  S SEEDS  UP/DOWN FINDS  ESC BACK`.
 
-The seed page (`SEEDING`, J-03, `game/seed_trip.cpp`, `13-life.md`'s seeded worlds): `S` on the drone bay, over any landable world
+The seed page (`SEEDING`, J-03, `game/seed_trip.cpp`, `14-seeded-worlds.md`): `S` on the drone bay, over any landable world
 but home (refused in the status: `HOME STAYS AS IT IS`, `NO GROUND DOWN THERE`, `NOT IN ORBIT - APPROACH A WORLD FIRST`, the drones
 away or charging, `THREE LINES LIVE THERE - IT TAKES NO MORE`). It shows `SEED <WORLD>`, the world's map with the ground under the ship
 (a dot), the places of its lines (green where one lives) and the cursor (a blinking cross), `CULTURE  A FLAGELLATE, FLASK 1, FULL` (`C`

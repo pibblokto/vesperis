@@ -13,7 +13,7 @@ log entry (`docs/decisions/log/`), B file or R file.
 
 ## Done in 1.5.0
 
-Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-11 done (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
+Phases 1 to 6 are done: the J series closed with J-12 (below). Log entries are in `docs/decisions/log/7-1.5.0.md`.
 
 - **Microbes (Z-01 to Z-07, R-425):** life on every landable world (`src/life/`, `docs/reference/13-life.md`), with `GEN_VERSION` 17;
   each species' form and its slide in six ways of seeing; the search on the ground (O takes a sample); the microscope, the incubator,
@@ -82,7 +82,7 @@ Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-11 done (below). Lo
   Steps squelch on a wet cover (WET GROUND), a flesh's or a sponge's vents breathe (BREATHING), the tall and hard creak in the wind, hair
   hisses; on a world gone silent nothing living is heard. `overgrowth ruins` draws a city and a capital at four steps and a city crumbled.
 
-- **Latest (2026-11-22): J-11, made kinds.** A world whose change passed a line takes a made kind on the data sheet ("FLESH WORLD, ONCE
+- **J-11, made kinds** (2026-11-22). A world whose change passed a line takes a made kind on the data sheet ("FLESH WORLD, ONCE
   FELISIAN"), with its own sentence: MADE HOTHOUSE (its seas boiled away, the scorched felisian's cover over its own ground, the forests
   stone), MADE SNOWBALL (a living wet world cooled under -6 C ices to its equator in six steps, FREEZING OVER, then lies under the frozen
   felisian's cover), HAZE WORLD, PURPLE WORLD, RUST WORLD, an overgrown world by its type (FLESH WORLD, CORAL WORLD and the rest),
@@ -91,26 +91,32 @@ Phases 1 to 5 are done; Phase 6, the J series, has J-01 to J-11 done (below). Lo
   harms by how warm the world gets (a tundra warmed to 6 C greens). `seed kinds` prints which kind forty worlds and six lines end as, with
   the shares of harm, looks and more livable, and draws each kind from orbit, on the data sheet and on the ground.
 
+- **Latest (2026-11-22): J-12, the record and the close.** Once a line has covered its world, the natives it beat there that live
+  nowhere it does not die out: no vial of the world holds them again. In the catalogue (G, THE CATALOGUE) a seeded world's head names
+  its made kind, a native seen that died out reads DIED OUT (its sheet says which line and how: POISONED BY NERVE BLOOM), a line seen
+  under the microscope in a vial of its world is found wild (SEEDED; its sheet says what the wild changed once the sequencer read it
+  there), and every world's animals seen follow its species with what the ground showed (GONE, DYING, CHANGED), each with a sheet in
+  words. The LIFE page adds WORLDS SEEDED, MADE and DIED OUT. Auto-explore lands on seeded worlds as on any. The seeded worlds have a
+  reference note of their own (`docs/reference/14-seeded-worlds.md`) and `rules-life-seeding.md`. `seed record` draws a poisoned
+  world's record into `shots/tests/record/`.
+
 ## Planned (2026-11-20)
 
-- **R-448, seeded worlds:** the J series, J-12 left (`ITERATION-1.5.0.md`, Phase 6; `IDEAS-seeded-worlds.md`). A
-  gene-edited culture sent down by a drone changes a world, more often for the worse: made traits, die-offs with remains, changed
-  animals, worlds overgrown with flesh, fungus or other tissue, ruins included.
+- Nothing left of 1.5.0's plan: R-448's J series is done. The release follows on the user's word.
 
 ## Committed
 
 Commits on `release/v1.5.0`, each on the user's word, none pushed: 0c90433 (Z, I, B-434 to B-438), 455c7ad (B-439), 82592c5 (B-440,
 R-427 to R-434), d12a9ea (R-435 to R-442, B-441, B-442), 20b236e (B-443, Y-01, Y-02), c9e98be (Y-03, Y-04, R-445, R-446, B-444 to
-B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05), 1b5ea42 (J-06), 47d4d2d (J-07). Not committed: J-08, J-09, J-10 and J-11.
+B-446), fce6383 (R-447, the R-448 plan, J-01 to J-05), 1b5ea42 (J-06), 47d4d2d (J-07), 599ff5f (J-08 to J-11). Not committed: J-12.
 
 ## Next
 
-- **J-12, the record and the close** (`ITERATION-1.5.0.md`, Phase 6) on the user's "proceed". First, the user's verdict on J-11's
-  frames (`shots/tests/kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`) and on J-10's (`shots/tests/overgrowth/ruins_*.png`, the
-  sounds `shots/tests/sound_squelch.wav`, `vents_dry`, `vents_wet`, `creaks`, `hair`, `tear`).
-- The 1.5.0 release after J-12, on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need
-  Docker, asked first).
-- **Proof base:** `build/prove/j11` (43 items; J-11 added `seed_kinds`).
+- **The 1.5.0 release** on the user's word (the `release` skill: pull request, tag `v1.5.0`, six zips; the Linux builds need Docker,
+  asked first). First, the user's verdict on J-12's frames (`shots/tests/record/<catalogue|died_out|found_wild|animal_gone|life_page>.png`),
+  J-11's (`shots/tests/kinds/`) and J-10's (`shots/tests/overgrowth/ruins_*.png`, the sounds `shots/tests/sound_squelch.wav`,
+  `vents_dry`, `vents_wet`, `creaks`, `hair`, `tear`), and a commit of J-12.
+- **Proof base:** `build/prove/j12` (44 items; J-12 added `seed_record`).
 
 ## Playing the lab
 
@@ -136,7 +142,10 @@ without BIND films by the water): land by the place to walk among it, or watch i
 people's world and land there later: the cover climbs the walls, the doorways grow shut (walk through them), and a wet one squelches
 underfoot; a line with ROT set to stone crumbles the ruins it reaches. J-11: once a world's change passes a line, the data sheet names
 its made kind; a CO2 line on a warm wet world runs away and dries its seas (MADE HOTHOUSE), a dimethyl sulphide line on a tundra freezes
-it (MADE SNOWBALL), a CO2 line on a tundra greens it. `seed kinds` draws each kind into `shots/tests/kinds/`.
+it (MADE SNOWBALL), a CO2 line on a tundra greens it. `seed kinds` draws each kind into `shots/tests/kinds/`. J-12: look at a world's
+species under the microscope before seeding it with a POISON line, and after about two hours (the line over the whole world) open the
+catalogue: those it drove out read DIED OUT. Sample the world again and put the line's vial under the microscope to find it wild, then
+read it on the sequencer to see what the wild changed in it. The statistics' L page counts the worlds seeded and what died out.
 
 ## Seeing the animals
 
@@ -174,6 +183,11 @@ and `life kit` draw them.
   line with five gases or overgrowing, as J-03's one line took on 21 of 240 seedings; the shares (50% harm, 20% looks, 11% more
   livable, 19% nothing) are printed, not tuned (KI-483); the heat's harm now weighs the mean a world reaches, so a cold world warmed
   greens (it moved J-04's and J-08's rule); a made hothouse no longer rains.
+- **J-12's calls:** a native a line beat dies out once the line covers the world, where it lives in no niche or salt the line does not
+  (its warmth not read: KI-487), and then leaves every vial of the world; the catalogue lists the animals seen by world, with sheets in
+  words (KI-488); DIED OUT counts the explorer's own sheets alone; what the wild changed shows once the sequencer read the line from a
+  vial of its world; the seeded worlds' notes moved out of `13-life.md` into `14-seeded-worlds.md`, and sending a culture down out of
+  `rules-life-world.md` into `rules-life-seeding.md`.
 - **R-448's calls:** the plan's defaults hold (the drones send a culture, about two hours a world, the animals in the middle, home
   never seeded, the explorer names the animals) until the user says otherwise.
 - **Docs still in the old style:** the reference notes (`docs/reference/`, 1.4 MB) and the code comments, until each is next edited.
@@ -187,8 +201,9 @@ and `life kit` draw them.
   off a thin trunk), J-08's KI-470 to KI-472 (fates on land herds alone; a cell come back to starts whole; one `seed fates` frame),
   J-09's KI-473 to KI-476 (one overgrowth colour a world; its lent bank; the second disc's tint under a stain; structures on a
   landing's grid), J-10's KI-477 to KI-481 (a building taken as one; arches not grown shut; a torn membrane unseen; a stone rotter
-  alike everywhere; a ruin's cover without gloss or night light), J-11's KI-482 to KI-486 (a made kind named on the data sheet alone;
-  the shares not tuned; a snowball's sea ice white; a kind with no memory; the cold's harm by its size alone).
+  alike everywhere; a ruin's cover without gloss or night light), J-11's KI-482 to KI-486 (a made kind named on the data sheet and the
+  catalogue alone; the shares not tuned; a snowball's sea ice white; a kind with no memory; the cold's harm by its size alone), J-12's
+  KI-487 and KI-488 (a native driven out in warmths the line cannot live in too; the catalogue's animals by world alone, in words).
 - Offered by B-430: the tables' dump as a harness mode for the container; parallel.h's misleading indentation (38 of the Linux builds'
   46 warnings). Offered by B-431: the `returnState =` lines before a scene's `openScreen`, now redundant.
 - Our Docker images `vesperis-build:arm64` and `:amd64` were removed on the user's word. The old proof kits (`build/p00` to
@@ -196,11 +211,11 @@ and `life kit` draw them.
 
 ## Disk
 
-About 71 GB free (2026-11-22). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
-j03, j04, j05, j06, j07, j08, j09, j10 and j11, the compares' outputs against r434 to j10, and their logs: about 57 GB. A snapshot and a
-compare's outputs are about 1.4 GB each.
+About 69 GB free (2026-11-22). `build/prove` keeps the snapshots r434, r438, r442, b443, y01, y02, y03, y04, r446, r447, j01, j02,
+j03, j04, j05, j06, j07, j08, j09, j10, j11 and j12, the compares' outputs against r434 to j11, and their logs: about 61 GB. A snapshot and
+a compare's outputs are about 1.4 GB each.
 
 ## Next free ids
 
-Bugs B-447, requests R-449, known issues KI-487. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
+Bugs B-447, requests R-449, known issues KI-489. Milestone ids go by letter series in `docs/ideas/MILESTONES.md` (1.5.0 took Z, I,
 Y and J).

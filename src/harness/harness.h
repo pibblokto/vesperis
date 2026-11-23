@@ -415,6 +415,7 @@ void waysShot(SurfaceView& sv, StarNeighborhood& nb, SpaceRenderer& sr, double t
 void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_t seed);
 int seedFates();   // J-08: `seed fates` (modes_seed_fates.cpp)
 int seedKinds();   // J-11: `seed kinds` (modes_seed_kinds.cpp): the made kinds of forty worlds and six lines, the shares, each kind drawn
+int seedRecord();  // J-12: `seed record` (modes_seed_record.cpp): a seeded world's record in the catalogue and on the LIFE page, `record/`
 // a sheet of frames side by side, each halved (the mean of four), `cols` to a row (J-09's plates too)
 void writeSheet(const std::vector<std::vector<uint32_t>>& cells, int w, int h, int cols, const std::string& fn);
 int overgrowthPlates();   // J-09: `overgrowth plates` (modes_overgrowth.cpp)
@@ -535,6 +536,13 @@ int seedLooks();
 bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild);
 struct SeedAirCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; SeedLine wild; };
 std::vector<SeedAirCase> seedAirCases(int n, int rounds = 3);
+// J-12: the world and line `seed record` and the unit's record checks send: of `seed climate`'s forty worlds with plants and animals, the first
+// where its own sea line given a nerve poison (its STOP cut and its cells bound: it overgrows too) takes and drives a native out by its 64th
+// step, else the poison alone; a game with it let go at the place (an edited strain of the explorer's, `<world>/M<i>/S1`), parked at the
+// world, the guide's clock at the line's 64th step
+struct SeedRecordCase { SeedAirCase c; std::vector<GeneEdit> edits; SeedLine line; double end = 0; };
+bool seedRecordCase(SeedRecordCase& out);
+void seedRecordGame(TestGame& g, const SeedRecordCase& rc, const std::string& name);
 // a game's flask filled with a line in a medium, the lab's clock stepped a minute at a time till it shows FULL (false: not within four hours);
 // a kind's best medium (its cell, its best warmth, its salt, its light and its energy)
 bool labFlaskFull(TestGame& g, int i, const FlaskSpecies& w, const Medium& m);

@@ -151,14 +151,17 @@ bool Game::microscopeStage(int vial) {
     scope.forms = morphsOf(scope.sys, v.body);
     Biota B = scope.life->bodies[v.body];
     scope.sample = sampleOf(B, v.hab);
-    scope.keys.clear(); scope.worlds.clear();
-    for (const Microbe& m : B.species) { scope.keys.push_back(Guide::bodyKey(v.sx, v.sy, v.sz, v.body) + "/M" + std::to_string(m.index)); scope.worlds.push_back(vialWorldName(v)); }
+    scope.keys.clear(); scope.worlds.clear(); scope.wild.clear();
+    for (const Microbe& m : B.species) {
+        scope.keys.push_back(Guide::bodyKey(v.sx, v.sy, v.sz, v.body) + "/M" + std::to_string(m.index)); scope.worlds.push_back(vialWorldName(v)); scope.wild.push_back("");
+    }
     for (const VialLine& L : vialLines(v, scope.sys, scope.sample)) {   // J-03: a seeded world's lines where they spread, after its own species
         FlaskSpecies w;
         if (!speciesOfKey(L.key, w)) continue;
         Microbe m = L.line.kind.s; m.index = (int)B.species.size(); m.state = SS_LIVING;
         B.species.push_back(m); scope.forms.push_back(L.line.form);
         scope.keys.push_back(flaskSpeciesKey(w)); scope.worlds.push_back(nameOfKey(Guide::bodyKey(w.sx, w.sy, w.sz, w.body)));
+        scope.wild.push_back(Guide::bodyKey(v.sx, v.sy, v.sz, v.body) + "/L" + std::to_string(L.seeding));   // J-12: found in the wild
         Held h; h.species = m.index; h.state = SS_LIVING; h.cells = L.cells; h.active = true;
         scope.sample.held.push_back(h);
     }
@@ -180,7 +183,7 @@ bool Game::microscopeStageFlask(int i) {
     const CultureNow now = flaskNow(i);
     Biota B;
     B.stage = LS_SIMPLE; B.chemistry = F.culture.kind[0].chemistry;
-    scope.species.clear(); scope.keys.clear(); scope.worlds.clear();
+    scope.species.clear(); scope.keys.clear(); scope.worlds.clear(); scope.wild.clear();
     Sample S;
     double t0 = 0;
     for (const CultureEvent& e : F.events) if (e.kind == CD_START) { t0 = e.t; break; }
@@ -459,6 +462,14 @@ void Game::microscopeSee() {
         if (cell && L.seeing == WS_GLOW && px >= SEE_DNA_PX) seen.seen |= SEEN_DNA;
         if (cell && L.seeing == WS_ELECTRON && px >= SEE_WALL_PX) seen.seen |= SEEN_WALL;
         const std::string key = speciesKey(K.species);
+        const std::string wild = K.species >= 0 && K.species < (int)scope.wild.size() ? scope.wild[K.species] : std::string();
+        if (!wild.empty() && !guide.wildFound.count(wild)) {   // J-12: a seeded line found in the wild, in the log with its world
+            guide.wildFound[wild] = false;
+            changed = true;
+            const std::vector<Seeding>& ss = seedingsAt(scope.sys, scope.body);
+            const int k = atoi(wild.c_str() + wild.rfind("/L") + 2);
+            if (k >= 0 && k < (int)ss.size()) logEvent("SEEDED", fmt("%s: %s FOUND IN THE WILD", scope.title.c_str(), seedLineWords(ss[k].line).c_str()));
+        }
         auto it = guide.microbes.find(key);
         if (it == guide.microbes.end()) {
             guide.microbes[key] = seen;

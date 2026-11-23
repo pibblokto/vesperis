@@ -38,6 +38,7 @@ void unitSeedingLooks(const Check& check);
 void unitSeedingGrowth(const Check& check);
 void unitSeedingRuins(const Check& check);
 void unitSeedingKinds(const Check& check);
+void unitSeedingRecord(const Check& check);
 
 void unitSeeding(const Check& check) {
     StarSystem fs; int fb = -1;
@@ -356,6 +357,7 @@ void unitSeeding(const Check& check) {
     unitSeedingGrowth(check);   // J-09
     unitSeedingRuins(check);    // J-10
     unitSeedingKinds(check);    // J-11 (unit_seeding_kinds.cpp)
+    unitSeedingRecord(check);   // J-12 (unit_seeding_record.cpp)
 }
 
 // J-04: the made air. Each gas a world's own sea line gives (`seed climate`'s twenty worlds, eight gases) at the whole world, worked out serially

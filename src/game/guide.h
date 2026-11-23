@@ -156,6 +156,9 @@ struct Guide {
     std::vector<SeedRecord> seeded;
     double clock = 0;
     std::map<std::string, std::string> madeSeen;   // J-03: what each seeded world showed at its last landing (`madeseen` lines, a seeded guide's)
+    // J-12: the seeded lines found in the wild, "<world key>/L<k>" (the world's k-th seeding, in the order they went down): seen in a vial of
+    // that world under the microscope, and true once the sequencer read it from one (what the wild changed in it). `wild` lines, a seeded guide's
+    std::map<std::string, bool> wildFound;
     void addSeeding(const SeedRecord& r);         // kept as its line reads back (the file's precision): a reload gives the same layer
     // Z-07: the samples taken (`stat samples`) and the worlds they came from (`sampled` lines); a friend's sheets of the species they saw, lent by
     // their inbox file (`lentmicrobe` lines, as `microbe` lines): in the catalogue in cyan, in no statistic; the explorer's own sheet wins

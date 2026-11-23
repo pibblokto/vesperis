@@ -22,9 +22,10 @@ before changing anything there.
 - `rules-life-record.md`: the sequencer and the tree; the record (the catalogue, the counts).
 - `rules-life-genes.md`: genes (a genesis's map and code, a species' genes read from what it is, edit values, cuts), the gene
   editor and its lines, learning what a gene does.
-- `rules-life-world.md`: the world genes (places 19 to 32, their wild values, what they do in a flask and how the lab shows them), the
-  seeded worlds' layer (what a seeding made of a world, where it is read and what keeps the world as generated) and sending a culture
-  down (the drone bay's seed trip, the verdict, the drift, the spread and its looks): the J series.
+- `rules-life-world.md`: the world genes (places 19 to 32, their wild values, what they do in a flask and how the lab shows them) and the
+  seeded worlds' layer (what a seeding made of a world, where it is read and what keeps the world as generated): the J series.
+- `rules-life-seeding.md`: sending a culture down (the drone bay's seed trip, the verdict, the drift, the spread) and a seeded world's
+  record, J-12 on (the natives died out, a line found wild, the catalogue's rows and the LIFE page's, auto-explore).
 - `rules-life-made.md`: what a seeded world is made into, J-04 on: the made air and its climate (each gas's answer by its world, a
   runaway, what lift carries up, the caps, the snow and the plants moved) and how it is drawn.
 - `rules-life-overgrowth.md`: what a seeded line's overgrowth makes of a world, J-09 on: its cover and structures, the ruins it takes and

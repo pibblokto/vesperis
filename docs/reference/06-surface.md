@@ -489,9 +489,9 @@ marks (`AnimalMark`): DYING for remains or a sick one, GONE for remains where no
 old bones mark nothing. The LIFE line shows them after the words: "STRIPED HOPPER (DYING)".
 
 **Fates** (J-08, `animalFateOf`, `cellRemains`). On a seeded world each species' fate at a place comes from the layer's
-(`13-life.md`): its class's harm by how it resists (a hash of its seed: the hardiest lose half the harm's share, the frailest half again
-as much; past 0.95 none is spared), the shell rotter's on the shelled, the food lost on the plant eaters (half on the hunters, 0.7 on the
-burrowers), the sickness on the land's survivors, its changed young's share of a herd, the thriving. Its changes (`animalChangesOf`,
+(`14-seeded-worlds.md`): its class's harm by how it resists (a hash of its seed: the hardiest lose half the harm's share, the frailest half
+again as much; past 0.95 none is spared), the shell rotter's on the shelled, the food lost on the plant eaters (half on the hunters, 0.7 on
+the burrowers), the sickness on the land's survivors, its changed young's share of a herd, the thriving. Its changes (`animalChangesOf`,
 one to three, the species' own on its world) are steered by the lines' genes where one fits (a big cell's giants, a small one's dwarfs,
 a dye's new colour, a glow's spots or stripes, a spiral's twisted spine, a line that never stops tumours or a leg more, a flesh rotter's
 sores, a shell's stone plates or horns, a weak nerve poison's circling), the rest by its hash among the 42 its body takes, none
@@ -517,10 +517,10 @@ within 30 m (fewer and lower over a small one). Remains are drawn a few centimet
 Silence: no herd, flock, swimmer or night eyes, and the dusk insects quiet. The bench's herd among twelve remains (`bench`, `herd
 remains 1x`, budget 0.6 ms). J-09: remains on an overgrowth's cover are taken in: drawn in its bank, with no stain and no flies.
 
-**The overgrowth** (J-09, `surface/overgrowth.cpp`). On a seeded world the layer's overgrowth (`13-life.md`) lies on the ground as one of
-three cover materials (TISSUE, THREADS, HARD GROWTH), each with a tile of four looks chosen by the overgrowth's texture: blisters with a
-pore at their tops, muscle's fibres, a brain's folds, gut's coils, all veined; threads crossing with tufts; a hard ground's pores, plates,
-knobs or rings (`growthTexture`). It takes a lent bank of its own before the made looks (`growthBank`, the first free of 28, 27, 26,
+**The overgrowth** (J-09, `surface/overgrowth.cpp`). On a seeded world the layer's overgrowth (`14-seeded-worlds.md`) lies on the ground as
+one of three cover materials (TISSUE, THREADS, HARD GROWTH), each with a tile of four looks chosen by the overgrowth's texture: blisters
+with a pore at their tops, muscle's fibres, a brain's folds, gut's coils, all veined; threads crossing with tufts; a hard ground's pores,
+plates, knobs or rings (`growthTexture`). It takes a lent bank of its own before the made looks (`growthBank`, the first free of 28, 27, 26,
 25; the rock's where none is free) in its colour, a wet one's top stops whiter and its faces glossy in the sun, and at night where it
 glows its upper stops in its light. The cover is mottled in 40 m lobes; on the near ring its veins run dark by day and lit at night.
 Its structures (`forGrowths`) are a pure function of a 16 m cell whose four corners it covers: 0.6 to 6 a cell by its type (a carpet's

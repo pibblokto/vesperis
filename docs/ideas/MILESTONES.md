@@ -48,7 +48,7 @@ Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
 Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
 Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
 fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10
-and J-11 2026-11-22.
+to J-12 2026-11-22: all twelve done.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -367,7 +367,7 @@ stays as generated.
 | J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | 1.5.0, done 2026-11-21 |
 | J-10 | Ruins overgrown, and the sounds of an overgrown world | L | 1.5.0, done 2026-11-22 |
 | J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | 1.5.0, done 2026-11-22 |
-| J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | 1.5.0 |
+| J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | 1.5.0, done 2026-11-22 |
 
 ## Suggested order for 1.2.0
 
