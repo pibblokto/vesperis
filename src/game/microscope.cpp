@@ -11,6 +11,7 @@
 #include "galaxy/drifters.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace {
 // a form in words, what it looks like (never a name: the names are the explorer's)

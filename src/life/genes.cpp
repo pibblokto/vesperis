@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 const char* const GENE_KIND_NAMES[GN_COUNT] = {"VITAL", "QUIET", "WARMTH", "SALT", "SIZE", "PIGMENT", "FOOD", "MOTION", "SENSE", "REST", "GLOW",

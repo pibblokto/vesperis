@@ -2,6 +2,7 @@
 // the shrine and its way, the lines on a plain, the fortified line, the battlefields, the launch sites, the antennas, the
 // colossi, the terraformed basins, the last shelter and a sunless people's works, the inexplicable, the lighthouses
 #include "works_internal.h"
+#include <cstdlib>
 
 // the highest point between r0 and r1 of a point, refined to its summit
 bool WB::summitNear(const Vec3& u0, double r0, double r1, Rng& rng, Vec3& best, double& hBest) {

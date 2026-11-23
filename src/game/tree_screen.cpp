@@ -10,6 +10,7 @@
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <set>
 

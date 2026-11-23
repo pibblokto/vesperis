@@ -1,6 +1,7 @@
 #include "surface_view.h"
 #include "surface_internal.h"
 #include "core/clock.h"
+#include <cstdlib>
 
 namespace {
 // rotate a local (x east, z north) vector by a heading change

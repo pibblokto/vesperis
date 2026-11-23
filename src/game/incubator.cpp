@@ -9,6 +9,7 @@
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <sstream>
 

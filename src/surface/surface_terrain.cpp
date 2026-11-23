@@ -3,6 +3,7 @@
 // `drawTerrainLOD`), the reflections, the floor beyond the far ring, and the cached ground the camera's march and the forms
 // read (`heightNear`, `drawnGround`, `rangeToGround`)
 #include "surface_internal.h"
+#include <cstdlib>
 
 // the material tiles of `want` (a bit a material) not made yet, made together, a material to a worker (a tile is a function of
 // its material and the seed, each into its own slot; ~1 ms each, five or six at a landing's first ring on a peopled world)

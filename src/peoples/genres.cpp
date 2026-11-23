@@ -4,6 +4,7 @@
 #include "genres.h"
 #include "genres_schema.h"
 #include "../core/clock.h"
+#include <cstdlib>
 
 namespace {
 // a place's landmark (the first of these the place's hash ranks that its water and the record's age allow: need 0 none, 1 a coast, 2 a river)

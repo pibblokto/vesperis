@@ -1,6 +1,7 @@
 #include "ui.h"
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <sstream>
 #include <cmath>
 

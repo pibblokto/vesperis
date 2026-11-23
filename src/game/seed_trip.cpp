@@ -9,6 +9,7 @@
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace {
 std::string latLonWords(double lat, double lon) {
