@@ -1,0 +1,1109 @@
+// J-06 (R-448): the unit's `animals` group: the bestiary a pure function (serially, reversed and on the pool), under 1.5% of 1,000 species
+// alike another of their world, every plan's poses within bounds (and its shapes made at each detail), the herds' habitat cells as generation
+// 17 placed them (which 512 m cells round a landing hold a herd, and where its spot is), and an older save's notice. J-07: every plan's gaits
+// within bounds and its feet put down; the record of what was seen, a name given with N, the guide's bytes, a loan's names. J-08: the fates'
+// shares fixed by world and line, remains a pure function of their cell, the record's marks
+#include "harness/harness.h"
+#include "harness/test_game.h"
+#include "surface/surface_view.h"
+#include "galaxy/drainage.h"
+#include "core/parallel.h"
+#include "core/rng.h"
+#include <fstream>
+#include <sstream>
+#include <cstring>
+
+namespace {
+// the cells with a herd round two landings on each of twelve worlds with plants and animals, and their spots, hashed (not the species or
+// the herd's size: those are the bestiary's)
+uint64_t herdCellsDigest(int& worlds, int& sites, int& cells) {
+    DrainageOff off;   // the cells read the planet function at 16 m; the rivers would take a tile a landing
+    worlds = sites = cells = 0;
+    uint64_t h = 0x4E4DC311ULL;
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return worlds < 12; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && worlds < 12; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (!kindHas(b.type, KT_FAUNA) || !kindHas(b.type, KT_FLORA)) continue;
+            worlds++;
+            Rng r(mix64(b.seed ^ 0xCE11ULL));
+            for (int k = 0; k < 2; k++) {
+                const double lat = r.range(-60 * DEG, 60 * DEG), lon = r.range(-PI, PI);
+                SurfaceSite site; site.init(&sys, bi, lat, lon, 5000.0);
+                const Bestiary B = Bestiary::make(b, site.gen);
+                sites++;
+                int gLat0, gLon0;
+                SurfaceView::lifeCellAt(site, 0, 0, gLat0, gLon0);
+                for (int dl = -2; dl <= 2; dl++)
+                    for (int dn = -3; dn <= 3; dn++) {
+                        SurfaceView::Herd hd; int spi = -1, n = 0;
+                        if (!SurfaceView::planCellHerd(site, B, gLat0 + dl, gLon0 + dn, hd, spi, n)) continue;
+                        cells++;
+                        h = hashCombine(h, b.seed);
+                        h = hashCombine(h, (uint64_t)(int64_t)(gLat0 + dl) * 0x9E3779B97F4A7C15ULL ^ (uint64_t)(int64_t)(gLon0 + dn));
+                        h = hashCombine(h, (uint64_t)std::llround(hd.cx * 100) * 31 ^ (uint64_t)std::llround(hd.cz * 100));
+                    }
+            }
+        }
+    }
+    return h;
+}
+
+// a bestiary's every drawn value hashed (the words, the ways, the plans and sizes, the ecology, every part)
+uint64_t bestiaryDigest(const Bestiary& B) {
+    uint64_t h = 0xBE57ULL;
+    auto d = [&](double v) { h = hashCombine(h, (uint64_t)std::llround(v * 1e6)); };
+    auto i = [&](int64_t v) { h = hashCombine(h, (uint64_t)v); };
+    for (int k = 0; k < (int)B.species.size(); k++) {
+        const Species& s = B.species[k];
+        for (char c : B.words(k)) i(c);
+        i(s.way); i(s.social); i(s.prey);   // J-07
+        i(s.plan); d(s.size); d(s.walkSpeed); d(s.runSpeed); i(s.gait); i(s.runGait); i(s.habitat); i(s.diet); i(s.activity); i(s.temperament); i(s.call);
+        d(s.callPitch); i(s.herdMin); i(s.herdMax); i((int64_t)s.seed);
+        const AnimalBody& a = s.body;
+        i(a.variant); i(a.segs); i(a.girth); d(a.length); d(a.width); d(a.depth); d(a.pitch); i(a.pairs); i(a.joints); i(a.kneeBack); i(a.stance); i(a.foot); d(a.leg);
+        d(a.legThick); d(a.arms); d(a.neck); d(a.neckThick); d(a.neckUp); i(a.arched); i(a.head); d(a.headLen); d(a.headW); d(a.headH); i(a.eyes); i(a.eyeLayout);
+        i(a.ornament); d(a.ornamentLen); i(a.tail); d(a.tailLen); d(a.tailThick); i(a.dorsal); d(a.dorsalH); i(a.wings); d(a.span); i(a.hide); i(a.coat); i(a.bank);
+        i(a.coatBank); d(a.tone); d(a.coatTone); i((int64_t)a.seed);
+    }
+    for (int k = 0; k < 2; k++) { d(B.style.colour[k].r); d(B.style.colour[k].g); d(B.style.colour[k].b); }
+    return h;
+}
+
+// a sink that counts the shapes made and wants each vertex finite
+struct CountSink final : ShapeSink {
+    int polys = 0, lines = 0, points = 0; bool finite = true;
+    void see(const RVert& v) { if (!(std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z) && std::isfinite(v.shade))) finite = false; }
+    void polygon(const RVert* q, int n, const RasterParams&) override { polys++; for (int k = 0; k < n; k++) see(q[k]); }
+    void line(const RVert& a, const RVert& b, int, bool, int) override { lines++; see(a); see(b); }
+    void point(const RVert& a, int, bool, int) override { points++; see(a); }
+};
+// a view looking north from 6 m south of the animal, lit from above-east
+struct TestView final : AnimalView {
+    Vec3 view(const Vec3& p) const override { return Vec3(p.x - eye.x, p.y - eye.y, p.z - eye.z); }
+    double light(const Vec3&, const Vec3& n) const override { return 52 * std::pow(0.15 + 0.85 * std::max(0.0, dot(n, normalize(Vec3(0.4, 0.8, 0.2)))), 0.65); }
+};
+std::string fileText(const std::string& path) { std::ifstream f(path, std::ios::binary); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }
+}
+
+// J-08: a layer's animal fates hashed (the air's, each line's, the traits, the age), and each species' fate under it at a place
+uint64_t fateDigest(const MadeWorld& m, const Bestiary& B, const Vec3& at, uint64_t seed) {
+    uint64_t h = 0xFA7E5ULL;
+    auto mix = [&](double v) { h = mix64(h ^ (uint64_t)std::llround(v * 1e6) ^ 0x9E3779B97F4A7C15ULL); };
+    auto fate = [&](const MadeFate& f) { mix(f.fauna); for (double v : f.harm) mix(v); mix(f.shelled); mix(f.starve); mix(f.death); mix(f.sickness); mix(f.sick); mix(f.changed); mix(f.steer); mix(f.dye); mix(f.thrive); mix(f.age); };
+    fate(m.fate);
+    for (int i = 0; i < m.lines; i++) fate(m.spread[i].fate);
+    mix(m.fauna); mix(m.fateAge); mix(m.rotFast);
+    const MadeFate here = madeFateAt(m, at, seed);
+    fate(here);
+    int steer = m.fate.steer;
+    for (int i = 0; i < m.lines; i++) steer |= m.spread[i].fate.steer;
+    for (const Species& sp : B.species) {
+        int ch[3] = {-1, -1, -1};
+        const int nc = animalChangesOf(sp, steer, ch);
+        const AnimalFate af = animalFateOf(sp, here, ch, nc);
+        mix(af.dead); mix(af.sickness); mix(af.sick); mix(af.changed); mix(af.thrive); mix(af.age);
+        for (int k = 0; k < af.nChanges; k++) mix(af.changes[k]);
+    }
+    return h;
+}
+
+void unitAnimals(const Check& check) {
+    // the fauna worlds of the scan region in its order, their bodies made (the checks below share them)
+    std::vector<std::pair<Body, BodyGen>> worlds;
+    int species = 0;
+    for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 200, [&] { return species < 1000; }))
+        for (const Body& b : sys.bodies) {
+            if (!kindHas(b.type, KT_FAUNA) || species >= 1000) continue;
+            worlds.push_back({b, BodyGen::make(b)});
+            species += (int)Bestiary::make(b, worlds.back().second).species.size();
+        }
+    {   // the bestiary a pure function: each world's the same serially, made again in reverse and on the pool
+        const int n = (int)worlds.size();
+        std::vector<uint64_t> serial(n), reversed(n), pooled(n);
+        for (int k = 0; k < n; k++) serial[k] = bestiaryDigest(Bestiary::make(worlds[k].first, worlds[k].second));
+        for (int k = n - 1; k >= 0; k--) reversed[k] = bestiaryDigest(Bestiary::make(worlds[k].first, worlds[k].second));
+        parallelFor(n, 1, [&](int a, int b) { for (int k = a; k < b; k++) pooled[k] = bestiaryDigest(Bestiary::make(worlds[k].first, worlds[k].second)); });
+        int same = 0;
+        for (int k = 0; k < n; k++) same += serial[k] == reversed[k] && serial[k] == pooled[k];
+        check("animals: the bestiary a pure function", same == n && n > 0, fmt("%d of %d worlds alike serially, reversed and on the pool (%d species)", same, n, species));
+    }
+    {   // no two of a world alike: the species with another of their world under ANIMAL_ALIKE, over the first thousand species; the plans all drawn;
+        // a world's kin nearer each other than strangers
+        int total = 0, alike = 0, plans[PLAN_COUNT] = {0};
+        double within = 0, across = 0; long nw = 0, na = 0;
+        std::vector<Bestiary> bs;
+        for (const auto& w : worlds) bs.push_back(Bestiary::make(w.first, w.second));
+        for (size_t k = 0; k < bs.size(); k++) {
+            const Bestiary& B = bs[k];
+            for (size_t i = 0; i < B.species.size() && total < 1000; i++) {
+                total++; plans[B.species[i].plan]++;
+                bool any = false;
+                for (size_t j = 0; j < B.species.size(); j++) {
+                    if (j == i) continue;
+                    const double dd = animalDistance(B.species[i].body, B.species[j].body);
+                    if (dd < ANIMAL_ALIKE) any = true;
+                    if (j > i && B.species[i].plan == B.species[j].plan) { within += dd; nw++; }
+                }
+                alike += any;
+                if (k + 1 < bs.size())   // against the next world's of the same plan
+                    for (const Species& o : bs[k + 1].species) if (o.plan == B.species[i].plan) { across += animalDistance(B.species[i].body, o.body); na++; }
+            }
+        }
+        int missing = 0; std::string none;
+        for (int p = 0; p < PLAN_COUNT; p++) if (!plans[p]) { missing++; none += std::string(none.empty() ? "" : ", ") + PLAN_NAMES[p]; }
+        const double share = 100.0 * alike / std::max(1, total);
+        check("animals: no two of a world alike", total == 1000 && share < 1.5 && missing == 0,
+              fmt("%d of %d species alike another of their world (%.2f%%, under 1.5%%); %d plans of %d drawn%s; a plan's two of a world %.2f apart, of two worlds %.2f", alike, total,
+                  share, PLAN_COUNT - missing, PLAN_COUNT, missing ? (" (none: " + none + ")").c_str() : "", within / std::max(1L, nw), across / std::max(1L, na)));
+    }
+    {   // every plan's poses within bounds: each species posed idle, walking and running through its cycle, grazing, lying, on the level and on a
+        // slope (aloft flapping and folded, afloat), every point near it and none under its ground; its shapes made at each detail, all finite
+        int poses = 0, outside = 0, unfinite = 0, empty = 0, seen[PLAN_COUNT] = {0};
+        std::string bad;
+        for (const auto& w : worlds) {
+            const Bestiary B = Bestiary::make(w.first, w.second);
+            for (const Species& sp : B.species) {
+                if (seen[sp.plan] >= 6) continue;   // six species a plan
+                seen[sp.plan]++;
+                const AnimalRig R = rigOf(sp.body);
+                const AnimalBody& a = sp.body;
+                const double reach = a.size + a.length + a.neck + a.tailLen + a.span + a.leg + a.headLen + a.ornamentLen;
+                for (int slope = 0; slope < 2; slope++)
+                    for (int q = 0; q < 24; q++) {
+                        AnimalPoseIn in;
+                        in.at = Vec3(0, 0, 0); in.heading = 0.3 * q; in.scale = 0.85 + 0.3 * (q % 3) / 2.0; in.t = 0.37 * q; in.seed = sp.seed;
+                        in.gx = 0.5 * a.length + a.leg + a.neck; in.gz = a.width + a.leg;
+                        for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) in.ground[i][j] = slope ? 0.2 * in.gx * (i - 1) + 0.1 * in.gz * (j - 1) : 0;
+                        in.phase = q / 8.0; in.moving = q % 8 != 0; in.running = q >= 16; in.gait = in.running ? sp.runGait : sp.gait;
+                        in.headPitch = q % 6 == 5 ? 1 : 0; in.lift = q % 8 == 7 ? 1 : 0;
+                        in.aloft = planFlies(sp.plan) && (q % 4 != 3 || sp.plan == PLAN_FLOATER);   // a floater never comes down
+                        in.folded = planFlies(sp.plan) && !in.aloft; in.flap = std::sin(q * 0.9);
+                        in.afloat = planSwims(sp.plan);
+                        AnimalPose P;
+                        poseAnimal(R, in, P);
+                        poses++;
+                        const bool onGround = !in.aloft && !in.afloat;
+                        double low = 0;
+                        for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) low = std::min(low, in.ground[i][j]);
+                        const double floorY = onGround ? low - 0.03 * a.size * in.scale - 0.02 : -1e9;   // under the ground's lowest corner
+                        if (!poseWithin(P, in.at, 1.5 * reach * in.scale, floorY)) {
+                            outside++;
+                            if (bad.size() < 200) bad += fmt(" %s(q%d%s)", PLAN_NAMES[sp.plan], q, slope ? " slope" : "");
+                        }
+                        for (int det = 0; det < 3; det++) {
+                            TestView V; V.eye = Vec3(0.5, 0.8 * a.size + 1, -6 - reach); V.pxPerM = 40.0 * (1 + det * 3); V.fbScale = 1;
+                            CountSink sink;
+                            emitAnimal(R, P, V, det, sink);
+                            if (!sink.finite) unfinite++;
+                            if (sink.polys + sink.lines + sink.points == 0) empty++;
+                        }
+                    }
+            }
+        }
+        int plansPosed = 0; for (int p = 0; p < PLAN_COUNT; p++) plansPosed += seen[p] > 0;
+        check("animals: every plan's poses within bounds", outside == 0 && unfinite == 0 && empty == 0 && plansPosed == PLAN_COUNT,
+              fmt("%d poses of %d plans: %d outside%s; their shapes at three details: %d not finite, %d empty", poses, plansPosed, outside, bad.c_str(), unfinite, empty));
+    }
+
+    {   // J-07: every plan's gaits within bounds, its feet where they were put: each land species walking and running at its speeds through
+        // its cycle (its gait and stride by `speciesGait` and `speciesStride`), stalking low, browsing, half under the ground and on a trunk,
+        // every point near it and none under its ground (but a burrower's going under and a climber's on its trunk); a foot on the ground moves
+        // under 3% of a stride while the body goes a fiftieth of a cycle
+        int poses = 0, outside = 0, stance = 0, slips = 0, plans = 0, seen[PLAN_COUNT] = {0}, gaitsUsed = 0;
+        bool gaitSeen[GAIT_COUNT] = {};
+        double worst = 0;
+        std::string bad;
+        for (const auto& w : worlds) {
+            const Bestiary B = Bestiary::make(w.first, w.second);
+            for (const Species& sp : B.species) {
+                if (seen[sp.plan] >= 4 || planFlies(sp.plan) || planSwims(sp.plan)) continue;
+                if (!seen[sp.plan]++) plans++;
+                const AnimalRig R = rigOf(sp.body);
+                const AnimalBody& a = sp.body;
+                const double reach = a.size + a.length + a.neck + a.tailLen + a.span + a.leg + a.headLen + a.ornamentLen;
+                for (int run = 0; run < 2; run++) {
+                    const double speed = run ? sp.runSpeed : sp.walkSpeed;
+                    const int gait = speciesGait(sp, 1, speed, 9.81, run);
+                    const double stride = speciesStride(sp, 1, speed, 9.81);
+                    gaitSeen[gait] = true;
+                    for (int q = 0; q < 24; q++) {
+                        AnimalPoseIn in;
+                        in.heading = 0; in.scale = 1; in.t = 0.37 * q; in.seed = sp.seed;
+                        in.gx = 0.5 * a.length + a.leg + a.neck; in.gz = a.width + a.leg;
+                        in.moving = true; in.running = run; in.gait = gait; in.stride = stride;
+                        const int what = q % 6;   // stepping, stalking, browsing, half under, on a trunk, stepping again
+                        in.crouch = what == 1 ? 1 : 0; in.reach = what == 2 ? 1 : 0; in.sink = what == 3 ? 0.5 : 0;
+                        in.climbing = what == 4; in.wall = Vec3(1, 0, 0);
+                        AnimalPose P[2];
+                        for (int k = 0; k < 2; k++) {
+                            in.phase = q / 24.0 + k * 0.02;
+                            in.at = Vec3(0, 0, in.phase * stride);   // the body gone its share of its strides (heading 0 is +z)
+                            poseAnimal(R, in, P[k]);
+                            poses++;
+                            const double floorY = in.sink > 0 || in.climbing ? -1e9 : -0.03 * a.size - 0.02;
+                            if (!poseWithin(P[k], in.at, 1.5 * reach, floorY)) {
+                                outside++;
+                                if (bad.size() < 200) bad += fmt(" %s(%s q%d)", PLAN_NAMES[sp.plan], GAIT_NAMES[gait], q);
+                            }
+                        }
+                        if (what != 0 && what != 5) continue;
+                        for (int l = 0; l < P[0].legs; l++) {   // a foot on the ground in both stays where it was put
+                            const Vec3 f0 = P[0].leg[l][P[0].joints - 1], f1 = P[1].leg[l][P[1].joints - 1];
+                            const double onGround = 0.2 * P[0].legR + 1e-3;
+                            if (f0.y > onGround || f1.y > onGround) continue;
+                            stance++;
+                            const double moved = std::hypot(f1.x - f0.x, f1.z - f0.z);
+                            worst = std::max(worst, moved / stride);
+                            if (moved > 0.03 * stride + 1e-3) slips++;
+                        }
+                    }
+                }
+            }
+        }
+        for (bool g : gaitSeen) gaitsUsed += g;
+        check("animals: the gaits within bounds, the feet put down", outside == 0 && slips == 0 && plans == 12 && stance > 1000,
+              fmt("%d poses of %d land plans in %d gaits: %d outside%s; %d feet on the ground over a fiftieth of a cycle, %d slipped (the most %.1f%% of a stride, "
+                  "under 3%%)", poses, plans, gaitsUsed, outside, bad.c_str(), stance, slips, 100 * worst));
+    }
+    {   // J-07: the record: a landing walked up to a herd sees its species (the guide's `animal` lines), N with the crosshair on one names it; the
+        // guide saved, loaded and saved again is the same bytes; a friend's export lent (a loan): its names in the inbox, the explorer's own
+        // name winning
+        const std::string pre = "shots/tests/unit_animals";
+        TestGame game;
+        game.savePrefix = pre + "_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = pre + "_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        StarSystem fs; int fb = -1;
+        int records = 0, named = 0, same = 0, lent = 0, own = 0, mapped = 0;
+        std::string said, key;
+        if (firstBodyOfType(PT_FELISIAN, fs, fb)) {
+            game.testParkAt(fs.star, fb);
+            game.testLandSite();
+            pressKey(game, in, KEY_ENTER); runFrames(game, in, 8.5);
+            if (game.testGotoHerd(16)) {
+                runFrames(game, in, 1.0);
+                records = (int)game.guide.animals.size();
+                // the crosshair on the nearest: the explorer turned to it until the view's middle rests on it
+                const SurfaceView& sv = game.testSurface();
+                auto aim = [&]() {
+                    for (int k = 0; k < 40 && sv.lifeTarget.species < 0; k++) {
+                        double best = 1e9, yaw = 0, pitch = 0;
+                        for (const Critter& c : sv.critters) {
+                            const double dx = c.x - sv.player.x, dz = c.z - sv.player.z, d = std::hypot(dx, dz);
+                            if (d < best) { best = d; yaw = std::atan2(dx, dz); pitch = std::atan2(0.5 * c.size - sv.player.eyeHeight, d); }   // (the ground taken as level)
+                        }
+                        game.testSurfaceFace(yaw, pitch);
+                        runFrames(game, in, 0.05);
+                    }
+                };
+                aim();
+                if (sv.lifeTarget.species >= 0) {
+                    pressKey(game, in, KEY_N); runFrames(game, in, 0.1);   // R-452: N alone the map, an animal under the crosshair or not
+                    mapped = game.state == GameState::SECTOR_MAP;
+                    pressKey(game, in, KEY_ESCAPE); runFrames(game, in, 0.1);
+                    aim();   // (the herd moved on meanwhile)
+                }
+                if (sv.lifeTarget.species >= 0) {
+                    key = Guide::bodyKey(fs.star.sx, fs.star.sy, fs.star.sz, fb) + "/A" + std::to_string(sv.lifeTarget.species);
+                    in.down[KEY_LEFT_SHIFT] = true; pressKey(game, in, KEY_N); in.down[KEY_LEFT_SHIFT] = false; runFrames(game, in, 0.1);
+                    game.testTypeText("TESTBEAST"); pressKey(game, in, KEY_ENTER); runFrames(game, in, 0.1);
+                    said = game.testStatus();
+                    named = game.guide.names.count(key) && game.guide.names[key] == "TESTBEAST";
+                }
+            }
+            game.guide.save(pre + "_a.txt");
+            Guide g2;
+            g2.load(pre + "_a.txt");
+            g2.save(pre + "_b.txt");
+            same = fileText(pre + "_a.txt") == fileText(pre + "_b.txt") && g2.animals.size() == game.guide.animals.size() && !g2.animals.empty();
+            Guide friendOf;   // the borrower: the record's names lent; then a name of its own, which wins
+            lent = friendOf.importInbox(pre + "_a.txt") >= 0 && !key.empty() && friendOf.inbox.count(key) && friendOf.inbox[key] == "TESTBEAST";
+            friendOf.names[key] = "MINE";
+            friendOf.save(pre + "_c.txt");
+            Guide again; again.load(pre + "_c.txt");
+            own = again.names[key] == "MINE" && again.inbox[key] == "TESTBEAST";
+            for (const char* f : {"_a.txt", "_b.txt", "_c.txt", "_guide.txt", "_save_auto.txt"}) remove((pre + f).c_str());
+        }
+        check("animals: the record and its names; N the map, Shift+N names (R-452)", records > 0 && mapped && named && same && lent && own,
+              fmt("%d species seen walking up to a herd; N on one %s; Shift+N named it TESTBEAST (%s, '%s'); the guide saved again %s; a friend's lent the name %s, its own %s",
+                  records, mapped ? "opened the map" : "DID NOT OPEN THE MAP", named ? "kept" : "NOT KEPT", said.c_str(), same ? "the same bytes" : "DIFFERENT", lent ? "in the inbox" : "NOT", own ? "wins" : "DOES NOT WIN"));
+    }
+
+    {   // the herds' cells as generation 17 had them: the bestiary drawn again moves no herd's cell or spot
+        int worlds, sites, cells;
+        const uint64_t d = herdCellsDigest(worlds, sites, cells);
+        // (generation 17's bestiary: 108 cells round 24 landings on 12 worlds)
+        check("animals: the herds' cells", d == 0x8a84caf071cf0447ULL && cells == 108,
+              fmt("%d cells with a herd round %d landings on %d worlds, digest %016llx (17: 108, 8a84caf071cf0447)", cells, sites, worlds, (unsigned long long)d));
+    }
+    {   // a save and a guide of generation 17 load with the regeneration's notice (VESPERIS_PLAYER_DIR: copies of the player's own too, read only)
+        const std::string pre = "shots/tests/animals_gen";
+        std::string said;
+        {
+            TestGame g; g.savePrefix = pre + "_save"; g.guidePath = pre + "_guide.txt"; g.settingsPath = pre + "_settings.txt";
+            g.newGame();
+            g.save(g.slotPath(0));
+            g.guide.save(g.guidePath);
+        }
+        for (const std::string& f : {pre + "_save_auto.txt", pre + "_guide.txt"}) {   // their generation set back to 17
+            std::string t = fileText(f);
+            const size_t at = t.find(fmt("\ngen %d\n", GEN_VERSION));
+            if (at != std::string::npos) t.replace(at, 8, "\ngen 17\n");
+            std::ofstream(f, std::ios::binary) << t;
+        }
+        {
+            TestGame g; g.savePrefix = pre + "_save"; g.guidePath = pre + "_guide.txt"; g.settingsPath = pre + "_settings.txt";
+            g.loadFromDisk();
+            said = g.testStatusNext() + " / " + g.testStatus();
+        }
+        std::string player;
+        if (const char* dir = std::getenv("VESPERIS_PLAYER_DIR")) {   // the player's, copied first
+            const std::string cp = "shots/tests/animals_player";
+            std::ofstream(cp + "_save_auto.txt", std::ios::binary) << fileText(std::string(dir) + "/vesperis_save_auto.txt");
+            std::ofstream(cp + "_guide.txt", std::ios::binary) << fileText(std::string(dir) + "/guide.txt");
+            TestGame g; g.savePrefix = cp + "_save"; g.guidePath = cp + "_guide.txt"; g.settingsPath = cp + "_settings.txt";
+            g.loadFromDisk();
+            player = fmt("; the player's copies said '%s'", (g.testStatusNext() + " / " + g.testStatus()).c_str());
+        }
+        for (const char* f : {"_save_auto.txt", "_guide.txt", "_settings.txt"}) remove((pre + f).c_str());
+        check("animals: an older save's notice", said.find(fmt("WORLDS REGENERATED (GEN 17, NOW %d)", GEN_VERSION)) != std::string::npos,
+              fmt("a save of generation 17 said '%s'%s", said.c_str(), player.c_str()));
+    }
+    // ---- J-08: the fates. Worlds with animals and plants and their own sea lines, four lines a world (a nerve poison, a blood poison, a sulphide
+    // gas, a host of the animals' cells that passes its genes on), each let go where it takes and read at three clocks
+    struct FateCase { const StarSystem* sys; int body; Seeding sd; };
+    std::vector<SeedAirCase> fateWorlds;
+    for (const SeedAirCase& c : seedAirCases(36))
+        if (kindHas(c.sys.bodies[c.body].type, KT_FAUNA) && kindHas(c.sys.bodies[c.body].type, KT_FLORA)) fateWorlds.push_back(c);
+    std::vector<FateCase> fcases;
+    const std::vector<std::vector<std::pair<int, int>>> fateLines = {{{GN_POISON, PZ_NERVE}}, {{GN_POISON, PZ_BLOOD}}, {{GN_GAS, WG_H2S}}, {{GN_HOST, HO_ANIMALS}, {GN_CARRIER, -1}}};
+    for (const SeedAirCase& c : fateWorlds)
+        for (const auto& genes : fateLines) {
+            SeedLine line = seedLineFor(c.sys, c.body, c.wild.kind.s.index, seedGeneEdits(c.wild.genes, genes));
+            line.key += "/S1";
+            double lat = c.lat, lon = c.lon;
+            if (!line.valid || !seedPlaceTaking(c.sys, c.body, line, lat, lon)) continue;
+            FateCase f{&c.sys, c.body, seedingFor(c.sys, c.body, line, lat, lon, 0)};
+            if (f.sd.verdict.takes()) fcases.push_back(f);
+        }
+    {   // the shares fixed by world and line: every case's fates (the layer's and each species' at its place) the same serially, reversed and
+        // on the pool, at steps 4, 16 and 40; and named where they are drawn
+        const int n = (int)fcases.size();
+        auto digestOf = [&](int k, int step) {
+            const FateCase& f = fcases[k];
+            const Body& b = f.sys->bodies[f.body];
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, step * MADE_STEP_S / f.sd.verdict.pace + 1);
+            return fateDigest(m, Bestiary::make(b, BodyGen::make(b)), StarSystem::bodyFromLatLon(f.sd.lat, f.sd.lon), b.seed);
+        };
+        int same = 0, fated = 0, dieOffs = 0, sick = 0, changed = 0;
+        for (int step : {4, 16, 40}) {
+            std::vector<uint64_t> serial(n), reversed(n), pooled(n);
+            for (int k = 0; k < n; k++) serial[k] = digestOf(k, step);
+            for (int k = n - 1; k >= 0; k--) reversed[k] = digestOf(k, step);
+            parallelFor(n, 1, [&](int a, int b) { for (int k = a; k < b; k++) pooled[k] = digestOf(k, step); });
+            for (int k = 0; k < n; k++) same += serial[k] == reversed[k] && serial[k] == pooled[k];
+        }
+        for (const FateCase& f : fcases) {
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            fated += m.fated(); dieOffs += (m.fauna & MF_DIE_OFF) != 0; sick += (m.fauna & MF_SICKNESSES) != 0; changed += (m.fauna & MF_CHANGED_YOUNG) != 0;
+        }
+        const MadeWorld none;   // (a world nobody seeded: no fate for any species)
+        const Body& b0 = fateWorlds.empty() ? Body() : fateWorlds[0].sys.bodies[fateWorlds[0].body];
+        bool unseeded = true;
+        if (!fateWorlds.empty()) for (const Species& sp : Bestiary::make(b0, BodyGen::make(b0)).species) unseeded = unseeded && !animalFateOf(sp, madeFateAt(none, Vec3(1, 0, 0), b0.seed), nullptr, 0).on();
+        check("animals: the fates' shares fixed by world and line", n > 0 && same == 3 * n && fated > n / 2 && dieOffs > 0 && sick > 0 && changed > 0 && unseeded,
+              fmt("%d seedings on %zu worlds: %d of %d fates alike serially, reversed and on the pool (steps 4, 16, 40); at step 40 %d with a fate, %d a die-off, %d a "
+                  "sickness, %d changed young; a world nobody seeded %s", n, fateWorlds.size(), same, 3 * n, fated, dieOffs, sick, changed, unseeded ? "untouched" : "TOUCHED"));
+    }
+    {   // remains a pure function of their cell: a blood poison's die-off at step 16 round its place, the cells' remains the same from two landings
+        // 3 km apart (each in its own local metres, compared on the body) and in any order; a world nobody seeded has old bones alone
+        int cells = 0, remainsN = 0, alike = 0, old = 0, oldOnly = 1;
+        bool done = false;
+        for (const FateCase& f : fcases) {
+            if (done || f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            const MadeWorld m = madeWorldOf(sys, f.body, {f.sd}, 16 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            const Body& b = sys.bodies[f.body];
+            const BodyGen g = BodyGen::make(b);
+            double la = 0, lo = 0;   // the land nearest the place
+            bool land = false;
+            for (double km = 1; km < 400 && !land; km *= 1.3)
+                for (int k = 0; k < 16 && !land; k++) {
+                    la = f.sd.lat + km / b.radiusKm * std::cos(k * TAU / 16); lo = f.sd.lon + km / b.radiusKm * std::sin(k * TAU / 16) / std::max(0.05, std::cos(f.sd.lat));
+                    const SurfaceSample smp = sampleSurface(g, StarSystem::bodyFromLatLon(la, lo), 16);
+                    land = !madeWetAt(smp) && smp.material != MAT_SNOW && smp.material != MAT_ICE;
+                }
+            if (!land) continue;
+            auto remainsOf = [&](double lat, double lon, bool reversed, const MadeWorld& made, std::vector<std::pair<Vec3, Remains>>& out) {
+                SurfaceView sv;
+                sv.site.made = made;
+                sv.init(&sys, f.body, lat, lon, 1000);
+                double cla, clo;   // (the cells round the first landing, the same cells from the second)
+                int gLat0, gLon0;
+                SurfaceSite first; first.made = made; first.init(&sys, f.body, la, lo, 1000);
+                SurfaceView::lifeCellAt(first, 0, 0, gLat0, gLon0);
+                (void)cla; (void)clo;
+                std::vector<std::pair<int, int>> order;
+                for (int dl = -2; dl <= 2; dl++) for (int dn = -3; dn <= 3; dn++) order.push_back({gLat0 + dl, gLon0 + dn});
+                if (reversed) std::reverse(order.begin(), order.end());
+                for (const auto& [gl, gn] : order) {
+                    SurfaceView::Herd hd; int spi = -1, nn = 0;
+                    const bool herd = SurfaceView::planCellHerd(sv.site, sv.bestiary, gl, gn, hd, spi, nn);
+                    std::vector<Remains> rs;
+                    sv.cellRemains(gl, gn, herd ? &hd : nullptr, spi, nn, rs);
+                    for (const Remains& r : rs) out.push_back({sv.site.unitAt(r.x, r.z), r});
+                }
+            };
+            std::vector<std::pair<Vec3, Remains>> a, a2, c, w;
+            remainsOf(la, lo, false, m, a);
+            remainsOf(la, lo, true, m, a2);
+            remainsOf(la + 3.0 / b.radiusKm, lo, false, m, c);
+            remainsOf(la, lo, false, MadeWorld(), w);
+            std::sort(a2.begin(), a2.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            std::sort(c.begin(), c.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            std::vector<std::pair<Vec3, Remains>> as = a;
+            std::sort(as.begin(), as.end(), [](const auto& p, const auto& q) { return p.second.seed < q.second.seed; });
+            cells = 35; remainsN = (int)a.size();
+            if (as.size() == a2.size() && as.size() == c.size())
+                for (size_t k = 0; k < as.size(); k++) {
+                    const Remains &p = as[k].second, &q = a2[k].second, &r = c[k].second;
+                    const bool sameCell = p.species == q.species && p.stage == q.stage && p.seed == q.seed && std::fabs(p.x - q.x) < 1e-9 && std::fabs(p.z - q.z) < 1e-9;
+                    const bool sameBody = p.species == r.species && p.stage == r.stage && p.seed == r.seed && length(as[k].first - c[k].first) * b.radiusKm * 1000 < 0.01;
+                    alike += sameCell && sameBody;
+                }
+            for (const auto& [u, r] : w) { old++; if (!r.old || (r.stage != RS_BONES && r.stage != RS_SCATTERED)) oldOnly = 0; }
+            done = true;
+        }
+        check("animals: remains a pure function of their cell", done && remainsN > 0 && alike == remainsN && oldOnly,
+              fmt("%d cells of a blood poison's die-off at step 16: %d remains, %d alike in another order and from a landing 3 km off (on the body within a "
+                  "centimetre); a world nobody seeded %d old bones%s", cells, remainsN, alike, old, oldOnly ? ", all of them old" : ", NOT ALL OLD"));
+    }
+    {   // the record's marks: remains in view mark their species DYING (GONE where none of it lives there), a changed young CHANGED; the guide's
+        // `animal` lines keep them and read back the same bytes, a line with no marks as J-07 wrote it; a loan carries no animal lines
+        std::string marksSeen;
+        bool dying = false, changedSeen = false, bytes = false, plain = false, loan = false;
+        for (const FateCase& f : fcases) {
+            if (f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            const MadeWorld m = madeWorldOf(sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb; Input in;
+            sv.site.made = m;
+            sv.init(&sys, f.body, f.sd.lat + 0.02, f.sd.lon, 1000);
+            if (!sv.bestiary.landCount) continue;
+            nb.update(sv.site.worldPos(1000, 0, 0, 0));
+            sv.critters.clear(); sv.flocks.clear(); sv.herds.clear(); sv.remains.clear(); sv.habitatT = 1e18;
+            const int spi = 0;
+            sv.freeCam = true; sv.freePos = Vec3(0, sv.site.groundHeight(0, 0) + 1.6, 0); sv.freeYaw = 0; sv.freePitch = -0.25;
+            Remains r; r.species = spi; r.x = 0.4; r.z = 5; r.heading = 1.2; r.size = sv.bestiary.species[spi].size; r.stage = RS_FRESH; r.seed = 99; r.cell = false;
+            sv.testRemainsAdd(r);
+            // a changed young beside it (its species' changes, or one given)
+            SurfaceView::Herd hd; hd.cx = -1; hd.cz = 6; hd.origin = true; sv.herds.push_back(hd);
+            Critter c; c.herd = 0; c.species = spi; c.x = -1.2; c.z = 6; c.heading = 1.0; c.timer = 30; c.size = sv.bestiary.species[spi].size; c.seed = 7; c.changed = true;
+            c.homeX = c.x; c.homeZ = c.z;
+            if (sv.speciesChanges.size() > (size_t)spi && sv.speciesChanges[spi].n == 0) { sv.speciesChanges[spi].n = 1; sv.speciesChanges[spi].changes[0] = CHG_PALE; }
+            sv.critters.push_back(c);
+            sv.player.x = 0; sv.player.z = -60; sv.player.y = sv.site.surfaceHeight(0, -60);
+            for (int k = 0; k < 3; k++) { sv.update(1.0 / 30, in, 1000 + k / 30.0, false); Framebuffer fb; sv.render(fb, 1000 + k / 30.0, nb.stars, sr, 1.0); }
+            const uint32_t mk = sv.lifeSeen.size() > (size_t)spi ? sv.lifeSeen[spi].marks : 0;
+            dying = (mk & (AM_DYING | AM_GONE)) != 0 && (sv.lifeSeen[spi].doing >> DO_DEAD & 1);
+            changedSeen = (mk & AM_CHANGED) != 0;
+            marksSeen = fmt("%s%s%s", (mk & AM_DYING) ? "DYING " : "", (mk & AM_GONE) ? "GONE " : "", (mk & AM_CHANGED) ? "CHANGED" : "");
+            break;
+        }
+        {   // the guide's bytes with marks, and a record without
+            const std::string pre = "shots/tests/unit_fates";
+            Guide g;
+            const std::string k0 = Guide::bodyKey(150, 0, 36, 1) + "/A0", k1 = Guide::bodyKey(150, 0, 36, 1) + "/A1";
+            g.animals[k0] = AnimalRecord{(1u << DO_DEAD) | 1u, 12, 3, AM_DYING | AM_CHANGED};
+            g.animals[k1] = AnimalRecord{2u, 30, 5, 0};
+            g.save(pre + "_a.txt");
+            Guide g2; g2.load(pre + "_a.txt"); g2.save(pre + "_b.txt");
+            const std::string ta = fileText(pre + "_a.txt");
+            bytes = ta == fileText(pre + "_b.txt") && g2.animals[k0].marks == (AM_DYING | AM_CHANGED);
+            plain = ta.find("animal " + k1 + " 2 30 5\n") != std::string::npos && ta.find(fmt("animal %s %u 12 3 %d\n", k0.c_str(), (1u << DO_DEAD) | 1u, AM_DYING | AM_CHANGED)) != std::string::npos;
+            Guide lent;
+            loan = lent.importInbox(pre + "_a.txt") >= 0 && lent.animals.empty();
+            for (const char* fn : {"_a.txt", "_b.txt"}) remove((pre + fn).c_str());
+        }
+        check("animals: the record's marks", dying && changedSeen && bytes && plain && loan,
+              fmt("remains and a changed young in view marked their species %s; the guide's marks read back %s, a record without them as J-07 wrote it %s; a "
+                  "loan's animal lines %s", marksSeen.empty() ? "NOTHING" : marksSeen.c_str(), bytes ? "the same bytes" : "DIFFERENT", plain ? "yes" : "NO",
+                  loan ? "none" : "SOME"));
+    }
+    {   // B-470: a kill kept and remains aged: a cell herd's member caught by the blood poison's place; the explorer 3 km off (the cell forgotten)
+        // and back: the quarry still dead and its remains where it fell; three steps on the landing's clock: the kill past fresh and the cells'
+        // dead staged again; 60 km off (the frame anchored again): flyers round them and no remains left over from the old frame
+        bool done = false, forgotten = false, stillDead = false, back = false, flocks = true, noStale = true;
+        int killStage = 0, cellRemains = 0, cellMoved = 0, staleN = 0;
+        double offCm = -1;
+        for (const FateCase& f : fcases) {
+            if (done || f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            const MadeWorld m = madeWorldOf(sys, f.body, {f.sd}, 16 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            const Body& b = sys.bodies[f.body];
+            SurfaceView sv; Input in;
+            sv.site.made = m;
+            sv.init(&sys, f.body, f.sd.lat + 0.02, f.sd.lon, 1000);
+            if (!sv.bestiary.landCount) continue;
+            double t = 1000;
+            auto pass = [&](int n) { for (int k = 0; k < n; k++) { t += 0.6; sv.update(0.6, in, t, false); } };
+            auto at = [&](double x, double z) { sv.player.x = x; sv.player.z = z; sv.player.y = sv.site.surfaceHeight(x, z); };
+            at(0, 0); pass(2);
+            int qi = -1;
+            for (int i = 0; i < (int)sv.critters.size() && qi < 0; i++) if (!sv.herds[sv.critters[i].herd].origin) qi = i;
+            if (qi < 0) continue;
+            const SurfaceView::Herd hd = sv.herds[sv.critters[qi].herd];
+            const Vec3 qU = sv.site.unitAt(sv.critters[qi].x, sv.critters[qi].z);
+            const uint64_t qs = sv.testKillCritter(qi);
+            at(hd.cx + 3000, hd.cz); pass(2);
+            forgotten = true;
+            for (const Critter& c : sv.critters) forgotten = forgotten && !(sv.herds[c.herd].gLat == hd.gLat && sv.herds[c.herd].gLon == hd.gLon && !sv.herds[c.herd].origin);
+            for (const Remains& r : sv.remains) forgotten = forgotten && r.seed != qs;
+            at(0, 0); pass(2);
+            stillDead = std::none_of(sv.critters.begin(), sv.critters.end(), [&](const Critter& c) { return c.seed == qs; });
+            const Remains* kr = nullptr;
+            for (const Remains& r : sv.remains) if (r.seed == qs) kr = &r;
+            if (kr) { double qx, qz; sv.site.localAt(qU, qx, qz); offCm = 100 * std::hypot(kr->x - qx, kr->z - qz); }
+            back = kr && offCm < 1;
+            std::vector<std::pair<uint64_t, int>> before;
+            for (const Remains& r : sv.remains) if (r.cell && !r.old) before.push_back({r.seed, r.stage});
+            sv.testLifeClock(3 * MADE_STEP_S); pass(1);
+            for (const Remains& r : sv.remains) {
+                if (r.seed == qs) killStage = r.stage;
+                for (const auto& [sd, st] : before) if (sd == r.seed && r.cell) { cellRemains++; cellMoved += r.stage != st; }
+            }
+            at(60000, 0); pass(1); at(sv.player.x, sv.player.z); pass(2);
+            flocks = !sv.bestiary.flyerCount || !sv.flocks.empty();
+            int stale = 0;
+            for (const Remains& r : sv.remains) {   // (a cell's dead lie in or by their cell: its middle within 800 m in the frame they are drawn in)
+                if (!r.cell) continue;
+                const double dLat = 512.0 / sv.site.R, latc = (r.gLat + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);
+                double mx, mz;
+                sv.site.localAt(StarSystem::bodyFromLatLon(latc, (r.gLon + 0.5) * dLon), mx, mz);
+                stale += std::hypot(r.x - mx, r.z - mz) > 800;
+            }
+            noStale = stale == 0;
+            staleN = stale;
+            (void)b;
+            done = true;
+        }
+        check("animals: a kill kept, remains aged", done && forgotten && stillDead && back && killStage > RS_FRESH && cellMoved > 0 && flocks && noStale,
+              fmt("a cell's member caught, the cell %s 3 km off; back: the quarry %s, its remains %s; three steps on: the kill %s, %d of %d of the cells' dead "
+                  "staged again; 60 km off: %s, %s", forgotten ? "forgotten" : "NOT FORGOTTEN", stillDead ? "still dead" : "ALIVE AGAIN",
+                  back ? fmt("where it fell (%.2f cm)", offCm).c_str() : (offCm >= 0 ? fmt("MOVED %.0f cm", offCm).c_str() : "GONE"),
+                  killStage ? REMAINS_NAMES[killStage] : "GONE", cellMoved, cellRemains, flocks ? "flyers about" : "NO FLYERS", noStale ? "no remains of the old frame" : fmt("%d REMAINS OF THE OLD FRAME", staleN).c_str()));
+    }
+    {   // B-489 (KI-494): a kill kept past the landing: a game on a felisian world, a cell herd's member caught; landed again three steps later on the
+        // guide's clock: the quarry still dead, its remains where it fell and past fresh; after a save and a load the same; 64 steps on, forgotten
+        // (the member alive again, its remains gone); the guide's `dead` line read back the same, a loan's none, a guide with none as before
+        const std::string pre = "shots/tests/unit_animals_dead";
+        TestGame game;
+        game.savePrefix = pre + "_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = pre + "_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        StarSystem fs; int fb = -1;
+        bool caught = false, dead1 = false, where1 = false, aged = false, dead2 = false, where2 = false, alive3 = false, gone3 = false;
+        bool readBack = false, loanNone = false, plain = false;
+        double off1 = -1, off2 = -1;
+        int stage1 = 0;
+        if (firstBodyOfType(PT_FELISIAN, fs, fb)) {
+            auto land = [&]() { game.testParkAt(fs.star, fb); game.testLandSite(); pressKey(game, in, KEY_ENTER); runFrames(game, in, 8.5); };
+            land();
+            runFrames(game, in, 1.5);
+            const SurfaceView& sv = game.testSurface();
+            int qi = -1;
+            for (int i = 0; i < (int)sv.critters.size() && qi < 0; i++) if (!sv.herds[sv.critters[i].herd].origin) qi = i;
+            if (qi >= 0) {
+                const Vec3 qU = sv.site.unitAt(sv.critters[qi].x, sv.critters[qi].z);
+                const uint64_t qs = game.testKillCritter(qi);
+                caught = qs != 0;
+                runFrames(game, in, 0.5);
+                // the explorer by where it fell, the quarry looked for: alive among the herds, its remains and how far from where it fell
+                auto look = [&](bool& dead, bool& where, double& offCm, int* stage) {
+                    double qx, qz;
+                    game.testSurface().site.localAt(qU, qx, qz);
+                    game.testWalkTo(qx + 20, qz);
+                    runFrames(game, in, 1.5);
+                    const SurfaceView& v = game.testSurface();
+                    dead = std::none_of(v.critters.begin(), v.critters.end(), [&](const Critter& c) { return c.seed == qs; });
+                    offCm = -1; where = false;
+                    for (const Remains& r : v.remains)
+                        if (r.seed == qs) { offCm = 100 * std::hypot(r.x - qx, r.z - qz); where = offCm < 1; if (stage) *stage = r.stage; }
+                };
+                game.guide.clock += 3 * MADE_STEP_S;
+                land();
+                look(dead1, where1, off1, &stage1);
+                aged = stage1 >= RS_BLOATED;
+                game.save(pre + "_x.txt");   // (the guide written with it)
+                {
+                    Guide g2; g2.load(game.guidePath); g2.save(pre + "_b.txt");
+                    const std::string key = Guide::bodyKey(fs.star.sx, fs.star.sy, fs.star.sz, fb);
+                    readBack = fileText(game.guidePath) == fileText(pre + "_b.txt") && g2.dead.count(key) && g2.dead[key].size() == 1 && g2.dead[key][0].seed == qs;
+                    Guide friendOf;
+                    loanNone = friendOf.importInbox(game.guidePath) >= 0 && friendOf.dead.empty();
+                    Guide none; none.save(pre + "_0.txt");
+                    const std::string t0 = fileText(pre + "_0.txt");
+                    plain = t0.find("\nclock ") == std::string::npos && t0.find("\ndead ") == std::string::npos;
+                }
+                game.load(pre + "_x.txt");
+                look(dead2, where2, off2, nullptr);
+                game.guide.clock += 64 * MADE_STEP_S;
+                land();
+                bool d3 = false, w3 = false; double o3 = -1;
+                look(d3, w3, o3, nullptr);
+                alive3 = !d3; gone3 = o3 < 0;
+            }
+            for (const char* f : {"_x.txt", "_b.txt", "_0.txt", "_guide.txt", "_save_auto.txt"}) remove((pre + f).c_str());
+        }
+        auto at = [](bool where, double offCm) { return where ? fmt("where it fell (%.2f cm)", offCm) : (offCm >= 0 ? fmt("MOVED %.0f cm", offCm) : std::string("GONE")); };
+        check("animals: a kill kept past the landing (B-489)", caught && dead1 && where1 && aged && dead2 && where2 && alive3 && gone3 && readBack && loanNone && plain,
+              fmt("a cell's member %s; landed again three steps on: the quarry %s, its remains %s, %s; saved and loaded: %s, %s; 64 steps on: %s, %s; the "
+                  "guide's dead line %s, a loan's %s, a guide with none %s", caught ? "caught" : "NOT CAUGHT", dead1 ? "still dead" : "ALIVE AGAIN",
+                  at(where1, off1).c_str(), stage1 ? REMAINS_NAMES[stage1] : "-", dead2 ? "still dead" : "ALIVE AGAIN", at(where2, off2).c_str(),
+                  alive3 ? "its herd whole again" : "STILL DEAD", gone3 ? "no remains" : "REMAINS LEFT", readBack ? "read back the same" : "NOT READ BACK",
+                  loanNone ? "none" : "SOME", plain ? "as before" : "WITH A CLOCK OR DEAD LINE"));
+    }
+    {   // B-468: a climber round its trunk: on worlds with climbers, the trees round a landing in a forest: each climber posed 1 and 2.5 m up each
+        // trunk as it clings now (on the trunk as drawn, its feet on the bark's round) and as it clung (on a flat face at the trunk's collider,
+        // 0.12 m and 2% of the tree's height out); its feet off the bark (in or out of it); four of a herd onto one trunk from one side: two on
+        // one side within a body's length up or down
+        int worlds = 0, poses = 0, feet = 0, shared0 = 0, shared1 = 0, trunks = 0;
+        double off0 = 0, off1 = 0, max0 = 0, max1 = 0;
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 160, [&] { return worlds < 4; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && worlds < 4; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!kindHas(b.type, KT_FAUNA) || !kindHas(b.type, KT_FLORA)) continue;
+                const Bestiary B0 = Bestiary::make(b, BodyGen::make(b));
+                int climber = -1;
+                for (int k = 0; k < B0.landCount; k++) if (B0.species[k].way == WAY_CLIMBER) climber = k;
+                if (climber < 0) continue;
+                double lat, lon, t;
+                if (!waysSite(sys, bi, 1, false, lat, lon, t)) continue;
+                SurfaceView sv;
+                sv.init(&sys, bi, lat, lon, t);
+                std::vector<TreeInst> trees;
+                for (int cz = -4; cz <= 4 && trees.size() < 40; cz++)
+                    for (int cx = -4; cx <= 4 && trees.size() < 40; cx++)
+                        sv.forTrees(cx, cz, [&](const TreeInst& T) { if (!T.dead && !T.stump && trees.size() < 40) trees.push_back(T); });
+                if (trees.empty()) continue;
+                worlds++;
+                const Species& sp = sv.bestiary.species[climber];
+                const AnimalRig R = rigOf(sp.body);
+                for (const TreeInst& T : trees) {
+                    trunks++;
+                    double r0, r1, top, lx, lz;
+                    sv.trunkOf(T, r0, r1, top, lx, lz);
+                    auto axisAt = [&](double Y, double& ax, double& az, double& r) {
+                        const double f = clampd((Y - (T.gy - 0.2)) / std::max(0.2, top + 0.2), 0, 1);
+                        ax = T.x + lx * f; az = T.z + lz * f; r = r0 + (r1 - r0) * f;
+                    };
+                    for (double y : {1.0, 2.5}) {
+                        for (int now = 0; now < 2; now++) {
+                            const double a = 0.7 + 1.3 * poses;
+                            const Vec3 n(std::sin(a), 0, std::cos(a));
+                            double ax, az, r;
+                            axisAt(T.gy + y, ax, az, r);
+                            AnimalPoseIn in;
+                            in.climbing = true; in.wall = n; in.scale = 1; in.t = 3; in.seed = 7;
+                            if (now) { in.at = Vec3(ax + n.x * r, T.gy + y, az + n.z * r); in.trunkR = r; }
+                            else in.at = Vec3(T.x + n.x * (0.12 + 0.02 * T.h), T.gy + y, T.z + n.z * (0.12 + 0.02 * T.h));
+                            AnimalPose P;
+                            poseAnimal(R, in, P);
+                            for (int l = 0; l < P.legs; l++) {
+                                const Vec3& f = P.leg[l][P.joints - 1];
+                                double fx, fz, fr;
+                                axisAt(f.y, fx, fz, fr);
+                                const double d = std::fabs(std::hypot(f.x - fx, f.z - fz) - fr);
+                                (now ? off1 : off0) += d; double& mx = now ? max1 : max0; mx = std::max(mx, d);
+                                if (now) feet++;
+                            }
+                        }
+                        poses++;
+                    }
+                    // four of a herd onto it from one side, in order (as they come one by one)
+                    for (int now = 0; now < 2; now++) {
+                        sv.critters.clear(); sv.herds.clear();
+                        SurfaceView::Herd hd; hd.origin = true; sv.herds.push_back(hd);
+                        const double came = 0.4;
+                        for (int i = 0; i < 4; i++) {
+                            Critter c; c.herd = 0; c.species = climber; c.size = sp.size; c.seed = mix64(T.seed + 31 * i + 1); c.state = CS_CLIMB; c.climbY = 0;
+                            c.treeX = T.x; c.treeZ = T.z; c.treeGy = T.gy;
+                            sv.trunkOf(T, c.trunkR0, c.trunkR1, c.trunkTopY, c.trunkLx, c.trunkLz);
+                            c.treeTop = clampd(std::min(T.cy - 0.5 * T.r, 0.45 * T.h), 1.0, 6.0) * (0.55 + 0.45 * hash01(c.seed ^ 0xC11CULL));
+                            const double want = came + 1.6 * (hash01(c.seed ^ 0xC11BULL) - 0.5);
+                            sv.critters.push_back(c);
+                            sv.critters.back().treeA = now ? sv.testClimbSide(i, want, 1.0) : want;
+                            sv.critters.back().climbY = 0.01;
+                        }
+                        const double wide = sp.body.width + 0.8 * sp.body.leg + 0.08, len = sp.body.length + 0.3 * sp.body.neck + 0.2 * sp.body.tailLen + 0.1;
+                        for (int i = 0; i < 4; i++)
+                            for (int j = i + 1; j < 4; j++) {
+                                const Critter &p = sv.critters[i], &q = sv.critters[j];
+                                const double r = std::max(0.03, std::min(sv.trunkRadius(p, p.treeTop), sv.trunkRadius(q, q.treeTop)));
+                                const bool same = std::fabs(std::remainder(p.treeA - q.treeA, TAU)) * r < wide && std::fabs(p.treeTop - q.treeTop) < len;
+                                (now ? shared1 : shared0) += same;
+                            }
+                    }
+                }
+            }
+        }
+        const double mean0 = feet ? 100 * off0 / feet : 0, mean1 = feet ? 100 * off1 / feet : 0;
+        check("animals: a climber round its trunk", worlds >= 2 && feet > 100 && 100 * max1 < 4 && mean1 < 1.5 && shared1 == 0,
+              fmt("%d trunks on %d worlds, %d poses, %d feet: off the bark %.1f cm on the mean, %.1f at most (as it clung: %.1f, %.1f); four of a herd onto each "
+                  "trunk, two on one side %d times (as they chose: %d)", trunks, worlds, poses, feet, mean1, 100 * max1, mean0, 100 * max0, shared1, shared0));
+    }
+    {   // B-491 (KI-496): a climber along its trunk's lean, on a trunk it can hold: on worlds with climbers, the trees round a landing in a forest
+        // that lean (their top 2 degrees or more off the foot); each climber posed 1 and 2.5 m up each as the game poses it (`climbPose`): its
+        // body's line against the trunk's axis there, as it clung before (upright) and now; its feet off the bark, now; and from 60 points round the
+        // landing the trunk it takes (`climbTreeNear`) against the nearest (as it took before): those thinner at the top it climbs to than its body
+        // is wide
+        int worlds = 0, leaning = 0, poses = 0, feet = 0, takes = 0, thin0 = 0, thin1 = 0, none1 = 0;
+        double ang0 = 0, ang1 = 0, max0 = 0, max1 = 0, offMax = 0, offSum = 0, leanMax = 0;
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 160, [&] { return worlds < 4; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && worlds < 4; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!kindHas(b.type, KT_FAUNA) || !kindHas(b.type, KT_FLORA)) continue;
+                const Bestiary B0 = Bestiary::make(b, BodyGen::make(b));
+                int climber = -1;
+                for (int k = 0; k < B0.landCount; k++) if (B0.species[k].way == WAY_CLIMBER) climber = k;
+                if (climber < 0) continue;
+                double lat, lon, t;
+                if (!waysSite(sys, bi, 1, false, lat, lon, t)) continue;
+                SurfaceView sv;
+                sv.init(&sys, bi, lat, lon, t);
+                std::vector<TreeInst> trees;
+                for (int cz = -4; cz <= 4 && trees.size() < 60; cz++)
+                    for (int cx = -4; cx <= 4 && trees.size() < 60; cx++)
+                        sv.forTrees(cx, cz, [&](const TreeInst& T) { if (!T.dead && !T.stump && trees.size() < 60) trees.push_back(T); });
+                if (trees.empty()) continue;
+                worlds++;
+                const Species& sp = sv.bestiary.species[climber];
+                const AnimalRig R = rigOf(sp.body);
+                auto topOf = [&](const TreeInst& T) { return clampd(std::min(T.cy - 0.5 * T.r, 0.45 * T.h), 1.0, 6.0); };
+                for (const TreeInst& T : trees) {
+                    Critter c; c.species = climber; c.size = sp.size; c.state = CS_CLIMB; c.treeX = T.x; c.treeZ = T.z; c.treeGy = T.gy;
+                    sv.trunkOf(T, c.trunkR0, c.trunkR1, c.trunkTopY, c.trunkLx, c.trunkLz);
+                    const Vec3 axis = normalize(Vec3(c.trunkLx, c.trunkTopY + 0.2, c.trunkLz));
+                    const double lean = std::acos(clampd(axis.y, -1, 1));
+                    if (lean < 2 * DEG) continue;
+                    leaning++; leanMax = std::max(leanMax, lean);
+                    for (double y : {1.0, 2.5}) {
+                        c.climbY = y; c.treeA = 0.7 + 1.3 * poses;
+                        sv.trunkPoint(c, y, c.x, c.z);
+                        for (int now = 0; now < 2; now++) {
+                            AnimalPoseIn in;
+                            if (now) sv.climbPose(c, in);
+                            else { in.climbing = true; in.wall = Vec3(std::sin(c.treeA), 0, std::cos(c.treeA)); in.trunkR = sv.trunkRadius(c, y); }
+                            in.at = Vec3(c.x, T.gy + y, c.z); in.scale = 1; in.t = 3; in.seed = 7;
+                            AnimalPose P;
+                            poseAnimal(R, in, P);
+                            const double a = std::acos(clampd(dot(normalize(P.fwd), axis), -1, 1));
+                            (now ? ang1 : ang0) += a; double& mx = now ? max1 : max0; mx = std::max(mx, a);
+                            if (!now) continue;
+                            for (int l = 0; l < P.legs; l++) {   // (its feet on the bark round the leaning axis at their height)
+                                const Vec3& f = P.leg[l][P.joints - 1];
+                                const double fy = f.y - T.gy, ff = clampd((fy + 0.2) / std::max(0.2, c.trunkTopY + 0.2), 0, 1);
+                                const Vec3 o(T.x + c.trunkLx * ff, f.y, T.z + c.trunkLz * ff), d = f - o, dn = d - axis * dot(d, axis);
+                                const double off = std::fabs(length(dn) - sv.trunkRadius(c, fy));
+                                offSum += off; offMax = std::max(offMax, off); feet++;
+                            }
+                        }
+                        poses++;
+                    }
+                }
+                Rng r(mix64(b.seed ^ 0xC11DULL));
+                for (int q = 0; q < 60; q++) {
+                    const double px = r.sym(120), pz = r.sym(120);
+                    TreeInst T0, T1;
+                    const bool had = sv.testTreeNear(px, pz, 25, T0), has = sv.testClimbTree(px, pz, sp, 1.0, T1);
+                    auto thin = [&](const TreeInst& T) {
+                        Critter c; sv.trunkOf(T, c.trunkR0, c.trunkR1, c.trunkTopY, c.trunkLx, c.trunkLz);
+                        return 2 * sv.trunkRadius(c, topOf(T)) < sp.body.width;
+                    };
+                    if (!had) continue;
+                    takes++;
+                    thin0 += thin(T0);
+                    if (has) thin1 += thin(T1); else none1++;
+                }
+            }
+        }
+        const double mean0 = poses ? ang0 / poses / DEG : 0, mean1 = poses ? ang1 / poses / DEG : 0;
+        check("animals: a climber along its trunk's lean, on a trunk it can hold (B-491)",
+              worlds >= 2 && poses > 40 && max1 < 1.5 * DEG && feet > 100 && offMax < 0.04 && takes > 100 && thin1 == 0 && none1 < takes / 4,
+              fmt("%d leaning trunks (up to %.0f degrees) on %d worlds, %d poses: the body off the trunk's line %.1f degrees on the mean, %.1f at most (upright as "
+                  "before: %.1f, %.1f); %d feet off the bark %.1f cm on the mean, %.1f at most; from %d points the trunk taken thinner than its body %d times (the "
+                  "nearest: %d), none it can hold %d times", leaning, leanMax / DEG, worlds, poses, mean1, max1 / DEG, mean0, max0 / DEG, feet,
+                  feet ? 100 * offSum / feet : 0.0, 100 * offMax, takes, thin1,
+                  thin0, none1));
+    }
+    {   // B-469: the flyers' and the swimmers' fates: under the fates' lines at step 40, their species sick or with changed young (a host's every
+        // class, a poison's where it harms); a sprouting one falls dead on its high ground at its time, its remains with their stalks kept
+        int sickAir = 0, sickWater = 0, changedAir = 0, changedWater = 0, sprout = 0;
+        for (const FateCase& f : fcases) {
+            const Body& b = f.sys->bodies[f.body];
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            const MadeFate here = madeFateAt(m, StarSystem::bodyFromLatLon(f.sd.lat, f.sd.lon), b.seed);
+            int steer = m.fate.steer;
+            for (int i = 0; i < m.lines; i++) steer |= m.spread[i].fate.steer;
+            for (const Species& sp : Bestiary::make(b, BodyGen::make(b)).species) {
+                int ch[3] = {-1, -1, -1};
+                const AnimalFate af = animalFateOf(sp, here, ch, animalChangesOf(sp, steer, ch));
+                sprout += af.sickness == MF_SPROUTING && !(!planFlies(sp.plan) && !planSwims(sp.plan));
+                if (planFlies(sp.plan)) { sickAir += af.sick > 0; changedAir += af.changed > 0; }
+                if (planSwims(sp.plan)) { sickWater += af.sick > 0; changedWater += af.changed > 0; }
+            }
+        }
+        bool fell = false, kept = false, stalks = false;
+        for (const FateCase& f : fcases) {
+            if (fell || f.sd.wild.kind.world.poison != PZ_BLOOD) continue;
+            StarSystem sys = *f.sys;
+            SurfaceView sv; Input in;
+            sv.site.made = madeWorldOf(sys, f.body, {f.sd}, 16 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            sv.init(&sys, f.body, f.sd.lat + 0.02, f.sd.lon, 1000);
+            if (!sv.bestiary.landCount) continue;
+            sv.critters.clear(); sv.flocks.clear(); sv.herds.clear(); sv.remains.clear(); sv.habitatT = 1e18;
+            SurfaceView::Herd hd; hd.origin = true; sv.herds.push_back(hd);
+            Critter c; c.herd = 0; c.species = 0; c.x = 2; c.z = 8; c.size = sv.bestiary.species[0].size; c.seed = 4242; c.sick = MF_SPROUTING; c.state = CS_IDLE;
+            c.timer = 30; c.homeX = c.x; c.homeZ = c.z; c.dieAt = sv.lifeClock + 5;
+            sv.critters.push_back(c);
+            sv.player.x = 0; sv.player.z = -80; sv.player.y = sv.site.surfaceHeight(0, -80);
+            double t = 1000;
+            for (int k = 0; k < 10; k++) { t += 1; sv.update(1.0, in, t, false); }
+            fell = std::none_of(sv.critters.begin(), sv.critters.end(), [](const Critter& q) { return q.seed == 4242; });
+            for (const Remains& r : sv.remains) if (r.seed == 4242) stalks = r.stalks;
+            kept = sv.keptDead(4242);
+        }
+        // (B-490: a flyer and a swimmer can sprout now; none of these lines makes any animal sprout)
+        check("animals: the flyers' and the swimmers' fates", sickAir > 0 && sickWater > 0 && changedAir > 0 && changedWater > 0 && fell && stalks && kept,
+              fmt("over %zu seedings at step 40: %d flyers' and %d swimmers' species with their sick, %d and %d with changed young, %d of them sprouting; a "
+                  "sprouting one at its time %s, %s, %s", fcases.size(), sickAir, sickWater, changedAir, changedWater, sprout, fell ? "fell dead" : "STILL STANDING",
+                  stalks ? "its remains with their stalks" : "NO STALKS", kept ? "kept for the landing" : "NOT KEPT"));
+    }
+    {   // B-490 (KI-495): a flock's and a shoal's changed young and sick. Under the fates' lines at step 40, the flyers' and the swimmers' species
+        // whose young take a way's change (circling, limping, a flyer stumbling or flying by night); on a world where the sprouting recipe's host
+        // reaches them, its flyers and swimmers sprouting. A flock of crazed flyers over a minute (`flockMembers`): how low they come, and the
+        // seconds one lies on the ground (a whole flock's lowest as the reference). A flock with sprouting members, the clock past their falls:
+        // they fall dead from the air, their remains kept with their stalks. On that world's shore, the clock past its swimmers' falls: they are
+        // gone from the water, washed up dead on dry ground with their stalks, kept
+        int waysAir = 0, waysWater = 0, sproutAir = 0, sproutWater = 0;
+        for (const FateCase& f : fcases) {
+            const Body& b = f.sys->bodies[f.body];
+            const MadeWorld m = madeWorldOf(*f.sys, f.body, {f.sd}, 40 * MADE_STEP_S / f.sd.verdict.pace + 1);
+            int steer = m.fate.steer;
+            for (int i = 0; i < m.lines; i++) steer |= m.spread[i].fate.steer;
+            for (const Species& sp : Bestiary::make(b, BodyGen::make(b)).species) {
+                if (!planFlies(sp.plan) && !planSwims(sp.plan)) continue;
+                int ch[3] = {-1, -1, -1};
+                const int n = animalChangesOf(sp, steer, ch);
+                bool way = false;
+                for (int k = 0; k < n; k++) way |= ch[k] == CHG_CIRCLES || ch[k] == CHG_LIMPS || ch[k] == CHG_STUMBLES || ch[k] == CHG_NIGHT;
+                (planFlies(sp.plan) ? waysAir : waysWater) += way;
+            }
+        }
+        StarSystem sys; int body = -1; double slat = 0, slon = 0; MadeWorld sm;
+        double lowest = 1e9, lowestWhole = 1e9;
+        int lyingS = 0, flyersFell = 0, flyersKept = 0, flyersGone = 0, flyersSprouting = 0, washed = 0, washedKept = 0, washedDry = 0, swimmersGone = 0;
+        int washedAged = 0;
+        // the sprouting world: its flyers and swimmers sprouting where the line went down
+        const bool sprouts = sproutingWorld(0, sys, body, slat, slon, sm, 40);
+        if (sprouts) {
+            const Body& b = sys.bodies[body];
+            const MadeFate here = madeFateAt(sm, StarSystem::bodyFromLatLon(slat, slon), b.seed);
+            for (const Species& sp : Bestiary::make(b, BodyGen::make(b)).species) {
+                int ch[3] = {-1, -1, -1};
+                const AnimalFate af = animalFateOf(sp, here, ch, 0);
+                if (af.sickness != MF_SPROUTING) continue;
+                if (planFlies(sp.plan)) sproutAir++;
+                if (planSwims(sp.plan)) sproutWater++;
+            }
+        }
+        // the fall and the washing up watched on a seeded world's shallow shore with flyers and swimmers (its terminator world's sea has no
+        // shore in reach), a sprouting fate laid on its swimmers by hand (`testSwimmerFate`) and on a flock of its flyers
+        bool shore = false;
+        for (const FateCase& fc : fcases) {
+            if (shore) break;
+            StarSystem ws = *fc.sys;
+            const Body& b = ws.bodies[fc.body];
+            const Bestiary B0 = Bestiary::make(b, BodyGen::make(b));
+            if (!B0.flyerCount || !B0.swimmerCount) continue;
+            double lat, lon, t;
+            if (!waysSite(ws, fc.body, 3, false, lat, lon, t)) continue;
+            shore = true;
+            {
+                SurfaceView sv; Input in;
+                sv.site.made = madeWorldOf(ws, fc.body, {fc.sd}, 40 * MADE_STEP_S / fc.sd.verdict.pace + 1);
+                sv.init(&ws, fc.body, lat, lon, t);
+                sv.relocateCapsule(0, -300);
+                sv.player.x = 0; sv.player.z = -40; sv.player.y = sv.site.surfaceHeight(0, -40);
+                Flock f;
+                f.species = sv.bestiary.firstFlyer(); f.n = 12; f.seed = 0xF10C4ULL; f.cx = 120; f.cz = 0; f.alt = f.cruiseAlt = 40; f.radius = 20; f.speed = 0.05;   // (inland)
+                f.restTimer = 1e9;
+                for (int crazy = 0; crazy < 2; crazy++) {   // (a crazed flock, then the same whole)
+                    Flock q = f; q.sickness = crazy ? 0 : MF_CRAZED; q.sick = crazy ? 0 : 1;
+                    std::vector<SurfaceView::FlockMember> ms;
+                    for (int k = 0; k < 600; k++) {
+                        sv.flockMembers(q, t + 0.1 * k, ms);
+                        bool lies = false;
+                        for (const SurfaceView::FlockMember& m : ms) {
+                            const double h = m.y - std::max(sv.site.groundHeight(m.x, m.z), sv.site.waterAt(m.x, m.z));
+                            (crazy ? lowestWhole : lowest) = std::min(crazy ? lowestWhole : lowest, h);
+                            lies |= m.lying;
+                        }
+                        if (!crazy) lyingS += lies;
+                    }
+                }
+                // a sprouting flock (its fate's age 0: each one falls four to sixteen steps on)
+                sv.flocks.clear(); sv.critters.clear(); sv.herds.clear(); sv.remains.clear();
+                Flock sf = f; sf.sickness = MF_SPROUTING; sf.sick = 1; sf.fateAge = 0; sf.fallsTo = sv.lifeClock;
+                sv.flocks.push_back(sf);
+                std::vector<uint64_t> seeds;
+                { std::vector<SurfaceView::FlockMember> ms; sv.flockMembers(sf, t, ms); for (const auto& m : ms) seeds.push_back(m.seed); flyersSprouting = (int)ms.size(); }
+                sv.testLifeClock(17 * MADE_STEP_S);
+                for (int k = 0; k < 40; k++) { t += 0.25; sv.update(0.25, in, t, false); }
+                for (const Remains& r : sv.remains)
+                    if (std::find(seeds.begin(), seeds.end(), r.seed) != seeds.end()) { flyersFell++; flyersKept += r.stalks && sv.keptDead(r.seed); }
+                { std::vector<SurfaceView::FlockMember> ms; sv.flockMembers(sf, t, ms); for (const auto& m : ms) flyersGone += m.gone; }
+                // the shore's swimmers sprouting (their fate's age 0), the clock past their falls
+                sv.flocks.clear();
+                sv.testSwimmerFate.sickness = MF_SPROUTING; sv.testSwimmerFate.sick = 1; sv.testSwimmerFate.age = 0;
+                std::vector<SurfaceView::SwimmerAt> before, alive, dead;
+                sv.swimmersNear(sv.player.x, sv.player.z, t, before);
+                sv.testLifeClock(20 * MADE_STEP_S);
+                for (int k = 0; k < 4; k++) { t += 0.6; sv.update(0.6, in, t, false); }
+                sv.swimmersNear(sv.player.x, sv.player.z, t, alive, &dead);
+                swimmersGone = (int)dead.size();
+                for (const SurfaceView::SwimmerAt& w : dead)
+                    for (const Remains& r : sv.remains)
+                        if (r.seed == w.seed) {
+                            washed++; washedKept += r.stalks && sv.keptDead(r.seed);
+                            washedAged += r.stage == sv.remainsStageAfter((sv.lifeClock - w.fellAt) / MADE_STEP_S) && r.stage > RS_FRESH;
+                            const TerrainVertex v = sv.site.sampleAt(r.x, r.z, 16);
+                            washedDry += !(v.material == MAT_WATER || (v.water > -1e8f && v.h < v.water + 0.3));
+                        }
+            }
+        }
+        check("animals: a flock's and a shoal's changed young and sick (B-490)",
+              waysAir > 0 && waysWater > 0 && sprouts && shore && sproutAir > 0 && sproutWater > 0 && lowest < 0.5 && lyingS > 0 && flyersFell > 0 &&
+                  flyersKept == flyersFell && flyersGone >= flyersFell && swimmersGone > 0 && washed > 0 && washedKept == washed && washedDry == washed &&
+                  washedAged == washed,
+              fmt("%d flyers' and %d swimmers' species with a way's change among their young's; %s%s: %d flyers' and %d swimmers' species sprouting; a crazed "
+                  "flock down to %.1f m over the ground (whole: %.1f), one lying there %.0f s of a minute; of a sprouting flock of %d, %d gone at their time, %d "
+                  "fallen dead on the ground (%d kept with their stalks); %d sprouting swimmers past their fall gone from the water, %d washed up (%d on dry "
+                  "ground, %d kept, %d staged by their fall)",
+                  waysAir, waysWater, sprouts ? "a sprouting world" : "NO SPROUTING WORLD", shore ? "" : " (NO SHORE)", sproutAir,
+                  sproutWater, lowest, lowestWhole, 0.1 * lyingS,
+                  flyersSprouting, flyersGone, flyersFell, flyersKept, swimmersGone, washed, washedDry, washedKept, washedAged));
+    }
+    {   // B-467: the shallows' swimmers: on worlds with one, a shore site each; of the 100 m cells round it whose spot is one of the shallows and
+        // that hold both water and dry ground, those where it finds its place, and how often its members are at the surface over a minute
+        int worlds = 0, shoreCells = 0, found = 0, frames = 0, seen = 0;
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 160, [&] { return worlds < 8; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && worlds < 8; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!kindHas(b.type, KT_FAUNA) || !kindHas(b.type, KT_FLORA)) continue;
+                const Bestiary B0 = Bestiary::make(b, BodyGen::make(b));
+                int shallows = -1;
+                for (int k = 0; k < B0.swimmerCount; k++) if (B0.species[B0.firstSwimmer() + k].way == WAY_SHALLOWS) shallows = B0.firstSwimmer() + k;
+                if (shallows < 0) continue;
+                double lat, lon, t;
+                if (!waysSite(sys, bi, 3, false, lat, lon, t)) continue;
+                SurfaceView sv;
+                sv.init(&sys, bi, lat, lon, t);
+                if (!sv.site.hasWater || !sv.bestiary.swimmerCount) continue;
+                worlds++;
+                for (int cz = -4; cz <= 4; cz++)
+                    for (int cx = -4; cx <= 4; cx++) {
+                        const uint64_t hs = hash2i(cx, cz, sv.site.gen.seed ^ 0xF1A);
+                        if (hash01(hs) > 0.35) continue;
+                        const int spi = sv.bestiary.firstSwimmer() + (int)(hash01(mix64(hs + 6)) * sv.bestiary.swimmerCount) % sv.bestiary.swimmerCount;
+                        if (sv.bestiary.species[spi].way != WAY_SHALLOWS) continue;
+                        int wet = 0, dry = 0;
+                        for (int q = 0; q < 100; q++) {
+                            const double px = cx * 100.0 + 5 + 10 * (q % 10), pz = cz * 100.0 + 5 + 10 * (q / 10);
+                            const double w = sv.site.waterAt(px, pz), g = sv.site.groundHeightCoarse(px, pz);
+                            (w > -1e8 && w > g ? wet : dry)++;
+                        }
+                        if (!wet || !dry) continue;
+                        shoreCells++;
+                        double sx, sz;
+                        if (!sv.testShallowsSpot(cx, cz, sx, sz)) continue;
+                        found++;
+                        std::vector<SurfaceView::SwimmerAt> ws;
+                        for (int k = 0; k < 60; k++) {
+                            sv.swimmersNear(cx * 100.0 + 50, cz * 100.0 + 50, t + k, ws);
+                            frames++;
+                            seen += std::any_of(ws.begin(), ws.end(), [&](const SurfaceView::SwimmerAt& w) { return w.seed == hs; });
+                        }
+                    }
+            }
+        }
+        const double share = shoreCells ? (double)found / shoreCells : 0, atSurface = frames ? (double)seen / frames : 0;
+        check("animals: the shallows' swimmers", worlds >= 4 && shoreCells > 20 && share > 0.8 && atSurface > 0.8,
+              fmt("%d worlds with one, a shore site each: %d of %d shore cells of a shallows' spot hold its place (%.0f%%); there %.0f%% of a minute's seconds "
+                  "with it at the surface", worlds, found, shoreCells, 100 * share, 100 * atSurface));
+    }
+    {   // B-492 (KI-497): the shallows' stretch along a curving shore: on worlds with one, a shore site each, the stretches of the 100 m cells round
+        // it whose spot is one of the shallows; along each (every 0.25 m between its points) the depth on the 16 m ground and the mean water, which
+        // keeps to the 0.3 to 1.5 m it swims in; those that turn (20 degrees or more end to end) and the points off the band on them; over a
+        // minute, the seconds a member of a turning one is at the surface
+        int worlds = 0, stretches = 0, turning = 0, samples = 0, off = 0, offTurning = 0, stretchesOff = 0, frames = 0, seen = 0;
+        double worst = 0, turnMax = 0;
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 160, [&] { return worlds < 10; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && worlds < 10; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!kindHas(b.type, KT_FAUNA) || !kindHas(b.type, KT_FLORA)) continue;
+                const Bestiary B0 = Bestiary::make(b, BodyGen::make(b));
+                int shallows = -1;
+                for (int k = 0; k < B0.swimmerCount; k++) if (B0.species[B0.firstSwimmer() + k].way == WAY_SHALLOWS) shallows = B0.firstSwimmer() + k;
+                if (shallows < 0) continue;
+                double lat, lon, t;
+                if (!waysSite(sys, bi, 3, false, lat, lon, t)) continue;
+                SurfaceView sv;
+                sv.init(&sys, bi, lat, lon, t);
+                if (!sv.site.hasWater || !sv.bestiary.swimmerCount) continue;
+                worlds++;
+                auto depth = [&](double px, double pz) { const double w = sv.site.waterAt(px, pz); return w > -1e8 ? w - sv.site.groundHeightCoarse(px, pz) : -1.0; };
+                for (int cz = -6; cz <= 6; cz++)
+                    for (int cx = -6; cx <= 6; cx++) {
+                        const uint64_t hs = hash2i(cx, cz, sv.site.gen.seed ^ 0xF1A);
+                        if (hash01(hs) > 0.35) continue;
+                        const int spi = sv.bestiary.firstSwimmer() + (int)(hash01(mix64(hs + 6)) * sv.bestiary.swimmerCount) % sv.bestiary.swimmerCount;
+                        if (sv.bestiary.species[spi].way != WAY_SHALLOWS) continue;
+                        const SurfaceView::ShallowsPath& P = sv.testShallowsPath(cx, cz);
+                        if (!P.ok || P.n < 2) continue;
+                        stretches++;
+                        const double a0 = std::atan2(P.z[1] - P.z[0], P.x[1] - P.x[0]), a1 = std::atan2(P.z[P.n - 1] - P.z[P.n - 2], P.x[P.n - 1] - P.x[P.n - 2]);
+                        const double turn = std::fabs(std::remainder(a1 - a0, TAU));
+                        const bool turns = turn >= 20 * DEG;
+                        turning += turns; turnMax = std::max(turnMax, turn);
+                        int offHere = 0;
+                        for (int q = 1; q < P.n; q++) {
+                            const double sl = std::hypot(P.x[q] - P.x[q - 1], P.z[q] - P.z[q - 1]);
+                            for (double u = 0; u <= sl; u += 0.25) {
+                                const double f = sl > 0 ? u / sl : 0, d = depth(P.x[q - 1] + (P.x[q] - P.x[q - 1]) * f, P.z[q - 1] + (P.z[q] - P.z[q - 1]) * f);
+                                samples++;
+                                if (d < 0.3 || d > 1.5) { offHere++; worst = std::max(worst, d < 0.3 ? 0.3 - d : d - 1.5); }
+                            }
+                        }
+                        off += offHere; stretchesOff += offHere > 0;
+                        if (turns) {
+                            offTurning += offHere;
+                            std::vector<SurfaceView::SwimmerAt> ws;
+                            for (int k = 0; k < 60; k++) {
+                                sv.swimmersNear(cx * 100.0 + 50, cz * 100.0 + 50, t + k, ws);
+                                frames++;
+                                seen += std::any_of(ws.begin(), ws.end(), [&](const SurfaceView::SwimmerAt& w) { return w.seed == hs; });
+                            }
+                        }
+                    }
+            }
+        }
+        const double atSurface = frames ? (double)seen / frames : 0;
+        check("animals: the shallows' stretch along a curving shore (B-492)", worlds >= 6 && stretches > 40 && turning >= 5 && off == 0 && atSurface > 0.9,
+              fmt("%d worlds with one: %d stretches, %d turning (up to %.0f degrees); along them %d of %d points off the 0.3 to 1.5 m (by %.2f m at most), "
+                  "%d on turning ones, %d stretches with any; a turning one's member at the surface %.0f%% of a minute's seconds", worlds, stretches, turning,
+                  turnMax / DEG, off, samples, worst, offTurning, stretchesOff, 100 * atSurface));
+    }
+}

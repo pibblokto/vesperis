@@ -75,6 +75,70 @@ struct GalaxyMark {
     long long when = 0;           // placed (the wall clock)
 };
 
+// Z-04: what was seen of a species under the microscope, keyed `<body key>/M<index>` (its index its world's list's, the biota's saved key): a bit
+// for each part of its sheet seen (its form and size on any slide, its motion on a living one, its flagella in a dark field, its DNA in the
+// glow, its wall under the electron; Z-05 its growth, Z-06 its kin), and the forms of its life cycle seen (`CycleForm`'s bits). `microbe` lines,
+// after the `microbes 1` line that marks the keys' scheme. Z-05: the stages of its life seen on a culture's curve (`LifeCycle`'s bits), and its
+// growth (the quickest doubling seen in a flask and the medium it grew in), after a sheet's two numbers where there are any. Z-06: its genome
+// read on the sequencer (its kin: the tree's). Z-07: the years its spores slept before a flask woke them (the longest seen), after the growth's
+enum SheetSeen : uint32_t { SEEN_FORM = 1, SEEN_MOTION = 2, SEEN_FLAGELLA = 4, SEEN_DNA = 8, SEEN_WALL = 16, SEEN_KIN = 32 };
+// R-437: what a species answered on the slide (the sheet's TO LIGHT, TO FOOD and TO THE FIELD lines): gathering in the light, fleeing it, no
+// answer seen; following the food's scent, gathering round lit cells, none seen; swimming along the field, none seen
+enum AnswerSeen : uint32_t { AW_LIGHT = 1, AW_FLEES = 2, AW_LIGHT_NONE = 4, AW_FOOD = 8, AW_FOOD_NONE = 16, AW_LIT = 32, AW_FIELD = 64, AW_FIELD_NONE = 128 };
+struct MicrobeSheet {
+    uint32_t seen = 0, forms = 0;
+    uint32_t stages = 0;
+    double doublingS = 0;        // 0: never seen growing
+    int cell = 0, light = 0, energy = 0, salt = 0;
+    double tempC = 0;
+    double sleptYears = 0;       // 0: never woken (or woken with no years: a living world's)
+    // R-437: its answers (AnswerSeen) and the stage's warmths it was seen at: moving (the lowest and the highest), still under its range (the
+    // highest) and over it (the lowest), its stress (and its act, life's AN_ number; -1 none seen); the guide's `answers` line
+    uint32_t answers = 0;
+    double movingLo = 1e9, movingHi = -1e9, stillCold = -1e9, stillHot = 1e9, stressC = 1e9;
+    int stressAct = -1;
+    bool answered() const { return answers || movingHi >= movingLo || stillCold > -1e8 || stillHot < 1e8 || stressAct >= 0; }
+};
+// Z-05: a strain arisen in a flask, keyed `<body key>/M<index>/S<n>` (its species' key and its number): the strain it came of (0 the wild),
+// its move (life/cultures.h's `StrainMove`) and the value moved to; its name the explorer's (`names`). `strain` lines. Y-02: a line the gene
+// editor wrote is one of them (its move SM_EDIT, its number its species' next), its edits after its value (life/genes.h's text: "3=ACCG;8=-")
+struct StrainRecord { int parent = 0, what = 0; double value = 0; std::string edits; };
+// Y-02: what a gene does, as the explorer learned it: its kind (life/genes.h's `GeneKind`). R-450: keyed by its species,
+// `<body key>/M<index>/G<its number>`, and known once the explorer changed it on the gene editor (or read a strain whose move it was in).
+// `gene` lines; an older guide's, by genesis (`<genesis id, hex>/<number>`), are dropped when loaded
+struct GeneKnown { int kind = -1; };
+// J-02 (R-448): a culture let go on a world (J-03's drone trip), kept by its world: the place, the line (its key, and its edits copied, a
+// strain's number being the guide's own), the flask's medium it grew in, the generation and the guide's clock when it went down. `seeded`
+// lines in the order they went down; a loan carries none (a friend's seeded worlds never reach the borrower's game)
+struct SeedRecord {
+    std::string body;                                                  // the world's key
+    double lat = 0, lon = 0;                                           // the place (radians)
+    std::string line, edits;                                           // the line's key; its edits (life/genes.h's text, "" none)
+    int cell = 0, light = 0, energy = 0, salt = 0; double tempC = 0;   // the medium (life/cultures.h's `Medium`)
+    int gen = 0;                                                       // the generation it went down in
+    double clock = 0;                                                  // the guide's clock then
+    double depthKm = 0;                                                // J-13: down a drill hole (km; written last, only when not 0); J-14: under 0, up
+};
+std::string seededLine(const SeedRecord& r);                 // its `seeded` line, without the newline
+bool parseSeeded(const std::string& rest, SeedRecord& r);    // the line after its key
+
+// J-07: what the explorer saw of an animal species, keyed `<body key>/A<index>` (its index its world's bestiary's, generation 18's): a bit for
+// each thing it was seen doing (surface_types.h's `AnimalDoing`), the nearest it came (metres) and the most seen at once. `animal` lines, after
+// the `animals 1` line that marks the keys' scheme (both only once there is one); its name the explorer's (`names`), which a loan carries
+// J-07: an animal species seen: its doings' bits, the nearest and the most at once; J-08: the marks it was seen with (surface_types.h's
+// `AnimalMark` bits: dying, gone, changed), written only when there is one
+struct AnimalRecord { uint32_t doing = 0; int nearest = 0, most = 0; uint32_t marks = 0; };
+// B-489 (KI-494): an animal a landing saw die (a hunt's kill, a sprouting one fallen), kept by its world so that at any later landing its herd
+// comes without it and its remains lie where it fell: its seed, its herd's cell (`cell` false: a landing's own herd), where it lies (a unit
+// vector on the body), its species, heading and size, its death on the guide's clock, how long hunters fed at it, with stalks. `dead` lines
+// (with the `clock` line), a world's in the order they died; forgotten DEAD_FORGET_S after the death, when its herd has young again. A loan
+// carries none
+struct DeadRecord {
+    uint64_t seed = 0; bool cell = false; int gLat = 0, gLon = 0; double ux = 0, uy = 0, uz = 0;
+    int species = -1; double heading = 0, size = 1, died = 0, eaten = 0; bool stalks = false;
+};
+constexpr double DEAD_FORGET_S = 64 * 75.0;   // 64 of a seeded world's steps (galaxy/made.h's MADE_STEP_S): 80 minutes
+
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
     std::map<std::string, std::string> inbox;     // key -> name (from imported guides)
@@ -92,6 +156,28 @@ struct Guide {
     std::set<std::string> graves;                 // "<body key>/G<id>" of every grave read in the ruins (`grave` lines), like the landmarks
     std::set<std::string> ended;                  // the worlds whose last recording the decoder read (`ended` lines): their timeline closed
     std::set<std::string> instruments;            // "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; peoples/instruments.h's ids): kept in the cabin's case
+    std::map<std::string, MicrobeSheet> microbes; // Z-04: "<body key>/M<index>" of every species seen under the microscope, what of it was seen (`microbe` lines)
+    std::map<std::string, StrainRecord> strains;  // Z-05: "<body key>/M<index>/S<n>" of every strain a flask gave (`strain` lines)
+    std::set<std::string> treeOff;                // Y-01: the lab's lines ("<body key>/M<index>/S<n>") taken off their world's tree (`treeoff` lines)
+    std::map<std::string, GeneKnown> genes;       // Y-02: what each gene of a species does ("<body key>/M<index>/G<number>": `gene` lines; R-450)
+    std::set<std::string> watermarks;             // Z-06: "<body key>/M<index>" of every made species sequenced: its watermark the decoder's (`watermark` lines)
+    std::map<std::string, AnimalRecord> animals;  // J-07: "<body key>/A<index>" of every animal species seen (`animal` lines)
+    std::map<std::string, std::vector<DeadRecord>> dead;   // B-489: "<body key>" -> the animals seen to die there (`dead` lines)
+    // J-02: the worlds seeded (`seeded` lines) and the guide's clock, the seconds the game ran across its saves and expeditions on real time
+    // (the warp never hurries it: `clock`), which the spreads read; both written once a world is seeded, so a guide without them is as before
+    std::vector<SeedRecord> seeded;
+    double clock = 0;
+    std::map<std::string, std::string> madeSeen;   // J-03: what each seeded world showed at its last landing (`madeseen` lines, a seeded guide's)
+    // J-12: the seeded lines found in the wild, "<world key>/L<k>" (the world's k-th seeding, in the order they went down): seen in a vial of
+    // that world under the microscope, and true once the sequencer read it from one (what the wild changed in it). `wild` lines, a seeded guide's
+    std::map<std::string, bool> wildFound;
+    void addSeeding(const SeedRecord& r);         // kept as its line reads back (the file's precision): a reload gives the same layer
+    // Z-07: the samples taken (`stat samples`) and the worlds they came from (`sampled` lines); a friend's sheets of the species they saw, lent by
+    // their inbox file (`lentmicrobe` lines, as `microbe` lines): in the catalogue in cyan, in no statistic; the explorer's own sheet wins
+    int samplesTaken = 0;
+    std::set<std::string> sampled;
+    std::map<std::string, MicrobeSheet> lentMicrobes;
+    bool isLentMicrobe(const std::string& key) const { return lentMicrobes.count(key) && !microbes.count(key); }
     // "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in
     // cyan, never taken, the ruins still hold them
     std::set<std::string> lent;
@@ -126,8 +212,10 @@ struct Guide {
     // (its `shard` keys with a `decoded` line, not its own lent ones), `lentOut` how many are new; -1 when the file cannot be read
     // and the probes' recordings it holds (its own, not those lent to it), `probesOut` how many are new; R-408: and its marks
     // (its own, not those lent to it, nor one standing where a mark of the explorer's or an earlier loan does), `marksOut`; G-06: and its
-    // marks of the galaxy likewise (one within a light year of a mark already there is the same place), `galaxyOut`
-    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr);
+    // marks of the galaxy likewise (one within a light year of a mark already there is the same place), `galaxyOut`; Z-07: and the sheets of the
+    // species it saw (its own, not those lent to it, nor one the explorer saw), `microbesOut` how many are new
+    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr,
+                    int* microbesOut = nullptr);
     void addLog(double t, const std::string& kind, const std::string& text);
     void pushHistory(const std::string& key);
 };

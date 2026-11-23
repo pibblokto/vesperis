@@ -366,6 +366,14 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
             snowLine *= 1.0 + 0.08 * facing;
         }
     }
+    // J-04: a seeded world's made climate (its warmth now over its generated, `MadeWorld::warmC`) moves the caps' edge (1.6 degrees of latitude a
+    // degree, as the mean's fall with latitude near the caps) and the snow line (the lapse rate's 154 m a degree); an endless rain on a cold world
+    // snows it over. The ground's heights and the drainage stay the world as generated
+    // (J-11: a made hothouse's or snowball's cover lies over the world as generated, as a dead world's over its then-world's)
+    const bool madeCover = deadCoverOf(g) != DC_NONE;
+    const double madeC = madeCover ? 0.0 : g.made.warmC, snowMore = madeCover ? 0.0 : g.made.snowMore;
+    const double capEdge0 = capEdge, snowLine0 = snowLine;   // (the reefs' heights and the alpine belt read them as generated)
+    if (madeC != 0 || snowMore > 0) { capEdge += 1.6 * madeC - 8.0 * snowMore; snowLine += 154.0 * madeC - 1200.0 * snowMore; }
     moist -= 0.12 * smoothstep(0.25, 0.5, o.slopeM) * smoothstep(0.3, 0.6, relief0);   // the ridges are the dry ground (the valley floors gained above); B-404: the material chain's slope
     // inland water. A river is a ribbon cut into the smooth ground along a hashed network (worley cell boundaries
     // at 80 km): across its floodplain the fine relief melts into `hS`, the channel is carved 2.5-11.5 m into it and the
@@ -409,7 +417,7 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     if (level > -1e8 && shore < 1e8 && shore <= 0) h = std::min(h, level - 0.3);
     else if (bankFloor > -1e8) h = std::max(h, bankFloor);
     double reefTint = 0;
-    if (h < 0 && g.hasTrait(TR_REEFS) && absLatDeg < capEdge) {
+    if (h < 0 && g.hasTrait(TR_REEFS) && absLatDeg < capEdge0) {
         // a barrier reef in the warm seas (the Great Barrier Reef's): along the shelf's edge where it falls past 18-40 m (a contour, so every
         // ring and the globe agree, B-404) its crest stands awash, the fore-reef dropping seaward under it, a few passes cut through it; behind it
         // the lagoon's floor of white sand lifted to a few metres, its water turquoise (`lifeTint`); in a province of the coasts where the sea is
@@ -426,22 +434,27 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     s.relief = clampd(relief0 + 0.5 * o.slope, 0, 1);
     // biomes from temperature (latitude, altitude, the body's climate) and moisture
     double T = climateTempC(g, absLatDeg, h, winter, sub);
+    // J-04: the made climate's warmth here (the frozen ground and waters follow it; a biome moves only across the ice's edge). KI-484: a greened
+    // world's biomes follow its warmth (a cold world's) or its rain (a dry one's), in the biome table alone (its rivers and heights as generated)
+    const bool greened = g.made.kind == MDK_GREENED;
+    const double Tm = T + madeC, Tb = greened || (T < -8) != (Tm < -8) ? Tm : T;
     if (g.locked && !(K.tags & KT_FIXED_SUN)) moist -= 0.35 * std::max(0.0, sub - 0.15);   // deserts under a permanent sun (P-03: a fixed sun's kind has its own, `felisianGround`)
+    const double moistB = greened && !g.made.kindCold ? moist + 0.3 * g.made.rainMore : moist;
     int biome = BIO_GRASSLAND;
-    if (T < -8) biome = BIO_ICE;
-    else if (T < 2) biome = BIO_TUNDRA;
-    else if (T < 10) biome = moist > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // a kind's grass band wider (forest wetter, desert drier)
-    else if (T < 20) biome = moist > 0.55 + g.grassBand ? BIO_TEMPERATE : (moist > 0.28 - g.grassBand ? BIO_GRASSLAND : BIO_DESERT);
-    else biome = moist > 0.55 + g.grassBand ? BIO_TROPICAL : (moist > 0.35 - g.grassBand ? BIO_SAVANNA : BIO_DESERT);
-    if (moist > 0.72 && h < 120 && relief0 < 0.2 && biome != BIO_ICE) biome = BIO_WETLAND;
-    if (relief0 > 0.45 && h > std::max(700.0, 0.5 * snowLine)) biome = BIO_ALPINE;   // the zone between the treeline and the snow (it began at 700 m everywhere: 13% of the land was bare rock)
+    if (Tb < -8) biome = BIO_ICE;
+    else if (Tb < 2) biome = BIO_TUNDRA;
+    else if (Tb < 10) biome = moistB > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // a kind's grass band wider (forest wetter, desert drier)
+    else if (Tb < 20) biome = moistB > 0.55 + g.grassBand ? BIO_TEMPERATE : (moistB > 0.28 - g.grassBand ? BIO_GRASSLAND : BIO_DESERT);
+    else biome = moistB > 0.55 + g.grassBand ? BIO_TROPICAL : (moistB > 0.35 - g.grassBand ? BIO_SAVANNA : BIO_DESERT);
+    if (moistB > 0.72 && h < 120 && relief0 < 0.2 && biome != BIO_ICE) biome = BIO_WETLAND;
+    if (relief0 > 0.45 && h > std::max(700.0, 0.5 * snowLine0)) biome = BIO_ALPINE;   // the zone between the treeline and the snow (it began at 700 m everywhere: 13% of the land was bare rock)
     bool inland = level > -1e8 && h < level;   // under a river, a lake or a pool
     if (h < 0) {
         s.material = MAT_WATER; s.water = 0; s.biome = BIO_OCEAN;
         s.albedo = h > -250 ? 0.36 : 0.22;
         s.lifeTint = reefTint;   // a lagoon's or a reef's
         if (g.seaDepth < 1 && h > -40 && h < -1.5) s.albedo += 0.12 * smoothstep(-40, -12, h) * smoothstep(-1.5, -4, h);   // the reefs fringing a shelf sea's coasts, pale under the water
-        if (absLatDeg > capEdge + 4 || (g.locked && T < -10)) { s.material = MAT_ICE; s.albedo = 0.85; s.height = 0; s.biome = BIO_ICE; }
+        if (absLatDeg > capEdge + 4 || (g.locked && Tm < -10)) { s.material = MAT_ICE; s.albedo = 0.85; s.height = 0; s.biome = BIO_ICE; }
         else if (K.daySeasDry && g.locked) {   // the seas boiled away where the day is too hot to hold them (the climate at the sea's level),
             // their floors dry: salt in the deeps, sand on the old shelves
             const double dry = smoothstep(30.0, 36.0, climateTempC(g, absLatDeg, 0, 0, sub) + 3.0 * hills);
@@ -472,17 +485,22 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
             }
         }
     } else if (inland) {
-        s.material = T < -2 ? MAT_ICE : MAT_WATER; s.water = level; s.albedo = 0.3; s.biome = (biome == BIO_ICE || biome == BIO_TUNDRA) ? biome : BIO_WETLAND;
-        if (T < -2) { s.height = level; s.albedo = 0.8; }
+        s.material = Tm < -2 ? MAT_ICE : MAT_WATER; s.water = level; s.albedo = 0.3; s.biome = (biome == BIO_ICE || biome == BIO_TUNDRA) ? biome : BIO_WETLAND;
+        if (Tm < -2) { s.height = level; s.albedo = 0.8; }
     } else if (absLatDeg > capEdge || h > snowLine || biome == BIO_ICE || o.iceSheet > 1) {   // an ice sheet's ground is its ice whatever the season
         s.material = MAT_SNOW; s.albedo = 0.92; s.biome = BIO_ICE;
         if (o.iceSheet > 1 && o.sheetWall) { s.material = MAT_ICE; s.albedo = 0.7; }   // the sheet's wall bare blue ice (P-03: its own wall, not the bedrock's slope under it)
+        else if (o.iceSheet > 1 && madeC > 0 && !(absLatDeg > capEdge || h > snowLine || biome == BIO_ICE)) { s.material = MAT_ICE; s.albedo = 0.62; }   // KI-456:
+        // a sheet a made warmth moved the caps, the snow line and the ice's edge off, its snow melted to bare ice (its heights the ice's as generated)
+        if (o.iceSheet > 1 && madeC > 0 && !o.sheetWall && o.iceSheet < K.sheetM * clampd(0.08 * madeC, 0, 0.8)) { s.material = MAT_ICE; s.albedo = 0.3; }
+        // J-16 (KI-500): its margin, thinner than a share of its dome that grows with the warmth, melting dark with its dust and meltwater (Greenland's
+        // dark zone: Wientjes and Oerlemans 2010), the white ice drawn back toward the pole; its heights still the ice's as generated
         if (waterZone > 0) s.water = level;
     } else if (o.caldera && h > 0) {
         s.material = MAT_WATER; s.albedo = 0.3; s.water = h + 2.0; s.biome = BIO_WETLAND;   // crater lake
     } else if (biome == BIO_ALPINE) {
         s.material = MAT_ROCK; s.albedo = 0.48; s.veg = 0.05; s.biome = BIO_ALPINE;
-    } else if (waterZone > 0.3 && h < level + 1.2 && T > -2) {   // the bars and beaches of inland water
+    } else if (waterZone > 0.3 && h < level + 1.2 && Tm > -2) {   // the bars and beaches of inland water
         s.material = MAT_SAND; s.albedo = 0.58; s.veg = 0.05; s.biome = biome; s.water = level;
     } else if (h < 12 + 10 * hills) {
         s.material = MAT_SAND; s.albedo = 0.62; s.veg = 0.08; s.biome = biome;
@@ -500,7 +518,9 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     if (s.biome == BIO_NONE) s.biome = biome;
     // the landforms' materials: glacier ice, and rock, basalt, sand or salt where a landform says so (never over water)
     if (dryLake && s.material != MAT_WATER && s.material != MAT_SNOW) { s.material = MAT_SALT; s.albedo = 0.86; s.veg = 0; }   // a dry basin's playa
-    if (o.land.glacier > 0.5 && s.material != MAT_WATER) { s.material = MAT_ICE; s.albedo = 0.8; s.veg = 0;
+    if (o.land.glacier > 0.5 && s.material != MAT_WATER && madeC > 0 && Tm > 2.0) { s.material = MAT_ROCK; s.albedo = 0.42; s.veg = 0;   // KI-456: a tongue a
+        // made warmth melted back, its bed's moraine (its valley as generated)
+    } else if (o.land.glacier > 0.5 && s.material != MAT_WATER) { s.material = MAT_ICE; s.albedo = 0.8; s.veg = 0;
     } else if (o.land.mat >= 0 && s.material != MAT_WATER && s.material != MAT_ICE && s.material != MAT_SNOW) {
         s.material = o.land.mat;
         if (o.land.albedo >= 0) s.albedo = o.land.albedo;
@@ -541,14 +561,18 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     if (s.water > 0.5 && waterZone > 0) s.waterKind = waterKind;
     if (waterZone > 0 && s.water > -1e8) s.shore = shore;   // (a snowfield or a glacier over the zone keeps the plane, so it keeps the edge too)
     else if (s.water < -1e8 && shoreOut < 1e8) s.shore = shoreOut;   // the bank beyond the plane's reach still knows how far the water is
-    if (K.cover != DC_NONE) {   // a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
+    // J-11: a made hothouse's or a made snowball's cover over its own living ground, as a dead world's (`MadeWorld::deadCover`)
+    const int cover = deadCoverOf(g);
+    if (cover != DC_NONE) {   // a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
         // the same in both times, so its people's towns stand where they stood). No liquid is left; the old forests' density stays in `veg` (their dead trees)
         const double oldForest = s.material == MAT_FOREST ? s.veg : 0.0;
         const int was = s.material;
         s.water = -1e9; s.waterKind = 0; s.shore = 1e9; s.veg = 0;
-        if (K.cover == DC_SCORCHED) {   // baked by its swelling sun: the seas boiled off to their salt, the soils cracked clay and dust, the forests stone; a
-            // cold one's (a white dwarf's, a giant's far world) frost where its present's mean falls under freezing
-            const double tNow = g.nowTempC - 0.4 * absLatDeg - 6.5 * std::max(0.0, h) / 1000.0 + (g.locked ? 25.0 * sub : 0.0);   // a locked one's night side the colder
+        if (K.cover == DC_NONE) s.lifeTint = 0;   // (J-11: a made cover's lagoons and living landforms gone with their life)
+        if (cover == DC_SCORCHED) {   // baked by its swelling sun: the seas boiled off to their salt, the soils cracked clay and dust, the forests stone; a
+            // cold one's (a white dwarf's, a giant's far world) frost where its present's mean falls under freezing (J-11: a made hothouse's the made climate's)
+            double tNow = T + g.made.warmC;
+            if (K.cover != DC_NONE) tNow = g.nowTempC - 0.4 * absLatDeg - 6.5 * std::max(0.0, h) / 1000.0 + (g.locked ? 25.0 * sub : 0.0);   // a locked one's night side the colder
             s.biome = BIO_DESERT;
             if (h < 0) {   // the old sea's floor, dry at its depth far under the shores: the deep basins' salt, the slopes' silt, reef limestone on the warm shelves
                 s.height = h; s.oldSea = 1;

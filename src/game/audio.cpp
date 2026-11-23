@@ -250,6 +250,69 @@ double AudioSynth::groundSample(double dt, AudioState& st) {
     return s;
 }
 
+// J-10: an overgrowth's sounds. Its vents breathe (a hollow intake through the vent's throat, then a longer breath out falling in pitch, bubbling
+// where it is wet; the pace the vents' lips'), its tissue creaks now and then (a stick-slip's pulses gliding in rate through a body's resonance:
+// the hard and the tall in the wind), a hair field hisses (fine and high, swelling with the gusts), a membrane pushed through tears (a wet slap,
+// then cracks thinning out)
+double AudioSynth::growthSample(double dt, AudioState& st) {
+    double s = 0;
+    const double air = st.air;
+    auto uni = [&]() { return 0.5 + 0.5 * noise(); };
+    if (ventLvl > 0.002) {
+        ventPh += dt / std::max(1.0, st.ventPace); ventPh -= std::floor(ventPh);
+        double env, f;
+        if (ventPh < 0.38) { const double u = ventPh / 0.38; env = 0.55 * std::pow(std::sin(PI_ * u), 2); f = 150 + 60 * u; }                          // in
+        else { const double u = (ventPh - 0.38) / 0.62; env = std::pow(std::sin(PI_ * u), 1.5) * (1 - 0.3 * u); f = 210 - 90 * u; }                    // out
+        const float nz = noise();
+        double x = 0.5 * resonate(nz, f, 60, dt, vtY1, vtY2) + 0.25 * resonate(nz, 2.6 * f, 300, dt, vtY3, vtY4);   // the throat and its hiss
+        if (st.ventWet > 0.3 && ventPh >= 0.38) {   // bubbles through the wet in the breath out
+            if (vbT < 0 && uni() < dt * 14 * env) { vbT = 0; vbF = 280 + 520 * uni(); vbY1 = vbY2 = 0; }
+            if (vbT >= 0) {
+                x += 1.2 * resonate(vbT < 0.004 ? 1.0 : 0.0, vbF * (1 + 2.5 * vbT), 90, dt, vbY1, vbY2) * std::exp(-vbT * 40);
+                vbT += dt;
+                if (vbT > 0.12) vbT = -1;
+            }
+        }
+        s += air * ventLvl * 0.2 * env * x;
+    } else ventPh = 0;
+    if (creakLvl > 0.002 || crT >= 0) {
+        if (creakLvl > 0.002) crNext -= dt * (0.4 + 1.6 * creakLvl);
+        if (crNext <= 0 && crT < 0) {
+            crT = 0; crDur = 0.35 + 0.6 * uni(); crF = 380 + 520 * uni(); crRate0 = 35 + 45 * uni(); crRate1 = crRate0 * (0.6 + 1.2 * uni()); crAmp = 0.5 + 0.5 * uni();
+            crPh = 0; crY1 = crY2 = 0; crNext = 1.2 + 4.5 * uni();
+            st.creakEvents++;
+        }
+        if (crT >= 0) {
+            const double u = crT / crDur;
+            if (u >= 1) crT = -1;
+            else {
+                crPh += dt * (crRate0 + (crRate1 - crRate0) * u);   // the slips' rate gliding
+                double pulse = 0;
+                if (crPh >= 1) { crPh -= 1; pulse = 0.7 + 0.6 * uni(); }
+                s += air * crAmp * (0.6 + 0.4 * creakLvl) * 3.0 * std::sin(PI_ * u) * resonate(pulse, crF, 120, dt, crY1, crY2);
+                crT += dt;
+            }
+        }
+    }
+    if (hairLvl > 0.002) {
+        const float nz = noise();
+        hrLp += (nz - hrLp) * co.kHair; hrHp += (hrLp - hrHp) * co.kHairLow;
+        const double gust = 0.45 + 0.55 * std::sin(lfo * TAU_ * 0.9 + 0.4) * std::sin(lfo * TAU_ * 0.31 + 1.1);
+        s += air * hairLvl * 0.22 * (hrLp - hrHp) * std::max(0.1, gust);
+    }
+    if (st.tear > 0) { trT = 0; trAmp = st.tear; st.tear = 0; trY1 = trY2 = 0; }
+    if (trT >= 0) {
+        if (trT < 0.5) {
+            double x = 0;
+            if (trT < 0.06) x += 0.8 * resonate(noise(), 140, 80, dt, trY1, trY2) * std::exp(-trT * 50);
+            if (uni() < dt * 260 * (1 - trT / 0.5)) x += (noise() > 0 ? 1 : -1) * 0.6 * (0.4 + 0.6 * uni());
+            s += air * trAmp * 0.5 * x;
+            trT += dt;
+        } else trT = -1;
+    }
+    return s;
+}
+
 void AudioSynth::coefs(double dt) {
     co.kF = 1 - std::exp(-dt / 0.02); co.kUp = 1 - std::exp(-dt / 0.006); co.kDown = 1 - std::exp(-dt / 0.012); co.kN = 1 - std::exp(-dt / 0.003);
     co.kDuneHz = 1 - std::exp(-dt / 0.5);
@@ -257,6 +320,7 @@ void AudioSynth::coefs(double dt) {
     co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt);
     co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt);
     co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);
+    co.kHair = 1 - std::exp(-TAU_ * 6000 * dt); co.kHairLow = 1 - std::exp(-TAU_ * 2000 * dt);
     static const double BW[4] = {80, 100, 150, 250};
     for (int i = 0; i < 4; i++) co.rS[i] = std::exp(-PI_ * BW[i] * dt);
     co.rNasal = std::exp(-PI_ * 120 * dt);
@@ -273,7 +337,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     mediumCoefs(dt, st.medium);
     if (st.beep > 0) { beepT = 0; beepKind = st.beep; st.beep = 0; }
     if (st.thunder > 0) { thunderT = 0; thunderAmp = st.thunder; st.thunder = 0; }
-    if (st.step > 0) { stepT = 0; stepKind = st.step; stepGainCur = st.stepGain; st.step = 0; }
+    if (st.step > 0) { stepT = 0; stepKind = st.step; stepGainCur = st.stepGain; st.step = 0; sqY1 = sqY2 = 0; }
     if (st.deck != 0) { if (st.deck > 0) deckBuf = deckRender(st.deck, st.deckSeed, sr); else deckBuf.clear(); deckI = 0; st.deck = 0; }   // R-420: the cassette deck's sequence (-1 hushes it)
     const double kDuck = 1 - std::exp(-dt / 0.5);
     // the music: a start from the top; a null piece stops every voice at once
@@ -339,6 +403,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         surfLvl += (st.surf - surfLvl) * k;
         birdLvl += (st.birds - birdLvl) * k;
         duneLvl += (st.dunes - duneLvl) * k * 2; iceLvl += (st.ice - iceLvl) * k; quakeLvl += (st.quake - quakeLvl) * k * 4;
+        ventLvl += (st.vents - ventLvl) * k; creakLvl += (st.creaks - creakLvl) * k; hairLvl += (st.hair - hairLvl) * k;   // J-10
         lfo += dt * 0.23;
         double s = 0;
         // hum: two low sines with slow beating
@@ -420,8 +485,18 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 else chirpT = -1;
             }
         }
-        // footsteps: a short filtered burst per stride
-        if (stepT >= 0) {
+        // footsteps: a short filtered burst per stride; J-10: a squelch, the foot pressed into wet tissue (a low wet thud), then drawn out of it
+        // (a suck gliding up, and its pop as it lets go)
+        if (stepT >= 0 && stepKind == 4) {
+            if (stepT < 0.34) {
+                double v = 0;
+                if (stepT < 0.09) { lpS += (n - lpS) * 0.1f; v += 1.4 * lpS * (stepT < 0.004 ? stepT / 0.004 : std::exp(-(stepT - 0.004) * 30)); }
+                if (stepT > 0.11) { const double u = (stepT - 0.11) / 0.23; v += 0.9 * resonate(n, 260 + 700 * u * u, 120, dt, sqY1, sqY2) * std::sin(PI_ * std::min(1.0, u)); }
+                if (stepT > 0.33 && stepT - dt <= 0.33) v += 0.5;
+                s += stepGainCur * 0.35 * v;
+                stepT += dt;
+            } else stepT = -1;
+        } else if (stepT >= 0) {
             double dur = stepKind == 3 ? 0.16 : 0.05;
             if (stepT < dur) {
                 double env = stepT < 0.005 ? stepT / 0.005 : std::exp(-(stepT - 0.005) * (stepKind == 3 ? 20 : 60));
@@ -440,6 +515,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         // breathing: slow noise pulses, faster when more winded
         if (breathLvl > 0.01) { breathPh += dt * (0.7 + 1.1 * breathLvl); double env = std::pow(std::max(0.0, std::sin(breathPh * 6.2831853)), 3.0); s += breathLvl * 0.22 * env * lp3; }
         if (duneLvl > 0.002 || iceLvl > 0.002 || iceT >= 0 || quakeLvl > 0.002 || qkT >= 0 || st.quakeHit > 0) s += groundSample(dt, st);   // the sounds of the ground
+        if (ventLvl > 0.002 || creakLvl > 0.002 || crT >= 0 || hairLvl > 0.002 || trT >= 0 || st.tear > 0) s += growthSample(dt, st);   // J-10: an overgrowth's
         {   // the music, C-05 the voice; C-07: through the radar's receiver when the radar owns them: a band of 250 Hz to 2.6 kHz,
             // a tape's wow (slight under a voice, heavy under a slowed piece), a slow fading, and only as much of it as the beam has
             double m = musicSample(dt, st) + speechSample(dt, st);

@@ -28,7 +28,8 @@ void Game::autoPlanSpace() {
     AutoState& A = ax;
     if (tele.on) { autoPush("the telescope stowed", 1, [this](double) { if (tele.on) autoTap(KEY_Z); return true; }); return; }
     if (radar.on && ship.mode != ShipState::VIMANA) { autoPush("the radar off", 1, [this](double) { if (radar.on) autoTap(KEY_B); return true; }); return; }
-    if (settings.cabin && !autoAtWindow()) autoPush("to the window", 14, [this](double) { return autoCabinWalk(CAB_WINDOW_X, CAB_WINDOW_Z, 0.0); });
+    if (settings.cabin && !autoAtWindow())   // I-01: the plan's front window
+        autoPush("to the window", 40, [this](double) { const ShipView& w = shipView("THE FRONT WINDOW"); return autoCabinWalk(w.room, w.at.x, w.at.z, w.at.yaw); });
     if (ship.mode == ShipState::VIMANA) { autoPlanFlight(); return; }
     if (ship.mode == ShipState::APPROACH) { autoPush("the approach", 60, [this](double) { autoWindowLook(0.4); return ship.mode != ShipState::APPROACH; }); return; }
     if (!sys.valid) { autoPlanMove(); return; }
@@ -138,7 +139,7 @@ void Game::autoPlanVisit(int b) {
     });
 }
 
-// parked at a world: the eyes over its disc a while, then as the taste likes the glass hull, a lap round it, the roof deck, the telescope;
+// parked at a world: the eyes over its disc a while, then as the taste likes the glass hull, a lap round it, the dome, the telescope;
 // then down to it in the capsule, or a probe into a giant
 void Game::autoPlanParked(int b) {
     AutoState& A = ax;
@@ -173,19 +174,25 @@ void Game::autoPlanParked(int b) {
     if (goingDown) autoPlanLanding(b);
 }
 
-// up on the roof deck: the world, a slow look round the sky, the world again; back down
+// up in the observatory's dome (the roof deck's heir, I-02): the world, a slow look round the sky, the world again; down to the bridge
 void Game::autoPlanRoof(int b) {
     AutoState& A = ax;
-    autoPush("up to the roof deck", 2, [this](double) { if (ax.stepFirst && !cabin.onRoof) autoTap(KEY_PAGE_UP); return ax.stepT > 1; });
+    autoPush("up to the dome", 2, [this](double) {   // the plan's lift
+        if (ax.stepFirst && cabin.room != shipLifter().to) autoTap(KEY_PAGE_UP);
+        return ax.stepT > 1;
+    });
     const double dur = A.rng.range(16, 30), turn = (A.rng.chance(0.5) ? 1 : -1) * A.rng.range(0.10, 0.16);
-    autoPush("the roof deck", dur, [this, b, dur, turn](double) {
+    autoPush("the dome", dur, [this, b, dur, turn](double) {
         AutoState& S = ax;
         const double u = S.stepT;
         if (u < 7 || u > dur - 6) { autoLookSpace(sys.bodyPos(b, t) - ship.pos, 0.45); S.driftYaw = cabin.yaw; }
         else autoLook(wrapAngle(S.driftYaw + (u - 7) * turn), 0.25 + 0.15 * std::sin(u * 0.2), 0.4);
         return false;
     }, true);
-    autoPush("back into the cabin", 2, [this](double) { if (ax.stepFirst && cabin.onRoof) autoTap(KEY_PAGE_DOWN); return ax.stepT > 1; });
+    autoPush("down to the bridge", 2, [this](double) {
+        if (ax.stepFirst && cabin.room == shipLifter().to) autoTap(KEY_PAGE_DOWN);
+        return ax.stepT > 1;
+    });
 }
 
 // the telescope on the world, or on one of its moons: the nose onto it, the eye to the eyepiece, a few powers closer one at a time, a
@@ -220,14 +227,14 @@ void Game::autoPlanLanding(int b) {
         autoAimShip(sys.bodyPos(b, t) - ship.pos); autoGazeOverBody(b);
         return ax.stepT > 1.5 && autoChooseSite(b, byPlace, underGiant, low);
     });
-    if (settings.cabin) autoPush("to the capsule", 16, [this](double) { if (!ax.siteSet) return true; return autoCabinToCapsule(); });
+    if (settings.cabin) autoPush("to the capsule", 45, [this](double) { if (!ax.siteSet) return true; return autoCabinToCapsule(); });
     else autoPush("the capsule", 1, [this](double) { if (ax.siteSet) autoTap(KEY_C); return true; });
     autoPush("the capsule deploying", 3, [this](double) { return !ax.siteSet || state != GameState::SPACE; });
 }
 
 // a probe into the giant: E at the capsule's cage (the giant takes a probe), its camera from then on
 void Game::autoPlanProbeLaunch() {
-    if (settings.cabin) autoPush("to the probe's bay", 16, [this](double) { return autoCabinToCapsule(); });
+    if (settings.cabin) autoPush("to the probe's bay", 45, [this](double) { return autoCabinToCapsule(); });
     else autoPush("the probe", 1, [this](double) { autoTap(KEY_C); return true; });
     autoPush("the probe away", 3, [this](double) { return state == GameState::PROBE; });
 }
@@ -238,14 +245,15 @@ void Game::autoPlanFlight() {
     const double left = std::max(1.0, ship.flightDur - ship.flightT);
     if (settings.cabin && left > 22 && A.rng.chance(0.4)) {
         const double side = A.rng.chance(0.5) ? 1.0 : -1.0;
-        autoPush("to a side window", 9, [this, side](double) { return ship.mode != ShipState::VIMANA || autoCabinWalk(1.7 * side, 0.62, side * PI / 2); });
-        autoPush("the side window", left * 0.45, [this, side](double) {
+        const ShipView* w = &shipView(side > 0 ? "THE RIGHT WINDOW" : "THE LEFT WINDOW");   // I-01: the plan's side windows
+        autoPush("to a side window", 30, [this, w](double) { return ship.mode != ShipState::VIMANA || autoCabinWalk(w->room, w->at.x, w->at.z, w->at.yaw); });
+        autoPush("the side window", left * 0.45, [this, w](double) {
             AutoState& S = ax;
             if (S.clock > S.driftNext) { S.driftYaw = S.rng.sym(0.3); S.driftPitch = S.rng.range(-0.08, 0.12); S.driftNext = S.clock + S.rng.range(5, 9); }
-            autoLook(side * PI / 2 + S.driftYaw, S.driftPitch, 0.4);
+            autoLook(w->at.yaw + S.driftYaw, S.driftPitch, 0.4);
             return ship.mode != ShipState::VIMANA;
         }, true);
-        autoPush("back to the front", 9, [this](double) { return autoCabinWalk(CAB_WINDOW_X, CAB_WINDOW_Z, 0.0); });
+        autoPush("back to the front", 30, [this](double) { const ShipView& w = shipView("THE FRONT WINDOW"); return autoCabinWalk(w.room, w.at.x, w.at.z, w.at.yaw); });
     }
     autoPush("the flight", left + 8, [this](double) { autoWindowLook(0.4); return ship.mode != ShipState::VIMANA; });
 }

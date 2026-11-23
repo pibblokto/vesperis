@@ -136,7 +136,11 @@ struct Abandon {
 };
 
 bool buildTile(const BodyGen& gNow, int tLat, int tLon, Tile& T, const Abandon& abandon, int samplers) {
-    BodyGen gThen; const BodyGen& g = deadKind(gNow.type) ? thenWorld(gNow, gThen) : gNow;   // P-04: a dead world's rivers ran on its then-world (`genKey`)
+    // P-04: a dead world's rivers ran on its then-world (`genKey`); J-02: a seeded world's are the world's as generated (its layer off)
+    BodyGen gThen; const BodyGen* gp = &gNow;
+    if (deadKind(gNow.type)) gp = &thenWorld(gNow, gThen);
+    else if (gNow.made.on()) { gThen = gNow; gThen.made = MadeWorld(); gp = &gThen; }
+    const BodyGen& g = *gp;
     auto t0 = std::chrono::steady_clock::now();
     const int N0 = drainageLatticeN0(g.R);
     T.N0 = N0; T.M = std::max(2, (int)std::lround(MARGIN_DEG * N0)); T.Nd = N0 + 2 * T.M;

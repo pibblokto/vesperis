@@ -5,6 +5,7 @@
 // gives the picture its CCTV look; the hull itself is never drawn from inside. Driving: a torque curve to 32 m/s,
 // traction by material and gravity, handbrake skids, spray per wheel, tread tracks and three engine gears.
 #include "surface_view.h"
+#include "vehicle_shape.h"
 #include "core/noise.h"
 #include "core/rng.h"
 #include "core/parallel.h"
@@ -12,13 +13,8 @@
 #include <algorithm>
 
 namespace {
-const double WHEEL_R = 0.42, WHEEL_X = 1.1, WHEEL_S = 0.85;   // wheel radius, longitudinal and lateral offsets of the hubs
+using namespace BuggyShape;   // the wheels and the hull's stations (R-427: shared with the ship's maintenance room)
 const double TOP_SPEED = 50.0, REVERSE_SPEED = 8.0;   // 180 km/h since O1-05 (115 before)
-// the hull's stations (metres along the length from the centre) and their half widths and heights
-const double NOSE_F = 1.62, SHO_F = 1.0, CABF_F = 0.5, CABR_F = -0.8, TAIL_F = -1.55;
-const double NOSE_W = 0.42, SHO_W = 0.86, CAB_W = 0.9, TAIL_W = 0.72;
-const double FLOOR = 0.32, NOSE_B = 0.44, NOSE_T = 0.74, BELT = 0.92, ROOF = 1.5, TAIL_B = 0.4, TAIL_T = 1.02;
-const double CAM_F = 1.58, CAM_U = 0.84;   // where the nose camera sits (the pod spans 1.44..1.62 x 0.74..0.94)
 }
 
 // traction of the wheels on a material (1 = rock), scaled by gravity (light worlds spin their wheels)
@@ -251,6 +247,7 @@ double SurfaceView::findOpenRun(double& ox, double& oz, double& heading) {
 // lines and the grain stay crisp, before the RGB conversion, like the vision modes.
 void SurfaceView::cameraFeed(Framebuffer& fb, double t) {
     for (int i = 0; i < BANKS * 64; i++) {
+        if (sightFrame && i / 64 == 15) continue;   // R-434: the activity vision's ramp keeps its colours through the camera
         uint8_t* c = fb.pal + i * 3;
         double lum = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
         double r = lum + (c[0] - lum) * 0.45, g = lum + (c[1] - lum) * 0.45, bl = lum + (c[2] - lum) * 0.45;

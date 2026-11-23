@@ -23,9 +23,15 @@ inline std::string sectorName(double latDeg, double lonDeg) { int sx, sy; sector
 // metres as "420 M" or "8.4 KM"
 inline std::string metresString(double m) { return m < 1000 ? fmt("%.0f M", m) : fmt("%.1f KM", m / 1000.0); }
 std::string thousands(double v);   // 13050 -> "13,050" (G-05, C-15)
+std::string fitText(const std::string& s, int width);   // Z-06: a line cut at a word with a stop to fit a width (a name and its world)
+std::string fitHead(const std::string& head, const std::string& tail, int width);   // B-443: both where they fit, else the head alone, cut
+std::string yearsWords(double years);   // Z-05: "ABOUT 12,000 YEARS", "ABOUT 1.2 MILLION YEARS"
 // Up and Down (and Left and Right, `sideways`) step a list's choice round its n rows; true when one was pressed
 bool menuStep(const Input& in, int& sel, int n, bool sideways = false);
 
+// Z-06: a letter's dye: ours as a sequencer's four (A green, C blue, G amber, T red), Benner's Z and P violet and cyan, hachimoji's S and B rose
+// and white (Y-02: the gene editor's letters too)
+uint32_t letterDye(char c, float k = 1);
 // HUD colours; `setHudScheme` (M6-01) picks the classic green, amber or a cool white scheme
 extern uint32_t HUD_GREEN, HUD_DIM, HUD_AMBER, HUD_WHITE, HUD_RED, HUD_SHADOW, HUD_CYAN;
 void setHudScheme(int scheme);
@@ -38,3 +44,8 @@ inline bool dataKey(const Input& in) { return in.wasPressed(KEY_F2) || (in.wasPr
 inline bool saveKey(const Input& in) { return in.wasPressed(KEY_F5) || (in.ctrl() && in.wasPressed(KEY_S)); }
 inline bool loadKey(const Input& in) { return in.wasPressed(KEY_F9) || (in.ctrl() && in.wasPressed(KEY_L)); }
 inline bool enterKey(const Input& in) { return in.wasPressed(KEY_ENTER) && !in.alt(); }   // Alt+Enter is fullscreen
+// R-435: a digit typed (the row's or the keypad's, GLFW's 320 on), else -1
+inline int digitKey(const Input& in) { for (int d = 0; d < 10; d++) if (in.wasPressed(KEY_0 + d) || in.wasPressed(320 + d)) return d; return -1; }
+// R-435: a warmth typed into `s`: a digit (three at most), the minus sign (- turns it, the keypad's too), Backspace; Up and Down a degree, Page
+// Up and Down ten, from `now` while nothing is typed
+void warmthTyping(const Input& in, std::string& s, double now);

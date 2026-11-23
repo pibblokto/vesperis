@@ -58,6 +58,7 @@ int variantsOf(int material) {
     switch (material) {
         case MAT_ROCK: case MAT_BASALT: case MAT_SAND: case MAT_DUST: case MAT_GRASS: case MAT_SNOW: case MAT_ICE: return 3;
         case MAT_METAL: case MAT_SULPHUR: case MAT_GRAPHITE: case MAT_FOREST: case MAT_QUARTZ: return 2;
+        case MAT_TISSUE: case MAT_THREADS: case MAT_HARD: return 4;   // J-09: an overgrowth's textures (`MadeGrowthTexture`), given by its layer
         default: return 1;
     }
 }
@@ -67,7 +68,7 @@ bool materialHasMesoTile(int material) {
     switch (material) {
         case MAT_SAND: case MAT_DUST: case MAT_ROCK: case MAT_BASALT: case MAT_ICE: case MAT_SNOW:
         case MAT_GRASS: case MAT_FOREST: case MAT_QUARTZ: case MAT_METAL: case MAT_SULPHUR: case MAT_GRAPHITE: case MAT_SALT: case MAT_GLASS: case MAT_MUD: case MAT_POTASH:
-        case MAT_MATS: case MAT_STROMATOLITE: case MAT_CRUST: case MAT_MOSS: return true;
+        case MAT_MATS: case MAT_STROMATOLITE: case MAT_CRUST: case MAT_MOSS: case MAT_TISSUE: case MAT_THREADS: case MAT_HARD: return true;
         default: return false;
     }
 }
@@ -78,12 +79,12 @@ int mesoVariant(int material, uint64_t seed) {
     return (int)(unitFromHash(mix64(seed ^ (0x7E5ULL + (uint64_t)material * 0x9E3779B97F4A7C15ULL))) * n) % n;
 }
 
-void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
+void buildMesoTile(GrainTexture& g, int material, uint64_t seed, int variant) {
     g.resize(N);
     Rng rng(seed ^ (0x51ED1ULL * (material + 1)));
     uint64_t sA = rng.next(), sB = rng.next(), sC = rng.next();
     double windA = rng.range(0, TAU);
-    int var = mesoVariant(material, seed);
+    int var = variant >= 0 ? variant : mesoVariant(material, seed);
     double strength = 0.8 + 0.5 * unitFromHash(mix64(seed ^ (0xA57ULL + (uint64_t)material * 977)));   // B-311: 0.8 .. 1.3 per planet
     for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++) {
@@ -330,12 +331,69 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     v += 1.5 * pvalue(x, y, 16, sB);
                     break;
                 }
-                case MAT_CRUST: {   // lichen rosettes with lobed rims, a few black thalli among them, bare grain between
-                    pworley(x, y, 12, sA, f1, f2, id);
-                    const double r = 0.28 + 0.25 * unitFromHash(mix64(id + 11)) + 0.06 * pvalue(x, y, 32, sC);
-                    if (f1 < r) v += 5 * (1 - f1 / r) + ((id % 5) == 0 ? -14 : 0);
-                    else v -= 3;
-                    v += 2 * pvalue(x, y, 24, sB);
+                case MAT_CRUST: {
+                    // a world's own crust: lichen rosettes with lobed rims, a few black thalli among them, bare grain between. KI-463: a seeded
+                    // line's crust in its form (`MadeLook::variant`, given): 0 polygons (a soil crust dried and cracked, each plate's rim curled
+                    // up dark), 1 ripples (a rugose crust's low ridges, bent and broken, dark pits along their troughs), 2 the rosettes
+                    const int form = variant >= 0 ? var % 3 : 2;
+                    if (form == 0) {
+                        pworley(x, y, 8, sA, f1, f2, id);
+                        v += (double)((int)(id % 5) - 2) * 1.2 + 2.5 * clampd(f1 / 0.45, 0, 1);
+                        if (f2 - f1 < 0.08) v -= 11 * (1 - (f2 - f1) / 0.08);
+                        else if (f2 - f1 < 0.16) v += 3 * (1 - (f2 - f1 - 0.08) / 0.08);
+                        if (pvalue(x, y, 6, sC) > 0.55) v -= 4;
+                        v += 1.5 * pvalue(x, y, 20, sB);
+                    } else if (form == 1) {
+                        const double rr = ripples(x, y, windA, 7.0, 0.9, sA);
+                        v += 4.5 * rr + 1.5 * pvalue(x, y, 16, sB);
+                        pworley(x, y, 20, sC, f1, f2, id);
+                        if (rr < -0.55 && f1 < 0.2 && (id % 3) == 0) v -= 8 * (1 - f1 / 0.2);
+                    } else {
+                        pworley(x, y, 12, sA, f1, f2, id);
+                        const double r = 0.28 + 0.25 * unitFromHash(mix64(id + 11)) + 0.06 * pvalue(x, y, 32, sC);
+                        if (f1 < r) v += 5 * (1 - f1 / r) + ((id % 5) == 0 ? -14 : 0);
+                        else v -= 3;
+                        v += 2 * pvalue(x, y, 24, sB);
+                    }
+                    break;
+                }
+                case MAT_TISSUE: {   // J-09: an overgrowth's soft tissue by its texture, veined: blisters, muscle's fibres, a brain's folds, gut's coils
+                    pworley(x, y, 18, sC, f1, f2, id);
+                    if (var == 0) {   // blistered: swollen domes, a pore at some of their tops
+                        pworley(x, y, 10, sA, f1, f2, id);
+                        v += 7 * std::max(0.0, 1 - f1 / 0.45) - 2;
+                        if ((id % 4) == 0 && f1 < 0.06) v -= 9;
+                    } else if (var == 1) {   // fibrous: bundles of fibres, striated across
+                        const double a = windA + 0.4 * pvalue(x, y, 40, sA);
+                        v += 5 * std::sin((x * std::cos(a) + y * std::sin(a)) * 0.9) + 1.5 * std::sin((x * std::sin(a) - y * std::cos(a)) * 0.25);
+                    } else if (var == 2) {   // folded: a brain's ridges and furrows
+                        const double r = pvalue(x, y, 14, sA) + 0.5 * pvalue(x, y, 7, sB);
+                        v += 9 * (0.35 - std::fabs(r)) ;
+                    } else {   // coiled: loops of gut round each cell's middle
+                        pworley(x, y, 22, sA, f1, f2, id);
+                        v += 6 * std::sin(f1 * 26 + (id % 7));
+                    }
+                    pworley(x, y, 26, sB, f1, f2, id);   // the veins: thin dark lines branching between
+                    if (f2 - f1 < 0.035) v -= 9 * (1 - (f2 - f1) / 0.035);
+                    v += 1.5 * pvalue(x, y, 4, sC);
+                    break;
+                }
+                case MAT_THREADS: {   // J-09: threads over everything (a fungus's, hair's, a carpet's): fine strands crossing, tufts between
+                    const double a = windA + (var - 1.5) * 0.5;
+                    const double s1 = std::sin((x * std::cos(a) + y * std::sin(a)) * 1.7 + 3 * pvalue(x, y, 18, sA));
+                    const double s2 = std::sin((x * std::cos(a + 1.1) + y * std::sin(a + 1.1)) * 1.3 + 3 * pvalue(x, y, 22, sB));
+                    v += 3.5 * (s1 > 0.75 ? 1 : 0) + 3 * (s2 > 0.8 ? 1 : 0) + 2.5 * pvalue(x, y, 9, sC);
+                    pworley(x, y, 14, sC, f1, f2, id);
+                    if (f1 < 0.12 && (id % 3) == 0) v += 5 * (1 - f1 / 0.12);
+                    break;
+                }
+                case MAT_HARD: {   // J-09: an overgrowth's hard ground: a coral's or a sponge's pores, plates seamed, bony knobs
+                    pworley(x, y, var == 1 ? 20 : 12, sA, f1, f2, id);
+                    if (var == 0) { v += f1 < 0.22 ? -10 * (1 - f1 / 0.22) : 2; }                       // pitted with pores
+                    else if (var == 1) { v += (double)((int)(id % 9) - 4) * 1.3; if (f2 - f1 < 0.05) v -= 7; }   // plates
+                    else if (var == 2) { v += 6 * std::max(0.0, 1 - f1 / 0.35) - 1; }                    // knobs
+                    else { v += 5 * std::sin(f1 * 30); }                                                // ringed
+                    v += 2 * pvalue(x, y, 6, sB);
                     break;
                 }
                 case MAT_MOSS: {   // soft cushions of moss, dark seams between them

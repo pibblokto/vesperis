@@ -552,7 +552,7 @@ static int decoderFrames() {
         for (int i = 0; i < C->count && (int)held.size() < languageFull(C->count); i++) if (C->entries[i].category == RC_TEXT) held.insert(i);   // the people's tongue learnt
         const std::string key = Guide::bodyKey(s.sx, s.sy, s.sz, W.body) + "/S";
         for (int i : held) game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, i)));
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
         for (const Pick& p : picks) {
             if (!game.testShardsOpenIndex(p.index)) { printf("  S%d NOT opened\n", p.index); failures++; continue; }
             if (p.cat == 0) { run(0.1); press(KEY_ENTER); run(0.1); press(KEY_ENTER); run(1.6); }   // the first reading skipped, then the page spoken
@@ -671,7 +671,7 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
         auto press = [&](int key) { pressKey(game, gi, key); };
         const std::string key = Guide::bodyKey(s.sx, s.sy, s.sz, W.body) + "/S";
         for (int k = 0; k < 4; k++) if (want[k] >= 0) game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, want[k])));
-        game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
+        game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
         int ok = 0; std::string detail;
         static const char* const WHAT[4] = {"written", "recorded", "notation", "a recorded piece"};
         for (int k = 0; k < 4; k++) {
@@ -787,7 +787,7 @@ static int decoderPages() {
                 if (early || j % 5 != 4 || held[j] == C->last) game.guide.decoded[k] = (int)held.size();
             }
             if (closes && !early) game.guide.ended.insert(wkey + (W.which ? "/P1" : ""));
-            game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
+            game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
             const std::string base = fmt("shots/tests/decoder_pages_%s", fileWord(AGE_NAMES[a]).c_str()) + (early ? "_early" : "");
             auto shot = [&](const char* what) { const std::string fn = base + "_" + what + ".png"; writePNG(fn.c_str(), game.output(), FBW, FBH); printf("  %s\n", fn.c_str()); };
             if (!early) {
@@ -881,7 +881,7 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
     const std::string key = Guide::bodyKey(s.sx, s.sy, s.sz, W.body) + "/S";
     for (int i : held) game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, i)));
     for (int i : read) game.guide.decoded[key + std::to_string(shardWorldIndex(W.which, i))] = (int)held.size();
-    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
+    game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
     // what the read records told, worked out here from their texts
     auto toldBy = [&](const std::vector<int>& recs, std::set<int>& events, std::set<std::string>& names) {
         for (int i : recs) { const ShardText& t = TX->items[i]; if (t.text.empty()) continue; for (int ev : t.told) events.insert(ev); for (const std::string& n : t.rec.names) names.insert(n); } };

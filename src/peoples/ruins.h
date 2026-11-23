@@ -89,6 +89,9 @@ struct Culture {
     int roof = RF_PITCHED, temple = 0, hut = 0, towerForm = 0, great = 0;
     double life = 1.0;   // its works' lifetimes over its age's materials' (built light 0.5 .. built to last 2: `GV_LASTING`)
     uint64_t seed = 0;   // the people's seed (`peopleGen(g, people).seed`): its ways read again in an older age (`cultureAtAge`)
+    // J-10: how far a seeded stone rotter has eaten its stone, brick and concrete (0 none .. 1: `buildingDecay`); the surface sets it for the
+    // settlements in the rotter's reach, as generated nowhere else
+    double stoneRot = 0;
 };
 // C-13: the peoples of a world. One world in five of those that had a civilisation had two, each with a culture, a lore, a
 // tongue, a voice, a music and fifty recordings of its own: `peopleGen` is the generator a people's draws read (the world's
@@ -143,6 +146,9 @@ struct Building {
     // whether it stands in a row or a compound (its neighbours at its sides: no turrets on its corners, no garden behind it)
     double yard = 0;
     bool joined = false;
+    // KI-480: how far a seeded stone rotter has eaten this building's stone, brick and concrete (0..1, over its culture's `stoneRot`): the
+    // surface sets it building by building where the rotter's line lives
+    double stoneRot = 0;
 };
 // A-04: what a building stands on, by its people's relation to the land: the ground; stilts (its room the ground under its floor); a
 // mound (B-416: nothing drawn round it: its earth bank, as wide as the building's longest side, ran over its neighbours); a pit it is
@@ -232,7 +238,8 @@ bool settlementClear(const RuinSpec& r, double x, double z, double margin);
 // the drawn pieces of a settlement at a level of detail: 0 whole (the walls with their doorways and windows, the roofs, the
 // columns, the rubble), 1 the walls as one box each, 2 one box per building. A-03: each building its age's (`buildingForms`,
 // peoples/buildings.h)
-void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out);
+// J-10: at level 0 the openings its walls leave (doorways, windows) go into `openings` where given
+void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out, std::vector<FormOpening>* openings = nullptr);
 
 // ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
 // the doorway's midpoint of a building with one, in the settlement's metres; false for the rest. A-03: its room's

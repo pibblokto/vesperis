@@ -3,6 +3,7 @@
 #include "autoexplore_internal.h"
 #include "peoples/plan.h"
 #include "galaxy/probe.h"
+#include "galaxy/planet_features.h"
 #include "peoples/signals.h"
 #include "ui.h"
 #include "core/rng.h"
@@ -163,8 +164,10 @@ bool Game::autoFindRise(double& bx, double& bz) {
     return found;
 }
 
-// the water: the nearest within 450 m, walked to the dry ground a few metres short of its edge, a long look over it
+// the water: the nearest within 450 m, walked to the dry ground a few metres short of its edge, a long look over it; Z-07: a spring's pool
+// first where one is in reach, and a sample of the edge on the way (the last dry ground before the water, the crosshair on the water)
 bool Game::autoOutingWater() {
+    if (autoOutingSprings()) return true;
     const Player& p = surf.player;
     for (double R = 20; R <= 450; R += 20)
         for (int k = 0; k < 24; k++) {
@@ -173,8 +176,13 @@ bool Game::autoOutingWater() {
             if (w < surf.site.groundHeight(x, z) + 0.3) continue;
             double sx = x, sz = z;
             for (double s = 2; s < R; s += 2) { sx = x - std::sin(a) * s; sz = z - std::cos(a) * s; if (autoDryAt(sx, sz)) break; }
+            const double ex = sx, ez = sz;   // the edge: the last dry ground
             sx -= std::sin(a) * 3; sz -= std::cos(a) * 3;
             autoPush("down to the water", 25 + R / 1.5, [this, sx, sz](double dt) { return autoWalkTo(sx, sz, 1.5, 0.9, dt) != 0; });
+            if (autoSampleRoom()) {
+                autoPush("to the water's edge", 20, [this, ex, ez](double dt) { return autoWalkTo(ex, ez, 0.8, 0.6, dt) != 0; });
+                autoPlanSample(x, z, "a sample of the water");
+            }
             autoPush("the water", ax.rng.range(12, 20), [this, x, z, w](double) {
                 AutoState& S = ax;
                 if (S.clock > S.driftNext) { S.driftYaw = S.rng.sym(0.5); S.driftPitch = S.rng.range(-0.05, 0.08); S.driftNext = S.clock + S.rng.range(4, 7); }
@@ -186,6 +194,56 @@ bool Game::autoOutingWater() {
             return true;
         }
     return false;
+}
+
+// Z-07: the springs: the nearest pool of a world's springs within 450 m (its terraced springs' vents, a chemotroph's hot pools, where their
+// landform put the pool), walked to its rim, a sample there, a long look over it
+bool Game::autoOutingSprings() {
+    const Player& p = surf.player;
+    const bool terraced = surf.site.gen.hasTrait(TR_HOT_SPRINGS), pools = (KINDS[surf.site.gen.type].events & EV_SPRINGS) != 0;
+    if (!terraced && !pools) return false;
+    std::vector<GeyserVent> vents;
+    if (terraced) hotSpringsNear(surf.site.gen, surf.site.unitAt(p.x, p.z), vents);
+    else springVents(surf.site.gen, surf.site.unitAt(p.x, p.z), vents);
+    double best = 450, bx = 0, bz = 0, br = 0;
+    for (const GeyserVent& gv : vents) {
+        double vx, vz;
+        surf.site.localAt(gv.unit, vx, vz);
+        const double d = std::hypot(vx - p.x, vz - p.z);
+        if (d >= best || surf.site.lod0.at((int)std::floor(vx / 16 + 0.5), (int)std::floor(vz / 16 + 0.5)).material != MAT_BRINE) continue;
+        best = d; bx = vx; bz = vz; br = gv.radiusKm * 1000;
+    }
+    if (best >= 450) return false;
+    const double a = std::atan2(p.x - bx, p.z - bz), rim = br * (terraced ? 1.2 : 1.4);   // its rim toward the explorer: a terrace's sinter, a pool's mat
+    const double sx = bx + std::sin(a) * rim, sz = bz + std::cos(a) * rim;
+    autoPush("to the springs", 25 + best / 1.5, [this, sx, sz](double dt) { return autoWalkTo(sx, sz, 1.0, 0.8, dt) != 0; });
+    if (autoSampleRoom()) autoPlanSample(bx, bz, "a sample of the spring");
+    autoPush("the springs", ax.rng.range(12, 20), [this, bx, bz](double) {
+        AutoState& S = ax;
+        if (S.clock > S.driftNext) { S.driftYaw = S.rng.sym(0.45); S.driftPitch = S.rng.range(-0.08, 0.06); S.driftNext = S.clock + S.rng.range(4, 7); }
+        const Player& q = surf.player;
+        const double gy = surf.site.groundHeight(bx, bz), d = std::max(4.0, std::hypot(bx - q.x, bz - q.z));
+        autoLook(std::atan2(bx - q.x, bz - q.z) + S.driftYaw, clampd(std::atan2(gy - (q.y + q.eyeHeight), d), -0.6, 0.3) + S.driftPitch, 0.45);
+        return false;
+    }, true);
+    return true;
+}
+
+// Z-07: room for a sample: a vial in the kit (R-432: the cold store takes any number)
+bool Game::autoSampleRoom() const { return (int)kit.size() < KIT_VIALS; }
+
+// Z-07: a sample where the walk ended (the lab's work stays the explorer's: it opens no screen): the crosshair eased onto the ground or the
+// water a metre or so toward a place, O once where it rests within reach (the take's line said as the explorer's is)
+void Game::autoPlanSample(double towardX, double towardZ, const char* what) {
+    autoPush(what, 6, [this, towardX, towardZ](double) {
+        AutoState& S = ax;
+        if (S.stepFirst) S.sampleTapped = false;
+        const Player& q = surf.player;
+        autoLook(std::atan2(towardX - q.x, towardZ - q.z), -0.95, 0.6);
+        const bool reach = surf.lastRange >= 0 && std::hypot(surf.lastRangeX - q.x, surf.lastRangeZ - q.z) <= 2.0;
+        if (!S.sampleTapped && S.stepT > 1.5 && reach) { autoTap(KEY_O); S.sampleTapped = true; S.samples++; }
+        return S.sampleTapped && S.stepT > 2.5;
+    });
 }
 
 const Critter* Game::autoCritter(uint64_t seed) const { for (const Critter& c : surf.critters) if (c.seed == seed) return &c; return nullptr; }

@@ -4,6 +4,7 @@
 // arms, a beacon on a mast; smaller, and with what the surface drone has not: two arms under its nose ending in three-fingered hands, a hold
 // under its back, its number in lamps on its deck.
 #include "game.h"
+#include "ship_plan.h"
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
@@ -15,13 +16,15 @@ const double HULL_X[8] = {0.07, 0.16, 0.16, 0.09, -0.09, -0.16, -0.16, -0.07};
 const double HULL_Z[8] = {0.25, 0.12, -0.14, -0.24, -0.24, -0.14, 0.12, 0.25};
 const double Y_BELLY = 0.10, Y_BELT = 0.17, Y_TOP = 0.23, TOP_K = 0.78, BELLY_K = 0.92;
 const double DUCT_X = 0.31, DUCT_Z = 0.19, DUCT_Y = 0.19, DUCT_R = 0.09, DUCT_H = 0.026;
-// the rack against the left wall by the front window (the cabin's metres: +x right, +y up, +z the front window): three shelves, a drone on
-// each facing the room (drone 1 on the top shelf), the bay's screen across its head
-const double RACK_X0 = -2.5, RACK_X1 = -1.88, RACK_Z0 = 0.92, RACK_Z1 = 1.95, RACK_TOP = 1.66, SCREEN_Y0 = 1.38, SCREEN_Y1 = 1.60;
-const double RACK_DX = -2.19, RACK_DZ = 1.435;   // where a drone stands on its shelf
+// the rack is the plan's fixture (ship_plan.cpp, `FX_RACK`: its box, its screen's edges, where a drone stands on its shelf, its floor,
+// the drones' way out), against the hangar's port wall by its ports (the ship's metres: +x starboard, +y up, +z the bow): three
+// shelves, a drone on each facing the room (drone 1 on the top shelf), the bay's screen across its head. I-02: its banks the frame's
+// dealing (`CabinFrame::banks`)
 const double BAY_OUT_S = 2.2, DOCK_S = 2.2;      // its way out of the rack into the hull, and back (game/drones.cpp's clock)
 
 Vec3 lerpV(const Vec3& a, const Vec3& b, double u) { return a + (b - a) * u; }
+// a home bank as the frame dealt it (I-02), the hull's when it dealt none
+int dealtBank(const ShipBanks& b, int home) { const int d = b.bankOf(home); return d >= 0 ? d : BANK_HULL; }
 double smooth01(double u) { u = clampd(u, 0, 1); return u * u * (3 - 2 * u); }
 }
 
@@ -132,6 +135,7 @@ void droneModel(const DronePose& pose, std::vector<DronePrim>& out) {
 // where a drone stands in the cabin now (its shelf; on its way into the hull or out of it), its height off the shelf and its fans' blur;
 // false while it is away
 bool Game::droneRackPlace(int k, double& x, double& lift, double& blur) const {
+    const double RACK_DX = shipFixtureOf(FX_RACK).droneX;
     x = RACK_DX; lift = 0; blur = 0;
     if (bay.clock < 0 || k < 0 || k >= DRONE_COUNT) return true;
     const DroneRun& R = bay.run[k];
@@ -170,8 +174,13 @@ void Game::droneRackFrame(CabinFrame& f) const {
     }
 }
 
-// the rack and the drones on it, in the cabin (`drawCabinBand`)
-void Game::drawDroneRack(const CabinFrame& f) {
+// the rack and the drones on it, in the cabin: its shapes into the frame's, where it comes in the room's order (`drawCabinPieces`)
+void Game::drawDroneRack(CabinFrame& f) {
+    const ShipFixture& R = shipFixtureOf(FX_RACK);
+    const double RACK_X0 = R.x0, RACK_X1 = R.x1, RACK_Z0 = R.z0, RACK_Z1 = R.z1, RACK_TOP = R.top, SCREEN_Y0 = R.screenLo, SCREEN_Y1 = R.screenHi, RACK_DX = R.droneX, RACK_DZ = R.droneZ;
+    const double BASE = R.base;
+    auto dealt = [&](int home) { return dealtBank(f.banks, home); };
+    ShapeList& out = f.shapes;
     const Mat3& look = f.look; const Vec3& eye = f.eye;
     const double hullShade = f.hullShade;
     auto toView = [&](const Vec3& p) { return look * (p - eye); };
@@ -187,24 +196,25 @@ void Game::drawDroneRack(const CabinFrame& f) {
             q[k].u = pts[k].x + pts[k].z * 0.31;
             q[k].v = pts[k].y + pts[k].z * 0.17;
         }
-        rasterPolygon(fb, q, 4, prm, spaceR.proj);
+        out.polygon(q, 4, prm);
     };
     auto lampAt = [&](const Vec3& p, int bank, double shade, int size) {
         const Vec3 v = toView(p);
         if (v.z <= NEAR_Z) return;
         RVert q; q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade;
-        rasterPoint3(fb, q, bank, spaceR.proj, true, size);
+        out.point(q, bank, true, size);
     };
     const double flick = f.flick;
     // ---- the rack: its back against the hull (a port behind each shelf, open while its drone is away), its sides, its shelves, its head
-    // with the bay's screen across it (three cells, a drone's each: bright aboard and ready, breathing while the bay charges, dim while away)
-    quad(solid, Vec3(RACK_X0 + 0.02, 0, RACK_Z0), Vec3(RACK_X0 + 0.02, 0, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z0), hullShade * 0.55);
-    for (const double z : {RACK_Z0, RACK_Z1}) quad(solid, Vec3(RACK_X0, 0, z), Vec3(RACK_X1, 0, z), Vec3(RACK_X1, RACK_TOP, z), Vec3(RACK_X0, RACK_TOP, z), hullShade * 0.7);
+    // with the bay's screen across it (three cells, a drone's each: bright aboard and ready, breathing aboard while the others are away, dim
+    // while away)
+    quad(solid, Vec3(RACK_X0 + 0.02, BASE, RACK_Z0), Vec3(RACK_X0 + 0.02, BASE, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z0), hullShade * 0.55);
+    for (const double z : {RACK_Z0, RACK_Z1}) quad(solid, Vec3(RACK_X0, BASE, z), Vec3(RACK_X1, BASE, z), Vec3(RACK_X1, RACK_TOP, z), Vec3(RACK_X0, RACK_TOP, z), hullShade * 0.7);
     quad(solid, Vec3(RACK_X0, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z1), Vec3(RACK_X0, RACK_TOP, RACK_Z1), hullShade * 0.9);
     quad(solid, Vec3(RACK_X1, SCREEN_Y0 - 0.06, RACK_Z0), Vec3(RACK_X1, SCREEN_Y0 - 0.06, RACK_Z1), Vec3(RACK_X1, RACK_TOP, RACK_Z1), Vec3(RACK_X1, RACK_TOP, RACK_Z0), hullShade * 0.8);
     const bool ready = f.ready;
     for (int k = 0; k < DRONE_COUNT; k++) {
-        const double y = SHELF_Y[k];
+        const double y = BASE + SHELF_Y[k];
         quad(solid, Vec3(RACK_X0, y, RACK_Z0), Vec3(RACK_X1, y, RACK_Z0), Vec3(RACK_X1, y, RACK_Z1), Vec3(RACK_X0, y, RACK_Z1), hullShade * 0.85);
         quad(solid, Vec3(RACK_X1, y - 0.03, RACK_Z0), Vec3(RACK_X1, y - 0.03, RACK_Z1), Vec3(RACK_X1, y, RACK_Z1), Vec3(RACK_X1, y, RACK_Z0), hullShade * 0.7);
         const double x = f.x[k];
@@ -215,14 +225,14 @@ void Game::drawDroneRack(const CabinFrame& f) {
             quad(dark, Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z0 + 0.06), Vec3(RACK_X0 + 0.03, y + 0.02, RACK_Z1 - 0.06), Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z1 - 0.06),
                     Vec3(RACK_X0 + 0.03, y + 0.36, RACK_Z0 + 0.06), 2);
         }
-        // the shelf's lamp: green aboard and ready, amber charging, red blinking while its drone is out
+        // the shelf's lamp: green aboard and ready, amber aboard while the others are away, red blinking while its drone is out
         const Vec3 lampP(RACK_X1 + 0.004, y - 0.015, RACK_Z1 - 0.07);
-        if (docked && here) lampAt(lampP, ready ? BANK_SCREEN : BANK_AMBER, ready ? 58 : 40 + 14 * std::sin(realTime * 2.4), 2);
-        else lampAt(lampP, BANK_RED, std::fmod(realTime, 1.0) < 0.5 ? 60 : 22, 2);
+        if (docked && here) lampAt(lampP, ready ? dealt(BANK_SCREEN) : dealt(BANK_AMBER), ready ? 58 : 40 + 14 * std::sin(realTime * 2.4), 2);
+        else lampAt(lampP, dealt(BANK_RED), std::fmod(realTime, 1.0) < 0.5 ? 60 : 22, 2);
         // the screen's cell
         const double z0 = RACK_Z0 + 0.05 + k * (RACK_Z1 - RACK_Z0 - 0.1) / 3, z1 = z0 + (RACK_Z1 - RACK_Z0 - 0.1) / 3 - 0.02;
         const double cell = cabin.facing == FACE_BAY ? 46 : (docked && here ? (ready ? 38 : 28 + 7 * std::sin(realTime * 2.4)) : (std::fmod(realTime + k * 0.3, 1.2) < 0.6 ? 24 : 14));
-        RasterParams rs; rs.bank = BANK_BAY; rs.grain = &cabinGrain; rs.grainScale = 30.0 * FB_SCALE; rs.grainWeight = 0.5;
+        RasterParams rs; rs.bank = dealt(BANK_BAY); rs.grain = &cabinGrain; rs.grainScale = 30.0 * FB_SCALE; rs.grainWeight = 0.5;
         RVert q[4]; const Vec3 pts[4] = {Vec3(RACK_X1 + 0.006, SCREEN_Y0, z1), Vec3(RACK_X1 + 0.006, SCREEN_Y0, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z1)};
         for (int i = 0; i < 4; i++) {
             const Vec3 v = toView(pts[i]);
@@ -233,28 +243,34 @@ void Game::drawDroneRack(const CabinFrame& f) {
             q[i].u = pts[i].x + pts[i].z;
             q[i].v = pts[i].y * 3 + realTime * 0.4;
         }
-        rasterPolygon(fb, q, 4, rs, spaceR.proj);
+        out.polygon(q, 4, rs);
     }
     // ---- the drones: each where it stands, facing the room (its nose +x, its right -z), lit by the cabin's lamp over the cage
     for (int k = 0; k < DRONE_COUNT; k++)
-        if (f.here[k]) drawDronePrims(look, eye, Vec3(f.x[k], SHELF_Y[k] + f.lift[k], RACK_DZ), Vec3(1, 0, 0), Vec3(0, 1, 0), f.pose[k], nullptr, f.prims[k]);
+        if (f.here[k]) drawDronePrims(look, eye, Vec3(f.x[k], BASE + SHELF_Y[k] + f.lift[k], RACK_DZ), Vec3(1, 0, 0), Vec3(0, 1, 0), f.pose[k], nullptr, f.prims[k], out);
 }
 
-// a drone's model drawn in the cabin's frame (the ship's metres): its feet at `origin`, its nose along `fwd`; lit by the cabin's lamp, or
-// outside the hull by the sun (`sun`: the ship's metres, toward it)
+// a drone's model drawn in the cabin's frame (the ship's metres): its feet at `origin`, its nose along `fwd`; lit by the cabin's lamp (the
+// rack's room's bulb; R-427: `bulb`'s, the maintenance room's over a platform), or outside the hull by the sun (`sun`: the ship's metres,
+// toward it)
 void Game::drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun) {
     std::vector<DronePrim> prims;
     droneModel(pose, prims);
-    drawDronePrims(look, eye, origin, fwd, up, pose, sun, prims);
+    RasterNow now(fb, spaceR.proj);
+    drawDronePrims(look, eye, origin, fwd, up, pose, sun, prims, now);
 }
 
-// F-05: a drone's model already made (`droneModel`), so the cabin's bands draw the rack's three without making them in every band
-void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims) {
+// F-05: a drone's model already made (`droneModel`), so the cabin's frame draws the rack's three without making them again; I-01: its
+// shapes into `out` (the cabin's frame, or the framebuffer at once)
+void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims,
+                          ShapeSink& out, const Vec3* bulbAt) {
     const double lit = cabin.lightLevel;
     const Vec3 right = normalize(cross(up, fwd));
     auto toCab = [&](const Vec3& p) { return origin + right * p.x + up * p.y + fwd * p.z; };
     auto toView = [&](const Vec3& p) { return look * (p - eye); };
-    const Vec3 bulb(0, 2.25, 0);
+    const ShipLamp& lamp = shipLampIn(shipFixtureOf(FX_RACK).room, LAMP_BULB);   // the rack's room's bulb (the plan's)
+    auto dealt = [&](int home) { return dealtBank(cabinFrame.banks, home); };
+    const Vec3 bulb = bulbAt ? *bulbAt : Vec3(lamp.x, lamp.y, lamp.z);
     for (const DronePrim& pr : prims) {
         if (pr.kind == 0) {
             const Vec3 n = right * pr.nrm.x + up * pr.nrm.y + fwd * pr.nrm.z;
@@ -266,8 +282,9 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
             switch (pr.mat) {
                 case DM_DARK: rp.bank = 0; base = 6 + 10 * pr.tint; break;
                 case DM_METAL: rp.bank = BANK_HULL; base = (16 + 34 * li) * pr.tint * l; break;
-                case DM_ACCENT: rp.bank = BANK_BAY; base = (18 + 26 * li) * l; break;
-                default: rp.bank = BANK_PAINT; base = (14 + 38 * li) * pr.tint * l; break;
+                case DM_ACCENT: rp.bank = dealt(BANK_BAY); base = (18 + 26 * li) * l; break;
+                case DM_BEACON: rp.bank = dealt(BANK_RED); base = (10 + 18 * li) * pr.tint * l; break;   // R-427: a tail light, unlit
+                default: rp.bank = dealt(BANK_PAINT); base = (14 + 38 * li) * pr.tint * l; break;
             }
             RVert q[6]; bool ok = true;
             for (int i = 0; i < pr.n; i++) {
@@ -275,25 +292,25 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
                 if (v.z < NEAR_Z) { ok = false; break; }
                 q[i].x = v.x; q[i].y = v.y; q[i].z = v.z; q[i].shade = std::min(63.0, base);
             }
-            if (ok) rasterPolygon(fb, q, pr.n, rp, spaceR.proj);
+            if (ok) out.polygon(q, pr.n, rp);
         } else if (pr.kind == 1) {
             const Vec3 a = toView(toCab(pr.p[0])), b = toView(toCab(pr.p[1]));
             if (a.z < NEAR_Z || b.z < NEAR_Z) continue;
-            const int bank = pr.mat == DM_ACCENT ? BANK_BAY : BANK_HULL;
+            const int bank = pr.mat == DM_ACCENT ? dealt(BANK_BAY) : BANK_HULL;
             const double li = sun ? 0.8 : lit;
             const double shade = pr.mat == DM_ACCENT ? 22 + 24 * li : 20 + 32 * li;
             const int th = clampi((int)std::lround(2 * pr.r / std::min(a.z, b.z) * spaceR.proj.f / FB_SCALE), 1, 4);
             RVert va, vb; va.x = a.x; va.y = a.y; va.z = a.z; va.shade = shade; vb = va; vb.x = b.x; vb.y = b.y; vb.z = b.z;
-            rasterLine3(fb, va, vb, bank, spaceR.proj, true, th);
+            out.line(va, vb, bank, true, th);
         } else {
             const Vec3 v = toView(toCab(pr.p[0]));
             if (v.z < NEAR_Z) continue;
             int bank = BANK_LIGHT; double shade = 58;
-            if (pr.mat == DM_EYE) { bank = BANK_EYE; shade = pose.lit ? 60 : 20; }
-            else if (pr.mat == DM_BEACON) { bank = BANK_RED; shade = pose.lit && std::fmod(pose.blink, 1.3) < 0.22 ? 63 : 18; }
-            else if (pr.mat == DM_NUMBER) { bank = BANK_BAY; shade = 60; }
+            if (pr.mat == DM_EYE) { bank = dealt(BANK_EYE); shade = pose.lit ? 60 : 20; }
+            else if (pr.mat == DM_BEACON) { bank = dealt(BANK_RED); shade = pose.lit && std::fmod(pose.blink, 1.3) < 0.22 ? 63 : 18; }
+            else if (pr.mat == DM_NUMBER) { bank = dealt(BANK_BAY); shade = 60; }
             RVert q; q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade;
-            rasterPoint3(fb, q, bank, spaceR.proj, true, v.z < 1.6 ? 2 : 1);
+            out.point(q, bank, true, v.z < 1.6 ? 2 : 1);
         }
     }
 }
@@ -303,15 +320,18 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
 // the drones leaving the ship and coming back, as lights in the space view
 void Game::drawDroneLights() {
     if (!bay.out || bay.clock < 0 || !droneBayHere()) return;
-    const Mat3 look = cameraBasis(cabin.yaw, cabin.pitch);
-    const Vec3 eye(cabin.x, cabin.onRoof ? 2.4 + 0.9 + 1.6 - 0.3 : 1.6, cabin.z);
+    const Cabin cs = cabinSeen();   // I-04: the hatch's drop's camera while it drops
+    const Mat3 look = cameraBasis(cs.yaw, cs.pitch);
+    const Vec3 eye(cs.x, cs.eyeY(), cs.z);
     const Mat3 shipCam = cameraBasis(ship.yaw, ship.pitch);
     const Vec3 down = normalize(shipCam * (-ship.parkDir));   // toward the world, in the ship's metres
     const Vec3 sunDir = sys.valid ? normalize(shipCam * (sys.star.pos - ship.pos)) : Vec3(0, 1, 0);
-    const Vec3 port(RACK_X0 - 0.4, 0.6, RACK_DZ);
-    // its place `tau` seconds out of the hull: out from the hull's side, then down to the world faster and faster (the way back the same)
-    auto placeAt = [&](int k, double tau) {   // out from the hull's side, rising to the windows and drifting ahead, then down to the world faster and faster
-        const double side = 5 * (1 - std::exp(-tau * 1.3)), rise = 0.9 * (1 - std::exp(-tau * 2)) + (k - 1) * 0.5 * (1 - std::exp(-tau)), along = 3 * tau * tau * tau;
+    const ShipFixture& rack = shipFixtureOf(FX_RACK);
+    const Vec3 port(rack.x0 - 0.4, rack.base + 0.6, rack.droneZ);
+    // its place `tau` seconds out of the hull: out from the hull's side and up past the flank's windows (the rack's way out), drifting ahead,
+    // then down to the world faster and faster (the way back the same)
+    auto placeAt = [&](int k, double tau) {
+        const double side = rack.outward * (1 - std::exp(-tau * 1.3)), rise = rack.rise * (1 - std::exp(-tau * 2)) + (k - 1) * 0.5 * (1 - std::exp(-tau)), along = 3 * tau * tau * tau;
         return port + Vec3(-side, rise, 2.5 * tau) + down * along + Vec3(0, 0, (k - 1) * 0.12 * along);
     };
     for (int k = 0; k < DRONE_COUNT; k++) {
@@ -398,14 +418,16 @@ void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, do
 
 // the screen's map of a world of this system (F-02: none until the world's map is made)
 void Game::buildDroneMap(int body) {
-    bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
+    bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0; bay.mapMade = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
     const PlanetMap* mp = spaceR.mapIfReady(b);   // never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
     if (!mp) return;
     const PlanetMap& m = *mp;
-    MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
+    MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
+    const BodyGen& bg = spaceR.genFor(b);
+    const bool greened = bg.made.green > 0 && madeGreens(bg.type);   // J-16 (KI-509): its grass a carpet's, each texel its own line's
     const int W = 376, H = 188;   // twice the screen's box: crisp at 2x and over
     bay.map.assign((size_t)W * H, 0);
     auto hAt = [&](double lon, double lat) { return m.heightAt(lon, lat); };
@@ -424,10 +446,11 @@ void Game::buildDroneMap(int body) {
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1,
+                                    greened && m.material[i] == MAT_GRASS ? 1.0 : m.madeTintAt(i), m.madeLineAt(i));
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);
     }
-    bay.mapW = W; bay.mapH = H; bay.mapSeed = b.seed;
+    bay.mapW = W; bay.mapH = H; bay.mapSeed = b.seed; bay.mapMade = m.madeKey;
 }

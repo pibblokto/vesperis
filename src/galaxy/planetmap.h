@@ -4,6 +4,7 @@
 // same function at full detail, so what you walk on is what you saw from orbit.
 #pragma once
 #include "system.h"
+#include "made.h"
 #include <vector>
 #include <string>
 #include <atomic>
@@ -17,6 +18,8 @@ std::string traitList(const BodyGen& g);   // R-304: "CANYON LANDS, SALT FLATS" 
 // on a kind (its bank in every view): a kind without flora may lend the grass and forest families to its two accents
 int matFamily(int material);
 int matFamilyOn(int type, int material);
+// KI-484: and by the world now: a made snowball's sea ice in the grass family (its bank the frozen felisian's blue: `madeMatColour`)
+int matFamilyOnGen(const BodyGen& g, int material);
 // the material that stands for a family on a kind (rock: basalt on volcanic worlds, graphite on carbon worlds...: the row's `famRep`, an accent for grass and forest)
 int familyRep(int type, int family);
 // N1-05: the one exposure rule: palette stop (0..63) of a fully lit surface of this albedo at noon, in every view
@@ -60,6 +63,9 @@ struct SurfaceSample {
     double groundTint = 0;  // the ground trait's field here, 0..1: a meteorites' strewn field's stones (the surface's objects), a rainbow stratum's accent
     double slipFace = 0;    // how much this point is a sand dune's slip face, 0..1 (its lee, downwind of the crest, where the sand slides: the singing
                             // dunes' hum; the dune field's share times the lee's, whatever the face's steepness; not a gypsum's dunes, nor snow's drifts)
+    double snowTint = 0;    // Z-03: red snow's algae on the snow here, 0..1 (TR_SNOW_ALGAE: its patches where the eye resolves them)
+    double madeTint = 0;    // J-02: a made world's tint over the land here, 0..1 (`MadeWorld::tint`: how much of the point its spreads reached)
+    int madeLine = -1;      // KI-460: the line whose look or overgrowth lies here (the spread's index; -1 none): its colour is its own
 };
 
 struct BodyGen {
@@ -153,6 +159,14 @@ struct BodyGen {
     // a body of a drifter's system: a people's world there lost its sun (its then-world keeps the flag: the profile, the history and the
     // records read the loss through it)
     bool drifter = false;
+    // J-02: the world has air (`bodyHasAir`: not one fallen as snow in the dark), read by the site, the globe and the maps through here
+    bool hasAir = false;
+    // J-02: what the world was made into (the seeded worlds, galaxy/made.h), put in by the game where the drawing gets its generator; none
+    // in a generator `make` gives, and taken off by `unseasoned` and `thenWorld`
+    MadeWorld made;
+    // J-02: the air's greenhouse (the kind's `tempOffset`), read through the generator. J-04: the ground's shapes read it as generated; a
+    // seeded world's made climate is its layer's own warmth (`MadeWorld::warmC`), read where the warmth of now is (the HUD, the ice, the snow)
+    double airWarmthC() const { return KINDS[type].tempOffset; }
     static BodyGen make(const Body& b, double season = 0);
 };
 // D-04: the drifters' own traits a body in the dark is given (into `out`, at most three: FROZEN AIR where its air froze, EMBERS on a lava
@@ -161,11 +175,22 @@ struct BodyGen {
 int darkTraitsOf(const Body& b, int* out);
 constexpr double EMBERS_SHARE = 0.3;            // of the rock drifters (a young interior, still erupting)
 constexpr double LIGHTS_IN_WATER_SHARE = 0.5;   // of the dark oceans (if anything lives there)
+// Z-03: red snow (TR_SNOW_ALGAE), given by its own hash (`SALT_SNOW_ALGAE`: `salt scan` holds that no protected world takes it) to a share of
+// the worlds it may come to: a kind of its process (`KS_SNOW_ALGAE`), under a sun, its mean at fifty degrees under `SNOW_ALGAE_COLD_C`, no people
+// nor the home world, a new slot free and no trait of the life in them (one trait of a kind). The free slot it would take, -1 where it may not come
+constexpr double SNOW_ALGAE_SHARE = 0.35, SNOW_ALGAE_COLD_C = 8.0;
+constexpr uint64_t SALT_SNOW_ALGAE = 0x5A0A1CAE00000001ULL;
+int snowAlgaeSlot(const Body& b, const BodyGen& g);
 // B-419: what is made on a world is the world's, not its season's. The terrain the explorer sees keeps the season (the winter
 // hemisphere's ice cap and snow line); a reader of the world's made things (a people's plan, its extent, its histories, settlements,
 // roads and works, the scanner's sights) reads it without (the cap and the line at their means): the generator itself where its season
 // is 0, else a copy without it in `tmp`
-inline const BodyGen& unseasoned(const BodyGen& g, BodyGen& tmp) { if (g.season == 0) return g; tmp = g; tmp.season = 0; return tmp; }
+// J-02: and without what a seeding made of it (its people's plan, its sights and its rivers are the world's as generated)
+inline const BodyGen& unseasoned(const BodyGen& g, BodyGen& tmp) {
+    if (g.season == 0 && !g.made.on()) return g;
+    tmp = g; tmp.season = 0; tmp.made = MadeWorld();
+    return tmp;
+}
 // P-04: the world in its people's time. A dead world (`deadKind`) was the living kind of its row's `thenKind`: the same seed, draws and
 // relief, so the same ground (its heights the same in both times: every town stands where it stood), without the present's cover (its seas
 // water, its forests living, its climate theirs). Every reader of a people's world (its plan, extent, culture, histories, settlements,
@@ -176,17 +201,70 @@ inline const BodyGen& thenWorld(const BodyGen& g, BodyGen& tmp) {
     if (!deadKind(g.type)) {
         if (!(g.dark && g.hasTrait(TR_CIVILISATION))) return unseasoned(g, tmp);
         tmp = g; tmp.season = 0; tmp.dark = false; tmp.frozenSeas = false;   // a drifter's people's world (a desert) had its sun
+        tmp.made = MadeWorld();
         return tmp;
     }
     tmp = g; tmp.deadAs = g.type; tmp.type = KINDS[g.type].thenKind; tmp.season = 0;
     tmp.dark = false; tmp.frozenSeas = false;   // in its people's time it had its sun
+    tmp.made = MadeWorld();
     return tmp;
 }
 inline int nowKind(const BodyGen& g) { return g.deadAs >= 0 ? g.deadAs : g.type; }   // P-04: the kind the explorer walks (a then-world's: the dead kind)
+// J-11: the dead cover over a world's living ground: its kind's (P-04's dead worlds), else its made kind's (`MadeWorld::deadCover`: a made
+// hothouse's scorched, a made snowball's frozen); and whether its ground is so dead (its old forests standing dead, nothing else growing)
+inline int deadCoverOf(const BodyGen& g) { return KINDS[g.type].cover != DC_NONE ? KINDS[g.type].cover : (g.made.on() ? g.made.deadCover() : DC_NONE); }
+inline bool deadGroundOf(const BodyGen& g) { return deadKind(g.type) || (g.made.on() && g.made.deadCover() != DC_NONE); }
 
 // B-321: the climate's mean surface temperature (degrees C) at a latitude, height and season on a living world: the
 // biome table and the HUD read the same number. `sub` is dot(unit, lockedDir) on a locked world (0 otherwise).
 double climateTempC(const BodyGen& g, double absLatDeg, double heightM, double winter, double sub);
+// J-03: a place's mean warmth through the year (C): the site's own formula (`computeEnvironment`) with the season at its mean and the day's
+// swing averaged out, at the place's height; a locked world's sun where it stands over the place, an airless world's day and night halves.
+// `bodyTempK` is the body's equilibrium (`Body::tempK`), `sunless` a drifter's world (its warmth its own). The samples read it
+// (`SurfaceView::placeMeanC`), and so do a seeding's place and the made layer's warmth bands (`MadeWorld::tempK`)
+double placeMeanC(const BodyGen& g, double bodyTempK, bool sunless, const Vec3& unit, double h);
+// J-04: a sample under water (a sea, a lake, a river, a pool), its water's salt as the made layer takes it (0 fresh, 1 the sea's, 2 a pink
+// lake's brine), and its mean warmth for a spread's band (`placeMeanC` at the water's level or the ground's, a water's never under its
+// freezing): the made pass and a seeding's habitat read them
+inline bool madeWetAt(const SurfaceSample& s) { return s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water); }
+inline int madeSaltAt(const BodyGen& g, const SurfaceSample& s) { return g.hasTrait(TR_PINK_LAKES) && s.waterTint > 0.5 ? 2 : (s.waterKind == 0 ? 1 : 0); }
+double madeMeanAt(const BodyGen& g, const MadeWorld& m, const Vec3& unit, const SurfaceSample& s, bool wet, int salt);
+// J-04: a material's colour as a seeded world's made climate leaves it (the globe, the maps and the ground read it): a world's plants (its
+// grass and its forest, where it has plants) dried toward straw by the heat (`MadeWorld::wilt`), its second flora's leaves with them; every
+// other colour, and every world's without a wilt, as generated. KI-473: an overgrowth's cover in `line`'s colour where it lies (-1: the
+// latest line's that grows)
+RGB madeMatColour(const BodyGen& g, int mat, int line = -1);
+// J-09: an overgrowth's cover (a soft tissue, threads, a hard one)
+inline bool madeGrowthMaterial(int mat) { return mat == MAT_TISSUE || mat == MAT_THREADS || mat == MAT_HARD; }
+RGB madeFlora2(const BodyGen& g);
+// J-05: and the waters (every water turned purple or black by a sulphide), the ground (an oxygenless world's rock, sand, dust and mud rusted
+// by an oxygen), the plants made lush or bleached; a reef's lagoon bleached by a sour sea (`madeLifeTint`, else `lifeTintColour`)
+RGB madeLifeTint(const BodyGen& g);
+// J-05: the class of ground a sample is for the made looks (`MadeClass`): its waters, its snow and ice, a world's plants (its grass and forest
+// where it has plants), its land
+inline int madeClassOf(const BodyGen& g, int material, bool wet) {
+    if (wet || material == MAT_WATER) return MC_WATER;
+    if (material == MAT_SNOW || material == MAT_ICE) return MC_SNOW;
+    if ((material == MAT_GRASS || material == MAT_FOREST) && kindHas(g.type, KT_FLORA)) return MC_PLANTS;
+    return MC_LAND;
+}
+// J-05: the class whose made look the globe draws in its made bank (25 or 26, one a disc): the waters' tint or the test layer's (J-02, J-03:
+// -1 here, as their own), else, where no made cloud's colour holds the bank, the land's, the plants' or the snow's look in turn; -1 none
+inline int madeGlobeClass(const MadeWorld& m) {
+    if (!m.on() || m.tinted || m.cloudTintK > 0 || m.cloudGlow > 0) return -1;
+    for (int cls : {MC_LAND, MC_PLANTS, MC_SNOW}) {
+        const MadeLook& L = *m.lookOf(cls);
+        if (L.on && (L.tinted || (cls == MC_PLANTS && m.plantGlow > 0))) return cls;
+    }
+    return -1;
+}
+// J-09: whether the globe gives its made bank (25 or 26) to an overgrowth's stain, before all of those (its cover's pixels; the waters' tint
+// moves to bank 31 on the first disc where no trait holds it, and a made cloud keeps its bank's colour no more)
+inline bool madeGlobeGrowth(const MadeWorld& m) { return m.on() && m.grown() && m.growthLine >= 0 && m.growthLine < MADE_LINES; }
+// J-05: a material's colour where a made share lies over a half (the class's colour: the waters' tint, the land's, the snow's, the plants';
+// the test layer's over the land), else `madeMatColour` (the landing map's zoom). KI-460: `line`'s own look where it lies there (-1: the class's,
+// the latest line's)
+RGB madeColourAt(const BodyGen& g, int mat, double share, int line = -1);
 double tideRangeAt(const BodyGen& g, const Vec3& unit);   // Q-02: the spring range at a place (the trait's at the equator, by cos^2 of the latitude)
 // P-03: how far a point lies inside an ice sheet's edge (0 at the edge, 1 where the sheet is full, under 0 outside): the tundra's and
 // the snowball's by latitude (14 degrees from the edge to the full sheet), a terminator world's by its climate at the sea's level (the edge
@@ -196,8 +274,8 @@ double iceSheetIn(const BodyGen& g, const Vec3& unit);
 // R-307: the zenith and horizon colours of a type's sky by day (false: no sky); the surface, the globe's hemisphere light
 // and the landing map read the same pair
 bool typeSky(const BodyGen& g, RGB& zenith, RGB& horizon);
-// M9-14: one generated sentence about a body or a star.
-std::string describeBody(const Body& b, const BodyGen& g);
+// M9-14: one generated sentence about a body or a star. B-498: `ofSecondSun`, a world of a system's second sun (its parent a star: no moon)
+std::string describeBody(const Body& b, const BodyGen& g, bool ofSecondSun = false);
 std::string describeStar(const Star& s);
 // Q-01: the facts of a body, read from its orbit and its spin (no draw): SIDEWAYS SPIN (a tilt over 60 degrees), RETROGRADE SPIN, RACING DAY (a
 // day under half an hour of the game's clock: its days are 20 minutes to 4 hours, the fastest twelfth), LOCKED FACE (one face to its sun),
@@ -223,7 +301,10 @@ struct PlanetMap {
     std::vector<uint8_t> cloud;    // 0..255
     std::vector<uint8_t> veg;
     std::vector<uint8_t> wtint, ltint;   // the water's trait colours (`SurfaceSample::waterTint`, `lifeTint`), 0..255; empty on a world with none
+    std::vector<uint8_t> mtint;          // J-02: a made world's tint (`SurfaceSample::madeTint`), 0..255; empty on a world with none
+    std::vector<uint8_t> mline;          // KI-460: the line whose look lies there (`SurfaceSample::madeLine` + 1, 0 none), with `mtint`
     uint64_t seed = 0;
+    uint64_t madeKey = 0;                // J-02: the made layer it was made with (`MadeWorld::key`; 0 the world as generated), set as the season's
     std::atomic<bool> valid{false};     // set when a (possibly background) generation finished
     std::atomic<bool> generating{false};
     int seasonBucket = -1;
@@ -246,6 +327,8 @@ struct PlanetMap {
     int materialAt(double lon, double lat) const { return material[texelIndex(lon, lat)]; }
     double waterTintAt(int i) const { return wtint.empty() ? 0.0 : wtint[i] / 255.0; }   // (a texel's index)
     double lifeTintAt(int i) const { return ltint.empty() ? 0.0 : ltint[i] / 255.0; }
+    double madeTintAt(int i) const { return mtint.empty() ? 0.0 : mtint[i] / 255.0; }
+    int madeLineAt(int i) const { return mline.empty() ? -1 : mline[i] - 1; }
 
 private:
     template <class T>

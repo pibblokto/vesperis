@@ -57,14 +57,37 @@ std::string Game::bodyNameOf(int bi) const {
 
 std::string Game::beltNameOf(int k) const { (void)k; return UNNAMED_LABEL; }   // belts cannot be named yet
 
+// B-498: a moon of a planet; a body of the second sun is one of its worlds (its parent a star), as the analyzer's ORBIT line says
+bool Game::bodyIsMoon(int i) const {
+    if (!sys.valid || i < 0 || i >= (int)sys.bodies.size()) return false;
+    const int p = sys.bodies[i].parent;
+    return p >= 0 && p < (int)sys.bodies.size() && sys.bodies[p].type != PT_COMPANION;
+}
+
 // the local target's line: the display name and what it is
 std::string Game::bodyLabelOf(int i) const {
     if (!sys.valid || i < 0 || i >= (int)sys.bodies.size()) return "";
     const Body& b = sys.bodies[i];
     std::string n = bodyNameOf(i);
     if (b.type == PT_COMPANION) return n + " (COMPANION STAR, " + STAR_CLASSES[b.starClass].name + ")";
-    if (b.doublePlanet && b.parent >= 0) return n + " (" + KINDS[b.type].name + ", twin planet)";
-    return n + " (" + KINDS[b.type].name + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
+    if (b.doublePlanet && b.parent >= 0) return n + " (" + kindNameNow(i) + ", twin planet)";
+    return n + " (" + kindNameNow(i) + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
+}
+
+std::string Game::kindNameNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindName(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(KINDS[sys.bodies[bi].type].name) : mk;
+}
+std::string Game::kindShortNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindShort(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(shortType(sys.bodies[bi].type)) : mk;
+}
+std::string Game::kindWordsNow(int bi) const {
+    if (!sys.valid || bi < 0 || bi >= (int)sys.bodies.size()) return "";
+    const std::string mk = madeKindName(spaceR.madeOf(sys.bodies[bi].seed));
+    return mk.empty() ? std::string(KINDS[sys.bodies[bi].type].name) : mk + ", ONCE " + KINDS[sys.bodies[bi].type].name;
 }
 
 bool Game::nameIsForeign(const std::string& key) const { return !guide.names.count(key) && guide.inbox.count(key); }
@@ -75,7 +98,7 @@ std::string Game::screenshotCaption() const {
     std::string where;
     if (surf.valid && stateHas(placeNow(), ST_GROUND))
         where = fmt("%s  %.1f%s %.1f%s  %s", upper(bodyNameOf(surf.site.body)).c_str(), std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S",
-                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", KINDS[sys.bodies[surf.site.body].type].name);
+                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", kindNameNow(surf.site.body).c_str());
     else if (sys.valid)
         where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str())
                                                                        : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);
@@ -84,9 +107,14 @@ std::string Game::screenshotCaption() const {
     if (state == GameState::RECORDING && replay.rec >= 0 && replay.rec < (int)guide.probes.size()) {   // a recording's frame
         const ProbeRecord& r = guide.probes[replay.rec];
         const double c = std::min(replay.clock, r.endClock);
-        where = fmt("THE RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0),
+        where = fmt("RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0),
                         probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) +
                 " - " + where;
+    }
+    if (state == GameState::MICROSCOPE && scope.page == 1 && ((scope.vial >= 0 && scope.vial < (int)coldStore.size()) || scope.flask >= 0)) {   // Z-04: a micrograph
+        const int sp = microscopeSpeciesUnder();
+        where = fmt("A MICROGRAPH, %s X%s: %s FROM %s, %s", SEEING_NAMES[scope.seeing], thousands(std::round(microscopeMag())).c_str(),
+                    sp >= 0 ? speciesName(sp).c_str() : "THE SLIDE", scope.title.c_str(), scope.line.c_str()) + " - " + where;
     }
     if (tele.on && state == GameState::SPACE) {   // a photo through the telescope names what the reticle rests on
         std::string line = telescopeTargetLine(true);
@@ -119,6 +147,20 @@ void Game::syncShards() {
 std::string Game::instrumentKey(int id) const {
     return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.valid ? surf.site.body : ship.localTarget) + "/I" + std::to_string(id);
 }
+// B-499: what the status line says as a record is taken (its object, then its count on the world or that the radar caught it) and as an
+// instrument is: "OF THE OLD PEOPLE" left out where the line would run past the 53 characters the status holds (it is centred: past them both
+// its ends were cut, "SOMETHING THAT HUMS OF THE OLD PEOPLE - 103 OF 200 ON THIS WORLD"); the log keeps the whole
+constexpr size_t STATUS_CHARS = 53;
+std::string Game::shardTakenStatus(const std::string& what, int here, int total, bool caught) {
+    const std::string tail = caught ? fmt("CAUGHT BY RADAR (%d OF %d)", here, total) : fmt("%d OF %d ON THIS WORLD", here, total);
+    const std::string whole = what + " OF THE OLD PEOPLE - " + tail;
+    return whole.size() <= STATUS_CHARS ? whole : what + " - " + tail;
+}
+std::string Game::instrumentTakenStatus(const std::string& what) {
+    const std::string whole = what + " OF THE OLD PEOPLE - TO THE CASE";
+    return whole.size() <= STATUS_CHARS ? whole : what + " - TO THE CASE";
+}
+
 // C-11: the instrument within reach into the guide and the cabin's case
 void Game::takeInstrument() {
     const SurfaceView::NearInstrument ni = surf.nearInstrument;
@@ -129,7 +171,7 @@ void Game::takeInstrument() {
     int here = 0; const std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/I";
     for (const std::string& k : guide.instruments) if (k.compare(0, prefix.size(), prefix) == 0) here++;
     logEvent("INSTRUMENT", fmt("%s OF THE OLD PEOPLE TAKEN ON %s, TO THE CABIN'S CASE (%d FROM THIS WORLD)", what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here));
-    status(fmt("%s OF THE OLD PEOPLE - TO THE CABIN'S CASE", what.c_str()), 5);
+    status(instrumentTakenStatus(what), 5);
     audio.beep = BEEP_LOCK;
 }
 // C-03: E at a shard: the guide, the log, the status
@@ -153,9 +195,7 @@ void Game::takeShard() {
             fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM",
                     ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place), where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here,
                     total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
-    status(caught ? fmt("%s OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", what.c_str(), here, total)
-                  : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total),
-            5);
+    status(shardTakenStatus(what, here, total, caught), 5);
     audio.beep = BEEP_LOCK;
 }
 
@@ -163,7 +203,7 @@ void Game::takeShard() {
 // and read lent to the decoder (`Guide::lent`: read there in cyan, counted in the world's language, never taken: the ruins keep them)
 void Game::importInboxFile() {
     std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_inbox.txt";
-    int lentN = 0, probesN = 0, worldMarksN = 0, galaxyN = 0, n = guide.importInbox(p, &lentN, &probesN, &worldMarksN, &galaxyN);
+    int lentN = 0, probesN = 0, worldMarksN = 0, galaxyN = 0, microbesN = 0, n = guide.importInbox(p, &lentN, &probesN, &worldMarksN, &galaxyN, &microbesN);
     if (n < 0) { status(fmt("NO INBOX FILE (%s)", upper(p).c_str()), 5); return; }
     guide.save(guidePath);
     const int marksN = worldMarksN + galaxyN;   // the marks of the galaxy with the worlds' (the chart is a map too)
@@ -175,10 +215,12 @@ void Game::importInboxFile() {
         for (const std::string& k : guide.lent) { size_t q = k.rfind("/S"); if (q != std::string::npos) worlds.insert(k.substr(0, q)); }
         logEvent("INBOX", fmt("%d SHARDS OF %d WORLD%s LENT BY THE INBOX, TO READ ON THE DECODER", lentN, (int)worlds.size(), worlds.size() == 1 ? "" : "S"));
     }
-    std::string got = fmt("INBOX: %d NAMES", n);   // 50 characters at most with all four
+    if (microbesN > 0) logEvent("INBOX", fmt("%d SPECIES' SHEETS LENT BY THE INBOX, IN THE CATALOGUE IN CYAN", microbesN));   // Z-07: a friend's species
+    std::string got = fmt("INBOX: %d NAMES", n);   // 50 characters at most with all four; Z-07: a fifth where it fits
     if (lentN > 0) got += fmt(", %d SHARDS", lentN);
     if (probesN > 0) got += fmt(", %d RECORDINGS", probesN);
     if (marksN > 0) got += fmt(", %d MARKS", marksN);
+    if (microbesN > 0 && got.size() + fmt(", %d SPECIES", microbesN).size() <= 52) got += fmt(", %d SPECIES", microbesN);
     status(got, 5);
 }
 

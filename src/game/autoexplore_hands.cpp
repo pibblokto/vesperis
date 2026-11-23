@@ -102,43 +102,83 @@ void Game::autoGazeRound(double pace) {
 // ---------------------------------------------------------------------------------------------------------------------------------------
 // the cabin
 
-bool Game::autoAtWindow() const { return !cabin.onRoof && std::hypot(cabin.x - CAB_WINDOW_X, cabin.z - CAB_WINDOW_Z) < 0.35; }
+// at the plan's front window (I-01), where it watches a flight and an approach from
+bool Game::autoAtWindow() const {
+    const ShipView& w = shipView("THE FRONT WINDOW");
+    return cabin.room == w.room && std::hypot(cabin.x - w.at.x, cabin.z - w.at.z) < 0.35;
+}
 
-// a walk in the cabin to (x, z) round the capsule's cage, then a turn to `yaw`; true there, facing it
-bool Game::autoCabinWalk(double tx, double tz, double yaw) {
+// a walk aboard to (x, z) in `room`, then a turn to `yaw`; true there, facing it (I-02): the plan's route a way at a time (an arch: its near
+// point, then through it; a landing: its near point, onto the stair, round it to the landing of the room beyond, off it), round the circles
+// in a room's way (the cradle, the stair's rails) by a point at their side; Shift held but on the last leg's end
+bool Game::autoCabinWalk(int room, double tx, double tz, double yaw) {
     const Cabin& c = cabin;
-    if (c.onRoof) { if (autoEvery(1.0)) autoTap(KEY_PAGE_DOWN); return false; }
     double wx = tx, wz = tz;
-    const double dx = tx - c.x, dz = tz - c.z, d = std::hypot(dx, dz);
-    if (d > 0.3) {   // the cage in the way: by a point at its side
-        const double u = clampd(-(c.x * dx + c.z * dz) / (d * d), 0, 1), px = c.x + dx * u, pz = c.z + dz * u;
-        if (std::hypot(px, pz) < 1.5) {
-            double sx = -dz / d, sz = dx / d;
-            if (sx * c.x + sz * c.z < 0) { sx = -sx; sz = -sz; }
-            wx = sx * 1.7; wz = sz * 1.7;
-            if (std::hypot(wx - c.x, wz - c.z) < 0.35) { wx = tx; wz = tz; }
+    bool last = c.room == room;
+    if (c.room == ROOM_STAIR) {   // round the stair toward the landing of the way off it (along its middle), then off
+        const int way = shipNextWay(ROOM_STAIR, room);
+        if (way < 0) return false;
+        const ShipStair& S = shipStair();
+        double ax, az, bx, bz;
+        shipWayPoints(way, ROOM_STAIR, ax, az, bx, bz);
+        const double goal = shipLandingAngle(shipOpenings()[way].from);
+        if (std::fabs(c.stairA - goal) < 0.08) { wx = bx; wz = bz; }
+        else {
+            const double a = c.stairA + clampd(goal - c.stairA, -0.6, 0.6);
+            wx = S.x + 0.95 * std::sin(a); wz = S.z + 0.95 * std::cos(a);
+        }
+        last = false;
+    } else if (!last) {
+        const int way = shipNextWay(c.room, room);
+        if (way < 0) return false;
+        double ax, az, bx, bz;
+        shipWayPoints(way, c.room, ax, az, bx, bz);
+        const double da = std::hypot(ax - c.x, az - c.z), ab = std::hypot(bx - ax, bz - az), db = std::hypot(bx - c.x, bz - c.z);
+        if (da < 0.3 || db < ab + 0.05) { wx = bx; wz = bz; } else { wx = ax; wz = az; }
+    }
+    if (c.room != ROOM_STAIR) {   // the circles of the room (the cradle, the stair's rails): out of a rail's way off first, then round them
+        for (const ShipCollider& k : shipColliders()) {
+            if (k.room != c.room || k.kind == COLLIDE_BOX) continue;
+            const double ox = c.x - k.x, oz = c.z - k.z, od = std::hypot(ox, oz);
+            if (std::hypot(wx - k.x, wz - k.z) < k.r + 0.1) continue;   // the one being walked into
+            if (k.kind == COLLIDE_RING && od < k.r) {   // within its rail: straight out along its way off
+                wx = k.x + (k.r + 0.45) * std::sin(k.gapAt); wz = k.z + (k.r + 0.45) * std::cos(k.gapAt);
+                break;
+            }
+            if (k.kind == COLLIDE_RING && od < k.r + 0.4) {   // I-04: hard by its rail outside: out from it first (rounded from there, the walk cut back
+                const double aw = std::atan2(ox, oz);          // inside it across its way off, and was penned in)
+                wx = k.x + (k.r + 0.45) * std::sin(aw); wz = k.z + (k.r + 0.45) * std::cos(aw);
+                break;
+            }
+            const double dx = wx - c.x, dz = wz - c.z, d = std::hypot(dx, dz);
+            if (d < 0.3) continue;
+            const double u = clampd(-(ox * dx + oz * dz) / (d * d), 0, 1), px = ox + dx * u, pz = oz + dz * u;
+            if (std::hypot(px, pz) >= k.r + 0.2) continue;
+            // in the way: round it, the shorter way, at the walker's distance (never nearer than its edge's)
+            const double aw = std::atan2(ox, oz), at = std::atan2(wx - k.x, wz - k.z), a = aw + clampd(wrapAngle(at - aw), -0.6, 0.6), R = std::max(k.r + 0.45, od);
+            wx = k.x + R * std::sin(a); wz = k.z + R * std::cos(a);
+            break;
         }
     }
-    if (d < 0.14) {
+    const double dx = wx - c.x, dz = wz - c.z, d = std::hypot(dx, dz);
+    if (last && std::hypot(tx - c.x, tz - c.z) < 0.14) {
         autoLook(yaw, 0, 0.7);
         return std::fabs(wrapAngle(c.yaw - yaw)) < 0.12;
     }
-    const double h = std::atan2(wx - c.x, wz - c.z), rel = wrapAngle(h - c.yaw);
+    if (!last || std::hypot(tx - c.x, tz - c.z) > 2.5) autoHold(KEY_LEFT_SHIFT);
+    const double h = std::atan2(dx, dz), rel = wrapAngle(h - c.yaw);
     autoLook(h, -0.12, 1.0);
     const double sp = (std::fabs(rel) > 0.9 ? 0.2 : 0.7) * std::min(1.0, d / 0.6 + 0.25);
     ax.wantFwd = sp * std::cos(rel); ax.wantSide = sp * std::sin(rel);
     return false;
 }
 
-// to the capsule's cage, facing it, and E (the capsule deploys; at a giant, a probe goes)
+// to the capsule's cradle in the hangar, at its device's stand and facing it, and E (the capsule deploys; at a giant, a probe goes)
 bool Game::autoCabinToCapsule() {
-    const Cabin& c = cabin;
-    double vx = c.x, vz = c.z, L = std::hypot(vx, vz);
-    if (L < 1e-3) { vx = 0; vz = 1; L = 1; }
-    const double sx = vx / L * 1.55, sz = vz / L * 1.55, face = std::atan2(-sx, -sz);
-    if (!autoCabinWalk(sx, sz, face)) return false;
-    autoLook(face, -0.25, 0.8);
-    if (c.facing == FACE_CAGE && autoEvery(1.0)) autoTap(KEY_E);
+    const CabinDevice& d = cabinDevices().row[FACE_CAGE];
+    if (!autoCabinWalk(d.room, d.stand.x, d.stand.z, d.stand.yaw)) return false;
+    autoLook(d.stand.yaw, -0.25, 0.8);
+    if (cabin.facing == FACE_CAGE && autoEvery(1.0)) autoTap(KEY_E);
     return state != GameState::SPACE;
 }
 
@@ -445,6 +485,6 @@ void Game::autoRender() {
     blendRectRGB(canvas, 0, UH - (music ? 21 : 12), UW - 1, UH - 1, rgb(0, 0, 0), (int)(120 * a));
     const uint32_t c = HUD_AMBER;
     const uint32_t faded = rgb((int)((c & 255) * a), (int)(((c >> 8) & 255) * a), (int)(((c >> 16) & 255) * a));
-    if (music) drawTextCentered(canvas, UW / 2, UH - 19, padInUse() ? "SELECT STARTS AND STOPS THE MUSIC" : "M STARTS AND STOPS THE MUSIC", faded);
+    if (music) drawTextCentered(canvas, UW / 2, UH - 19, padInUse() ? "SELECT STARTS AND STOPS MUSIC" : "M STARTS AND STOPS MUSIC", faded);
     drawTextCentered(canvas, UW / 2, UH - 10, s.c_str(), faded);
 }

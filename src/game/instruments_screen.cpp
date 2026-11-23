@@ -195,22 +195,22 @@ void Game::updateInstruments(const Input& in, double dt, double realDt) {
 
 // U-04: the case's commands (the controller's first page; an instrument played is its context's, THE INSTRUMENT)
 void Game::instrumentsPad(PadMenu& m) const {
-    m.title = "THE CASE";
-    if (icase.level == 0) { if (!icase.worlds.empty()) m.item("OPEN THE FOLDER", KEY_ENTER); m.item("CLOSE THE CASE", KEY_ESCAPE); return; }
-    if (icase.valid && instrumentPlaysDisc(icase.inst)) m.item(icase.discOn ? "STOP THE MACHINE" : "WIND THE MACHINE", KEY_ENTER);
-    else if (icase.valid) { m.item("LOWER", KEY_LEFT); m.item("HIGHER", KEY_RIGHT); m.item("THE NINTH NOTE", KEY_9); m.item("THE TENTH NOTE", KEY_0); }
-    m.item("THE NEXT INSTRUMENT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP);
-    m.item("BACK TO THE FOLDERS", KEY_ESCAPE);
+    m.title = "CASE";
+    if (icase.level == 0) { if (!icase.worlds.empty()) m.item("OPEN FOLDER", KEY_ENTER); m.item("CLOSE", KEY_ESCAPE); return; }
+    if (icase.valid && instrumentPlaysDisc(icase.inst)) m.item(icase.discOn ? "STOP" : "WIND UP", KEY_ENTER);
+    else if (icase.valid) { m.item("LOWER", KEY_LEFT); m.item("HIGHER", KEY_RIGHT); m.item("NINTH NOTE", KEY_9); m.item("TENTH NOTE", KEY_0); }
+    m.item("NEXT INSTRUMENT", KEY_DOWN); m.item("PREVIOUS", KEY_UP);
+    m.item("BACK", KEY_ESCAPE);
 }
 
 // C-18: the case's worlds, a folder each: the world's name and where it is (a world of two peoples: the folder's people, as the decoder's
 // lines), how many it holds
 void Game::renderCaseWorlds() {
-    drawText(canvas, 6, 4, "THE INSTRUMENTS", HUD_AMBER);
+    drawText(canvas, 6, 4, "INSTRUMENTS", HUD_AMBER);
     const int nw = (int)icase.worlds.size();
     if (nw == 0) {
-        drawTextCentered(canvas, UW / 2, 80, "THE CASE IS EMPTY", HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, 92, "INSTRUMENTS LIE IN THE RUINS OF THE OLD PEOPLES,", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, 80, "CASE IS EMPTY", HUD_GREEN);
+        drawTextCentered(canvas, UW / 2, 92, "INSTRUMENTS LIE IN THE OLD PEOPLES' RUINS,", HUD_DIM);
         drawTextCentered(canvas, UW / 2, 101, "BESIDE THEIR MUSIC, TAKEN BY HAND OR BY DRONE", HUD_DIM);
         drawTextCentered(canvas, UW / 2, UH - 10, "ESC BACK", HUD_DIM);
         return;
@@ -246,7 +246,7 @@ void Game::renderInstruments() {
     std::string who = inRange && icase.worldSel < (int)icase.worldPeoples.size() ? icase.worldPeoples[icase.worldSel] : std::string();
     if (who.empty() && icase.valid) who = icase.people;
     drawText(canvas, 6, 4, (who.empty() ? trunc(wname, 30) : trunc(wname, 16) + " - " + trunc(who, 16)).c_str(), HUD_AMBER);
-    if (n == 0) { drawTextCentered(canvas, UW / 2, 80, "NOTHING OF THIS WORLD IN THE CASE", HUD_GREEN); drawTextCentered(canvas, UW / 2, UH - 10, "ESC THE WORLDS", HUD_DIM); return; }
+    if (n == 0) { drawTextCentered(canvas, UW / 2, 80, "NOTHING OF THIS WORLD IN THE CASE", HUD_GREEN); drawTextCentered(canvas, UW / 2, UH - 10, "ESC BACK", HUD_DIM); return; }
     const std::string head = n == 1 ? "1 INSTRUMENT" : fmt("%d INSTRUMENTS", n);
     drawText(canvas, UW - 6 - textWidth(head.c_str()), 4, head.c_str(), HUD_DIM);
     // the world's instruments
@@ -258,7 +258,7 @@ void Game::renderInstruments() {
         if (sel) drawText(canvas, 6, y, ">", HUD_AMBER);
         drawText(canvas, 14, y, trunc(name, 17).c_str(), sel ? HUD_WHITE : HUD_GREEN);
     }
-    if (!icase.valid) { drawTextCentered(canvas, 220, 80, "IT CANNOT BE READ", HUD_DIM); return; }
+    if (!icase.valid) { drawTextCentered(canvas, 220, 80, "CANNOT BE READ", HUD_DIM); return; }
     const Instrument& I = icase.inst;
     const bool disc = instrumentPlaysDisc(I);
     drawInstrumentPicture(122, 16, 192, 104, I, icase.tradition, icase.palette, icase.glow, realTime);
@@ -269,10 +269,10 @@ void Game::renderInstruments() {
     const char* reg = icase.regShift < 0 ? "LOWER" : (icase.regShift > 0 ? "HIGHER" : "");
     const bool showReg = *reg && !instrumentPlaysDisc(I);
     if (disc) {
-        drawText(canvas, 124, 135, trunc(std::string("ITS DISC: ") + PIECE_FORM_NAMES[std::max(0, std::min(PF_COUNT - 1, icase.disc.form))], 31).c_str(), HUD_GREEN);
+        drawText(canvas, 124, 135, trunc(std::string("DISC: ") + PIECE_FORM_NAMES[std::max(0, std::min(PF_COUNT - 1, icase.disc.form))], 31).c_str(), HUD_GREEN);
         const std::string st = icase.discOn ? fmt("TURNING  %d:%02d OF %d:%02d", (int)icase.discT / 60, (int)icase.discT % 60, (int)icase.disc.seconds / 60, (int)icase.disc.seconds % 60) : "STILL";
         drawText(canvas, 124, 144, st.c_str(), icase.discOn ? HUD_AMBER : HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER WINDS IT  UP/DOWN ANOTHER  ESC THE WORLDS", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER WIND UP  UP/DOWN ANOTHER  ESC BACK", HUD_DIM);
         return;
     }
     drawText(canvas, 124, 135, trunc(traditionLine(icase.tradition), showReg ? 23 : 31).c_str(), HUD_GREEN);   // room for the register's word

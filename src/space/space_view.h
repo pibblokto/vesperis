@@ -70,6 +70,9 @@ struct SpaceContext {
 // turn and the ship's orbit: the lookup turns the point, not the plate.
 struct DetailPlate {
     int body = -1; uint64_t seed = 0; int seasonBucket = -1;
+    uint64_t madeKey = 0;      // J-02: the made layer it was sampled with (`MadeWorld::key`), and the layer's tint over its cells (empty: none)
+    std::vector<uint8_t> mtint;
+    std::vector<uint8_t> mline;   // KI-460: the line whose look or overgrowth lies on each cell (`SurfaceSample::madeLine` + 1; empty: none)
     Vec3 u0, e1, e2;
     double texel = 0, texelM = 0;
     int W = 0, H = 0;
@@ -96,6 +99,8 @@ class SpaceRenderer {
 public:
     Proj proj = Proj::fromHFov(70);
     std::vector<BodyScreenInfo> bodyInfo;
+    // I-02: the bodies' places on the screen (`bodyInfo`) as `render` leaves them, nothing drawn (the ship's walls hide the outside)
+    void bodiesOnScreen(const SpaceContext& c);
     void render(Framebuffer& fb, const SpaceContext& c);
     // M5-07/N0-01: a comet's coma, its ion tail with streaming knots, its curved dust tail and, when the
     // nucleus is a disc of `nucleusRpx` pixels, jets from its sunlit side (the nucleus is drawn by drawGlobe)
@@ -122,6 +127,13 @@ public:
     const PlanetMap& mapFor(const Body& b);          // synchronous: waits for a background generation
     const PlanetMap* mapIfReady(const Body& b);      // starts a background generation, nullptr until ready
     const BodyGen& genFor(const Body& b);
+    // J-02: a world's made layer (the seeded worlds: galaxy/made.h), set by the game for the worlds of the system before a frame
+    // (`Game::madeTick`) and kept by the seed: a changed key drops the world's generator (made again with it on request), and its map and
+    // the telescope's plates, keyed by it as by the season, are made again
+    void setMade(uint64_t seed, const MadeWorld& m);
+    const MadeWorld& madeOf(uint64_t seed) const;   // none where none was set
+    void clearMade();
+    size_t madeHeld() const { return made.size(); }
     // the fronts' cloud at t on the map's grid (`buildFrontMap`), for the globe and the landing map; nullptr for a world
     // without fronts; built again when the clock has moved four minutes (a front moves a texel in an hour). `coarse` flags the
     // 16 x 16 texel blocks that hold any band (a texel's neighbours counted), so a globe pixel off every band costs one byte
@@ -131,11 +143,14 @@ public:
     ~SpaceRenderer();
     // maps and generators follow the season; call before rendering a system at time t
     void setSeason(const StarSystem& sys, double t);
+    int seasonStepOf(const Body& b) const;   // B-438: the body's season step as last set, -1 none yet
 private:
     FrontMap frontMaps[4]; int frontMapNext = 0;
     static void frontCoarse(FrontMap& fm);
-    double curSeason[64] = {0};
-    int seasonBucket[64] = {0};
+    // B-438 (KI-442): a world's season step (eight an orbit) and the season its generator is made at, kept by its seed: kept by its index,
+    // another system's body of that index decided when its map was made again, and a map could keep a season a step off
+    struct SeasonStep { int step = -1; double season = 0; };
+    std::map<uint64_t, SeasonStep> seasons;
 public:
     // Draw all bodies of the system into a sky (from a surface), excluding one.
     void drawSkyBodies(Framebuffer& fb, const SpaceContext& c);
@@ -158,8 +173,10 @@ public:
     struct MapStats { int generated = 0, hits = 0, evicted = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // `mapFor` waiting on a map or making it
     std::atomic<long> genMicros{0};
     size_t mapsHeld() const { return maps.size(); }
+    int mapsMaking() const { int n = 0; for (const auto& kv : maps) n += kv.second->generating ? 1 : 0; return n; }   // B-439: on their threads now
 private:
     std::map<uint64_t, BodyGen> gens;
+    std::map<uint64_t, MadeWorld> made;   // J-02: the made layers by the body's seed (none held for a world as generated)
     std::map<uint64_t, std::vector<EmberField>> emberFields;   // a young interior's fields by the body's seed (`emberFieldsOf`, once a body)
     // the lights of a world in the dark after its disc is drawn: its ember fields' glow, a dead people's cities still lit
     void drawDarkLights(Framebuffer& fb, const SpaceContext& c, int bi, int bank, const Vec3& posW, const Mat3& frameT, double R, double depthUnit, const Vec3& starDirW, bool dark);
@@ -169,6 +186,32 @@ private:
     uint64_t bandGen = 0;         // moved on by every write of bandMap (the replay's key holds it)
     double bandSH[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; uint64_t bandSHGen = ~0ULL;   // the band's light on a sunless system's globes, kept with its build
     bool auroraBank12 = false;    // the palette's bank 12 is a drifter's aurorae (a system with no sun has no second sun to hold it)
+public:
+    // KI-461, KI-475: each disc's made colours in banks of their own (`setupPalette`: the first disc's from 25, 27, 29, 21, 23 and 31 where no
+    // water trait holds it, the second's from 26, 28, 30, 22, 24): its overgrowth's stain, its waters' tint and its land's, plants' and snow's
+    // looks, each by line, the test layer's land and its made clouds; -1 none dealt (as generated), and whether a bank's colour glows at night
+    struct DiscMade {
+        int stain[MADE_LINES], water[MADE_LINES], look[MC_COUNT][MADE_LINES], land = -1, cloud = -1;
+        int deckGlow = -1;   // J-14: a deck world's glowing clouds at night (its dyed lanes are `cloud`)
+        bool stainGlow[MADE_LINES], waterGlow[MADE_LINES], lookGlow[MC_COUNT][MADE_LINES];
+        int banks[6]; int nBanks = 0;   // (the banks dealt, the veil's)
+        void clear() {
+            land = cloud = deckGlow = -1; nBanks = 0;
+            for (int i = 0; i < MADE_LINES; i++) { stain[i] = water[i] = -1; stainGlow[i] = waterGlow[i] = false; for (int c = 0; c < MC_COUNT; c++) { look[c][i] = -1; lookGlow[c][i] = false; } }
+        }
+        int of(const int* byLine, int line) const {   // a line's, else the first dealt (another line's colour where none was left)
+            if (line >= 0 && line < MADE_LINES && byLine[line] >= 0) return byLine[line];
+            for (int i = MADE_LINES - 1; i >= 0; i--) if (byLine[i] >= 0) return byLine[i];
+            return -1;
+        }
+        bool glowOf(const int* byLine, const bool* glows, int line) const {
+            if (line >= 0 && line < MADE_LINES && byLine[line] >= 0) return glows[line];
+            for (int i = MADE_LINES - 1; i >= 0; i--) if (byLine[i] >= 0) return glows[i];
+            return false;
+        }
+    };
+    DiscMade discMade[2];
+private:
     // the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
     // the pass outside a flight and without nebula patches: the camera, the projection, the frame's size and the band map. A frame
     // whose key matches the last one's keeps its layer; one whose key matches the kept layer's copies it

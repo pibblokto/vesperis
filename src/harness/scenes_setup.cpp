@@ -78,6 +78,9 @@ struct SceneFind {
     bool twoFacedBoundary();
     bool twoFacedRidge();
     bool spongePits();
+    bool springBands();
+    bool redSnow();
+    bool mats();
     bool traitGround();
     bool neutronGlass();
     bool biome();
@@ -136,6 +139,57 @@ bool SceneFind::geysers() {   // a geyser basin
     if (!found) return false;
     placed = true;
     return true;
+}
+
+// Z-03: a terraced hot spring (TR_HOT_SPRINGS): the first vent's pool of the scan, the site 30 m south of it facing north over its bands
+bool SceneFind::springBands() {
+    const double Rm = b.radiusKm * 1000.0;
+    for (double la = -50; la <= 50; la += 1)
+        for (double lo = -180; lo < 180; lo += 1) {
+            std::vector<GeyserVent> vents;
+            hotSpringsNear(g, StarSystem::bodyFromLatLon(la * DEG, lo * DEG), vents);
+            for (const GeyserVent& v : vents) {
+                if (sampleSurface(g, v.unit, 4).material != MAT_BRINE) continue;
+                double vla, vlo; StarSystem::latLonFromBody(v.unit, vla, vlo);
+                latUse = vla - 30.0 / Rm; lon = vlo; faceYawOut = 0; placed = true;
+                return true;
+            }
+        }
+    return false;
+}
+// Z-03: red snow (TR_SNOW_ALGAE): on a 0.5-degree grid, the first red sample (16 m: its patches resolved) whose ground round it (nine points 30 m
+// apart) is red at four at least and level (within 8 m), the site on it
+bool SceneFind::redSnow() {
+    const double Rm = b.radiusKm * 1000.0;
+    for (double la = -80; la <= 80; la += 0.5)
+        for (double lo = -180; lo < 180; lo += 0.5) {
+            const SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, lo * DEG), 16);
+            if (ss.material != MAT_SNOW || ss.snowTint < 0.6) continue;
+            int red = 0; double hLo = 1e9, hHi = -1e9;
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++) {
+                    const double la2 = la * DEG + j * 30.0 / Rm, lo2 = lo * DEG + i * 30.0 / (Rm * std::max(0.1, std::cos(la * DEG)));
+                    const SurfaceSample s2 = sampleSurface(g, StarSystem::bodyFromLatLon(la2, lo2), 16);
+                    red += s2.material == MAT_SNOW && s2.snowTint > 0.5;
+                    hLo = std::min(hLo, s2.height); hHi = std::max(hHi, s2.height);
+                }
+            if (red < 4 || hHi - hLo > 8) continue;
+            latUse = la * DEG; lon = lo * DEG; placed = true;
+            return true;
+        }
+    return false;
+}
+// Z-03: a microbial mat on a wet flat (the archean's): its first sample from the latitude asked, the site on it
+bool SceneFind::mats() {
+    for (double la = latDeg; la < latDeg + 40; la += 0.5)
+        for (int k = 0; k < 720; k++) {
+            const double ln = k * TAU / 720;
+            const SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
+            if (ss.material != MAT_MATS || (ss.water > -1e8 && ss.height < ss.water + 0.2)) continue;
+            latUse = la * DEG; lon = ln; placed = true;
+            return true;
+        }
+    return false;
 }
 
 bool SceneFind::groundSounds() {   // Q-03: the dunes, the ice, the quakes
@@ -1170,6 +1224,7 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 if (wantMat == SCENE_AURORA_CURTAIN) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // the main curtain a degree poleward: overhead and across the sky
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == SCENE_GEYSERS && !g.hasTrait(TR_GEYSERS)) continue;
+                if ((wantMat == SCENE_SPRING_BANDS && !g.hasTrait(TR_HOT_SPRINGS)) || (wantMat == SCENE_RED_SNOW && !g.hasTrait(TR_SNOW_ALGAE))) continue;   // Z-03
                 if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) ||
                         (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES)))
                     continue;
@@ -1262,6 +1317,16 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     placed = true;
                 } else if (wantMat == SCENE_SPONGE_PITS) {
                     if (!f.spongePits()) continue;
+                } else if (wantMat == SCENE_SPRING_BANDS) {
+                    if (!f.springBands()) continue;
+                } else if (wantMat == SCENE_RED_SNOW) {
+                    if (!f.redSnow()) continue;
+                } else if (wantMat == SCENE_MATS) {
+                    if (!f.mats()) continue;
+                } else if (wantMat == SCENE_HUNT || wantMat == SCENE_FLOCK) {   // J-07: open grass for the chase, the flock over it
+                    if (!f.herdOrBuggy()) continue;
+                } else if (wantMat == SCENE_SWIMMERS) {   // J-07: a beach over the sea
+                    if (!f.sand()) continue;
                 } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE &&
                         wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD &&
                         wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
@@ -1347,22 +1412,33 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                         sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
                     }
                 }
-                if (wantMat == SCENE_CREATURES) {   // one creature of each land species 5 m ahead, side on, standing still
+                if (wantMat == SCENE_CREATURES) {   // one of each land species side by side, three quarters on, standing still (J-06: the row framed)
                     if (sv.critters.empty()) continue;
                     std::vector<Critter> keep;
-                    for (int spi = 0; spi < sv.bestiary.landCount; spi++) {
+                    const int n = sv.bestiary.landCount;
+                    auto widthOf = [&](const Species& sp) { return sp.body.length + 0.6 * (sp.body.neck + sp.body.tailLen + sp.body.headLen) + 0.5 * sp.size + 0.8; };
+                    double row = 0, tall = 0;
+                    for (int spi = 0; spi < n; spi++) { const Species& sp = sv.bestiary.species[spi]; row += widthOf(sp); tall = std::max(tall, sp.size + sp.body.neck); }
+                    const double D = std::max({5.0, row / (2 * 0.7 * 0.85), tall / (2 * 0.44 * 0.75)});
+                    double x = -0.5 * row;
+                    for (int spi = 0; spi < n; spi++) {
+                        const Species& sp = sv.bestiary.species[spi];
                         Critter c; c.species = spi; c.herd = 0; c.seed = 1234 + spi; c.state = CS_IDLE; c.timer = 1e9;
-                        c.size = sv.bestiary.species[spi].size;
-                        c.x = sv.player.x + (spi - (sv.bestiary.landCount - 1) * 0.5) * (2.5 + c.size * 2.5);
-                        c.z = sv.player.z + 5 + c.size * 2.5;
-                        c.heading = PI / 2;
+                        c.size = sp.size;
+                        c.x = sv.player.x + x + 0.5 * widthOf(sp);
+                        c.z = sv.player.z + D;
+                        c.heading = PI / 2 - 0.4;
+                        x += widthOf(sp);
                         keep.push_back(c);
                     }
                     sv.critters = keep;
-                    sv.player.yaw = 0; sv.player.pitch = -0.08;
+                    sv.player.yaw = 0; sv.player.pitch = -std::atan2(std::max(0.0, 1.6 - 0.45 * tall), D);
                     for (const Critter& c : sv.critters)
-                        printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.species[c.species].name.c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
+                        printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.words(c.species).c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
                                 sv.site.groundHeight(c.x, c.z));
+                }
+                if (wantMat == SCENE_HUNT || wantMat == SCENE_FLOCK || wantMat == SCENE_SWIMMERS) {   // J-07: the ways' scenes, staged and played
+                    if (!setupWaysScene(sv, wantMat, t)) continue;
                 }
                 if (wantMat == SCENE_HERD || wantMat == SCENE_HERD_NEAR || wantMat == SCENE_HERD_FAR) {
                     // stand 18 m (M4-05), 6 m or 60 m (N3) south of the first herd, facing it
@@ -1372,7 +1448,8 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (sv.site.sampleAt(sv.player.x, sv.player.z + d, 16).material == MAT_FOREST) continue;   // the herd must stand in the open
                     int n = 0; for (const Critter& c : sv.critters) if (c.herd == 0) n++;
                     const Species& sp = sv.bestiary.species[sv.critters[0].species];
-                    printf("herd of %d %s (%s, %.1f m, %s, %s) at %.0f m\n", n, sp.name.c_str(), PLAN_NAMES[sp.plan], sp.size, ACTIVITY_NAMES[sp.activity], TEMPERAMENT_NAMES[sp.temperament], d);
+                    printf("herd of %d %s (%s, %.1f m, %s, %s) at %.0f m\n", n, sv.bestiary.words(sv.critters[0].species).c_str(), PLAN_NAMES[sp.plan], sp.size, ACTIVITY_NAMES[sp.activity],
+                           TEMPERAMENT_NAMES[sp.temperament], d);
                 }
                 if (lookAtWater) {
                     // face the direction with the most water within 150 m

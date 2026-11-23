@@ -1,6 +1,7 @@
 #include "surface_view.h"
 #include "surface_internal.h"
 #include "core/clock.h"
+#include <cstdlib>
 
 namespace {
 // rotate a local (x east, z north) vector by a heading change
@@ -83,6 +84,78 @@ void SurfaceView::joinAhead() {
     if (aheadThread.joinable()) aheadThread.join();
     aheadBusy.store(false);
     aheadCells.clear(); aheadOut.clear();
+    if (resampleThread.joinable()) { resampleStop.store(true); resampleThread.join(); takeResample(); }   // KI-491: its samples read the site too
+}
+
+// KI-491: the rings round the camera sampled again on a worker (the rest dropped), with the corners of the structures' cells in view: the
+// ground's samples and the structures follow the world now without a frame that samples them all
+void SurfaceView::startResample() {
+    joinAhead();
+    TerrainCache* caches[5] = {&site.lodN, &site.lod0, &site.lod1, &site.lod2, &site.lod3};
+    const int radii[5] = {ringN + 6, ringR[0] + 3, ringR[1] + 3, ringR[2] + 3, ringR[3] + 3};
+    resampleCells.clear();
+    for (int k = 0; k < 5; k++) {
+        TerrainCache& c = *caches[k];
+        const int pcx = (int)std::floor(camPos.x / c.cellSize), pcz = (int)std::floor(camPos.z / c.cellSize);
+        for (TerrainVertex& t : c.v) {
+            if (t.cx == 0x7fffffff) continue;
+            if (std::abs(t.cx - pcx) <= radii[k] && std::abs(t.cz - pcz) <= radii[k]) resampleCells.push_back({k, t.cx, t.cz});
+            else t.cx = 0x7fffffff;
+        }
+    }
+    resampleCorners.clear();   // (the world cells round the local cells the structures are drawn in, with their neighbours: `growthsOwned`'s)
+    int N = 1;
+    if (growthOn()) {
+        const int pcx = (int)std::floor(camPos.x / 16), pcz = (int)std::floor(camPos.z / 16);
+        for (int cz = pcz - 13; cz <= pcz + 13; cz++)
+            for (int cx = pcx - 13; cx <= pcx + 13; cx++) {
+                int f, i, j;
+                N = growthLatticeAt(site.unitAt(cx * 16.0 + 8, cz * 16.0 + 8), site.R, f, i, j);
+                for (int dj = -1; dj <= 2; dj++)
+                    for (int di = -1; di <= 2; di++) {
+                        const int ci = i + di, cj = j + dj;
+                        if (ci < 0 || cj < 0 || ci > N || cj > N) continue;   // (across a cube's edge: left to the main thread)
+                        resampleCorners.push_back(((uint64_t)f << 42) | ((uint64_t)ci << 21) | (uint64_t)cj);
+                    }
+            }
+        std::sort(resampleCorners.begin(), resampleCorners.end());
+        resampleCorners.erase(std::unique(resampleCorners.begin(), resampleCorners.end()), resampleCorners.end());
+    }
+    resampleOut.assign(resampleCells.size(), TerrainVertex());
+    resampleHolds.assign(resampleCorners.size(), 0);
+    resampleDone.store(0); resampleCornersDone.store(0); resampleStop.store(false); resampleFrames = 0;
+    resampleThread = std::thread([this, N]() {
+        const double cs[5] = {(double)site.lodN.cellSize, (double)site.lod0.cellSize, (double)site.lod1.cellSize, (double)site.lod2.cellSize, (double)site.lod3.cellSize};
+        for (size_t i = 0; i < resampleCells.size() && !resampleStop.load(std::memory_order_relaxed); i++) {
+            const ResampleCell& c = resampleCells[i];
+            resampleOut[i] = site.sampleAt(c.cx * cs[c.ring], c.cz * cs[c.ring], cs[c.ring]);
+            resampleDone.store(i + 1, std::memory_order_release);
+        }
+        const double d = (PI / 2) / N;
+        for (size_t i = 0; i < resampleCorners.size() && !resampleStop.load(std::memory_order_relaxed); i++) {
+            const uint64_t key = resampleCorners[i];
+            resampleHolds[i] = growthCornerAt((int)(key >> 42), -PI / 4 + (int)((key >> 21) & 0x1FFFFF) * d, -PI / 4 + (int)(key & 0x1FFFFF) * d);
+            resampleCornersDone.store(i + 1, std::memory_order_release);
+        }
+    });
+}
+
+void SurfaceView::takeResample() {
+    if (resampleThread.joinable()) resampleThread.join();
+    TerrainCache* caches[5] = {&site.lodN, &site.lod0, &site.lod1, &site.lod2, &site.lod3};
+    const size_t done = resampleDone.load(std::memory_order_acquire);
+    for (size_t i = 0; i < resampleCells.size(); i++) {   // (a slot another cell took since is left alone; one not reached is dropped)
+        const ResampleCell& c = resampleCells[i];
+        TerrainVertex& slot = caches[c.ring]->v[caches[c.ring]->index(c.cx, c.cz)];
+        if (slot.cx != c.cx || slot.cz != c.cz) continue;
+        if (i < done) { slot = resampleOut[i]; slot.cx = c.cx; slot.cz = c.cz; } else slot.cx = 0x7fffffff;
+    }
+    if (!resampleCorners.empty()) {   // the structures of the world now: the lattice placed again from the corners read
+        growthLattice.clear(); growthOwned.clear(); growthCorners.clear(); growthLatticeKey = site.gen.made.key;
+        const size_t cdone = resampleCornersDone.load(std::memory_order_acquire);
+        for (size_t i = 0; i < cdone && i < resampleCorners.size(); i++) growthCorners[resampleCorners[i]] = resampleHolds[i] != 0;
+    }
+    resampleCells.clear(); resampleOut.clear(); resampleCorners.clear(); resampleHolds.clear();
 }
 
 void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double lon, double t) {
@@ -96,6 +169,9 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
+    ruinsMade = site.gen.made; ruinsKey = ruinsMade.key;   // KI-480: the ruins' layer the landing's until the game hands on another
+    setupFilmGlow();   // Z-03: the world's films under the lamp's ultraviolet
+    clearSight();      // R-434: the activity vision's square metres (the local metres' own)
     site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the old roads round the site, before anything samples the ground
     site.clearMarks(); markCheckX = markCheckZ = 1e18;
     site.clearEdits(); workCells.clear(); workNear.clear(); workEdited.clear();
@@ -104,6 +180,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     grain.generate(site.gen.seed ^ 0x77, 9, 1);
     grainFine.generate(site.gen.seed ^ 0x99, 4, 0);
     grainEdge.generate(site.gen.seed ^ 0x5E, 64, 1);   // the wobble of material boundaries
+    growthVeinsBuilt = false;                            // KI-492: a ruin's cover's veins, made when a glowing cover first asks
     buildMacroTile(grainMacro, site.gen.seed);          // slow tone patches within a material
     buildLeafTiles(leafTile, leafEdge, site.gen.seed);   // the vegetation's tiles and looks
     buildBarkTile(barkTile, site.gen.seed);
@@ -134,6 +211,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     lastWindUpdate = -1; lastEnvT = -1;
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
+    for (bool& b : madeCrustBuilt) b = false;   // KI-493
     footprints.clear(); footHead = 0; stepAccum = 0; lastStepX = 6; lastStepZ = -4;
     // C-01; C-13: the world's peoples, each with a culture and a lore (B-420: the footings' meshes with them)
     ruinCells.clear(); supportMeshes.clear(); supports.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;
@@ -153,6 +231,9 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     instrumentsFound.clear(); nearInstrument = NearInstrument();   // (likewise)
     hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // nothing of the last landing shows on this one's map
     quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);
+    ventSong = creakSong = hairSong = tearCue = 0;   // J-10
+    tornMembranes.clear();   // KI-479
+    growthLattice.clear(); growthOwned.clear(); growthCorners.clear();   // KI-476: in the new landing's metres
     tick("capsule+misc");
     joinScan(); echoes.clear(); scanned = false;   // the last site's echoes are gone; the scanner asks again
     tick("scan");
@@ -252,6 +333,7 @@ void SurfaceView::prefetch(double budgetMs) {
 void SurfaceView::reanchor() {
     const auto ta0 = std::chrono::steady_clock::now();   // F-01: the parts' ms under VESPERIS_TRACE (KI-302: a comet's every 0.35 radii)
     joinAhead();   // cell coordinates change with the anchor
+    clearSight();  // R-434: the activity vision's square metres are read again in the new metres
     double lat, lon;
     site.latLonAt(player.x, player.z, lat, lon);
     Vec3 capU = site.unitAt(capsuleX, capsuleZ);
@@ -282,6 +364,7 @@ void SurfaceView::reanchor() {
     siteEpoch++;
     // the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
     ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();
+    growthLattice.clear(); growthOwned.clear();   // KI-476: the structures' too
     refreshPlanNear();   // the plan's places in the new frame's metres
     ensureTownMarks();
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
@@ -310,7 +393,7 @@ void SurfaceView::reanchor() {
     drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);
     const auto ta5 = std::chrono::steady_clock::now();
     for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // the same echoes, in the new frame (a scan under way is taken in it)
-    flocks.clear(); critters.clear(); herds.clear(); habitatT = -1e9;   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs)
+    lifeAnchored(lat, lon);   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs; B-470: the flocks and the kept dead too)
     prefetchStage = 0; prefetchRing = 0;
     anchorFrame = frameStamp;   // the next frames' warm lines are traced (the rings' refill)
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
@@ -387,13 +470,16 @@ void SurfaceView::updateFreeCam(double dt, const Input& in) {
 
 void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnabled) {
     if (!valid) return;
+    lifeClock += dt;   // B-470: the landing's clock, the real seconds the guide's runs by on the ground (before the step's cap)
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
     waterRecords();
+    const double px0 = player.x, pz0 = player.z;
     if (inBuggy) updateBuggy(dt, in, t);
     else if (inDrone) updateDrone(dt, in, t);
     else updateWalking(dt, in, t, controlsEnabled);
     prefetchAhead();
+    if (resampleThread.joinable() && ++resampleFrames >= RESAMPLE_FRAMES) takeResample();   // KI-491
     collectScan();
     if (scanWanted && !scanBusy.load(std::memory_order_acquire)) {   // the scanner on: a first scan, and another every SCAN_STEP
         double sx = 0, sz = 0; if (scanned) site.localAt(scanU, sx, sz);
@@ -420,6 +506,8 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         double reach = std::min(50e3, 0.35 * site.R);
         if (player.x * player.x + player.z * player.z > reach * reach) reanchor();
     }
+    if (ruinsMade.key != ruinsKey) regrowRuins();   // KI-480: a step passed while on the ground: the ruins' cover and crumble follow it
+    if (madeHanded) adoptMadeNow();   // KI-491: and the ground's cover, looks and structures (its rings on a worker: after the ruins' join)
     if (!worksHere && worldHadCivilisation(site.gen) && (worksHere = worldWorksIfReady(site.gen))) { refreshPlanNear(); markCheckX = markCheckZ = 1e18; }   // the works come in when built
     if (worldHadCivilisation(site.gen) && std::hypot(player.x - planNearX, player.z - planNearZ) > 1000) refreshPlanNear();
     if (worldHadCivilisation(site.gen) && std::hypot(player.x - markCheckX, player.z - markCheckZ) > 250) ensureTownMarks();   // the towns coming into reach
@@ -475,6 +563,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     quake *= std::exp(-dt / 4.0);
     if (quake < 0.01) quake = 0;
     updateGroundSongs(dt, t);
+    updateGrowthSongs(dt, px0, pz0);   // J-10
     // dust devils on a desert world (and in a thin-air dust storm): up to four within 500 m, born every 20-50 s, each
     // walking with the wind for two to five minutes
     if (((events & EV_DEVILS) || ((events & EV_STORM_DEVILS) && env.dust > 0.3)) && env.skyBrightness > 0.3) {
@@ -709,9 +798,13 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     if (buggy.deployed) drawBuggy(fb, t);
     if (drone.deployed) drawDrone(fb, t);
     drawLife(fb, t);
+    prepareFilmGlow();   // Z-03: the films under the lamp's ultraviolet, after the old result (nothing at all with the lamp's ultraviolet off)
+    drawFilmGlow(fb);
     if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
     drawWeather(fb, t);
     drawVeil(fb);
+    prepareSight();   // R-434: the activity vision, after everything drawn (nothing at all with it off)
+    drawSight(fb);
     section(5);
     // what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
     lastRange = cameraOverrideAlt >= 0 ? -1 : rangeToGround(drawRadiusM(), lastRangeX, lastRangeZ, lastRangeWater);

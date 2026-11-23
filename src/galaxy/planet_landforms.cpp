@@ -705,12 +705,17 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
                         else if (x < 0.24) step = S.heightM;    // the sinter round it
                         h = dome + (step - dome) * featFade(S.rKm / S.terraces, detailM);
                         if (matVisible(0.3 * S.rKm, detailM)) {   // white sinter terraces holding coloured pools: where the eye sees a terrace's rim, its rim
-                            // white and its pool coloured; where it sees the terraces, every other one white; from further, the inner half white
+                            // white and its pool coloured; where it sees the terraces, every other one white; from further, the inner half white. Z-03: the
+                            // pools' mats in bands by their water's temperature (`springWaterC`, a terrace's at its middle where the eye sees the
+                            // terraces), the hottest pools bare: clear water over the white sinter
                             const double tw = S.rKm / S.terraces;
-                            const bool white = matVisible(0.004, detailM) ? frac < 0.16 : (matVisible(tw, detailM) ? (tk & 1) == 0 : x < 0.55);
+                            const bool terraced = matVisible(tw, detailM);
+                            const bool white = matVisible(0.004, detailM) ? frac < 0.16 : (terraced ? (tk & 1) == 0 : x < 0.3);
+                            const int band = springBand(springWaterC(terraced ? 1 - (tk + 0.5) / S.terraces : x));
                             if (x < 0.14) { m = MAT_BRINE; a = 0.16; }
                             else if (x < 0.24 || white) { m = MAT_SALT; a = 0.86; }
-                            else { m = MAT_MATS; a = 0.68 - 0.42 * x; }
+                            else if (band == 0) { m = MAT_SALT; a = 0.74; }
+                            else { m = MAT_MATS; a = SPRING_BAND_ALBEDO[band]; }
                         }
                     } else if (matVisible(0.02, detailM)) {   // the runoff's streaks of mats down the ground round it
                         const Vec3 rel = p - S.c;

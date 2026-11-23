@@ -346,7 +346,7 @@ static int runChartsAges() {
         const std::string base = Guide::bodyKey(p.sx, 0, p.sz, p.body) + "/S";
         for (int i = 0; i < full; i++) game.guide.shards.insert(base + std::to_string(shardWorldIndex(p.which, i)));
         game.guide.shards.insert(base + std::to_string(shardWorldIndex(p.which, p.index)));
-        run(0.2); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+        run(0.2); game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
         press(KEY_ENTER); run(0.2);
         const bool opened = game.testShardsOpenIndex(p.index); run(0.2);
         press(KEY_ENTER); run(0.3);   // the reading skipped: read
@@ -423,7 +423,7 @@ static int runChartsRogues() {
         const std::string base = Guide::bodyKey(p.d.sx, p.d.sy, p.d.sz, 0) + "/S";
         for (int i = 0; i < full; i++) game.guide.shards.insert(base + std::to_string(shardWorldIndex(p.which, i)));
         game.guide.shards.insert(base + std::to_string(shardWorldIndex(p.which, p.index)));
-        run(0.2); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
+        run(0.2); game.testCabinAtDevice(FACE_DECODER); run(0.2); press(KEY_E); run(0.1);
         press(KEY_ENTER); run(0.2);
         const bool opened = game.testShardsOpenIndex(p.index); run(0.2);
         press(KEY_ENTER); run(0.3);   // the reading skipped: read

@@ -18,6 +18,7 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
     auto it = ruinCells.find(key);
     if (it != ruinCells.end()) return &it->second;
     RuinCell& c = ruinCells[key];
+    c.key = key;
     c.has = ruinOfCell(site.gen, gLat, gl, c.spec, true);
     if (c.has) { DrainageOff off; c.has = ruinSiteOk(site.gen, c.spec); }   // the slope and the sea, without building tiles (the water's own check is at the draw)
     if (c.has) {
@@ -26,12 +27,14 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
         r.heading = c.spec.heading; r.size = c.spec.size; r.spec = &c.spec;
         {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
             const Culture& cu = cultures[c.spec.people == 1 && peoples > 1 ? 1 : 0]; const Lore& lo = lores[c.spec.people == 1 && peoples > 1 ? 1 : 0];
-            for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]);
+            // J-10: its stone eaten where a seeded stone rotter reached it (its pieces alone: its records and graves as they were), KI-480 building
+            // by building where the rotter lives
             recordSitesOf(site.gen, c.spec, cu, c.shards, &c.instruments);
             gravesOf(lo, c.spec, cu, c.graves);
-            graveElements(c.graves, cu, 0, c.elems[0]);
+            layRuinPieces(c);
             recordObjects(c);
             instrumentObjects(c);
+            overgrowCell(c);   // J-10: a seeded overgrowth's cover on it
             groupPieces(c);   // each building's pieces, for its own level of detail
         }
     }
@@ -45,14 +48,15 @@ const SurfaceView::RuinCell* SurfaceView::workCell(const Work& w) const {
     if (it != workCells.end()) return &it->second;
     RuinCell& c = workCells[w.id];
     workSpec(site.gen, w, c.spec);
-    c.has = true;
+    c.has = true; c.key = mix64(w.id ^ 0x3077C311ULL);
     Ruin& r = c.r;
     site.localAt(w.unit, r.x, r.z);
     r.heading = c.spec.heading; r.size = c.spec.size; r.spec = &c.spec;
     const int k = w.people == 1 && peoples > 1 ? 1 : 0;
-    for (int l = 0; l < 3; l++) ruinElements(c.spec, cultures[k], l, c.elems[l]);
-    gravesOf(lores[k], c.spec, cultures[k], c.graves); graveElements(c.graves, cultures[k], 0, c.elems[0], true);
+    gravesOf(lores[k], c.spec, cultures[k], c.graves);
+    layRuinPieces(c);   // (its stone eaten as a settlement's)
     recordSitesOf(site.gen, c.spec, cultures[k], c.shards); recordObjects(c);   // the works that kept records (the last shelter's last recording)
+    overgrowCell(c);
     groupPieces(c);
     return &c;
 }

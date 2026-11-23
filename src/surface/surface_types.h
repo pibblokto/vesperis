@@ -3,11 +3,14 @@
 // the environment at the place and the nearest front's line, the flocks and the creatures, the trees and the logs, and a
 // settlement in the view's metres (`Ruin`)
 #include "site.h"
+#include "animal_mesh.h"
 #include "galaxy/fronts.h"
 #include "peoples/ruins.h"
+#include "life/samples.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 struct Player {
@@ -163,10 +166,67 @@ struct Flock {
     int species = -1;                                     // the flyer species of the bestiary
     bool perched = false;                                 // resting in a tree
     double perchX = 0, perchZ = 0, perchY = 0, perchR = 2;
+    int wraps = 0;                                        // J-07: a floater's comings in again upwind
+    // B-469: its fate where it flies (none on a world nobody seeded): the sickness its sick show and their share (each member by its own hash,
+    // as a herd's), its young born changed (their share, the size a giant's or a dwarf's change gives them)
+    int sickness = 0;
+    double sick = 0, changed = 0, changedK = 1;
+    // B-490: its fate's age where it flies (steps: a sprouting one's fall, as a herd's), and the landing's clock its falls were read to
+    double fateAge = 0, fallsTo = 0;
 };
-// N3 creature behaviour states
-enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT, CS_FLEE, CS_CURIOUS };
-extern const char* const CRITTER_STATE_NAMES[8];
+// N3 creature behaviour states. J-07: the ways' (a browser's neck up in a tree, a hunter stalking and chasing, a scavenger trailing a
+// hunter, a burrower under the ground, a climber up a trunk, one on its ground facing the explorer and charging)
+enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT, CS_FLEE, CS_CURIOUS, CS_BROWSE, CS_STALK, CS_CHASE, CS_TRAIL,
+                    CS_UNDER, CS_CLIMB, CS_DISPLAY, CS_CHARGE, CS_STATES };
+// J-07: what an animal is seen doing (the guide keeps a bit of each a species was seen doing): a land animal's state, then the air's and the
+// water's
+// J-08: feeding at remains (a hunter's, a scavenger's: a land state numbered after the doings, whose bits the guide keeps), and remains seen
+enum AnimalDoing { DO_FLYING = CS_STATES, DO_PERCHED, DO_SWARMING, DO_SOARING, DO_DRIFTING, DO_SWIMMING, DO_LEAPING, DO_FEEDING, DO_DEAD, DO_COUNT };
+constexpr int CS_FEED = DO_FEEDING;
+extern const char* const DOING_NAMES[DO_COUNT];
+// J-08: what the record marks a species seen with (the guide keeps the bits): dying (its remains or a sick one seen), gone (remains where none
+// of it lives), changed (a changed young seen)
+enum AnimalMark { AM_DYING = 1, AM_GONE = 2, AM_CHANGED = 4 };
+// J-09: an overgrowth's structures (`SurfaceView::forGrowths`): the shared ones, then each type's own (a fungus's caps and shelves, a slime
+// mould's creeping veins, a coral's spires, a sponge's vases, hair's waving tufts, the rising bladders)
+constexpr double GROWTH_BREATH_RATE = 0.8;   // J-10: a vent's lips breathe at this many radians a second (the drawing and its sound)
+enum GrowthShape { GS_MOUND = 0, GS_RIDGE, GS_BLISTER, GS_SAC, GS_STALK, GS_FOLD, GS_VENT, GS_ARCH, GS_TEETH, GS_MEMBRANE, GS_POLYP, GS_CAP, GS_SHELF,
+                   GS_VEINS, GS_SPIRE, GS_VASE, GS_HAIR, GS_BLADDER, GS_COUNT };
+// J-09: one structure: its shape, its foot and the ground there, its radius (a stalk's, a rib's or a post's girth, a tuft's or a cluster's
+// reach), its height (a bladder's float), its heading and its length along it (a ridge's, a fold's, an arch's span, a row's, a membrane's,
+// the veins'), its hash; whether the explorer walks round it (`collides`: what stands over a step)
+struct GrowthInst {
+    int shape = GS_MOUND;
+    int line = -1;   // KI-473: the line whose cover it grew from (its type, colour and bank)
+    double x = 0, z = 0, gy = 0, r = 0, h = 0, heading = 0, len = 0;
+    uint64_t hs = 0;
+    bool collides = false;
+};
+double growthReachOf(const GrowthInst& S);                                // how far it reaches over the ground from its foot
+bool growthHolds(const GrowthInst& S, double x, double z, double margin);  // whether a point lies under it (within `margin` of its reach)
+// the points it stands on (a round one's foot, a row's teeth, an arch's ribs' feet, along a ridge, a fold or a membrane) with the disc each
+// stands in the way with: the colliders' and the drawing's
+struct GrowthFoot { double x = 0, z = 0, r = 0; };
+constexpr int GROWTH_FEET = 24;
+int growthFeet(const GrowthInst& S, GrowthFoot* out, int max);
+extern const char* const ANIMAL_MARK_NAMES[3];
+// J-08: an animal dead on the ground as far as it has gone (`RemainsStage`, animal_mesh.h's: how it is posed and drawn)
+extern const char* const REMAINS_NAMES[RS_COUNT];
+// J-08: remains: a die-off's (its habitat cell's, a pure function of the cell: `SurfaceView::cellRemains`), a kill's, old bones on any world. Its
+// species, where it lies and which way, its size, its stage, its own hash, its cell (dropped with the cell); on high ground with stalks (a
+// sprouting one's), a kill (the hunters feed at it: `eaten` the seconds they fed, past which it is sunk to its ribs), old bones
+// B-470: staged again by the clock (`SurfaceView::restageRemains`): a cell's dead by their fate's age where they lie at the landing (`age0`, steps)
+// and the time since; a kill's or a fall's by its death on the landing's clock (`diedAt`, seconds, under 0 before the landing; -1e18 none)
+struct Remains {
+    int species = -1;
+    double x = 0, z = 0, heading = 0, size = 1;
+    int stage = RS_FRESH;
+    uint64_t seed = 0;
+    int gLat = 0, gLon = 0;
+    bool cell = true, stalks = false, kill = false, old = false;
+    double eaten = 0;
+    double age0 = 0, diedAt = -1e18;
+};
 struct Critter {
     double x = 0, z = 0, heading = 0, speed = 0, timer = 0, size = 1;
     uint64_t seed = 0;
@@ -181,6 +241,29 @@ struct Critter {
     double calledT = -100;    // time of the last call
     struct Track { float x, z; };
     std::vector<Track> tracks; int trackHead = 0; double trackAccum = 0;
+    // J-07: the step (its gait and the metres a cycle at its speed) and the ways' postures and places
+    int gait = 0; double stride = 1;
+    double sink = 0, reach = 0, crouch = 0;   // going under 0..1, a browser's neck up 0..1, a stalker low 0..1
+    double climbY = 0;                        // how high up its trunk
+    double treeX = 0, treeZ = 0, treeR = 0, treeTop = 0, treeGy = 0;   // the trunk it browses or climbs: its foot, radius, how high it goes, its ground
+    double homeX = 0, homeZ = 0;              // its burrow's mouth; a territorial's ground
+    uint64_t quarry = 0;                      // a hunter's quarry, a scavenger's hunter (their seeds); 0 none
+    double hungerT = 0;                       // till a hunter hunts again, a territorial charges again
+    double calmT = 0;                         // a climber's or a burrower's time since the explorer was near
+    // J-08: its fate: a sickness it shows (an MF_ bit of galaxy/made.h, 0 none), born changed (its species' changes: the changed rig), the remains
+    // it feeds at (their seed, 0 none), a crazed or a stumbling one's fall (seconds left), a hunt's one roll for the kill made, killed (gone after
+    // the frame)
+    int sick = 0;
+    bool changed = false;
+    uint64_t food = 0;
+    double fallT = 0;
+    bool rolled = false, killed = false;
+    int64_t fallWin = -1;                     // the four seconds' window its last fall came in
+    // B-469: a sprouting one's death, seconds on the landing's clock (`SurfaceView::lifeClock`; 1e18 none): it falls dead on its high ground
+    double dieAt = 1e18;
+    // B-468: its trunk as drawn (`SurfaceView::trunkOf`): the side it clings to (radians), the radius at the foot and at the trunk's top, the
+    // top's height, the top's lean off the foot
+    double treeA = 0, trunkR0 = 0, trunkR1 = 0, trunkTopY = 0, trunkLx = 0, trunkLz = 0;
 };
 // N2: one tree, placed by SurfaceView::forTrees (drawing, colliders, coverage and creatures read the same list)
 struct TreeInst {
@@ -191,6 +274,9 @@ struct TreeInst {
     int bank = 3;                  // leaf bank: 3 forest, 5 second family / autumn, 10 straw variant
     bool dead = false, bare = false;   // a dead skeleton; deciduous in winter
     bool stump = false;            // a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
+    bool made = false, galls = false;   // J-05: in a made plants' look (its leaves in its bank: a blight, new leaves, a glow), swellings on it
+    bool wrapped = false;          // J-09: wrapped in an overgrowth (its trunk and canopy in its bank and tile)
+    int line = -1;                 // KI-460, KI-473: the line whose plants' look or overgrowth lies at its foot (its bank's)
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };
@@ -206,10 +292,30 @@ struct TreeLook {
     double tone = 1;       // leaf brightness factor
     double droop = 0;      // 0..1, the clusters hang (weeping) or the fronds arch
 };
+// I-04: a silhouette's look on a planet of a seed (`SurfaceView::buildLooks`' hash) and its shape (its height's range, its canopy's radius
+// and middle as shares of the height; flora.cpp's), for the ship's garden of the home world's plants
+TreeLook treeLookOf(uint64_t seed, int fam);
+struct FloraShape { double h0, h1, r, cy; };
+FloraShape floraShapeOf(int fam);
 struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64_t seed = 0; bool stone = false; };   // Q-02: stone, a petrified forest's (its own bank)
 // C-01: a settlement's cell (`peoples/ruins.*`) in the view's metres (B-417: M4-07's monoliths of the old ones are gone)
 struct Ruin {
     double x, z, heading, size;
     const RuinSpec* spec = nullptr;   // the settlement's layout (the cell cache's)
     double reach = 0;                 // how far its pieces reach from its middle (its harbour, a fallen tower's top): past its radius at times
+};
+
+// Z-03: what a vial takes at a place of the ground (`SurfaceView::readSample`): its microhabitat (a function of the square metre: the planet
+// function, the springs' and vents' finders, the ruins' walls), its name as the HUD gives it ("WET SILT AT A LAKE'S EDGE"), the temperature read
+// at the take, and where it is on the body; `refusal` where nothing can be taken there (molten ground)
+struct SampleRead {
+    bool ok = false;
+    const char* refusal = nullptr;
+    Microhabitat hab;
+    std::string name;
+    double readingC = 0;
+    Vec3 unit;
+    // R-434: read without the ruins' walls (the sight's reads on the pool): the walls' check left to the main thread, the place's mean kept for it
+    bool wallsAsked = false;
+    double placeC = 0;
 };

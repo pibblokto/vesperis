@@ -89,7 +89,7 @@ bool Game::targetHome() {
     int64_t sx, sy, sz;
     if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { refuse("NO HOME STAR SET", 3); return false; }
     Star s;
-    if (!placeInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return false; }
+    if (!placeInSector(sx, sy, sz, s, true)) { status("HOME SECTOR HAS NO STAR", 3); return false; }
     setRemoteStar(s);
     return true;
 }
@@ -142,7 +142,7 @@ void Game::updateStarMap(const Input& in, double dt, double realDt) {
         if (gchart.look) {   // another star of the plotted end taken, the line kept for the log; back on the chart, Enter flies
             const JumpPlot keep = jumpPlot;
             setRemoteStar(full);
-            if (ship.hasRemote && ship.remote.seed == full.seed) { jumpPlot = keep; jumpPlot.seed = full.seed; status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4); }
+            if (ship.hasRemote && ship.remote.seed == full.seed) { jumpPlot = keep; jumpPlot.seed = full.seed; status("PLOTTED - ENTER TO FLY, ESC TO KEEP FOR V", 4); }
             gchart.look = false; mapPage = 1;
             return;
         }
@@ -155,31 +155,31 @@ void Game::updateStarMap(const Input& in, double dt, double realDt) {
 // neighbourhood turns)
 void Game::starMapPad(PadMenu& m) const {
     if (mapPage == 1) {   // the galaxy chart
-        m.title = "THE GALAXY";
-        m.item(chartPlotted() ? "FLY THE PLOTTED JUMP" : "PLOT A JUMP TO THE CURSOR", KEY_ENTER);
-        m.item("THE NEXT STOP", KEY_N); m.item("THE STOP BEFORE", KEY_N, MOD_SHIFT);
+        m.title = "GALAXY";
+        m.item(chartPlotted() ? "FLY PLOTTED JUMP" : "PLOT JUMP TO CURSOR", KEY_ENTER);
+        m.item("NEXT STOP", KEY_N); m.item("PREVIOUS STOP", KEY_N, MOD_SHIFT);
         m.item("MARK THE PLACE", KEY_L);
         m.item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
-        m.item("THE CURSOR BACK TO THE SHIP", KEY_SPACE);
+        m.item("CURSOR BACK TO SHIP", KEY_SPACE);
         m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
-        m.item(chartPlotted() ? "LOOK AT THE PLOTTED END" : "THE NEIGHBOURHOOD", KEY_TAB);
-        m.button(PR_A, KEY_ENTER, chartPlotted() ? "FLY" : "PLOT"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "THE SHIP");
+        m.item(chartPlotted() ? "LOOK AT PLOTTED END" : "NEIGHBOURHOOD", KEY_TAB);
+        m.button(PR_A, KEY_ENTER, chartPlotted() ? "FLY" : "PLOT"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "SHIP");
         m.button(PR_LB, KEY_PAGE_UP, "HIGHER"); m.button(PR_RB, KEY_PAGE_DOWN, "LOWER");
         m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN"); m.button(PR_L3, KEY_LEFT_SHIFT, "FASTER");
         m.button(PR_SELECT, KEY_TAB, chartPlotted() ? "LOOK THERE" : "NEIGHBOURHOOD"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
-        m.sticks = "STICKS MOVE THE CURSOR";
+        m.sticks = "STICKS MOVE CURSOR";
     } else {
         m.title = "STAR MAP";
-        m.item(gchart.look ? "TAKE THIS STAR AS THE END" : "TARGET THE STAR", KEY_ENTER);
+        m.item(gchart.look ? "TAKE THIS STAR" : "TARGET STAR", KEY_ENTER);
         m.item("THE NEXT CLASS", KEY_C); m.item("THE CLASS BEFORE", KEY_X); m.item("EVERY CLASS", KEY_0);
         m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
-        m.item(gchart.look ? "BACK TO THE CHART" : "THE GALAXY", KEY_TAB);
+        m.item(gchart.look ? "BACK TO CHART" : "GALAXY", KEY_TAB);
         m.button(PR_A, KEY_ENTER, gchart.look ? "TAKE THIS STAR" : "TARGET"); m.button(PR_B, KEY_ESCAPE, "CLOSE");
         m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN");
-        m.button(PR_SELECT, KEY_TAB, gchart.look ? "THE CHART" : "THE GALAXY"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
+        m.button(PR_SELECT, KEY_TAB, gchart.look ? "CHART" : "GALAXY"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
         m.sticks = "STICKS TURN IT";
     }
-    m.item("CLOSE THE MAP", KEY_ESCAPE);
+    m.item("CLOSE", KEY_ESCAPE);
 }
 
 // the galaxy chart covers the frame: no scene under it
@@ -255,7 +255,7 @@ void Game::renderStarMap() {
     drawLineRGB(canvas, cx - 8, cy, cx - 3, cy, HUD_DIM); drawLineRGB(canvas, cx + 3, cy, cx + 8, cy, HUD_DIM);
     drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, HUD_DIM); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, HUD_DIM);
     // the page's name (49 characters with four digits; G-06's look 50)
-    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);
+    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT PLOTTED END" : "NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);
     int solo = -1;   // the filter shows all or one class (the legend of every code outgrew the line at ten classes)
     for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
     std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);

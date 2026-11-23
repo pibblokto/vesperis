@@ -83,11 +83,28 @@ struct Form {
     bool absolute = false;  // y0 and y1 are heights over the reference level, not over the ground at its foot (a dam's wall across its
                             // valley, an aqueduct's arches to their channel): drawn and walked into where they are whatever the ground does
     float tone = 0;         // shades over its slot's (a house painted a little lighter or darker than its neighbours: `GV_POLYCHROMY`)
+    int growth = 0;         // J-10: a piece of an overgrowth's (`FORM_PART_GROWTH`): `FormGrowth`
 };
 
 // T-04: a record's object (peoples/records.h) in the records' own banks: bone, parchment and paper pale; wax, leather, vinyl, a glass plate and a
 // drive's case dark; a painting's ochre; clay; metal (an engraved plate, a reel's flanges)
 enum { FORM_PART_PALE = 12, FORM_PART_DARK, FORM_PART_OCHRE, FORM_PART_CLAY, FORM_PART_METAL };
+// J-10: a seeded world's overgrowth on a ruin (surface/overgrowth.cpp): a membrane grown across an opening, a nodule on a wall, a drape hanging
+// from a top, drawn in the overgrowth's bank and never walked into
+enum { FORM_PART_GROWTH = 17 };
+enum FormGrowth { FG_NONE = 0, FG_MEMBRANE, FG_NODULE, FG_DRAPE };
+// J-10: an opening a building's walls leave (a doorway, C-01's window, a ring's doorway), in the settlement's metres: its middle on the wall's
+// line, the wall's heading (the opening runs across it, `half` each way), its bottom and top over the ground at its foot, the wall's thickness
+struct FormOpening {
+    double x = 0, z = 0, heading = 0, half = 0.9, y0 = 0, y1 = 2.1, thick = 0.5; int building = -1; bool door = true;
+    // KI-478: an arch's bay (a gate's, an arcade's, a porch's): its head's shape (-1 none: a rectangle to `y1`; else `FK_ARCH`'s sub: 0 round,
+    // 1 pointed, 2 flat), its springing over `y0` and the head's rise over it (`y1` its crown)
+    int arch = -1;
+    double spring = 0, rise = 0;
+};
+// KI-478: the bays of an arch piece (`FK_ARCH`) left standing, in the settlement's metres (a broken arch's fallen bays left out); none for one lying
+// down or standing at heights over the reference level (an aqueduct's)
+void archOpenings(const Form& e, std::vector<FormOpening>& out);
 
 // A-02: a people's windows: a pattern laid on a face by the face's own metres (along it and up it, like the grain), so a
 // tower of thirty storeys costs what a blank one does. Far off, where a bay is a pixel or two, the pattern fades to its mean

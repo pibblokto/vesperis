@@ -66,7 +66,7 @@ void Game::ensureTold() {
     const History& H = *shardWorld.history;
     std::vector<int> read; int lastIndex = -1;
     for (size_t i = 0; i < shardWorld.shards.size(); i++) if (shardWorld.shards[i].last) lastIndex = (int)i;
-    for (int i : shardHeld) if (guide.decoded.count(heldShardKey(i))) read.push_back(i);
+    for (int i : shardHeld) if (i != shardWorld.watermark && guide.decoded.count(heldShardKey(i))) read.push_back(i);   // Z-06: a watermark tells no event
     toldHistoryOf(H, *shardWorld.texts, read, lastIndex, told);
     {   // the timeline: each era its share of the width by the people's records written in it (an era of few or none a sliver), linear within
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, shardWorld.which);
@@ -82,7 +82,7 @@ void Game::ensureTold() {
     {   // the history page: the people's ways as the records told them, then the events told under their eras' headings, each line read as the
         // records are (the names kept)
         std::set<std::string> names; legendNameWords(H, told, names);
-        const int held = (int)shardHeld.size();
+        const int held = recordsHeld();
         auto addWords = [&](int kind, int item, int year, const std::string& label, const std::vector<DecodedWord>& words) {   // a line's words in rows the text's width
             LegendRow row; row.kind = kind; row.item = item; row.year = year; row.first = true; row.text = label;
             int x = HIST_TEXT_X;
@@ -108,7 +108,7 @@ void Game::ensureTold() {
                 if (ek >= 0 && ek < (int)H.eras.size() && told.eraRead[ek] > 0) {   // its name read as the records are, its years the ship's
                     decodeLine(H.eras[ek].name, shardWorld.lang, shardWorld.tongue, held, names, h.words);
                     h.text = ", " + eraYears(H.eras[ek], ek + 1 == (int)H.eras.size(), told.ended);
-                } else h.text = "AN ERA NO RECORD READ IS FROM";
+                } else h.text = "ERA WITH NO RECORD READ";
                 legendRows.push_back(h);
             }
             std::string line = legendLine(H, told, told.events[k].event);
@@ -118,7 +118,7 @@ void Game::ensureTold() {
             addWords(1, (int)k, e.year, std::string(), words);
         }
         if (told.ended) {   // the last recording closes it
-            LegendRow c; c.kind = 2; c.text = fmt("THE LAST RECORDING: THE RECORD ENDS IN YEAR %s", thousands(H.last).c_str());
+            LegendRow c; c.kind = 2; c.text = fmt("LAST RECORDING: RECORD ENDS IN YEAR %s", thousands(H.last).c_str());
             legendRows.push_back(c);
         }
     }
@@ -151,7 +151,7 @@ void Game::renderShardTimeline() {
         }
     }
     if (!shardWorld.history || eraX0.empty()) {
-        drawTextCentered(canvas, UW / 2, 90, "THE COMPUTER CANNOT PLACE THEIR YEARS", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, 90, "COMPUTER CANNOT PLACE THEIR YEARS", HUD_DIM);
         drawTextCentered(canvas, UW / 2, UH - 10, "TAB PAGE  ESC BACK", HUD_DIM);
         return;
     }
@@ -219,7 +219,7 @@ void Game::renderShardTimeline() {
     if (ended) {
         fillRectRGB(canvas, TL_X0, ax, TL_X1, ax, HUD_DIM);
         fillRectRGB(canvas, TL_X1 - 1, ax - 3, TL_X1, ax + 3, HUD_AMBER);
-        const std::string endLabel = fmt("THE RECORD ENDS, YEAR %s", thousands(H.last).c_str());
+        const std::string endLabel = fmt("RECORD ENDS, YEAR %s", thousands(H.last).c_str());
         drawText(canvas, TL_X1 - textWidth(endLabel.c_str()), ax + 4, endLabel.c_str(), HUD_AMBER);
     } else {
         const int xl = std::min(TL_X1, xOf(latest) + 1);
@@ -255,7 +255,7 @@ void Game::renderShardHistory() {
     ensureTold();
     const int ne = (int)told.events.size();
     drawShardPagesStrip(ne > 0 ? fmt("%d OF %d", legendSel + 1, ne) : std::string());
-    const std::string age = told.ageTold ? std::string("THE AGE THEY REACHED: ") + AGE_TOLD_NAMES[std::max(0, std::min(AGE_COUNT - 1, told.age))] : std::string("THE AGE THEY REACHED: NOT TOLD YET");
+    const std::string age = told.ageTold ? std::string("AGE THEY REACHED: ") + AGE_TOLD_NAMES[std::max(0, std::min(AGE_COUNT - 1, told.age))] : std::string("AGE THEY REACHED: NOT TOLD YET");
     drawText(canvas, 12, 26, age.c_str(), told.ageTold ? HUD_AMBER : HUD_DIM);
     drawText(canvas, 12, 35, fmt("%d EVENT%s LEARNT FROM %d RECORD%s READ", ne, ne == 1 ? "" : "S", told.read, told.read == 1 ? "" : "S").c_str(), HUD_DIM);
     if (ne > 0 && legendSel < ne) {

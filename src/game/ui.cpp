@@ -1,6 +1,7 @@
 #include "ui.h"
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <sstream>
 #include <cmath>
 
@@ -12,6 +13,16 @@ std::string fmt(const char* f, ...) {
 void drawPanel(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t fill, int alpha, uint32_t edge) {
     blendRectRGB(c, x0, y0, x1, y1, fill, alpha);
     drawRectRGB(c, x0, y0, x1, y1, edge);
+}
+
+void warmthTyping(const Input& in, std::string& s, double now) {
+    const bool minus = !s.empty() && s[0] == '-';
+    const int d = digitKey(in);
+    if (d >= 0 && (int)s.size() - (minus ? 1 : 0) < 3) s += (char)('0' + d);
+    if (in.wasPressed(KEY_MINUS) || in.wasPressed(333)) s = minus ? s.substr(1) : "-" + s;   // 333: GLFW's keypad minus
+    if (in.wasPressed(KEY_BACKSPACE) && !s.empty()) s.pop_back();
+    const int step = in.wasPressed(KEY_UP) ? 1 : (in.wasPressed(KEY_DOWN) ? -1 : (in.wasPressed(KEY_PAGE_UP) ? 10 : (in.wasPressed(KEY_PAGE_DOWN) ? -10 : 0)));
+    if (step) s = std::to_string((s.empty() || s == "-" ? (int)std::lround(now) : atoi(s.c_str())) + step);
 }
 
 bool menuStep(const Input& in, int& sel, int n, bool sideways) {
@@ -28,6 +39,27 @@ std::string thousands(double v) {   // 13050 -> "13,050" (G-05; C-15's radar)
     std::string out;
     for (size_t i = 0; i < d.size(); i++) { if (i && (d.size() - i) % 3 == 0) out += ','; out += d[i]; }
     return (v < -0.5 ? "-" : "") + out;
+}
+
+// Z-05: a span of years as the lab says it, to two figures: "ABOUT 12,000 YEARS", "ABOUT 1.2 MILLION YEARS"
+std::string yearsWords(double y) {
+    auto two = [](double v) { const double p = std::pow(10.0, std::floor(std::log10(std::max(1.0, v))) - 1); return v < 10 ? fmt("%.2g", v) : thousands(std::round(v / p) * p); };
+    if (y >= 1e9) return "ABOUT " + two(y / 1e9) + " BILLION YEARS";   // two figures (Z-06: 230 million, not 2.3e+02)
+    if (y >= 1e6) return "ABOUT " + two(y / 1e6) + " MILLION YEARS";
+    const double p = std::pow(10.0, std::floor(std::log10(std::max(1.0, y))) - 1);
+    return "ABOUT " + thousands(std::max(1.0, std::round(y / p) * p)) + " YEARS";
+}
+
+std::string fitText(const std::string& s, int width) {
+    if (textWidth(s.c_str()) <= width) return s;
+    std::string t = s;
+    while (!t.empty() && textWidth((t + ".").c_str()) > width) { const size_t sp = t.find_last_of(' '); t = sp == std::string::npos ? t.substr(0, t.size() - 1) : t.substr(0, sp); }
+    return t + ".";
+}
+// B-443: a look and its world: the world left out before the look is cut
+std::string fitHead(const std::string& head, const std::string& tail, int width) {
+    const std::string s = head + tail;
+    return textWidth(s.c_str()) <= width ? s : fitText(head, width);
 }
 
 std::string trunc(const std::string& s, size_t n) { return s.size() <= n ? s : s.substr(0, n - 1) + "."; }
@@ -67,4 +99,19 @@ const char* compassName(double azRad) {
     static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     int i = (int)std::floor(wrap2pi(azRad) / TAU * 8 + 0.5) & 7;
     return names[i];
+}
+
+uint32_t letterDye(char c, float k) {
+    RGB col;
+    switch (c) {
+        case 'A': col = RGB(0.3f, 0.9f, 0.35f); break;
+        case 'C': col = RGB(0.35f, 0.55f, 1.0f); break;
+        case 'G': col = RGB(1.0f, 0.75f, 0.2f); break;
+        case 'T': col = RGB(1.0f, 0.3f, 0.3f); break;
+        case 'Z': col = RGB(0.75f, 0.45f, 1.0f); break;
+        case 'P': col = RGB(0.3f, 0.9f, 0.95f); break;
+        case 'S': col = RGB(1.0f, 0.5f, 0.75f); break;
+        default: col = RGB(0.9f, 0.9f, 0.9f); break;
+    }
+    return rgb((int)clampd(col.r * k * 255, 0, 255), (int)clampd(col.g * k * 255, 0, 255), (int)clampd(col.b * k * 255, 0, 255));
 }

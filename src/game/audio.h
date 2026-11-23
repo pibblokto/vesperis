@@ -36,7 +36,7 @@ struct AudioState {
     double windTone = 0.5; // 0 sea (low, slow surges) .. 1 mountain whistle
     double surf = 0;       // breaking waves nearby 0..1
     double birds = 0;      // bird calls 0..1
-    int step = 0;          // >0: one footstep of this kind (1 soft, 2 hard, 3 splash)
+    int step = 0;          // >0: one footstep of this kind (1 soft, 2 hard, 3 splash; J-10: 4 a squelch)
     double stepGain = 0.5;
     double leaves = 0;     // wind through leaves and undergrowth rustle 0..1
     // creatures
@@ -57,9 +57,15 @@ struct AudioState {
     // bar and over, 0.15 in the thinnest, 0 airless: a quake through the boots alone)
     double dunes = 0, duneHz = 80, ice = 0, quake = 0, quakeHit = 0, air = 1;
     int iceEvents = 0;   // the ice's sounds begun so far (the harness counts them)
+    // J-10: an overgrowth's: its vents breathing near (0..1; the breath's period in seconds, the vents' lips'; its wetness, the gurgle in the breath
+    // out), its tissue creaking (0..1: the hard and the tall near, in the wind), a hair field hissing (0..1: its hair near, in the wind), a membrane
+    // torn as the explorer pushes through (one-shot: its strength); the creaks begun so far (the harness counts them). A step on wet ground is
+    // `step` 4: the squelch
+    double vents = 0, ventPace = 7.85, ventWet = 0, creaks = 0, hair = 0, tear = 0;
+    int creakEvents = 0;
     // the ground's sounds off, every level the surface sets (`updateSurface`): the capsule, the ship and a load hear none of
     // them (the ship silenced the wind, the rain and the lava only; the breath, the waves, the leaves, ... went on aboard)
-    void surfaceOff() { wind = rain = lava = breath = surf = birds = leaves = hoofs = insects = engineRpm = skid = rotor = 0; dunes = ice = quake = quakeHit = 0; }
+    void surfaceOff() { wind = rain = lava = breath = surf = birds = leaves = hoofs = insects = engineRpm = skid = rotor = 0; dunes = ice = quake = quakeHit = 0; vents = creaks = hair = tear = 0; }
     // a piece of the old peoples' music (the decoder screen): the piece and its tradition, which must outlive the play;
     // `pieceStart` plays it from the top, a null `piece` stops it at once; the synth reports the beat it is at (-1 idle) and the end
     const Piece* piece = nullptr;
@@ -170,6 +176,13 @@ private:
     double iceLvl = 0, iceT = -1, iceNext = 1.5, iceDur = 0.2, iceF0 = 3000, iceFLo = 600, iceT0 = 0.05, iceAmp = 0, icePh = 0, iceLp = 0, iceY1 = 0, iceY2 = 0; int iceKind = 0;
     double quakeLvl = 0, qkClock = 0, qkLp1 = 0, qkLp2 = 0, qkLp3 = 0, qkT = -1, qkAmp = 0, qkPh = 0, qkRatT = -1, qkRatA = 0, qkRatF = 2000, qkRY1 = 0, qkRY2 = 0;
     double groundSample(double dt, AudioState& st);
+    // J-10: an overgrowth's: its vents' breath (its phase, the throat's and the hiss's resonators, a bubble's), its creaks (the next, the one
+    // sounding: its clock, length, resonance, the slips' rates and phase, loudness), a hair field's hiss (its filters), a membrane's tearing, a
+    // squelch's suck
+    double ventLvl = 0, ventPh = 0, vtY1 = 0, vtY2 = 0, vtY3 = 0, vtY4 = 0, vbT = -1, vbF = 400, vbY1 = 0, vbY2 = 0;
+    double creakLvl = 0, crNext = 2, crT = -1, crDur = 0.5, crF = 500, crRate0 = 50, crRate1 = 60, crPh = 0, crAmp = 0, crY1 = 0, crY2 = 0;
+    double hairLvl = 0, hrLp = 0, hrHp = 0, trT = -1, trAmp = 0, trY1 = 0, trY2 = 0, sqY1 = 0, sqY2 = 0;
+    double growthSample(double dt, AudioState& st);
     // the receiver: the content's band and its ghosting (the wow, the ring, the dropouts, the carrier), the bed (the rumble,
     // the drone, the wisp, the hiss), the signals' own sounds (a pulsar's thump and growl and whine; a comet's song, geysers and ice;
     // a magnetosphere's whistlers, chorus, hiss band and choir) and the echo everything heard goes through
@@ -339,6 +352,7 @@ private:
         double mdUp, mdDown, mdDropK, mdSr;                // the medium's level, a reel's dropout, the rate
         double mdAh, mdAl, mdHornR, mdHornB, mdHissHi, mdHissLo, mdRum;   // by the medium: its band, its horn, its hiss and rumble
         double kDuneHz, kDuneHiss, kIceFar, kIceThud, kQuake;   // the dunes' note's glide and their sand's hiss, a far crack's dulling, the snow's thud, the quake's rumble
+        double kHair, kHairLow;                            // J-10: a hair field's hiss, its band's top and foot
     } co{};
     void coefs(double dt);
     void mediumCoefs(double dt, int medium);

@@ -45,7 +45,8 @@ bool Guide::load(const std::string& path) {
         if (key == "name" || key == "inbox") {
             std::string k, rest; is >> k; std::getline(is, rest);
             if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
-            (key == "name" ? names : inbox)[k] = rest;
+            const bool oldGene = k.size() > 18 && k[0] == 'G' && k[17] == '/' && k.find_first_not_of("0123456789abcdef", 1) == 17;   // R-450: by genesis
+            if (!oldGene) (key == "name" ? names : inbox)[k] = rest;
         } else if (key == "visited") { std::string k; is >> k; visited.insert(k); }
         else if (key == "landed") { std::string k; is >> k; landed.insert(k); }
         else if (key == "mark") {   // <body> <lat> <lon> <kind> <lent> <when> <name...>
@@ -75,6 +76,37 @@ bool Guide::load(const std::string& path) {
         else if (key == "ended") { std::string k; is >> k; ended.insert(k); }
         else if (key == "lent") { std::string k; is >> k; lent.insert(k); }
         else if (key == "instrument") { std::string k; is >> k; instruments.insert(k); }
+        else if (key == "microbe" || key == "lentmicrobe") {   // Z-04: <key> <seen> <forms>; Z-05: [<stages> <doubling> <cell> <tempC> <light> <energy> <salt>
+            std::string k; MicrobeSheet m; is >> k >> m.seen >> m.forms;   // [<slept years>]] (Z-07); Z-07: a friend's lent alike
+            if (is.fail()) continue;
+            MicrobeSheet g = m;
+            is >> g.stages >> g.doublingS >> g.cell >> g.tempC >> g.light >> g.energy >> g.salt;
+            if (!is.fail()) { double slept = 0; is >> slept; if (!is.fail()) g.sleptYears = slept; else is.clear(); }
+            (key == "microbe" ? microbes : lentMicrobes)[k] = is.fail() ? m : g;
+        }
+        else if (key == "answers" || key == "lentanswers") {   // R-437: <key> <answers> <movingLo> <movingHi> <stillCold> <stillHot> <stressC> <stressAct>
+            std::string k; MicrobeSheet a;   // (after its sheet's line: the sheet's fields its own)
+            is >> k >> a.answers >> a.movingLo >> a.movingHi >> a.stillCold >> a.stillHot >> a.stressC >> a.stressAct;
+            if (is.fail()) continue;
+            MicrobeSheet& m = (key == "answers" ? microbes : lentMicrobes)[k];
+            m.answers = a.answers; m.movingLo = a.movingLo; m.movingHi = a.movingHi; m.stillCold = a.stillCold; m.stillHot = a.stillHot;
+            m.stressC = a.stressC; m.stressAct = a.stressAct;
+        }
+        else if (key == "sampled") { std::string k; is >> k; if (!is.fail()) sampled.insert(k); }   // Z-07: a world a sample was taken on
+        else if (key == "strain") {   // Z-05: <key> <parent> <what> <value>; Y-02: an edited line's edits after them
+            std::string k; StrainRecord r; is >> k >> r.parent >> r.what >> r.value;
+            if (!is.fail()) { std::string e; if (is >> e) r.edits = e; strains[k] = r; }
+        }
+        else if (key == "gene") {   // Y-02: <species key>/G<number> <kind> (R-450: an older guide's <genesis>/<number> dropped)
+            std::string k; GeneKnown g; is >> k >> g.kind;
+            if (!is.fail() && k.find("/M") != std::string::npos && k.find("/G") != std::string::npos && g.kind >= 0) genes[k] = g;
+        }
+        else if (key == "watermark") { std::string k; is >> k; if (!is.fail()) watermarks.insert(k); }   // Z-06: a made species sequenced
+        else if (key == "animal") {   // J-07: <key> <doing> <nearest> <most>; J-08: [<marks>]
+            std::string k; AnimalRecord a; is >> k >> a.doing >> a.nearest >> a.most;
+            if (!is.fail()) { uint32_t m = 0; if (is >> m) a.marks = m; animals[k] = a; }
+        }
+        else if (key == "treeoff") { std::string k; is >> k; if (!is.fail()) treeOff.insert(k); }   // Y-01: a lab's line off its world's tree
         else if (key == "probe") {
             ProbeRecord r; int lentFlag = 0; std::string storm;
             is >> r.id >> lentFlag >> r.body >> r.gen >> r.saved >> r.launchT >> r.aimLat >> r.aimLon >> r.seed >> r.startX >> r.startY >> r.startZ >> r.headYaw >> r.descYaw >> r.chuteOpen >>
@@ -99,6 +131,18 @@ bool Guide::load(const std::string& path) {
         else if (key == "history") { std::string k; is >> k; history.push_back(k); }
         else if (key == "home") is >> home;
         else if (key == "gen") is >> genVersion;
+        else if (key == "clock") is >> clock;   // J-02
+        else if (key == "seeded") { std::string rest; std::getline(is, rest); SeedRecord r; if (parseSeeded(rest, r)) seeded.push_back(r); }
+        else if (key == "madeseen") {   // J-03
+            std::string body, rest; is >> body; std::getline(is, rest); if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
+            if (!body.empty()) madeSeen[body] = rest;
+        }
+        else if (key == "wild") { std::string k; int read = 0; is >> k >> read; if (!is.fail()) wildFound[k] = read != 0; }   // J-12
+        else if (key == "dead") {   // B-489: <body> <seed> <cell> <gLat> <gLon> <ux> <uy> <uz> <species> <heading> <size> <died> <eaten> <stalks>
+            std::string k; DeadRecord d; int cell = 0, stalks = 0;
+            is >> k >> d.seed >> cell >> d.gLat >> d.gLon >> d.ux >> d.uy >> d.uz >> d.species >> d.heading >> d.size >> d.died >> d.eaten >> stalks;
+            if (!is.fail()) { d.cell = cell != 0; d.stalks = stalks != 0; dead[k].push_back(d); }
+        }
         else if (key == "records") is >> recordsScheme;
         else if (key == "log") {
             LogEntry e; std::string rest; is >> e.t >> e.kind; std::getline(is, rest);
@@ -113,6 +157,7 @@ bool Guide::load(const std::string& path) {
             else if (n == "probes") probesSent = (int)v;
             else if (n == "drones") droneTrips = (int)v;
             else if (n == "dronefinds") droneFinds = (int)v;
+            else if (n == "samples") samplesTaken = (int)v;   // Z-07
         }
     }
     if (shownMark < -1 || shownMark >= (int)marks.size()) shownMark = -1;
@@ -145,6 +190,7 @@ bool Guide::save(const std::string& path) const {
     f << "vesperis-guide 1\n";
     f << "gen " << genVersion << "\n";
     f << "records 3\n";   // T-04: the shards' keys at the records' stride (people x 1000 + index); B-414: the records of the age reached
+    f << "microbes 1\n";  // Z-04: the species' keys (`<body>/M<index>`) of generation 17's lists
     if (!home.empty()) f << "home " << home << "\n";
     for (auto& kv : names) f << "name " << kv.first << " " << kv.second << "\n";
     for (auto& kv : inbox) f << "inbox " << kv.first << " " << kv.second << "\n";
@@ -163,6 +209,47 @@ bool Guide::save(const std::string& path) const {
     for (auto& k : ended) f << "ended " << k << "\n";
     for (auto& k : lent) f << "lent " << k << "\n";
     for (auto& k : instruments) f << "instrument " << k << "\n";
+    auto sheet = [&](const char* kind, const std::string& k, const MicrobeSheet& m) {
+        f << kind << " " << k << " " << m.seen << " " << m.forms;
+        if (m.stages || m.doublingS > 0 || m.sleptYears > 0) {
+            f << " " << m.stages << " " << m.doublingS << " " << m.cell << " " << m.tempC << " " << m.light << " " << m.energy << " " << m.salt;   // Z-05
+            if (m.sleptYears > 0) f << " " << m.sleptYears;   // Z-07
+        }
+        f << "\n";
+    };
+    for (auto& kv : microbes) sheet("microbe", kv.first, kv.second);
+    for (auto& kv : lentMicrobes) sheet("lentmicrobe", kv.first, kv.second);   // Z-07
+    auto answers = [&](const char* kind, const std::string& k, const MicrobeSheet& m) {   // R-437: after the sheets
+        if (m.answered()) f << kind << " " << k << " " << m.answers << " " << m.movingLo << " " << m.movingHi << " " << m.stillCold << " " << m.stillHot << " " << m.stressC
+                            << " " << m.stressAct << "\n";
+    };
+    for (auto& kv : microbes) answers("answers", kv.first, kv.second);
+    for (auto& kv : lentMicrobes) answers("lentanswers", kv.first, kv.second);
+    for (auto& k : sampled) f << "sampled " << k << "\n";
+    for (auto& kv : strains)
+        f << "strain " << kv.first << " " << kv.second.parent << " " << kv.second.what << " " << kv.second.value << (kv.second.edits.empty() ? "" : " " + kv.second.edits) << "\n";
+    for (auto& kv : genes) f << "gene " << kv.first << " " << kv.second.kind << "\n";   // Y-02, R-450
+    for (auto& k : treeOff) f << "treeoff " << k << "\n";   // Y-01
+    for (auto& k : watermarks) f << "watermark " << k << "\n";   // Z-06
+    if (!animals.empty()) {   // J-07: the keys' scheme, then each species seen
+        f << "animals 1\n";
+        for (auto& [k, a] : animals) {
+            f << "animal " << k << " " << a.doing << " " << a.nearest << " " << a.most;
+            if (a.marks) f << " " << a.marks;   // J-08
+            f << "\n";
+        }
+    }
+    if (!seeded.empty() || !dead.empty()) f << "clock " << clock << "\n";   // J-02: once a world is seeded; B-489: or an animal kept dead
+    if (!seeded.empty()) {   // J-02: the worlds seeded, once there is one
+        for (const SeedRecord& r : seeded) f << seededLine(r) << "\n";
+        for (const auto& [body, w] : madeSeen) f << "madeseen " << body << " " << w << "\n";   // J-03
+        for (const auto& [k, read] : wildFound) f << "wild " << k << " " << (read ? 1 : 0) << "\n";   // J-12
+    }
+    for (const auto& [body, ds] : dead)   // B-489: each world's dead not yet forgotten
+        for (const DeadRecord& d : ds)
+            if (clock - d.died < DEAD_FORGET_S)
+                f << "dead " << body << " " << d.seed << " " << (d.cell ? 1 : 0) << " " << d.gLat << " " << d.gLon << " " << d.ux << " " << d.uy << " " << d.uz << " "
+                  << d.species << " " << d.heading << " " << d.size << " " << d.died << " " << d.eaten << " " << (d.stalks ? 1 : 0) << "\n";
     for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "
           << r.startX << " " << r.startY << " " << r.startZ << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " "
@@ -175,12 +262,12 @@ bool Guide::save(const std::string& path) const {
     for (auto& k : history) f << "history " << k << "\n";
     f << "stat furthest " << furthestFromHomeLY << "\nstat walk " << longestWalkM << "\nstat highest " << highestPointM << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM
       << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM
-      << "\nstat probes " << probesSent << "\nstat drones " << droneTrips << "\nstat dronefinds " << droneFinds << "\n";
+      << "\nstat probes " << probesSent << "\nstat drones " << droneTrips << "\nstat dronefinds " << droneFinds << "\nstat samples " << samplesTaken << "\n";
     for (auto& e : log) f << "log " << e.t << " " << e.kind << " " << e.text << "\n";
     return true;
 }
 
-int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, int* marksOut, int* galaxyOut) {
+int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, int* marksOut, int* galaxyOut, int* microbesOut) {
     Guide other;
     if (!other.load(path)) return -1;
     int n = 0;
@@ -221,7 +308,46 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
         galaxyMarks.push_back(c); gn++;
     }
     if (galaxyOut) *galaxyOut = gn;
+    int un = 0;   // Z-07: the sheets of the species the friend saw (not those lent to them; the explorer's own win), an earlier loan's added to
+    for (const auto& kv : other.microbes) {
+        if (microbes.count(kv.first)) continue;
+        const auto it = lentMicrobes.find(kv.first);
+        if (it == lentMicrobes.end()) { lentMicrobes[kv.first] = kv.second; un++; continue; }
+        MicrobeSheet& m = it->second; const MicrobeSheet& o = kv.second;
+        m.seen |= o.seen; m.forms |= o.forms; m.stages |= o.stages;
+        if (o.doublingS > 0 && (m.doublingS <= 0 || o.doublingS < m.doublingS)) { m.doublingS = o.doublingS; m.cell = o.cell; m.tempC = o.tempC; m.light = o.light; m.energy = o.energy; m.salt = o.salt; }
+        m.sleptYears = std::max(m.sleptYears, o.sleptYears);
+        m.answers |= o.answers;   // R-437: what the friend saw it answer too
+        m.movingLo = std::min(m.movingLo, o.movingLo); m.movingHi = std::max(m.movingHi, o.movingHi);
+        m.stillCold = std::max(m.stillCold, o.stillCold); m.stillHot = std::min(m.stillHot, o.stillHot);
+        if (m.stressAct < 0 && o.stressAct >= 0) { m.stressAct = o.stressAct; m.stressC = o.stressC; }
+    }
+    if (microbesOut) *microbesOut = un;
     return n;
+}
+
+std::string seededLine(const SeedRecord& r) {
+    std::ostringstream f;
+    f.precision(12);   // the guide's file
+    f << "seeded " << r.body << " " << r.lat << " " << r.lon << " " << r.line << " " << (r.edits.empty() ? "-" : r.edits) << " " << r.cell << " " << r.tempC << " " << r.light << " "
+      << r.energy << " " << r.salt << " " << r.gen << " " << r.clock;
+    if (r.depthKm != 0) f << " " << r.depthKm;   // J-13 (a line on the ground reads as before); J-14: under 0, up in the clouds
+    return f.str();
+}
+
+bool parseSeeded(const std::string& rest, SeedRecord& r) {
+    std::istringstream is(rest);
+    is >> r.body >> r.lat >> r.lon >> r.line >> r.edits >> r.cell >> r.tempC >> r.light >> r.energy >> r.salt >> r.gen >> r.clock;
+    if (is.fail()) return false;
+    if (r.edits == "-") r.edits.clear();
+    double d = 0;
+    if (is >> d && std::isfinite(d) && d != 0 && d > -200 && d < 200) r.depthKm = d;
+    return true;
+}
+
+void Guide::addSeeding(const SeedRecord& r) {
+    SeedRecord c;
+    if (parseSeeded(seededLine(r).substr(7), c)) seeded.push_back(c);
 }
 
 double Guide::deepestProbeKm() const {

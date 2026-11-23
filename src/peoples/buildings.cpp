@@ -38,7 +38,11 @@ double materialDecay(int m, double years, double wet) {
 
 double buildingDecay(const Building& b, const Culture& c, int m) {   // the luck's spread C-01's (a quarter) where the material is half gone;
     const double d = materialDecay(m, c.ageYears / std::max(0.1, c.life), c.wet);   // the years over its people's lifetimes (built light, built to last)
-    return clampd(d + b.luck * 2.5 * d * (1 - d), 0, 1);
+    const double v = clampd(d + b.luck * 2.5 * d * (1 - d), 0, 1);
+    // J-10: a stone rotter's line eats the stone, the brick (fired or of mud) and the concrete: what stood falls toward its foundations
+    const double rot = std::max(c.stoneRot, b.stoneRot);   // (KI-480: the building's own, where the rotter lives there)
+    if (rot > 0 && (m == MT_EARTH || m == MT_DRYSTONE || m == MT_MASONRY || m == MT_CONCRETE || m == MT_MASS)) return 1 - (1 - v) * (1 - 0.8 * clampd(rot, 0, 1));
+    return v;
 }
 
 // ---- the kinds' ages and places --------------------------------------------------------------------------------------------
@@ -156,8 +160,9 @@ int ageExpressed(const Culture& c, int var, bool great) {
 
 // ---- the dispatch ------------------------------------------------------------------------------------------------------------
 
-void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int lod, std::vector<Form>& out, int bi) {
+void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int lod, std::vector<Form>& out, int bi, std::vector<FormOpening>* openings) {
     Gen g(b, c, st, lod, out, bi);
+    g.openings = lod == 0 ? openings : nullptr;
     switch (b.kind) {
         case BK_HOUSE: case BK_HALL: case BK_TOWER: genHouse(g); break;
         case BK_ROTUNDA: case BK_POD: genRotunda(g); break;

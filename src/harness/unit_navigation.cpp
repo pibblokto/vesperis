@@ -1,5 +1,6 @@
 // E-03: the unit's flights, marks and auto-explore (groups `navigation`, `sights`, `auto`); E-06: the states' table (`states`)
 #include "harness/harness.h"
+#include "harness/test_worlds.h"
 
 // a tape of two files (and one listed but gone) with their credits and gains, in shots/tests/unit_tape
 static std::string tapeTestDir() {
@@ -977,7 +978,7 @@ void unitStates(const Check& check) {
         auto press = [&](int key) { pressKey(g, bi, key); };
         auto run = [&](double secs) { runFrames(g, bi, secs); };
         int consoles = 0;   // the console opened (its scene read), or the state it left the explorer in
-        auto console = [&]() { g.testCabinGoto(-1.2, 0.0, -PI / 2, 0.0); press(KEY_E); if (g.state != S::CONSOLE) return g.state; consoles++; return g.testScene(); };
+        auto console = [&]() { g.testCabinAtDevice(FACE_GOES); press(KEY_E); if (g.state != S::CONSOLE) return g.state; consoles++; return g.testScene(); };
         press(KEY_H); press(KEY_ESCAPE); press(KEY_ENTER); run(0.3);
         const S titleConsole = console();
         press(KEY_ESCAPE); run(0.2);
@@ -991,7 +992,7 @@ void unitStates(const Check& check) {
         std::string surface = "none";
         { std::ifstream f(pre + "save_3.txt"); std::string line; while (std::getline(f, line)) if (line.rfind("surface ", 0) == 0) surface = line; }
         press(KEY_ESCAPE); run(0.2);
-        g.testCabinGoto(0.0, 1.3, 0.0, 0.0); press(KEY_E);
+        g.testCabinAtDevice(FACE_FLIGHT); press(KEY_E);
         const bool bayRow = g.state == S::SHIPSCREEN && g.testShipScreenRow("THE DRONE BAY");
         press(KEY_ENTER);
         const bool bayOpen = g.state == S::DRONES;
@@ -1081,6 +1082,138 @@ void unitStates(const Check& check) {
         check("a new expedition and a load note the system they put the ship in (B-433)", row && newState == S::SPACE && loaded && afterNew == 1 && afterLoad == 1,
               fmt("NEW EXPEDITION %s (%s): %zu systems noted after a frame; the ship's save %s: %zu", row ? "found" : "not found", stateName(newState), afterNew,
                   loaded ? "loaded" : "not loaded", afterLoad));
+        for (const char* f : {"save_1.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+    }
+    // B-496 (KI-440): the data sheet's lines within the frame, 50 characters at most (its sentence's wrap: 10 px clear of either edge): the
+    // sheet of every body and belt of the scan region's first twelve systems in space, over its pages, and of three landable worlds with a
+    // tilt on their ground (its season, its forecast and its sky). Before, the GRAVITY line ran to 58 characters and the SEASON line to 79
+    {
+        const std::string pre = "shots/tests/test_b496_";
+        remove((pre + "guide.txt").c_str());
+        TestGame& g = game;   // one game alive at a time: the group's
+        g.savePrefix = pre + "save"; g.guidePath = pre + "guide.txt"; g.shotsDir = pre + "shots"; g.moviesDir = pre + "movies";
+        applyTestScale(g); g.newGame(); g.setState(S::SPACE);
+        Input vi;
+        int sheets = 0, belts = 0, over = 0, grounds = 0, overGround = 0, systems = 0;
+        size_t widest = 0, widestGround = 0;
+        std::string wide, wideGround;
+        std::vector<std::pair<Star, int>> tilted;
+        auto longest = [&](size_t& most, std::string& line) {   // the sheet's longest line now, the longest of all kept
+            size_t n = 0;
+            for (const std::string& l : g.testDataSheetText()) {
+                n = std::max(n, l.size());
+                if (l.size() > most) { most = l.size(); line = l; }
+            }
+            return n;
+        };
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return systems < 12; })) {
+            systems++;
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                g.testParkAt(s, bi, false); g.setState(S::SPACE);   // (a landable world's landing map left closed)
+                g.testRenderDataSheet();
+                sheets++;
+                over += longest(widest, wide) > 50;
+                const Body& b = sys.bodies[bi];
+                if (KINDS[b.type].landable && b.axialTilt > 5 * DEG && tilted.size() < 3) tilted.push_back({s, bi});
+            }
+            for (int k = 0; k < (int)sys.belts.size(); k++) {   // a belt's own sheet (its target set where a rock is within reach)
+                g.testParkAtBelt(s, k);
+                g.testRenderDataSheet();
+                const std::vector<std::string>& T = g.testDataSheetText();
+                if (T.size() < 2 || T[1] != "ASTEROID BELT") continue;
+                belts++;
+                over += longest(widest, wide) > 50;
+            }
+        }
+        for (const auto& [s, bi] : tilted) {
+            g.testParkAt(s, bi); runFrames(g, vi, 0.2); g.testLandSite(); runFrames(g, vi, 0.2); pressKey(g, vi, KEY_ENTER); runFrames(g, vi, 8.0);
+            if (g.state != S::SURFACE) continue;
+            pressKey(g, vi, KEY_I); runFrames(g, vi, 0.1);
+            grounds++;
+            overGround += longest(widestGround, wideGround) > 50;
+            pressKey(g, vi, KEY_ESCAPE); runFrames(g, vi, 0.1);
+        }
+        check("the data sheet's lines within the frame: every body of twelve systems in space, three worlds on their ground (B-496)",
+              systems == 12 && sheets > 60 && belts > 0 && over == 0 && grounds == 3 && overGround == 0,
+              fmt("%d sheets of bodies and %d of belts of %d systems in space, %d with a line over 50 characters (the longest %zu: '%s'); %d on the ground, %d "
+                  "over (the longest %zu: '%s')",
+                  sheets, belts, systems, over, widest, wide.c_str(), grounds, overGround, widestGround, wideGround.c_str()));
+        for (const char* f : {"save_1.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+    }
+    // B-499 (KI-454): a record's status as it is taken, and an instrument's, within the 53 characters the status line holds (it is centred:
+    // past them both its ends were cut): every medium at 400 of 400 (two peoples' records), taken and caught by the radar; every instrument of
+    // the age worlds' peoples
+    {
+        int lines = 0, over = 0;
+        size_t most = 0;
+        std::string longest;
+        auto measure = [&](const std::string& l) { lines++; over += l.size() > 53; if (l.size() > most) { most = l.size(); longest = l; } };
+        for (int m = 0; m < RM_COUNT; m++)
+            for (bool caught : {false, true}) measure(Game::shardTakenStatus(RECORD_MEDIUM_HUD[m], 400, 400, caught));
+        int instruments = 0;
+        for (int a = 0; a < AGE_COUNT; a++) {
+            const AgeWorld& W = AGE_WORLDS[a];
+            Star s; StarSystem sys;
+            if (!systemAt(W.sx, 0, W.sz, s, sys, true) || W.body >= (int)sys.bodies.size()) continue;
+            const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
+            if (!worldHadCivilisation(g)) continue;
+            const Lore L = loreQuick(sys, b, g, W.which);
+            const Tradition T = traditionOf(g, L);
+            PeopleInstruments P; instrumentsOf(T, L.which, P);
+            for (int x = 0; x < AGE_COUNT; x++) for (const Instrument& I : P.byAge[x]) { instruments++; measure(Game::instrumentTakenStatus(instrumentName(T, I))); }
+        }
+        check("a record's and an instrument's status as they are taken within the 53 characters of the status line (B-499)", instruments > 0 && over == 0,
+              fmt("%d lines (%d mediums taken and caught at 400 of 400, %d instruments), %d over 53 characters (the longest %zu: '%s')", lines, 2 * RM_COUNT,
+                  instruments, over, most, longest.c_str()));
+    }
+    // B-498 (KI-453): a planet of a second sun is a world, not a moon: its sheet's kind line ("- PLANET OF THE 2ND SUN", never "- MOON OF"), the
+    // telescope's reticle line (no MOON), N through the telescope ("NAME THIS WORLD", then "THE WORLD IS NOW CALLED"); the second sun's sheet
+    // counts its PLANETS. A planet's moon is still a moon in all three
+    {
+        const std::string pre = "shots/tests/test_b498_";
+        remove((pre + "guide.txt").c_str());
+        TestGame& g = game;
+        g.savePrefix = pre + "save"; g.guidePath = pre + "guide.txt"; g.shotsDir = pre + "shots"; g.moviesDir = pre + "movies";
+        applyTestScale(g); g.newGame(); g.setState(S::SPACE);
+        Input vi;
+        Star sunStar, moonStar; int planet = -1, sun = -1, moon = -1, scanned = 0;
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return (planet < 0 || moon < 0) && scanned < 2000; })) {
+            scanned++;
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const int p = sys.bodies[bi].parent;
+                if (p < 0) continue;
+                if (sys.bodies[p].type == PT_COMPANION && planet < 0) { sunStar = s; planet = bi; sun = p; }
+                if (sys.bodies[p].type != PT_COMPANION && sys.bodies[bi].type != PT_COMPANION && moon < 0) { moonStar = s; moon = bi; }
+            }
+        }
+        // a body's kind line on its sheet, the telescope's line, the prompt N opens on it and the status its name leaves
+        auto read = [&](const Star& s, int bi, std::string& kind, std::string& tele, std::string& prompt, std::string& named, std::string& counts) {
+            g.testParkAt(s, bi, false); g.setState(S::SPACE);
+            g.testRenderDataSheet();
+            const std::vector<std::string>& T = g.testDataSheetText();
+            kind = T.size() > 1 ? T[1] : std::string();
+            counts.clear();
+            std::string all;   // (its sentence's "A MOON" read across its wrapped lines)
+            for (const std::string& l : T) { all += " " + l; if (l.compare(0, 10, "ATMOSPHERE") == 0) counts = l; }
+            if (all.find(", A MOON") != std::string::npos) kind += " (A MOON)";
+            tele = g.testTelescopeLineOf(bi);
+            g.testTelescopeName(bi);
+            prompt = g.testTextPrompt();
+            for (const char* c = "ROSY"; *c; c++) pressKey(g, vi, KEY_A + (*c - 'A'));
+            pressKey(g, vi, KEY_ENTER);
+            named = g.testStatus();
+        };
+        std::string kP, tP, pP, nP, cP, kM, tM, pM, nM, cM, kS, tS, pS, nS, cS;
+        if (planet >= 0) { read(sunStar, planet, kP, tP, pP, nP, cP); read(sunStar, sun, kS, tS, pS, nS, cS); }
+        if (moon >= 0) read(moonStar, moon, kM, tM, pM, nM, cM);
+        const bool planetOk = kP.find("MOON") == std::string::npos && kP.find("PLANET OF THE 2ND SUN") != std::string::npos && tP.find("MOON") == std::string::npos &&
+                              pP == "NAME THIS WORLD" && nP == "THE WORLD IS NOW CALLED ROSY";
+        const bool sunOk = cS.find("MOONS") == std::string::npos && cS.find("PLANETS") != std::string::npos;
+        const bool moonOk = kM.find("MOON OF") != std::string::npos && tM.find("MOON") != std::string::npos && pM == "NAME THIS MOON" && nM == "THE MOON IS NOW CALLED ROSY";
+        check("a planet of a second sun is a world: its sheet, the telescope, its naming; the second sun's planets; a moon still a moon (B-498)",
+              planet >= 0 && moon >= 0 && planetOk && sunOk && moonOk,
+              fmt("%d systems scanned; a planet of a second sun: '%s', telescope '%s', '%s', '%s'; its sun: '%s'; a moon: '%s', telescope '%s', '%s', '%s'",
+                  scanned, kP.c_str(), tP.c_str(), pP.c_str(), nP.c_str(), cS.c_str(), kM.c_str(), tM.c_str(), pM.c_str(), nM.c_str()));
         for (const char* f : {"save_1.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
     }
 }

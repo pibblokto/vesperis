@@ -49,7 +49,7 @@ static int runRoguesHeard() {
     game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game); game.setState(GameState::SPACE);
-    for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // every map first
+    game.testWaitMaps();   // every map first, made for the season its frames draw (KI-446: made before it, the frames drew the world flat)
     Input in;
     auto run = [&](double secs) { runFramesAtLeastOne(game, in, secs); };
     auto press = [&](int key) { pressKey(game, in, key); };
@@ -89,7 +89,7 @@ static int runRoguesHeard() {
     press(KEY_ENTER); run(0.2);
     printf("Enter: '%s'\n", game.testStatus().c_str());
     for (int i = 0; i < 30 * 120 && game.testShipMode() == (int)ShipState::VIMANA; i++) { game.frame(in, 1.0 / 30); in.newFrame(); }
-    run(0.6);
+    game.testWaitMaps(); run(0.6);
     Star d; drifterInSector(wx, wy, wz, d, true);
     {
         const StarSystem& sys = game.testSystem(); const Body& b = sys.bodies[0];
@@ -102,11 +102,11 @@ static int runRoguesHeard() {
         game.testArriveAt(at); run(0.1);
         const StarSystem& sys = game.testSystem(); const double R = sys.bodies[0].radiusKm;
         const Vec3 dir = normalize(game.testShipPos() - sys.star.pos);
-        game.testPlaceShip(sys.star.pos + dir * 60 * R); game.testAimAtBody(0); run(0.4);
+        game.testPlaceShip(sys.star.pos + dir * 60 * R); game.testAimAtBody(0); game.testWaitMaps(); run(0.4);
         shot(far);
         game.testParkAt(at, 0, false); run(0.2);
         if (game.state == GameState::LANDING_MAP) press(KEY_ESCAPE);
-        game.testAimAtBody(0); run(0.4);
+        game.testAimAtBody(0); game.testWaitMaps(); run(0.4);
         shot(orbit);
         {   // the disc's shades along the frame's middle row, across it (bank:shade; the dark frames are read by their numbers)
             std::string row; const int y = FBH / 2;
@@ -119,7 +119,7 @@ static int runRoguesHeard() {
             int mi = 1; for (int i = 1; i < (int)sys.bodies.size(); i++) if (sys.bodies[i].radiusKm > sys.bodies[mi].radiusKm) mi = i;
             game.testParkAt(at, mi, false); run(0.2);
             if (game.state == GameState::LANDING_MAP) press(KEY_ESCAPE);
-            game.testAimAtBody(mi); run(0.4);
+            game.testAimAtBody(mi); game.testWaitMaps(); run(0.4);
             shot("rogue_bd_moon");
             printf("  its largest moon (%s, %.0f km, %.0f K) parked at, lit by the brown dwarf's glow -> shots/tests/rogue_bd_moon.png\n", KINDS[game.testSystem().bodies[mi].type].name,
                     game.testSystem().bodies[mi].radiusKm, game.testSystem().bodies[mi].tempK);
@@ -364,7 +364,7 @@ static int runRoguesDark() {
     auto orbit = [&](const Star& at, const char* name, const char* what) {
         game.testParkAt(at, 0, true); run(0.2);
         if (game.state == GameState::LANDING_MAP) press(KEY_ESCAPE);
-        game.testAimAtBody(0); run(0.6);
+        game.testAimAtBody(0); game.testWaitMaps(); run(0.6);
         shot(name);
         int lit[32] = {}; for (const Pix p : game.fb.idx) if (shadeOf(p) >= 40) lit[bankOf(p)]++;   // the pixels over shade 40 by bank (the globe's own lights)
         std::string banks; for (int k = 0; k < 32; k++) if (lit[k]) banks += fmt(" %d:%d", k, lit[k]);
@@ -476,7 +476,7 @@ int runRogues(int argc, char** argv) {
     }
     game.testParkAt(d, 0, false); run(0.2);
     if (game.state == GameState::LANDING_MAP) press(KEY_ESCAPE);
-    run(0.5);
+    game.testWaitMaps(); run(0.5);
     printf("parked: the ship %.0f km off the drifter's centre -> shots/tests/rogue_parked.png\n", length(game.testShipPos() - game.testSystem().star.pos));
     writePNG("shots/tests/rogue_parked.png", game.output(), FBW, FBH);
     game.testParkAt(d, 0); run(0.3);

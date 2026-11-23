@@ -29,29 +29,58 @@ void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
     const BodyGen& g = spaceR.genFor(b);
     RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
     lf = sys.sunless() ? 1.0 : clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);   // the survey's colours at the noon stop
-    atmo = bodyHasAir(b);
+    atmo = g.hasAir;   // (J-02: read through the generator)
     RGB skyL; bool hasSky = false;
     if (atmo) {
         RGB zen, hor;
         typeSky(g, zen, hor);   // the one pair per type
         skyL = lerp(zen, hor, 0.5f) * lightC; hasSky = true;
     }
-    for (int mm = 0; mm < MAT_COUNT; mm++) ramps[mm] = materialRamp(g.matColor[mm] * lightC, hasSky ? &skyL : nullptr, 1.0);
+    for (int mm = 0; mm < MAT_COUNT; mm++) ramps[mm] = materialRamp(madeMatColour(g, mm) * lightC, hasSky ? &skyL : nullptr, 1.0);   // (J-04: plants a made heat dried)
+    // J-02: a made world's tint (the test layer's over the land, J-03's over the waters); J-05: the land's, snow's and plants' looks in their colours
+    const MatRamp tintRamp = g.made.tinted ? materialRamp(g.made.tint * lightC, hasSky ? &skyL : nullptr, 1.0) : ramps[familyRep(g.type, FAM_ROCK)];
+    for (int mm = 0; mm < MAT_COUNT; mm++) {
+        MatRamp& r = ramps[MAP_MADE + mm];
+        r = ramps[mm];
+        if (mm == MAT_LAVA || madeGrowthMaterial(mm)) continue;   // (J-09: an overgrowth's cover its own colour)
+        if (g.made.tinted && (mm == MAT_WATER ? (g.made.tintOn & MADE_ON_WATER) : (g.made.tintOn & MADE_ON_LAND))) r = tintRamp;
+        else if (mm != MAT_WATER && !(g.made.tinted && (g.made.tintOn & MADE_ON_LAND))) {
+            const MadeLook* L = g.made.lookOf(madeClassOf(g, mm, false));
+            if (L && L->tinted) r = materialRamp(L->tint * lightC, hasSky ? &skyL : nullptr, 1.0);
+        }
+    }
+    for (int ln = 0; ln < MADE_LINES; ln++)   // KI-460, KI-473: each line's own (its look's, its waters', its overgrowth's), else the class's
+        for (int mm = 0; mm < MAT_COUNT; mm++) {
+            MatRamp& r = ramps[MAP_LINE + ln * MAT_COUNT + mm];
+            r = madeGrowthMaterial(mm) ? ramps[mm] : ramps[MAP_MADE + mm];
+            if (ln >= g.made.lines || mm == MAT_LAVA || (g.made.tinted && (g.made.tintOn & MADE_ON_LAND))) continue;
+            const MadeSpread& sp = g.made.spread[ln];
+            if (madeGrowthMaterial(mm) || (mm == MAT_GRASS && sp.growth.greens)) {   // (J-16, KI-509: a carpet's grass its line's)
+                if (sp.growth.on()) r = materialRamp(madeMatColour(g, mm, ln) * lightC, hasSky ? &skyL : nullptr, 1.0);
+            }
+            else if (mm == MAT_WATER) { if (g.made.tinted && sp.waterTinted) r = materialRamp(sp.waterTint * lightC, hasSky ? &skyL : nullptr, 1.0); }
+            else if (sp.look[madeClassOf(g, mm, false)].on && sp.look[madeClassOf(g, mm, false)].tinted)
+                r = materialRamp(sp.look[madeClassOf(g, mm, false)].tint * lightC, hasSky ? &skyL : nullptr, 1.0);
+        }
 }
 
 // D-02: `survey` 0..1, a sunless world's survey look at that height
 // the survey look of a world with no sun, the ship's altimeter and not its camera (the maps went black at a light of 0): the ground's
 // colour at the noon stop, two parts in three the radar camera's cold phosphor, its brightness by the height (the map's lows dark, its highs
 // pale) times the relief's hillshade; lava keeps its glow
-uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey) {
+// J-02: `made` a made world's tint's share at the texel: over a half, the land takes the tint's ramp (as the globe and the ground take its bank);
+// J-03: the waters too, where the tint lies on them (the made pass sets the share only where its tint lies)
+uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey, double made, int line) {
+    const bool own = line >= 0 && line < MADE_LINES && mat != MAT_LAVA && (made > 0.5 || madeGrowthMaterial(mat));   // (KI-460, KI-473: its line's)
+    const MatRamp& ramp = own ? ramps[MAP_LINE + line * MAT_COUNT + mat] : (made > 0.5 && mat != MAT_LAVA ? ramps[MAP_MADE + mat] : ramps[mat]);
     if (survey >= 0 && mat != MAT_LAVA) {
-        const RGB c = materialRampColor(ramps[mat], clampd(noonStop(albedo), 0, 63));
+        const RGB c = materialRampColor(ramp, clampd(noonStop(albedo), 0, 63));
         const double k = (0.45 + 0.7 * clampd(survey, 0, 1)) * shade, l = clampd((0.3 * c.r + 0.59 * c.g + 0.11 * c.b) * k, 0, 1) * 255;
         const RGB ph((float)((10 + 0.55 * l) / 255), (float)((14 + 1.0 * l) / 255), (float)((16 + 0.92 * l) / 255));
         const RGB o = lerp(ph, c * (float)k, 0.35f);
         return rgb(clampi((int)(o.r * 255), 0, 255), clampi((int)(o.g * 255), 0, 255), clampi((int)(o.b * 255), 0, 255));
     }
-    RGB c = materialRampColor(ramps[mat], clampd(exposureStop(albedo, lf, atmo) * shade, 0, 63));
+    RGB c = materialRampColor(ramp, clampd(exposureStop(albedo, lf, atmo) * shade, 0, 63));
     double r = c.r * 255, gg = c.g * 255, bl = c.b * 255;
     if (mat == MAT_LAVA) { r = 255; gg = 110 + 80 * albedo; bl = 20; }
     return rgb(clampi((int)r, 0, 255), clampi((int)gg, 0, 255), clampi((int)bl, 0, 255));
@@ -74,7 +103,7 @@ void Game::buildLandingMapBase() {
     mapBase.assign(W * H, 0);
     mapEmissive.assign(W * H, 0);
     RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
-    MatRamp ramps[MAT_COUNT];
+    MatRamp ramps[MAP_RAMPS];
     double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
     // hillshade: gradients scaled by their RMS so every body gets the same relief strength
@@ -84,6 +113,7 @@ void Game::buildLandingMapBase() {
         for (int x = 0; x < W; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
     double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
     const bool survey = sys.sunless();   // D-02: the altimeter's map (no clouds: it reads the ground)
+    const bool greened = g.made.green > 0 && madeGreens(g.type);   // J-16 (KI-509): its grass a carpet's, each texel its own line's
     double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++)
         for (int x = 0; x < W; x++) {
@@ -91,7 +121,8 @@ void Game::buildLandingMapBase() {
             int mat = m.material[i];
             double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
             double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);   // light from the north-west
-            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
+            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1,
+                                     greened && mat == MAT_GRASS ? 1.0 : m.madeTintAt(i), m.madeLineAt(i));
             double r = base & 255, gg = (base >> 8) & 255, bl = (base >> 16) & 255;
             if (mat == MAT_LAVA) mapEmissive[i] = 1;
             if (mapClouds && atmo && !survey) {
@@ -108,7 +139,7 @@ void Game::buildLandingMapBase() {
             }
             mapBase[i] = rgb(clampi((int)r, 0, 255), clampi((int)gg, 0, 255), clampi((int)bl, 0, 255));
         }
-    mapBaseSeed = b.seed;
+    mapBaseSeed = b.seed; mapBaseMade = m.madeKey;
     mapBaseClouds = mapClouds;
 }
 
@@ -120,7 +151,7 @@ void Game::buildLandingMapBase() {
 void Game::buildLandingZoom() {
     const Body& b = sys.bodies[landBody];
     const BodyGen& g = spaceR.genFor(b);
-    zoomLat = landLat; zoomLon = landLon; zoomSeed = b.seed;
+    zoomLat = landLat; zoomLon = landLon; zoomSeed = b.seed; zoomMade = g.made.key;
     zoomHalfLat = 0.5 * DEG;
     zoomHalfLon = zoomHalfLat * 2.0 / std::max(std::cos(zoomLat), 0.15);
     double texelM = 2 * zoomHalfLat * b.radiusKm * 1000.0 / ZH;
@@ -134,7 +165,8 @@ void Game::buildLandingZoom() {
     if (zoomDry) { drainagePrefetch(g, zoomCentre, zoomRadiusM, true); zoomPrefetchT = realTime; }
     const bool dry = zoomDry;
     zoomImg.assign(ZW * ZH, 0); zoomEmissive.assign(ZW * ZH, 0); zoomUnit.assign(ZW * ZH, Vec3());
-    std::vector<float> hs(ZW * ZH), albs(ZW * ZH); std::vector<uint8_t> mats(ZW * ZH);
+    std::vector<float> hs(ZW * ZH), albs(ZW * ZH), mts(g.made.shares() ? ZW * ZH : 0); std::vector<uint8_t> mats(ZW * ZH);   // (J-02: a made world's tint; J-05: its looks)
+    std::vector<int8_t> mls(g.made.on() && (g.made.shares() || g.made.grown()) ? ZW * ZH : 0);   // (KI-460: the line whose look lies there)
     auto zt = std::chrono::steady_clock::now();   // the build's parts
     auto zoomPart = [&](int k) { auto n = std::chrono::steady_clock::now(); zoomBuildMs[k] = std::chrono::duration<double, std::milli>(n - zt).count(); zt = n; };
     for (double& ms : zoomBuildMs) ms = 0;
@@ -149,10 +181,12 @@ void Game::buildLandingZoom() {
                 SurfaceSample s = sampleSurface(g, u, detail);
                 int i = y * ZW + x;
                 zoomUnit[i] = u; hs[i] = (float)s.height; mats[i] = (uint8_t)s.material; albs[i] = (float)s.albedo;
+                if (!mts.empty()) mts[i] = (float)s.madeTint;
+                if (!mls.empty()) mls[i] = (int8_t)s.madeLine;
             }
     });
     zoomPart(0);
-    MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
+    MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
     auto hAt = [&](int x, int y) { x = clampi(x, 0, ZW - 1); y = clampi(y, 0, ZH - 1); return (double)hs[y * ZW + x]; };
     double sum2 = 0; int cnt = 0;
@@ -166,7 +200,7 @@ void Game::buildLandingZoom() {
             int i = y * ZW + x;
             double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
             double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-            zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade, survey ? surveyHeight(hs[i], hLo, hHi) : -1);
+            zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade, survey ? surveyHeight(hs[i], hLo, hHi) : -1, mts.empty() ? 0.0 : mts[i], mls.empty() ? -1 : mls[i]);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
     if (g.tideRangeM > 0) {   // the tide lines over the flats (the high water's pale, the low water's dark), as the sector map draws them
@@ -214,7 +248,7 @@ void Game::buildLandingZoom() {
         for (const PlanEdgeRef& r : es) if (r.e->kind != NK_SEA) addLine(planEdgeWay(g, *P, r), r.e->kind);
         zoomPart(3);
         std::vector<const PlanPlace*> ps; planPlacesNear(*P, zoomCentre, zoomRadiusM, ps);
-        MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
+        MatRamp ramps2[MAP_RAMPS]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
         const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
         for (const PlanPlace* p : ps) {
             zoomPlaces.push_back({p->people, p->rank, p->sclass, p->unit, p->radiusM / texelM});   // for the places the explorer knows

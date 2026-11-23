@@ -1,0 +1,469 @@
+// B-442 and R-439 to R-442 (2026-11-19; the unit's `incubator` group, after `experiments`): the lab's rows telling a vial's organisms apart by
+// their looks (the incubator's chooser, the sequencer's, a flask's; B-443, the tree's leaves and the sequencer's title, kin and log); N naming a
+// flask's organism; the choosers' two tabs; K keeping a copy (the cell under the crosshair alone, a flask's two together) in a folder, a new one
+// made for it, C copying, a pair kept twice merged
+#include "harness/harness.h"
+#include "harness/test_game.h"
+#include "life/cultures.h"
+#include "life/seeding.h"
+#include <map>
+#include <set>
+
+namespace {
+const char* const GUIDE = "shots/tests/unit_lab_guide.txt";
+// a game on the ship, its guide fresh, its files the harness's
+void labGame(TestGame& g) {
+    g.savePrefix = "shots/tests/unit_lab_save"; g.settingsPath = "shots/tests/test_settings.txt"; g.guidePath = GUIDE; g.keysPath = "shots/tests/test_keys.txt";
+    remove(GUIDE);
+    g.newGame(); g.setState(GameState::SPACE);
+}
+// the cold store given a vial of each of the scan region's first living worlds (`labVial`), every living or sleeping species of each seen
+// (the guide's sheet, its form): the vials' count
+int stockVials(TestGame& g, int want) {
+    int n = 0;
+    for (auto& [x, z, s, scanned] : scanSystems(150, 340, 20, 160, [&] { return n < want; })) {
+        const StarSystem& sys = scanned;
+        auto L = lifeOf(sys);
+        for (int bi = 0; bi < (int)sys.bodies.size() && n < want; bi++) {
+            if (!livingStage(L->bodies[bi].stage)) continue;
+            Vial v;
+            if (!labVial(sys, bi, v)) continue;
+            for (const Held& H : sampleOf(L->bodies[bi], v.hab).held)
+                if (H.state != SS_FOSSIL && H.state != SS_PROTO) g.guide.microbes[Guide::bodyKey(v.sx, v.sy, v.sz, bi) + "/M" + std::to_string(H.species)].seen |= SEEN_FORM;
+            g.testColdStore().push_back(v);
+            n++;
+        }
+    }
+    return n;
+}
+// the cold store's first vial holding two living species (its place, the two), else -1
+int firstPair(TestGame& g, int& a, int& b) {
+    for (int v = 0; v < (int)g.testColdStore().size(); v++) {
+        const Vial& V = g.testColdStore()[v];
+        StarSystem sys; Star st;
+        if (!placeInSector(V.sx, V.sy, V.sz, st, true)) continue;
+        sys.generate(st);
+        std::vector<int> living;
+        for (const Held& H : sampleOf(lifeOf(sys)->bodies[V.body], V.hab).held) if (H.state == SS_LIVING && H.cells >= 1) living.push_back(H.species);
+        if (living.size() < 2) continue;
+        a = living[0]; b = living[1];
+        return v;
+    }
+    return -1;
+}
+std::string speciesKeyOf(const Vial& V, int species) { return Guide::bodyKey(V.sx, V.sy, V.sz, V.body) + "/M" + std::to_string(species); }
+void typeWord(TestGame& g, Input& in, const char* w) { for (const char* c = w; *c; c++) pressKey(g, in, KEY_A + (*c - 'A')); }
+// a chooser's world folders: how many hold two rows or more, how many rows repeat one before them in their folder, how many read UNNAMED
+void rowsApart(const std::vector<LabFolder>& folders, const std::vector<std::string>& lines, int& many, int& same, int& unnamed, std::string& example) {
+    for (const LabFolder& f : folders) {
+        if (f.id != FOLDER_WORLD) continue;
+        many += f.rows.size() >= 2;
+        std::set<std::string> seen;
+        for (int r : f.rows) {
+            const std::string& l = lines[r];
+            if (!seen.insert(l).second) { same++; if (example.empty()) example = l; }
+            unnamed += l.compare(0, 7, "UNNAMED") == 0;
+        }
+    }
+}
+}   // namespace
+
+void unitLabIncubator(const Check& check) {
+    {   // B-442: a vial's organisms told apart. The scan region's first forty living worlds a vial each, every species of each seen: in the
+        // incubator's chooser and the sequencer's each world's rows differ and none reads UNNAMED (each its look and its size); a flask of a vial's
+        // first two living species reads their looks
+        TestGame g; Input in;
+        labGame(g);
+        const int vials = stockVials(g, 40);
+        int many = 0, same = 0, unnamed = 0, manyQ = 0, sameQ = 0, unnamedQ = 0;
+        std::string example, exampleQ;
+        {
+            const std::vector<IncubatorChoice>& C = g.testIncubatorChoices();
+            std::vector<std::string> lines;
+            for (const IncubatorChoice& c : C) lines.push_back(c.line);
+            rowsApart(g.testIncub().pages.folders, lines, many, same, unnamed, example);
+        }
+        {
+            const std::vector<SequencerChoice>& C = g.testSequencerChoices();
+            std::vector<std::string> lines;
+            for (const SequencerChoice& c : C) lines.push_back(c.line);
+            rowsApart(g.testLab().seq.pages.folders, lines, manyQ, sameQ, unnamedQ, exampleQ);
+        }
+        std::string labels;
+        bool flaskApart = false;
+        for (int v = 0; v < (int)g.testColdStore().size() && labels.empty(); v++) {
+            const Vial& V = g.testColdStore()[v];
+            StarSystem sys; Star st;
+            if (!placeInSector(V.sx, V.sy, V.sz, st, true)) continue;
+            sys.generate(st);
+            std::vector<int> living;
+            for (const Held& H : sampleOf(lifeOf(sys)->bodies[V.body], V.hab).held) if (H.state == SS_LIVING) living.push_back(H.species);
+            if (living.size() < 2) continue;
+            g.testFlaskEmpty(0);
+            if (!g.testFlaskPut(0, v, living[0]) || !g.testFlaskPut(0, v, living[1])) continue;
+            const Flask& F = g.testLab().flasks[0];
+            labels = F.label[0] + " + " + F.label[1];
+            flaskApart = F.label[0] != F.label[1] && F.label[0].compare(0, 7, "UNNAMED") != 0 && F.label[1].compare(0, 7, "UNNAMED") != 0;
+        }
+        check("incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)",
+              vials == 40 && many > 0 && same == 0 && unnamed == 0 && manyQ > 0 && sameQ == 0 && unnamedQ == 0 && flaskApart,
+              fmt("%d vials; the incubator's chooser: %d worlds of two rows or more, %d rows repeated%s, %d UNNAMED; the sequencer's: %d, %d%s, %d; "
+                  "a flask of two: %s",
+                  vials, many, same, example.empty() ? "" : (" (" + example + ")").c_str(), unnamed, manyQ, sameQ,
+                  exampleQ.empty() ? "" : (" (" + exampleQ + ")").c_str(), unnamedQ, labels.empty() ? "NONE PUT IN" : labels.c_str()));
+    }
+    {   // B-443 (KI-447): the tree's leaves and the sequencer in looks. The scan region's first forty living worlds a vial each, every species of
+        // each seen and read but a vial's first living one: no leaf UNNAMED, none drawn alike another of its world; that one read last: the
+        // sequencer's title its leaf's words, its kin in theirs, the log's KIN without UNNAMED; named ROSY on a flask (N), the sequencer's title ROSY
+        TestGame g; Input in;
+        labGame(g);
+        const int vials = stockVials(g, 40);
+        int a = -1, b = -1;
+        const int v = firstPair(g, a, b);
+        const std::string ka = v >= 0 ? speciesKeyOf(g.testColdStore()[v], a) : std::string();
+        for (auto& kv : g.guide.microbes) if (kv.first != ka) kv.second.seen |= SEEN_KIN;
+        int leaves = 0, same = 0, unnamed = 0;
+        std::string example;
+        std::map<std::string, std::set<std::string>> drawn;   // each world's leaves as drawn
+        for (const TreeLeaf& L : g.testTree().leaves) {
+            if (L.body < 0) continue;
+            leaves++;
+            const std::string line = TestGame::testTreeLine(L);
+            if (!drawn[L.key.substr(0, L.key.rfind("/M"))].insert(line).second) { same++; if (example.empty()) example = line; }
+            unnamed += L.name.compare(0, 7, "UNNAMED") == 0;
+        }
+        std::string title, leaf, kin, logged, renamed;
+        bool kinLeaf = false;
+        if (v >= 0) {
+            const Vial& V = g.testColdStore()[v];
+            g.testSeqPut(V.sx, V.sy, V.sz, V.body, a);
+            title = g.testLab().seq.name;
+            g.testLabSkip(SEQUENCE_S + 1);
+            const std::vector<std::string>& R = g.testLab().seq.result;
+            kin = R.size() > 2 && R[2].compare(0, 23, "NEAREST KIN SEQUENCED: ") == 0 ? R[2].substr(23) : std::string();
+            for (const TreeLeaf& L : g.testTree().leaves) {
+                if (L.key == ka) leaf = L.name;
+                else if (!kin.empty() && kin.compare(0, L.name.size(), L.name) == 0) kinLeaf = true;
+            }
+            for (const LogEntry& e : g.guide.log) if (e.kind == "KIN") logged = e.text.substr(std::min(e.text.size(), e.text.find("KIN: ")));   // (after its date)
+            if (g.testFlaskPut(0, v, a)) {   // N names it on its flask: the sequencer says the name
+                g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
+                g.testIncub().sel = 0;
+                pressKey(g, in, KEY_N); typeWord(g, in, "ROSY"); pressKey(g, in, KEY_ENTER);
+                g.testLabSkip(0.1);
+                renamed = g.testLab().seq.name;
+            }
+        }
+        check("incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)",
+              vials == 40 && leaves > 100 && same == 0 && unnamed == 0 && !title.empty() && title.compare(0, 7, "UNNAMED") != 0 && title == leaf &&
+                  kinLeaf && logged.compare(0, 5 + title.size(), "KIN: " + title) == 0 && logged.find("UNNAMED") == std::string::npos && renamed == "ROSY",
+              fmt("%d vials; the tree: %d leaves of species, %d drawn alike another of their world%s, %d UNNAMED; read last: '%s' (its leaf '%s'), its kin "
+                  "'%s' %s; the log '%s'; named on its flask: '%s'",
+                  vials, leaves, same, example.empty() ? "" : (" (" + example + ")").c_str(), unnamed, title.c_str(), leaf.c_str(), kin.c_str(),
+                  kinLeaf ? "a leaf's" : "NOT A LEAF'S", logged.c_str(), renamed.c_str()));
+    }
+    {   // R-442: N names a flask's organism. A flask of a vial's first two living species: N on its page offers both (each its look), the second
+        // chosen and named ROSY by its keys; the flask's row says ROSY; a flask of one: N names it at once
+        TestGame g; Input in;
+        labGame(g);
+        stockVials(g, 40);
+        int a = -1, b = -1;
+        const int v = firstPair(g, a, b);
+        bool rows = false, typed = false, named = false, label = false, once = false;
+        std::string offered;
+        if (v >= 0 && g.testFlaskPut(0, v, a) && g.testFlaskPut(0, v, b) && g.testFlaskPut(1, v, a)) {
+            g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
+            g.testIncub().sel = 0;
+            pressKey(g, in, KEY_N);
+            rows = g.testIncub().pick == PICK_NAME && g.testIncub().pickLines.size() == 2;
+            for (const std::string& l : g.testIncub().pickLines) offered += (offered.empty() ? "" : " / ") + l;
+            pressKey(g, in, KEY_DOWN); pressKey(g, in, KEY_ENTER);
+            typed = g.state == GameState::TEXT_ENTRY;
+            typeWord(g, in, "ROSY"); pressKey(g, in, KEY_ENTER);
+            const Vial& V = g.testColdStore()[v];
+            named = g.state == GameState::INCUBATOR && g.guide.names[speciesKeyOf(V, b)] == "ROSY" && !g.guide.names.count(speciesKeyOf(V, a));
+            label = g.testLab().flasks[0].label[1] == "ROSY" && g.testLab().flasks[0].label[0] != "ROSY";
+            g.testIncub().sel = 1;
+            pressKey(g, in, KEY_N);
+            once = g.state == GameState::TEXT_ENTRY && g.testIncub().pick == PICK_NONE;
+            pressKey(g, in, KEY_ESCAPE);
+        }
+        check("incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)",
+              v >= 0 && rows && typed && named && label && once,
+              fmt("a flask of two %s: offered %s (%s); the second typed %s, named ROSY %s, the flask's row %s; a flask of one named at once %s",
+                  v >= 0 ? "put in" : "NONE FOUND", rows ? "both" : "NOT BOTH", offered.c_str(), typed ? "yes" : "NO", named ? "yes" : "NO",
+                  label ? "says it" : "DOES NOT", once ? "yes" : "NO"));
+    }
+    {   // R-441: the choosers' two tabs. Vials of ten worlds (every species seen), a flask's culture and a kept one: Enter on an empty flask opens on
+        // the vials (each folder a world's); Tab the cultures (the flasks', the collection's, no world's); Esc, and Enter opens on the cultures again
+        // (the tab last shown); the sequencer's likewise
+        TestGame g; Input in;
+        labGame(g);
+        stockVials(g, 10);
+        int a = -1, b = -1;
+        const int v = firstPair(g, a, b);
+        bool put = v >= 0 && g.testFlaskPut(0, v, a), vials = false, cultures = false, again = false, seq = false;
+        if (put) {
+            KeptCulture c; c.who = g.testLab().flasks[0].who[0]; c.medium = c.asWorld = g.testLab().flasks[0].medium;
+            g.testLab().kept.push_back(c);
+            g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
+            g.testIncub().sel = 1;
+            pressKey(g, in, KEY_ENTER);
+            auto only = [](const ChooserPage& P, bool worlds) {
+                if (P.folders.empty()) return false;
+                for (const LabFolder& f : P.folders) if ((f.id == FOLDER_WORLD) != worlds) return false;
+                return true;
+            };
+            const ChooserPage& P = g.testIncub().pages;
+            vials = g.testIncub().choosing && P.tabbed && P.tab == 0 && only(P, true);
+            pressKey(g, in, KEY_TAB);
+            bool kept = false;
+            for (const LabFolder& f : P.folders) kept |= f.id >= 0;
+            cultures = P.tab == 1 && only(P, false) && kept;
+            pressKey(g, in, KEY_ESCAPE);
+            pressKey(g, in, KEY_ENTER);
+            again = g.testIncub().choosing && P.tab == 1;
+            pressKey(g, in, KEY_ESCAPE);
+            g.closeScreen();
+            g.openScreen(GameState::SEQUENCER); g.frame(in, 0); in.newFrame();
+            pressKey(g, in, KEY_ENTER);
+            const ChooserPage& Q = g.testLab().seq.pages;
+            const bool first = g.testLab().seq.choosing && Q.tabbed && Q.tab == 0 && only(Q, true);
+            pressKey(g, in, KEY_TAB);
+            seq = first && Q.tab == 1 && only(Q, false);
+        }
+        check("incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too (R-441)",
+              put && vials && cultures && again && seq,
+              fmt("the incubator's on the vials %s; Tab the cultures %s; opened again on them %s; the sequencer's %s",
+                  vials ? "yes" : "NO", cultures ? "yes" : "NO", again ? "yes" : "NO", seq ? "yes" : "NO"));
+    }
+    {   // R-440: K keeps a copy. The dense vial on the microscope, a living cell tracked: K, Enter keeps it alone in UNSORTED (the vial
+        // kept); again refused there; K, N, IRON, Enter makes the folder IRON and keeps it in it; a flask of two: K, the third row (both), Enter keeps
+        // the pair (the flask grows on); C copies a kept one to IRON, twice refused; a pair B-441 kept twice (each way round) merged at a load
+        TestGame g; Input in;
+        labGame(g);
+        Vial dense;
+        const bool ok = labDenseVial(dense);
+        bool under = false, alone = false, twice = false, folder = false, both = false, copied = false, merged = false;
+        int sp = -1;
+        if (ok) {
+            g.testColdStore().push_back(dense);
+            g.openScreen(GameState::MICROSCOPE); g.frame(in, 0); in.newFrame();
+            if (g.testScopeStage(0)) {
+                g.testScopeFrame();
+                const MicroscopeState& S = g.testScope();
+                for (size_t i = 0; i < S.shown.size() && sp < 0; i++) {
+                    const int k = S.mount.cells[S.refs[i].cell].kind, s0 = S.mount.kinds[k].species;
+                    if (!S.shown[i].m || g.testScope().species[s0].state != SS_LIVING) continue;
+                    g.testScopeView(S.seeing, S.step, S.refs[i].x, S.refs[i].y, S.focus);
+                    g.testScopeFrame();
+                    if (g.testScopeUnder() >= 0 && g.testScope().species[g.testScopeUnder()].state == SS_LIVING) sp = g.testScopeUnder();
+                }
+                if (sp >= 0) pressKey(g, in, KEY_ENTER);   // tracked: the crosshair follows it
+                under = sp >= 0 && g.testScope().tracking && g.testScopeUnder() == sp;
+            }
+            if (under) {
+                const size_t n0 = g.testLab().kept.size(), vials0 = g.testColdStore().size();
+                pressKey(g, in, KEY_K);
+                const bool open = g.testKeep().open;
+                pressKey(g, in, KEY_ENTER);
+                const KeptCulture* c = g.testLab().kept.size() == n0 + 1 ? &g.testLab().kept.back() : nullptr;
+                alone = open && c && !c->paired && c->who.species == sp && c->folder == 0 && g.testColdStore().size() == vials0;
+                pressKey(g, in, KEY_K); pressKey(g, in, KEY_ENTER);
+                twice = g.testLab().kept.size() == n0 + 1 && g.testKeep().open;
+                pressKey(g, in, KEY_ESCAPE);
+                pressKey(g, in, KEY_K); pressKey(g, in, KEY_N);
+                const bool typing = g.state == GameState::TEXT_ENTRY;
+                typeWord(g, in, "IRON"); pressKey(g, in, KEY_ENTER);
+                int iron = -1;
+                for (const CultureFolder& f : g.testLab().folders) if (f.name == "IRON") iron = f.id;
+                folder = typing && iron > 0 && g.testLab().kept.size() == n0 + 2 && g.testLab().kept.back().folder == iron && g.state == GameState::MICROSCOPE;
+                // a flask of two, both kept
+                int a = -1, b = -1;
+                for (const Held& H : g.testScope().sample.held) if (H.state == SS_LIVING && H.cells >= 1) { if (a < 0) a = H.species; else if (b < 0) b = H.species; }
+                g.closeScreen();
+                if (b >= 0 && g.testFlaskPut(0, 0, a) && g.testFlaskPut(0, 0, b)) {
+                    g.openScreen(GameState::INCUBATOR); g.frame(in, 0); in.newFrame();
+                    g.testIncub().sel = 0;
+                    pressKey(g, in, KEY_K);
+                    const bool rows = g.testIncub().pick == PICK_KEEP && g.testIncub().pickLines.size() == 3;
+                    pressKey(g, in, KEY_DOWN); pressKey(g, in, KEY_DOWN); pressKey(g, in, KEY_ENTER); pressKey(g, in, KEY_ENTER);
+                    const KeptCulture& p = g.testLab().kept.back();
+                    both = rows && p.paired && p.who.species == a && p.partner.species == b && p.folder == 0 && g.testLab().flasks[0].n == 2;
+                    g.closeScreen();
+                }
+                const size_t n1 = g.testLab().kept.size();
+                g.testKeptCopy(n0, iron);   // the one kept alone, into IRON (its copy from the new folder there already: refused)
+                const bool refusedThere = g.testLab().kept.size() == n1;
+                g.testKeptCopy((int)n1 - 1, iron);
+                copied = refusedThere && g.testLab().kept.size() == n1 + 1 && g.testLab().kept.back().folder == iron && g.testLab().kept.back().paired;
+                // B-441's pair kept twice, each way round: one at a load
+                KeptCulture x = g.testLab().kept.back(), y = x;
+                x.folder = y.folder = 0;
+                std::swap(y.who, y.partner);
+                g.testLab().kept.clear(); g.testLab().kept.push_back(x); g.testLab().kept.push_back(y);
+                g.save("shots/tests/unit_lab_keep.txt");
+                TestGame h; labGame(h);
+                h.load("shots/tests/unit_lab_keep.txt");
+                merged = h.testLab().kept.size() == 1 && h.testLab().kept[0].paired;
+                remove("shots/tests/unit_lab_keep.txt");
+            }
+        }
+        check("incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)",
+              ok && under && alone && twice && folder && both && copied && merged,
+              fmt("the crosshair on a living cell %s (M%d); kept alone in UNSORTED, the vial kept %s; again refused %s; a new folder IRON with it %s; a flask's two "
+                  "kept together, the flask growing on %s; C copied into IRON, twice refused %s; a pair kept each way round one at a load %s",
+                  under ? "yes" : "NO", sp, alone ? "yes" : "NO", twice ? "yes" : "NO", folder ? "yes" : "NO", both ? "yes" : "NO", copied ? "yes" : "NO",
+                  merged ? "yes" : "NO"));
+    }
+    {   // B-497 (KI-448, KI-449): unnamed worlds told apart by their place, never named. The scan region's first forty living worlds a vial each,
+        // every species seen and read and kept in the collection's UNSORTED folder: the tree's world pages (an unnamed world's name and kind,
+        // its place under them), the catalogue's world heads and the microscope's world folders each read apart from every other; on the
+        // folder's page (every world's species together) no two leaves alike as drawn
+        TestGame g; Input in;
+        labGame(g);
+        const int vials = stockVials(g, 40);
+        for (auto& kv : g.guide.microbes) {
+            kv.second.seen |= SEEN_KIN;
+            FlaskSpecies w;
+            if (!g.testSpeciesOfKey(kv.first, w)) continue;
+            KeptCulture K; K.who = w; K.folder = 0; g.testLab().kept.push_back(K);
+        }
+        auto alikeOf = [](const std::vector<std::string>& lines, std::string& example) {   // the lines that read as another does
+            std::map<std::string, int> n;
+            for (const std::string& l : lines) n[l]++;
+            int alike = 0;
+            for (const auto& kv : n) if (kv.second > 1) { alike += kv.second; if (example.empty()) example = kv.first; }
+            return alike;
+        };
+        std::vector<std::string> pages, leaves, heads, folders;
+        int folderPage = -1;
+        {
+            const TreeState& T = g.testTree();
+            for (int p = 0; p < (int)T.pages.size(); p++) {
+                if (T.pages[p].kind == TP_FOLDER && folderPage < 0) folderPage = p;
+                if (T.pages[p].kind == TP_WORLD) pages.push_back(T.pages[p].name + " | " + g.testTreePageWhere(p));
+            }
+        }
+        if (folderPage >= 0) {
+            g.testTreePage(folderPage);
+            for (const TreeLeaf& L : g.testTree().shown) if (L.depth == 0 && !L.lab && L.body >= 0) leaves.push_back(TestGame::testTreeLine(L, true));
+        }
+        g.openScreen(GameState::CATALOGUE);
+        for (const CatalogueRow& r : g.testCat().rows) if (r.head && !r.key.empty()) heads.push_back(g.testCatLine(r));
+        g.closeScreen();
+        for (const LabFolder& f : g.testVialFolders()) folders.push_back(f.name + labFolderWhere(f.key));
+        std::string pe, le, he, fe;
+        const int pageAlike = alikeOf(pages, pe), leafAlike = alikeOf(leaves, le), headAlike = alikeOf(heads, he), folderAlike = alikeOf(folders, fe);
+        int unnamedPages = 0;
+        for (const std::string& p : pages) unnamedPages += p.compare(0, 7, "UNKNOWN") == 0;
+        check("incubator: unnamed worlds told apart by their place: the tree's pages and a folder's leaves, the catalogue's heads, the microscope's folders (B-497)",
+              vials == 40 && unnamedPages >= 30 && folderPage >= 0 && leaves.size() > 100 && pageAlike == 0 && leafAlike == 0 && headAlike == 0 && folderAlike == 0,
+              fmt("%d vials; the tree: %zu world pages (%d unnamed), %d alike%s; the folder's page: %zu leaves, %d alike%s; the catalogue: %zu world heads, %d alike%s; "
+                  "the microscope: %zu world folders, %d alike%s",
+                  vials, pages.size(), unnamedPages, pageAlike, pe.empty() ? "" : (" ('" + pe + "')").c_str(), leaves.size(), leafAlike,
+                  le.empty() ? "" : (" ('" + le + "')").c_str(), heads.size(), headAlike, he.empty() ? "" : (" ('" + he + "')").c_str(), folders.size(),
+                  folderAlike, fe.empty() ? "" : (" ('" + fe + "')").c_str()));
+    }
+    {   // B-500 (KI-488): the catalogue's animals as the record holds them. `seed record`'s world (a nerve poison's line at its 64th step), every
+        // animal of its bestiary seen and none marked on the ground: by world their fates read from the world's record (some DYING or GONE), the
+        // same animals with the line not yet let go marked nothing; by kin every animal listed too, with those not yet sequenced, then under its
+        // world's genesis once one of the world's own species was read; each animal's sheet drawing it (its picture's pixels)
+        SeedRecordCase rc;
+        const bool found = seedRecordCase(rc);
+        int seen = 0, marked = 0, before = 0, kinRows = 0, unread = 0, headedFirst = 0, rowsRead = 0, underHead = 0, unreadAfter = 0, worldRows = 0, sheets = 0,
+            drawn = 0, fewest = 1 << 30;
+        std::string example;
+        if (found) {
+            TestGame g; Input in;
+            seedRecordGame(g, rc, "unit_b500");
+            const StarSystem& S = rc.c.sys;
+            const int bi = rc.c.body;
+            const std::string world = Guide::bodyKey(S.star.sx, S.star.sy, S.star.sz, bi);
+            const Bestiary A = Bestiary::make(S.bodies[bi], BodyGen::make(S.bodies[bi]));
+            for (int i = 0; i < (int)A.species.size(); i++) {
+                AnimalRecord& r = g.guide.animals[world + "/A" + std::to_string(i)];
+                r.doing = 1u << CS_WALK; r.nearest = 20; r.most = 2;
+                seen++;
+            }
+            auto marks = [&](int& n) {   // the animal rows by world that read a fate
+                n = 0;
+                g.openScreen(GameState::CATALOGUE);
+                for (const CatalogueRow& r : g.testCat().rows) {
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    const std::string l = g.testCatLine(r);
+                    if (l.find(" - GONE") != std::string::npos || l.find(" - DYING") != std::string::npos || l.find(" - CHANGED") != std::string::npos) {
+                        n++;
+                        if (example.empty()) example = l;
+                    }
+                }
+                g.closeScreen();
+            };
+            marks(marked);
+            {   // by kin: each animal a row, with those not yet sequenced; one of the world's own species read, under its genesis's head
+                const Biota& B = lifeOf(S)->bodies[bi];
+                auto kinPage = [&](int& rows, int& headed, int& notRead) {
+                    rows = headed = notRead = 0;
+                    g.openScreen(GameState::CATALOGUE);
+                    pressKey(g, in, KEY_TAB);
+                    uint64_t head = 0; bool unreadHead = false;
+                    for (const CatalogueRow& r : g.testCat().rows) {
+                        if (r.head) { head = r.genesis; unreadHead = r.line == "NOT YET SEQUENCED"; continue; }
+                        if (r.kind != CR_ANIMAL) continue;
+                        rows++;
+                        headed += head != 0 && head == B.genesis.id;
+                        notRead += unreadHead;
+                    }
+                    pressKey(g, in, KEY_TAB);   // (by world again)
+                    g.closeScreen();
+                };
+                kinPage(kinRows, headedFirst, unread);
+                for (const Microbe& m : B.species)   // the world's first species of its own genesis, read
+                    if (m.genesis == B.genesis.id && m.state == SS_LIVING) {
+                        g.guide.microbes[world + "/M" + std::to_string(m.index)].seen |= SEEN_FORM | SEEN_KIN;
+                        break;
+                    }
+                kinPage(rowsRead, underHead, unreadAfter);
+                g.openScreen(GameState::CATALOGUE);
+                // each animal's sheet: Enter on its row, a frame, the picture's pixels
+                for (int k = 0; k < (int)g.testCat().rows.size(); k++) {
+                    const CatalogueRow& r = g.testCat().rows[k];
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    worldRows++;
+                    g.testCat().sel = k; g.testCat().page = 1;
+                    g.frame(in, 1.0 / 30); in.newFrame();
+                    sheets++;
+                    const int px = g.testCat().animalPx;
+                    drawn += px > 0;
+                    fewest = std::min(fewest, px);
+                    g.testCat().page = 0;
+                }
+                g.closeScreen();
+            }
+            {   // the line not yet let go: the guide's clock back to its seeding's
+                TestGame p;
+                seedRecordGame(p, rc, "unit_b500_before");
+                p.testClockSkip(-rc.end);
+                p.guide.animals = g.guide.animals;
+                p.openScreen(GameState::CATALOGUE);
+                for (const CatalogueRow& r : p.testCat().rows) {
+                    if (r.head || r.kind != CR_ANIMAL) continue;
+                    const std::string l = p.testCatLine(r);
+                    before += l.find(" - GONE") != std::string::npos || l.find(" - DYING") != std::string::npos || l.find(" - CHANGED") != std::string::npos;
+                }
+                p.closeScreen();
+                remove(p.guidePath.c_str());
+            }
+            remove(g.guidePath.c_str());
+        }
+        check("incubator: the catalogue's animals: their fates as the world's record holds them, by kin too, each drawn on its sheet (B-500)",
+              found && seen >= 3 && marked > 0 && before == 0 && kinRows == seen && unread == seen && headedFirst == 0 && rowsRead == seen && underHead == seen &&
+                  unreadAfter == 0 && worldRows == seen && sheets == seen && drawn == seen,
+              fmt("%s; %d animals seen, none marked on the ground: by world %d read a fate (%s), %d with the line not yet let go; by kin %d rows, %d with "
+                  "those not yet sequenced (%d under its genesis); one of its species read: %d rows, %d under its world's genesis (%d not); %d sheets, %d "
+                  "drawn (the fewest pixels %d)",
+                  found ? "seed record's world" : "NO WORLD", seen, marked, example.empty() ? "none" : example.c_str(), before, kinRows, unread, headedFirst,
+                  rowsRead, underHead, unreadAfter, sheets, drawn, fewest == (1 << 30) ? 0 : fewest));
+    }
+    remove(GUIDE);   // (the group's guide, removed after it)
+}

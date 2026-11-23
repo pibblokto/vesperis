@@ -1,5 +1,6 @@
 // TestGame's hooks defined out of line (test_game.h declares them; the game's own files keep none)
 #include "harness/test_game.h"
+#include "game/autoexplore_internal.h"   // Z-07: an outing planned (`testAutoWater`)
 #include "game/ui.h"
 #include "core/fs.h"
 #include "core/noise.h"
@@ -131,14 +132,14 @@ int TestGame::testLandableBody() const {
     return -1;
 }
 
-void TestGame::testParkAt(const Star& s, int body, bool waitMap) {
+void TestGame::testParkAt(const Star& s, int body, bool waitMap, bool nightSide) {
     arriveAtStar(s, Vec3(0, 0, -1));
     if (body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
     Vec3 bp = sys.bodyPos(body, t);
     Vec3 toStar = normalize(sys.star.pos - bp);
     Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
-    ship.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0));
+    ship.parkDir = normalize(toStar * (nightSide ? -0.7 : 0.7) + side * 0.7 + Vec3(0, 0.2, 0));
     ship.parkDist = parkDistanceFor(b);
     ship.parkedBody = body; ship.localTarget = body; ship.mode = ShipState::PARKED;
     ship.pos = bp + ship.parkDir * ship.parkDist;
@@ -155,6 +156,18 @@ void TestGame::testWaitMap() { testWaitMapOf(landBody); }
 void TestGame::testWaitMapOf(int bi) {   // a wait on the map's thread, not one of the game's blocking calls (`mapStats.blocked` counts the game's)
     if (bi < 0 || bi >= (int)sys.bodies.size()) return;
     while (!spaceR.mapIfReady(sys.bodies[bi])) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}
+
+// KI-446 (J-16): a body drawn before its map is made is drawn flat, so a scene that shot a frame soon after reaching a place drew its globes
+// whole or flat by how fast their threads ran (the radar's lock over the home world, a drifter's disc, a giant's clouds from the probe).
+// This makes every map of the system at one instant, for the season the next frame draws (set first: a map made at another season is
+// made again by the frame's own `setSeason`, B-438), the cache held large enough for all of them
+void TestGame::testWaitMaps() {
+    if (!sys.valid) return;
+    spaceR.mapCacheCap = std::max(spaceR.mapCacheCap, (int)sys.bodies.size() + 1);
+    spaceR.setSeason(sys, t);
+    for (const Body& b : sys.bodies)
+        if (b.type != PT_COMPANION) while (!spaceR.mapIfReady(b)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 std::string TestGame::testBeltDraw() const {
@@ -536,7 +549,7 @@ int TestGame::testDronesWorldItems(int kind, bool unheld) {
 }
 
 std::string TestGame::testDronesInfo() const {
-    std::string s = fmt("the bay: clock %.1f, %s%s, cooldown %.0f s; ", bay.clock, bay.out ? "out" : (droneBayReady() ? "ready" : "charging"), bay.planned ? ", planned" : "", droneCooldownLeft());
+    std::string s = fmt("the bay: clock %.1f, %s%s; ", bay.clock, bay.out ? "out" : "ready", bay.planned ? ", planned" : "");
     if (bay.worldValid)
         s += fmt("the world's items %d (%d places, homes %s, read in %.0f ms); ", (int)bay.world.items.size(), (int)bay.world.places.size(), bay.world.homes ? "yes" : "no", bay.world.buildMs);
     for (int k = 0; k < DRONE_COUNT; k++) {
@@ -600,8 +613,8 @@ int TestGame::testPlayerItems() { playerBuildList(); return (int)player.items.si
 std::string TestGame::testPlayerItemLine(int i) const {
     if (i < 0 || i >= (int)player.items.size()) return std::string();
     const PlayerItem& it = player.items[i];
-    bool foreign = false; const std::string* nm = it.music ? shardNameOf(playerItemKey(it), foreign) : nullptr;
-    return fmt("%s %s%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.music ? "music" : "a recording", it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(),
+    bool foreign = false; const std::string* nm = shardNameOf(playerItemKey(it), foreign);
+    return fmt("%s music%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(),
             it.seconds > 0 ? fmt(", %.1f s", it.seconds).c_str() : "");
 }
 bool TestGame::testPlayerPlay(int item) { if (player.items.empty()) playerBuildList(); if (item < 0 || item >= (int)player.items.size()) return false; playerPlay(item); return true; }
@@ -609,8 +622,7 @@ std::string TestGame::testPlayerInfo() const {
     if (player.playing < 0) return fmt("the player: nothing plays (%d items, %d played to their end)", (int)player.items.size(), player.finished);
     return fmt("the player: item %d '%s - %s', %.1f of %.1f s%s%s%s; the synth's piece %s, speech %s, medium %d; %d played to their end", player.playing, player.title.c_str(), player.people.c_str(),
             player.t, player.secs, player.paused ? ", paused" : "", player.held ? ", held" : "", player.waiting ? ", waiting for its world" : "",
-            audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech == &player.world.speech ? "the player's" : (audio.speech ? "another's" : "none"),
-            audio.medium, player.finished);
+            audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech ? "another's" : "none", audio.medium, player.finished);
 }
 
 std::string TestGame::testAutoInfo() const {
@@ -619,9 +631,32 @@ std::string TestGame::testAutoInfo() const {
                ax.records, ax.outings, ax.steps, ax.timeouts, ax.unsticks);
 }
 
+bool TestGame::testAutoWater() {
+    ax.groundBegun = true; ax.groundUntil = ax.clock + 600; ax.outingsLeft = 0;
+    ax.plan.clear(); ax.stepT = 0; ax.stepFirst = true;
+    return autoPlanOuting(AO_WATER);
+}
+
+bool TestGame::testNearWater(double withinM, double& x, double& z) {
+    const Player& p = surf.player;
+    auto dry = [&](double px, double pz) { return surf.site.waterNowAt(px, pz) < surf.site.groundHeight(px, pz) - 0.05; };
+    for (double R = 40; R <= withinM; R += 40)
+        for (int k = 0; k < 24; k++) {
+            const double a = k * TAU / 24, wx = p.x + std::sin(a) * R, wz = p.z + std::cos(a) * R;
+            if (surf.site.waterNowAt(wx, wz) < surf.site.groundHeight(wx, wz) + 0.3) continue;
+            for (double s = 4; s < R; s += 4)
+                if (dry(wx - std::sin(a) * s, wz - std::cos(a) * s)) {
+                    const double back = std::min(R, s + 80);
+                    x = wx - std::sin(a) * back; z = wz - std::cos(a) * back;
+                    return true;
+                }
+        }
+    return false;
+}
+
 int TestGame::testAutoCount(int what) const {
-    const int v[8] = {ax.stars, ax.bodies, ax.landings, ax.probes, ax.records, ax.outings, ax.timeouts, ax.unsticks};
-    return what >= 0 && what < 8 ? v[what] : -1;
+    const int v[9] = {ax.stars, ax.bodies, ax.landings, ax.probes, ax.records, ax.outings, ax.timeouts, ax.unsticks, ax.samples};
+    return what >= 0 && what < 9 ? v[what] : -1;
 }
 
 Vec3 TestGame::testViewDir() const {
@@ -848,14 +883,17 @@ std::string TestGame::testFrontInfo() const {
                e.frontCloud, e.cloudPattern, e.frontRain, e.frontCold, e.windKnots, compassName(e.windDir), e.temperatureC, e.fogDistance);
 }
 
-// R-404: the computers with a colour of their own and the smallest distance between two of them (nothing faced and the cage,
-// with no screen, left out)
-int TestGame::testScreenColours(double& minDist) const {
+// R-404: the computers with a colour of their own (the devices' rows but nothing faced and the cage, with no screen), the banks they
+// take between them, and the smallest distance between two colours
+int TestGame::testScreenColours(double& minDist, int& banks) const {
     minDist = 9; int n = 0;
+    bool used[SHIP_HOMES] = {};   // Z-06: a device's home may be past the banks (46, 47)
+    banks = 0;
     const RowList<CabinDevice>& d = cabinDevices();
     for (int i = 1; i < d.count; i++) {
         if (d.row[i].bank == BANK_LIGHT) continue;
         n++;
+        if (!used[d.row[i].bank]) { used[d.row[i].bank] = true; banks++; }
         for (int j = i + 1; j < d.count; j++) {
             if (d.row[j].bank == BANK_LIGHT) continue;
             const RGB &a = d.row[i].col, &b = d.row[j].col;
@@ -913,14 +951,31 @@ std::string TestGame::testSelection() const {
         case GameState::CONSOLE: return fmt("'%s', %d lines", consoleInput.c_str(), (int)consoleLines.size());
         case GameState::SECTOR_MAP: return fmt("zoom %d", sectorZoom);
         case GameState::KEYS: return fmt("page %d row %d%s", keysPage, keysPage == 1 ? padUI.screenSel : keysSel, keysCapture || padUI.capture >= 0 ? " capturing" : "");
-        case GameState::SHARDS:
-            return fmt("level %d top %d page %d row %d", shardsLevel, shardsTop, shardsPage, shardsLevel > 0 ? shardSel : (shardsTop == 1 ? player.sel : shardWorldSel));
+        case GameState::SHARDS: return fmt("level %d page %d row %d", shardsLevel, shardsPage, shardsLevel > 0 ? shardSel : shardWorldSel);
         case GameState::ALMANAC: return fmt("row %d free %d", almanacSel, almanacFree);
         case GameState::PROBE: return fmt("clock %.2f%s", probe.clock, probe.endClock >= 0 ? " ended" : "");
         case GameState::RECORDING: return fmt("clock %.2f %s", replay.clock, replay.playing ? "playing" : "paused");
         case GameState::INSTRUMENTS: return fmt("level %d folder %d item %d", icase.level, icase.worldSel, icase.sel);
         case GameState::DRONES: return fmt("top %d", bay.listTop);
         case GameState::AUTO: return fmt("row %d", autoSel);
+        case GameState::MICROSCOPE:   // Z-04: the lists (R-432: the tab, the folder, its row), or the slide: its way and magnification, a cell tracked, the sheet up
+            return scope.page == 0 ? fmt("%s folder %d%s%s", scope.tab ? "cultures" : "vials", scope.folder, scope.open ? fmt(" row %d", scope.sel).c_str() : "",
+                                         scope.moving ? (scope.copying ? " copying" : " moving") : "")
+                                   : fmt("%s %d %s x%.0f focus %.1f%s%s%s, %d events, %d kept", scope.flask >= 0 ? "flask" : (scope.kept >= 0 ? "kept" : "vial"),
+                                         scope.flask >= 0 ? scope.flask : (scope.kept >= 0 ? scope.kept : scope.vial),
+                                         SEEING_NAMES[scope.seeing], microscopeMag(), scope.focus, scope.tracking ? " tracking" : "", scope.sheet ? " sheet" : "",
+                                         keep.open ? " keeping" : "", (int)scope.events.size(), (int)lab.kept.size());   // R-440: K's folders, the collection
+        case GameState::INCUBATOR:   // Z-05: the flask and the medium's field, the chooser's row; R-440 to R-442: its tab, N's and K's rows,
+            // K's folders, the collection
+            if (keep.open) return fmt("keeping row %d, %d kept", keep.sel, (int)lab.kept.size());
+            if (incub.pick) return fmt("picking %s row %d of %d", incub.pick == PICK_NAME ? "a name" : "a copy", incub.pickSel, (int)incub.pickLines.size());
+            return incub.choosing ? fmt("choosing tab %d folder %d of %d%s", incub.pages.tab, incub.pages.folder, (int)incub.pages.folders.size(),
+                                        incub.pages.open ? fmt(" row %d", incub.choiceSel).c_str() : "")
+                                  : fmt("flask %d field %d, %d in it, %d kept", incub.sel, incub.field, lab.flasks[incub.sel].n, (int)lab.kept.size());
+        case GameState::CATALOGUE:   // Z-07: its order, the row chosen; on a sheet its way of seeing
+            return cat.page == 1 ? fmt("%s row %d of %d, its sheet in %s", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size(), SEEING_NAMES[cat.seeing])
+                                 : fmt("%s row %d of %d", cat.order ? "kin" : "world", cat.sel, (int)cat.rows.size());
+        case GameState::PLAYER: return fmt("level %d world %d of %d item %d", player.level, player.worldSel, (int)player.worldFirst.size(), player.sel);   // R-431
         default: break;
     }
     return "?";

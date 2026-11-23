@@ -12,13 +12,28 @@ fp_bodies | $V fingerprint bodies | shots/tests/fingerprint_bodies.txt=1 |
 fp_stream | $V fingerprint stream | shots/tests/fingerprint_stream.txt=1 | 
 fp_peoples | $V fingerprint peoples | shots/tests/fingerprint_peoples.txt=1 | 
 fp_modules | $V fingerprint modules | shots/tests/fingerprint_modules.txt=1 | 
+fp_life | $V fingerprint life | shots/tests/fingerprint_life.txt=1 | 
 salt | $V salt scan |  | 
+life | $V life list 24; $V life survey 1500; $V life kin 200; $V life search all; $V life kit; $V life made 100; $V life auto; $V life sight | shots/tests/life_kit_*.png=4 shots/tests/life_auto_*.png=2 shots/tests/life_sight_*.png=4 | mask=\(\d+(?:\.\d+)?\ss\)
+life_look | $V life plates 4; $V life strips; $V life distinct; $V life forms | shots/tests/life_*.png=60 | mask=\(\d+(?:\.\d+)?\ss\)
+lab | $V lab microscope; $V lab cultures; $V lab tree; $V lab catalogue; $V lab genes | shots/tests/lab_microscope_*.png=20 shots/tests/lab_cultures*.png=3 shots/tests/lab_sequencer.png=1 shots/tests/lab_tree.png=1 shots/tests/lab_watermark.png=1 shots/tests/lab_catalogue.png=1 shots/tests/lab_life.png=1 shots/tests/lab_catalogue_gallery/*.png=1 shots/tests/lab_genes*.png=3 | mask=\(\d+(?:\.\d+)?\ss\)
+seed | $V seed test | shots/tests/seed_test_*.png=15 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_worlds | $V seed worlds; $V seed sea | shots/tests/seed_sea_*.png=10 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_air | $V seed climate; $V seed traits | shots/tests/made_*.png=54 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_looks | $V seed looks | shots/tests/look_*.png=168 shots/tests/seed_*.txt=2 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_fates | $V seed fates | shots/tests/fates/*.png=79 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_kinds | $V seed kinds | shots/tests/kinds/*.png=40 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_record | $V seed record | shots/tests/record/*.png=7 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_cold | $V seed cold | shots/tests/cold/*.png=6 | twice mask=\(\d+(?:\.\d+)?\ss\)
+seed_clouds | $V seed clouds | shots/tests/clouds/*.png=9 | twice mask=\(\d+(?:\.\d+)?\ss\)
+overgrowth | $V overgrowth plates; $V overgrowth world; $V overgrowth ruins | shots/tests/overgrowth/type_*.png=10 shots/tests/overgrowth/variant_*.png=40 shots/tests/overgrowth/types.png=1 shots/tests/overgrowth/variants.png=1 shots/tests/overgrowth/world_*.png=13 shots/tests/overgrowth/ruins_*.png=16 shots/tests/overgrowth_guide.txt=1 shots/tests/overgrowth_save_auto.txt=1 | twice mask=\(\d+(?:\.\d+)?\ss\)
+bestiary | $V bestiary; $V bestiary plates 64; $V bestiary ways | shots/tests/plates/plate_*.png=64 shots/tests/plates/herd_*.png=64 shots/tests/plates/plates.png=1 shots/tests/ways/ways_*.png=15 shots/tests/ways/gaits.png=1 | twice
 regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 screens | $V screens | shots/tests/screens/*.png=96 | 
-scenes | for s in $($V scene list); do $V scene $s; done | shots/tests/scene_*.png=111 shots/tests/scene_*.wav=3 | 
+scenes | for s in $($V scene list); do $V scene $s; done | shots/tests/scene_*.png=123 shots/tests/scene_*.wav=3 | 
 scenes_4x | for s in rogue_lamp rogue_embers rogue_frozen_air dark_ocean; do $V scene $s 4; done | shots/tests/*.png=5 | 
-sweeps | for m in surface maps space landmaps consistency traits; do $V $m; done | shots/tests/*.png=504 | 
+sweeps | for m in surface maps space landmaps consistency traits; do $V $m; done | shots/tests/*.png=505 | 
 datasheet | $V datasheet 6 | shots/tests/datasheet_*.png=24 | 
 signals | $V signals; $V signals wav | shots/tests/radar_*.wav=59 | 
 rogues | $V rogues heard; $V rogues voices; $V rogues dark | shots/tests/*.png=16 shots/tests/*.wav=14 | 
@@ -27,14 +42,15 @@ music | $V music ages wav | shots/tests/*.wav=21 |
 voice | $V voice 151 25 1 wav | shots/tests/*.wav=1 | 
 media | $V decoder wav | shots/tests/*.wav=30 | 
 instruments | $V instruments wav | shots/tests/*.wav=19 | 
-sounds | $V sounds | shots/tests/*.wav=9 | 
+sounds | $V sounds | shots/tests/*.wav=15 | 
 tape | $V tape | shots/tests/*.png=7 shots/tests/*.wav=12 | 
-probe | $V probe wav | shots/tests/*.png=15 shots/tests/*.wav=15 shots/*.png=1 | 
+probe | $V probe wav | shots/tests/*.png=15 shots/tests/*.wav=15 shots/*.png=0 shots/tests/game_shots/*.png=1 | 
 audio | $V audio | shots/tests/audio_test.wav=1 | 
 almanac | $V almanac; $V showers |  | 
 climate | $V climate |  | 
 settings | $V settings | shots/tests/*.txt=2 | 
 input | $V input | shots/tests/*.png=15 shots/tests/*.txt=8 | twice
-unit | $V unit | shots/tests/*.png=47 shots/tests/*.txt=15 shots/*.png=2 | twice noise=tests/unit_r408_*.png noise=tests/unit_b412_*.png noise=tests/unit_t03_scan.png noise=tests/test_save_auto.txt mask=\(the\sworst\s\d+\) mask=\(\d+(?:\.\d+)?\sat\smost\) mask=\d+(?:\.\d+)?\sfresh mask=steps\s\d+\s\(window\s\d+\),\sthe\sfastest\sturn\s\d+\sdeg/s mask=\(\d+(?:\.\d+)?\ss\sto\sfind\) mask=,\s\d+(?:\.\d+)?\ss$ mask=\d+(?:\.\d+)?\ss\sin\sall mask=checks\s\d+(?:\.\d+)?\ss\) mask=slowest\slaid\sout\s[^;]* mask=\(the\sslowest\s[^)]*\)
-flow | $V flow | shots/tests/*.png=164 shots/tests/test_gallery/*.png=3 | twice
-tour | $V tour | shots/tests/tour/*.png=410 shots/tests/tour/*.txt=81 shots/tests/tour/*/*.png=4 shots/tests/tour/*/*.txt=4 | twice
+unit | $V unit | shots/tests/*.png=47 shots/tests/*.txt=19 shots/*.png=0 shots/tests/game_shots/*.png=2 | twice noise=tests/unit_r408_*.png noise=tests/unit_b412_*.png noise=tests/unit_t03_scan.png noise=tests/test_save_auto.txt mask=\(the\sworst\s\d+\) mask=\(\d+(?:\.\d+)?\sat\smost\) mask=\d+(?:\.\d+)?\sfresh mask=steps\s\d+\s\(window\s\d+\),\sthe\sfastest\sturn\s\d+\sdeg/s mask=\(\d+(?:\.\d+)?\ss\sto\sfind\) mask=,\s\d+(?:\.\d+)?\ss$ mask=\d+(?:\.\d+)?\ss\sin\sall mask=checks\s\d+(?:\.\d+)?\ss\) mask=slowest\slaid\sout\s[^;]* mask=\(the\sslowest\s[^)]*\)
+flow | $V flow | shots/tests/*.png=197 shots/tests/test_gallery/*.png=3 | twice
+tour | $V tour | shots/tests/tour/*.png=512 shots/tests/tour/*.txt=94 shots/tests/tour/*/*.png=4 shots/tests/tour/*/*.txt=4 | twice
+ship | $V ship rooms; $V ship walk; $V ship light; $V ship life | shots/tests/ship/*.png=98 shots/tests/ship_life_gallery/*.png=12 | mask=\d+\.\d+\sms

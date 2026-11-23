@@ -41,6 +41,11 @@ int matFamilyOn(int type, int material) {
     return matFamily(material);
 }
 
+int matFamilyOnGen(const BodyGen& g, int material) {
+    if (material == MAT_ICE && g.made.on() && g.made.deadCover() == DC_FROZEN) return FAM_GRASS;
+    return matFamilyOn(g.type, material);
+}
+
 int familyRep(int type, int family) {
     const KindDef& K = KINDS[type];
     if (family == FAM_GRASS && K.accent[0] >= 0) return K.accent[0];
@@ -83,6 +88,9 @@ static void materialPalette(BodyGen& g) {
     m[MAT_STROMATOLITE] = lerp(RGB(0.58f, 0.54f, 0.40f), base, 0.2f);
     m[MAT_CRUST] = RGB(0.78f, 0.45f, 0.14f);
     m[MAT_MOSS] = RGB(0.30f, 0.40f, 0.15f);
+    m[MAT_TISSUE] = RGB(0.62f, 0.30f, 0.32f);   // J-09: an overgrowth's (its layer gives its own colour: `madeMatColour`)
+    m[MAT_THREADS] = RGB(0.86f, 0.84f, 0.78f);
+    m[MAT_HARD] = RGB(0.82f, 0.78f, 0.70f);
     for (int i = 0; i < K.nPalette; i++) {
         const MatMix& x = K.palette[i];
         switch (x.mode) {
@@ -220,6 +228,20 @@ int darkTraitsOf(const Body& b, int* out) {
     return n;
 }
 
+int snowAlgaeSlot(const Body& b, const BodyGen& g) {
+    if (b.drifter || b.wanderer || !KINDS[b.type].landable || !(shapesOf(b) & KS_SNOW_ALGAE)) return -1;
+    const bool home = b.starKnown && b.starSx == HOME_SX && b.starSy == HOME_SY && b.starSz == HOME_SZ && b.parent < 0 && b.type == PT_FELISIAN;
+    if (home || peoplesHash(b.type, b.seed)) return -1;
+    if (climateTempC(g, 50, 0, 0, 0) - (g.hasTrait(TR_SNOWBALL) ? 6.0 : 0.0) >= SNOW_ALGAE_COLD_C) return -1;
+    int free = -1;
+    for (int j = 3; j < TRAIT_SLOTS; j++) {
+        const int t = g.traits[j];
+        if (t == TR_SNOW_ALGAE || !t) { if (free < 0) free = j; continue; }
+        if (TRAITS[t].kind == TK_LIFE) return -1;
+    }
+    return free;
+}
+
 static bool traitFits(const Body& b, const BodyGen& g, int t) {
     switch (t) {
         case TR_GREAT_TIDES: return b.tideForcingM >= TIDE_FORCING_MIN;
@@ -238,11 +260,12 @@ BodyGen BodyGen::make(const Body& b, double season) {
     g.R = b.radiusKm;
     g.season = K.cover != DC_NONE ? 0.0 : season;   // P-04: a dead world's ground keeps no season (its climate is its then-world's)
     g.starSx = b.starSx; g.starSy = b.starSy; g.starSz = b.starSz; g.starKnown = b.starKnown; g.bodyIndex = b.index;
+    g.hasAir = bodyHasAir(b);   // J-02: what the site, the globe and the maps read (an air fallen as snow in the dark is none)
     // a living world's air keeps it 33 degrees over its equilibrium temperature (Earth's greenhouse), so an Earth-like
     // orbit gives an Earth-like climate; without it two thirds of the felisian land was ice sheet (`vesperis_test encounters`).
     // a dead world's the climate it had in its people's time (`Body::thenTempK`), its present's mean apart
     g.tempBias = ((b.thenTempK > 0 ? b.thenTempK : b.tempK) + K.greenhouseK - 288.0) * 0.3;
-    if (K.cover != DC_NONE) g.nowTempC = (b.tempK - 273.15) * 0.75 + K.tempOffset;
+    if (K.cover != DC_NONE) g.nowTempC = (b.tempK - 273.15) * 0.75 + g.airWarmthC();   // (J-02: the kind's, through the generator)
     Rng rng(b.seed ^ 0xB0D7ULL);
     g.sA = rng.next(); g.sB = rng.next(); g.sC = rng.next(); g.sD = rng.next(); g.sE = rng.next(); g.sF = rng.next();
     g.sG = rng.next();
@@ -390,6 +413,9 @@ BodyGen BodyGen::make(const Body& b, double season) {
                 }
                 if (n > 0) g.traits[3 + nOwn + got++] = elig[(int)(nu(10 + order[i]) * n) % n];
             }
+            // Z-03: red snow, by its own hash after the draw (no draw moves: a world it comes to keeps its other traits)
+            const int snow = snowAlgaeSlot(b, g);
+            if (snow >= 0 && unitFromHash(mix64(b.seed ^ SALT_SNOW_ALGAE)) < SNOW_ALGAE_SHARE) g.traits[snow] = TR_SNOW_ALGAE;
         }
         for (int k = 0; k < TRAIT_SLOTS; k++) switch (g.traits[k]) {
             case TR_ARCHIPELAGO: g.seaLevel += 0.3; g.islandDensity = std::max(g.islandDensity, 0.5); break;   // a kind's own islands may be more
@@ -486,4 +512,21 @@ double climateTempC(const BodyGen& g, double absLatDeg, double heightM, double w
     // terminator world's)
     if (g.locked) T += g.subContrast * sub - 6.0 + 0.35 * absLatDeg;
     return T;
+}
+
+// (moved from `SurfaceView::placeMeanC` in J-03, each expression as it was: the site's generator, its air and its unit at the place)
+double placeMeanC(const BodyGen& g, double bodyTempK, bool sunless, const Vec3& u, double h) {
+    const KindDef& K = KINDS[g.type];
+    const double absLat = std::fabs(std::asin(clampd(u.z, -1, 1))) / DEG;
+    if (sunless) return bodyTempK - 273.15 - (g.hasAir ? 6.5 * h / 1000.0 : 0.0);
+    const double sinAlt = g.locked ? dot(u, g.lockedDir) : 0.0;
+    double base = bodyTempK - 273.15;
+    if (livingGround(g.type)) base = climateTempC(g, absLat, h, 0, sinAlt) - 3 + K.daySwing * sinAlt;
+    else if (g.hasAir && K.reachClimate && g.locked) base = g.airWarmthC() + K.tempSwing * (sinAlt - std::cos(g.seaReachDeg * DEG));
+    else if (g.hasAir) base = base * 0.75 + g.airWarmthC() + K.tempSwing * sinAlt - 0.4 * absLat;   // (J-02: the greenhouse through the generator)
+    else base = base * 1.3 - 60 + (g.locked ? (sinAlt > 0 ? 110 * sinAlt : -70) : 35 * std::cos(absLat * DEG) - 35) - 0.5 * absLat;
+    if (!livingGround(g.type)) base -= 6.5 * (h / 1000.0);
+    base += K.tempAdd;
+    if (K.nightSideC > -1e8 && g.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);
+    return std::max(base, -270.0);
 }

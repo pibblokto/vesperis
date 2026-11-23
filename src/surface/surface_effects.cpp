@@ -458,6 +458,179 @@ void SurfaceView::drawStreetLamps(Framebuffer& fb) {
     }
 }
 
+// J-04: a seeded world's made air near the explorer. A dyed rain's puddles: on a grid of 7 m within 40 m, a share of the cells on flat open
+// ground holds one, a flat ragged disc a metre or three across a few centimetres over the ground, in the dyed waters' bank (`tintBankMade`),
+// lighter where the sky lights it. Spores in the air by day: motes drifting downwind and sinking slowly round the eye, in the coloured clouds'
+// bank (23, set by `setupPalette`)
+void SurfaceView::drawMadeAir(Framebuffer& fb, double t) {
+    const MadeWorld& m = site.gen.made;
+    const int pb = madeRainBank >= 0 ? madeRainBank : (madeCloudBank ? 23 : -1);   // (KI-459: its own bank, else the dyed clouds')
+    if (m.rainTintK > 0 && pb >= 0 && !inDrone) {
+        const double cell = 7.0;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        RasterParams rp; rp.bank = pb; rp.zbias = 1.0;
+        for (int dz = -6; dz <= 6; dz++)
+            for (int dx = -6; dx <= 6; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0xB100DULL);
+                if (hash01(h) > 0.22 * m.rainTintK) continue;
+                const double px = (c0x + dx + 0.15 + 0.7 * hash01(mix64(h + 1))) * cell, pz = (c0z + dz + 0.15 + 0.7 * hash01(mix64(h + 2))) * cell;
+                const double dist = std::hypot(px - camPos.x, pz - camPos.z);
+                if (dist > 40) continue;
+                const int mat = site.lod0.at((int)std::floor(px / 16), (int)std::floor(pz / 16)).material;
+                if (mat == MAT_WATER || mat == MAT_ICE || mat == MAT_SNOW || mat == MAT_LAVA || mat == MAT_FOREST) continue;
+                const double gy = site.groundHeight(px, pz);
+                if (gy < site.waterAt(px, pz) + 0.2) continue;
+                const double slope = std::fabs(site.groundHeight(px + 1.5, pz) - site.groundHeight(px - 1.5, pz)) + std::fabs(site.groundHeight(px, pz + 1.5) - site.groundHeight(px, pz - 1.5));
+                if (slope > 0.25) continue;
+                const double rad = (0.5 + 1.0 * hash01(mix64(h + 3))) * (0.6 + 0.4 * m.rainTintK);
+                RVert q[10];
+                bool ok = true;
+                for (int k = 0; k < 10 && ok; k++) {
+                    const double a = k * TAU / 10, rr = rad * (0.75 + 0.25 * hash01(mix64(h + 10 + k)));
+                    const double qx = px + std::cos(a) * rr, qz = pz + std::sin(a) * rr;
+                    const Vec3 v = toView(qx, site.groundHeight(qx, qz) + 0.05, qz);
+                    if (v.z < NEAR_Z) ok = false;
+                    q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = 30 + 14 * env.skyBrightness + 6 * (k == 2 || k == 3);
+                }
+                if (ok) rasterPolygon(fb, q, 10, rp, proj);
+            }
+    }
+    if (m.spores > 0 && madeCloudBank && env.skyBrightness > 0.35) {
+        Rng r(0x5B0E5EEDULL);
+        const int n = (int)(320 * m.spores);
+        const double wx = std::sin(env.windDir), wz = std::cos(env.windDir), drift = 0.25 + 0.06 * env.windKnots;
+        for (int i = 0; i < n; i++) {
+            const double bx = r.range(-14, 14), bz = r.range(-14, 14), by = r.range(-2, 9), ph = r.uni();
+            // each mote's place in a box round the eye that wraps as it drifts downwind and sinks (the box follows the eye)
+            const double ox = std::fmod(bx + wx * drift * t + 2.0 * std::sin(t * 0.3 + 7 * ph) + 1400, 28.0) - 14, oz = std::fmod(bz + wz * drift * t + 2.0 * std::cos(t * 0.27 + 5 * ph) + 1400, 28.0) - 14;
+            const double oy = std::fmod(by - 0.15 * t + 110, 11.0) - 2;
+            const Vec3 v = toView(camPos.x + ox, camPos.y + oy, camPos.z + oz);
+            if (v.z < NEAR_Z) continue;
+            RVert p; p.x = v.x; p.y = v.y; p.z = v.z; p.shade = 46 + 12 * env.skyBrightness * (0.6 + 0.4 * std::sin(t * 1.3 + 9 * ph));
+            rasterPoint3(fb, p, 23, proj, true, v.z < 6 ? 2 : 1);
+        }
+    }
+}
+
+// J-05: a seeded world's made waters and ground near the explorer. A foam's banks along the shores of the waters its line lives in (ragged
+// discs a metre or two across on the water's edge, rocking with the waves, in its bank: `madeFoamBank`, else the snow's white); a boiling
+// sea's bubbles bursting on the water (pale discs that widen and go); a glass sand's glints and a slime's wet sheen where the sun catches a
+// facet (by day); a pitted stone's pits; a dark ice's meltwater pools. Each is drawn only where the made share lies over a half
+void SurfaceView::drawMadeGround(Framebuffer& fb, double t) {
+    const MadeWorld& m = site.gen.made;
+    if (inDrone) return;
+    auto vertexAt = [&](double x, double z) -> const TerrainVertex& { return site.lod0.at((int)std::floor(x / 16), (int)std::floor(z / 16)); };
+    auto disc = [&](double px, double py, double pz, double rad, int n, uint64_t h, int bank, double shade, double zbias) {
+        RVert q[12];
+        for (int k = 0; k < n; k++) {
+            const double a = k * TAU / n, rr = rad * (0.72 + 0.28 * hash01(mix64(h + 10 + k)));
+            const Vec3 v = toView(px + std::cos(a) * rr, py, pz + std::sin(a) * rr);
+            if (v.z < NEAR_Z) return;
+            q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade * (k == 2 || k == 3 ? 1.08 : 1.0);
+        }
+        RasterParams rp; rp.bank = bank; rp.zbias = zbias;
+        rasterPolygon(fb, q, n, rp, proj);
+    };
+    const double day = env.skyBrightness;
+    if (m.foam > 0) {   // the foam's banks on the water's edge: a few lumps a metre or so along it, rocking with the waves
+        const double cell = 3.0;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        const int bank = madeFoamBank >= 0 ? madeFoamBank : 8;
+        for (int dz = -17; dz <= 17; dz++)
+            for (int dx = -17; dx <= 17; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0xF0A3ULL);
+                if (hash01(h) > 0.75 * m.foam) continue;
+                const double px = (c0x + dx + hash01(mix64(h + 1))) * cell, pz = (c0z + dz + hash01(mix64(h + 2))) * cell;
+                if (std::hypot(px - camPos.x, pz - camPos.z) > 50) continue;
+                const TerrainVertex& tv = vertexAt(px, pz);
+                if (tv.material != MAT_WATER || tv.mtint < 128) continue;   // (on its own waters)
+                const double wl = site.waterNowAt(px, pz), gy = site.groundHeight(px, pz);
+                if (wl < -1e8 || gy > wl - 0.02 || gy < wl - 0.8) continue;   // in the shallows
+                bool edge = false;   // dry ground within four metres: the water's edge
+                for (int k = 0; k < 8 && !edge; k++) edge = site.groundHeight(px + 4 * std::cos(k * TAU / 8), pz + 4 * std::sin(k * TAU / 8)) > wl;
+                if (!edge) continue;
+                const double rock = 0.2 * std::sin(t * 0.9 + 6 * hash01(mix64(h + 3)));
+                const int lumps = 3 + (int)(hash01(mix64(h + 4)) * 2.99);
+                for (int k = 0; k < lumps; k++) {
+                    const uint64_t hk = mix64(h + 20 + k);
+                    const double lx = px + rock + (hash01(hk) - 0.5) * 1.6, lz = pz + 0.6 * rock + (hash01(mix64(hk + 1)) - 0.5) * 1.6;
+                    disc(lx, wl + 0.03, lz, (0.2 + 0.5 * hash01(mix64(hk + 2))) * (0.7 + 0.3 * m.foam), 7, hk, bank, (34 + 18 * hash01(mix64(hk + 3))) * (0.5 + 0.5 * day), 1.0);
+                }
+            }
+    }
+    if (m.boil > 0) {   // bubbles bursting on the boiling water: a pale disc that widens and goes, each in its own beat
+        const double cell = 3.0;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        for (int dz = -15; dz <= 15; dz++)
+            for (int dx = -15; dx <= 15; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0xB0115ULL);
+                if (hash01(h) > 0.7 * m.boil) continue;
+                const double px = (c0x + dx + hash01(mix64(h + 1))) * cell, pz = (c0z + dz + hash01(mix64(h + 2))) * cell;
+                if (std::hypot(px - camPos.x, pz - camPos.z) > 45) continue;
+                const double wl = site.waterNowAt(px, pz);
+                if (wl < -1e8 || site.groundHeight(px, pz) > wl - 0.3) continue;
+                const double ph = std::fmod(t * (0.6 + 0.8 * hash01(mix64(h + 3))) + hash01(mix64(h + 4)), 1.0);
+                disc(px, wl + 0.03, pz, 0.15 + 0.85 * ph, 8, h, 2, (62 - 22 * ph) * (0.55 + 0.45 * day), 1.0);   // a dome of foam that widens and goes
+            }
+    }
+    const int landBank = madeBanks[MC_LAND];
+    if ((m.land.kind == MGT_GLASS || m.land.kind == MGT_SLIME) && day > 0.25) {   // a facet or a wet face turned to the sun between it and the eye
+        const bool glass = m.land.kind == MGT_GLASS;
+        const double cell = glass ? 1.6 : 2.4;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        const Vec3 sd = env.sun.dirLocal;
+        for (int dz = -24; dz <= 24; dz++)
+            for (int dx = -24; dx <= 24; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0x61A55ULL);
+                const double px = (c0x + dx + hash01(mix64(h + 1))) * cell, pz = (c0z + dz + hash01(mix64(h + 2))) * cell;
+                const double dist = std::hypot(px - camPos.x, pz - camPos.z);
+                if (dist > (glass ? 38 : 30)) continue;
+                const TerrainVertex& tv = vertexAt(px, pz);
+                if (tv.mtint < 128 || tv.material == MAT_WATER) continue;
+                const double gy = site.groundHeight(px, pz);
+                // its facet's normal, tilted by a hash; lit where it mirrors the sun to the eye
+                const Vec3 n = normalize(Vec3(hash01(mix64(h + 3)) - 0.5, glass ? 1.2 : 2.0, hash01(mix64(h + 4)) - 0.5));
+                const Vec3 toEye = normalize(Vec3(camPos.x - px, camPos.y - gy, camPos.z - pz));
+                const double spec = std::pow(std::max(0.0, dot(normalize(toEye + sd), n)), glass ? 60.0 : 18.0);
+                if (spec < 0.3) continue;
+                const Vec3 v = toView(px, gy + 0.03, pz);
+                if (v.z < NEAR_Z) continue;
+                RVert p; p.x = v.x; p.y = v.y; p.z = v.z; p.shade = 50 + 13 * spec * day;
+                rasterPoint3(fb, p, landBank >= 0 ? landBank : 0, proj, true, dist < 10 ? 2 : 1);
+            }
+    }
+    if (m.land.kind == MGT_PITTED) {   // pits in the stone: small dark hollows on a grid of a metre and a half
+        const double cell = 1.5;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        for (int dz = -17; dz <= 17; dz++)
+            for (int dx = -17; dx <= 17; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0x9177EDULL);
+                if (hash01(h) > 0.6) continue;
+                const double px = (c0x + dx + hash01(mix64(h + 1))) * cell, pz = (c0z + dz + hash01(mix64(h + 2))) * cell;
+                if (std::hypot(px - camPos.x, pz - camPos.z) > 25) continue;
+                const TerrainVertex& tv = vertexAt(px, pz);
+                if (tv.mtint < 128 || (tv.material != MAT_ROCK && tv.material != MAT_BASALT && tv.material != MAT_GRAPHITE && tv.material != MAT_METAL && tv.material != MAT_QUARTZ)) continue;
+                disc(px, site.groundHeight(px, pz) + 0.02, pz, 0.08 + 0.3 * hash01(mix64(h + 3)), 6, h, landBank >= 0 ? landBank : 0, 6 + 8 * day, 1.0);
+            }
+    }
+    if (m.snow.kind == MGT_DARK_ICE) {   // the dark ice's meltwater: pools on the flat ice in the water's bank
+        const double cell = 8.0;
+        const int c0x = (int)std::floor(camPos.x / cell), c0z = (int)std::floor(camPos.z / cell);
+        for (int dz = -7; dz <= 7; dz++)
+            for (int dx = -7; dx <= 7; dx++) {
+                const uint64_t h = hash2i(c0x + dx, c0z + dz, site.gen.seed ^ 0x3E17ULL);
+                if (hash01(h) > 0.3) continue;
+                const double px = (c0x + dx + 0.2 + 0.6 * hash01(mix64(h + 1))) * cell, pz = (c0z + dz + 0.2 + 0.6 * hash01(mix64(h + 2))) * cell;
+                if (std::hypot(px - camPos.x, pz - camPos.z) > 55) continue;
+                const TerrainVertex& tv = vertexAt(px, pz);
+                if (tv.mtint < 128 || (tv.material != MAT_ICE && tv.material != MAT_SNOW)) continue;
+                const double slope = std::fabs(site.groundHeight(px + 2, pz) - site.groundHeight(px - 2, pz)) + std::fabs(site.groundHeight(px, pz + 2) - site.groundHeight(px, pz - 2));
+                if (slope > 0.3) continue;
+                disc(px, site.groundHeight(px, pz) + 0.04, pz, 1.0 + 2.5 * hash01(mix64(h + 3)), 10, h, site.hasWater ? 2 : 8, site.hasWater ? 28 + 16 * day : 14 + 8 * day, 1.0);
+            }
+    }
+}
+
 void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     const uint32_t events = KINDS[site.gen.type].events;   // P-00: the kind's vents and jets
     if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) drawStreetLamps(fb);
@@ -468,6 +641,8 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     // R-307; P-01; P-03; Q-02
     if ((events & (EV_CRACK_VENTS | EV_FUMAROLES | EV_STEAM_BURSTS | EV_SPRINGS)) || site.gen.hasTrait(TR_GEYSERS) || site.gen.hasTrait(TR_HOT_SPRINGS)) drawGeysers(fb, t);
     if (events & EV_SPRINGS) drawSpores(fb, t);
+    if (site.gen.made.rainTintK > 0 || site.gen.made.spores > 0) drawMadeAir(fb, t);   // J-04
+    if (site.gen.made.foam > 0 || site.gen.made.boil > 0 || site.gen.made.land.on || site.gen.made.snow.on) drawMadeGround(fb, t);   // J-05
     // dust devils: a column of dust points spiralling up, leaning with the wind, a skirt at the foot
     for (const DustDevil& d : devils) {
         double dist = std::sqrt((d.x - camPos.x) * (d.x - camPos.x) + (d.z - camPos.z) * (d.z - camPos.z));
@@ -566,6 +741,8 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     // drops live in the world around the camera (KI-017): depth-tested against the terrain, so
     // they never paint over the ground when looking down, and the wind drifts them
     double wx = std::sin(env.windDir) * env.windKnots * 0.03, wz = std::cos(env.windDir) * env.windKnots * 0.03;
+    const int rainBank = site.gen.made.rainTintK > 0 ? (madeRainBank >= 0 ? madeRainBank : (madeCloudBank ? 23 : 1)) : 1;   // J-04: a dyed rain in its waters' bank
+    // (KI-459: else one of its own, else its dyed clouds')
     for (int i = 0; i < n; i++) {
         double x = camPos.x + r.range(-6, 6), z = camPos.z + r.range(-6, 6), y = camPos.y + r.range(-3, 4);
         Vec3 va = toView(x, y, z), vb = toView(x + wx * 0.2, y - 0.5, z + wz * 0.2);
@@ -573,7 +750,7 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
         RVert a, b;
         a.x = va.x; a.y = va.y; a.z = va.z; a.shade = 38 + 10 * env.skyBrightness;
         b.x = vb.x; b.y = vb.y; b.z = vb.z; b.shade = a.shade;
-        rasterLine3(fb, a, b, 1, proj, true, 1);
+        rasterLine3(fb, a, b, rainBank, proj, true, 1);
     }
     // lightning
     if (env.rain > 0.5) {

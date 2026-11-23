@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-42 groups, 406 checks in their order; a group's heading gives its file, its function, the render scale it
+53 groups, 546 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -19,7 +19,7 @@ starts at and its count.
 - noon exposure rule
 - material ramp hits c at 47
 
-## kinds (`unit_kinds.cpp`, `unitKinds`, 1x): 11
+## kinds (`unit_kinds.cpp`, `unitKinds`, 1x): 12
 
 - kinds: 1.3.2's trait eligibility kept
 - kinds: the traits' classes are 1.3.2's split
@@ -30,6 +30,7 @@ starts at and its count.
 - living kinds: from felisian (or thin air) worlds whose day is not their year, round living stars; a young star's alike (P-02)
 - living grounds: each kind's signature on its first world (P-02)
 - locked and deep kinds: from their sources, the locked ones locked and untilted, none half of a double planet (P-03)
+- locked and deep kinds: a chemotroph a cool world warmed from within, its mean under 60 C (B-504)
 - locked and deep kinds: the regress's and the bench's test worlds as drawn (P-03)
 - locked and deep grounds: each kind's signature on its first world (P-03)
 
@@ -60,7 +61,7 @@ starts at and its count.
 - giants: each class's globe (P-07)
 - giants: the probe's, the regress's and home's worlds as drawn (P-07)
 
-## traits (`unit_kinds.cpp`, `unitTraits`, 1x): 14
+## traits (`unit_kinds.cpp`, `unitTraits`, 1x): 15
 
 - traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)
 - traits: the new slots of distinct kinds, eligible, none excluded or moving a people's ground, packed; a fifth with none (Q-01)
@@ -75,6 +76,7 @@ starts at and its count.
 - qualities: the ground's, a stratum's accent, the gypsum's dunes, a petrified forest's trunks, a spring's pool and its terraces, a strewn field heard (Q-02)
 - sounds: each carried, on a world it fits, the dunes' slip faces and the ice there (Q-03)
 - sounds: the ground's within their levels, the dunes at their note, the ice oftener at dusk, a quake through the boots muffled (Q-03)
+- sounds: an overgrowth's (J-10): the squelch's suck rising, the vents at their lips' pace, the wet ones bubbling, the creaks now and then, none airless
 - sounds: each cue where its world has it and nowhere else (Q-03)
 
 ## drifters (`unit_drifters.cpp`, `unitDrifters`, 1x): 18
@@ -98,7 +100,25 @@ starts at and its count.
 - works: a people that lost its sun's works of the end, its last recording in the last shelter alone (D-05)
 - radar: a drifter's beacon, a radio people's last broadcast under its voice, heard (D-05)
 
-## basics (`unit_basics.cpp`, `unitBasics`, 4x): 74
+## life (`unit_life.cpp`, `unitLife`, 1x): 15
+
+- life: a row a kind, every landable kind's habitats and stages (Z-01)
+- life: the same twice and by the workers (Z-01)
+- life: the furnaces sterile, no giant with a biota (Z-01)
+- life: nothing fed by light in the dark or under ice (Z-01)
+- life: a world whose life shows on its ground lives (Z-01)
+- life: something on every landable kind but the furnaces (Z-01)
+- life: a living world's species 3-16, a dead world's spores 1-4 (Z-01)
+- life: a carried spore its living neighbour's, of one genesis (Z-01)
+- life: a system's living worlds of one chemistry, one genesis (Z-01)
+- life: a drifter's life the star's it left (Z-01)
+- life: home's genesis pinned, the ship's species of it (Z-01)
+- life: forms the same twice, none of a world alike (Z-02)
+- life: a slide's frame however reached (Z-02)
+- life: every form within its bounds at every zoom (Z-02)
+- life: a way of seeing's banks its own (Z-02)
+
+## basics (`unit_basics.cpp`, `unitBasics`, 4x): 78
 
 - lat/lon round trip
 - a landable planet found
@@ -148,6 +168,10 @@ starts at and its count.
 - the same globe in a sky shows its limb
 - sky bodies lie beyond the far ring
 - a small body close by lies beyond the far ring too
+- Heilya III-a and III-c found
+- a moon near a globe's size shows wherever the view turns (B-436)
+- a world's season is its own whatever system was drawn between (B-438)
+- a frame's layer under its banks reads as the frame whole (B-437)
 - the mountain review site set up
 - (made by `(std::string("rings meet: ") + names[k]).c_str()`)
 - a grassland herd site set up
@@ -315,9 +339,9 @@ starts at and its count.
 
 - the player: through a flight to a landing (C-11)
 - the player: through a flight to a landing (C-11)
-- the player: lists the pieces, the recordings and what the radar caught (C-11)
+- the player: its own screen at the deck, by world, the worlds' music alone (R-431)
 - the player: held by the decoder's own record, taken up where it was (C-11)
-- the player: a recording the radar caught plays as kept off the air (C-11)
+- the player: a piece the radar caught plays as kept off the air (C-11)
 - the player: plays on through a Vimana flight, stops at a landing (C-11)
 
 ## drones (`modes_drones.cpp`, `droneChecks`, 1x): 4
@@ -473,7 +497,7 @@ starts at and its count.
 - telescope: the plate's cells are the planet function's own numbers
 - telescope: a zoom step begins a finer plate and keeps the last as the fallback
 - telescope: P reads the plate out whole for the photo
-- cabin: the telescope's set on the back wall, E looks through it
+- cabin: the telescope's set in the observatory, E looks through it
 - cabin: every computer in a colour of its own
 - cabin: a glass hull shows the outside, what stands in the room stays solid (B-411)
 - cabin: the light works through a glass hull, and U says the hull is glass (B-411)
@@ -530,7 +554,7 @@ starts at and its count.
 - auto-explore's tape: the cassette deck (R-420)
 - auto-explore's tape: the explorer's folder, else the game's own (R-420)
 
-## states (`unit_navigation.cpp`, `unitStates`, 1x): 6
+## states (`unit_navigation.cpp`, `unitStates`, 1x): 9
 
 - the states' table, the old lists
 - the controller's general page, the old lists
@@ -538,3 +562,152 @@ starts at and its count.
 - the cabin's screens over the scene they open from: after help at the title, and after the ground (B-431)
 - the title keeps the game's place through its help and credits: a save there, and Enter (B-432)
 - a new expedition and a load note the system they put the ship in (B-433)
+- the data sheet's lines within the frame: every body of twelve systems in space, three worlds on their ground (B-496)
+- a record's and an instrument's status as they are taken within the 53 characters of the status line (B-499)
+- a planet of a second sun is a world: its sheet, the telescope, its naming; the second sun's planets; a moon still a moon (B-498)
+
+## ship (`unit_ship.cpp`, `unitShip`, 1x): 16
+
+- ship: every room reachable from the bridge
+- ship: every device in a room and reachable
+- ship: the lift up to the observatory and down to the bridge
+- ship: no collider in an arch
+- ship: the stair's floor continuous from the hangar to the observatory
+- ship: the banks dealt, home first, the farthest dimmed past the pool
+- ship: every view's banks whole
+- ship: no finish or screen dimmed from any view (B-435)
+- ship: nothing dimmed whatever the outside shows (B-437)
+- ship: the lamps' pools and the sun's patches
+- ship: no patch of the sun over an arch, a window or a hole (B-434)
+- ship: life aboard: the garden, the explorer's things
+- ship: a bed grown by the time played, trimmed back by E, kept by the save (R-429)
+- ship: the wall hung by the explorer, kept by the save (R-428)
+- ship: a save keeps the room and the place; the 5 m room's at the bridge's start
+- ship: aboard, the target's bracket where the glass shows it alone (B-501)
+
+## search (`unit_search.cpp`, `unitSearch`, 1x): 5
+
+- search: a sample a pure function of its place (Z-03)
+- search: a sterile world's samples hold nothing alive (Z-03)
+- search: the lamp's ultraviolet absent to the bit when off (Z-03)
+- search: the activity vision as a vial reads, its frame in bank 15, absent to the bit when off (R-434)
+- search: the kit's count, its refusals, the cold store without limit and its lines (Z-03, R-432)
+
+## lab (`unit_lab.cpp`, `unitLab`, 1x): 18
+
+- lab: a slide's frame closed-form in its clock, the same at any thread count (Z-04)
+- lab: a sheet's lines only by what was seen (Z-04)
+- lab: the guide's save byte-stable with its species (Z-04)
+- lab: Backspace on the list empties a vial, a bloom kept in a vial's line (Z-04)
+- lab: the vials by world past the cold store's old 64 places, the choosers by world a row a species (R-432)
+- lab: a culture's state closed-form from its events (Z-05)
+- lab: the lab's save round-trip, an older save's jar line and guide's jarband line dropped (Z-05, R-447)
+- lab: the culture collection: kept as grown, in a folder, on the stage, into a flask, chosen, saved (R-433)
+- lab: the lab's clock runs as the drones' does, in the simulating states (Z-05)
+- lab: two in a flask, the four ways (Z-05)
+- lab: a switched strain in a predator cycle follows its numbers (B-446)
+- lab: a culture at its best is full within five minutes and stays full (R-449)
+- lab: a species' genome a pure function of it and its genesis (Z-06)
+- lab: the distances rank as the lineages: a world's, a system's, a cell's (Z-06)
+- lab: no common ancestor across geneses (Z-06)
+- lab: mirrored species ignore each other in a flask (Z-06)
+- lab: the sequencer told at its reading's end; home's species at the tree's root (Z-06)
+- lab: a friend's sheets lent, in cyan and no count; the record's lines byte-stable (Z-07)
+
+## experiments (`unit_lab_answers.cpp`, `unitLabAnswers`, 1x): 5
+
+- experiments: the stage set to a warmth: a kind still out of its range moves in it, at its warmth's pace, stressed past its top, still in the cold (R-438)
+- experiments: every cell within its reach answers: into the light, to the food; the dark's flee the light; lit light-feeders draw the eaters (R-438)
+- experiments: the microscope's keys: the magnet's three presses, the food rinsed, the stage's warmth typed and kept; what answers told and kept (R-436, R-437)
+- experiments: the incubator's warmth typed: set as one change, refused past its cell's range, kept by Esc, below zero (R-435)
+- experiments: a culture grown on its partner kept with it: staged and put in together, saved, the pair kept once; alone on the stage its cells live (B-441)
+
+## incubator (`unit_lab_incubator.cpp`, `unitLabIncubator`, 1x): 7
+
+- incubator: a vial's organisms told apart by their looks: the incubator's chooser, the sequencer's, a flask's rows (B-442)
+- incubator: the tree's leaves and the sequencer in looks: none UNNAMED, none of a world alike; its title, kin and log (B-443)
+- incubator: N names a flask's organism: of two the one chosen, of one at once; its rows say the name (R-442)
+- incubator: the choosers' two tabs: the vials' worlds, the cultures; the tab last shown first; the sequencer's too (R-441)
+- incubator: K keeps a copy: the cell under the crosshair alone, never twice in a folder, a new folder made for it; a flask's two together; C copies; a pair kept twice merged (R-440)
+- incubator: unnamed worlds told apart by their place: the tree's pages and a folder's leaves, the catalogue's heads, the microscope's folders (B-497)
+- incubator: the catalogue's animals: their fates as the world's record holds them, by kin too, each drawn on its sheet (B-500)
+
+## genes (`unit_lab_genes.cpp`, `unitLabGenes`, 1x): 27
+
+- genes: GREEN and PINK in every genesis's dye table, a run each from its synonyms, the rest as J-01 drew them (R-453)
+- genes: the tree by world and by folder: its pages, a world's species and its lines, Backspace and A, a folder's tree (Y-01)
+- genes: a living world of each alphabet and hand (Y-02)
+- genes: deterministic (Y-02)
+- genes: every species unedited is itself: its values, its culture's segments, its slide's kinds (Y-02)
+- genes: each gene's edit and cut as its code says (Y-02)
+- genes: a vital gene's edit kills, a quiet one shows nothing (Y-02)
+- genes: how it lives and its plan's family never move; its values within their limits (Y-02)
+- genes: a gene moved in takes its donor's letters and value, over its own or into a gap; its way and family fixed (Y-03)
+- genes: the own switches (a glow's WHEN CROWDED, a rest's WHEN STARVING, the rest ALWAYS) give every species' curve as before (Y-04)
+- genes: the cell's genes (places 1 to 18, the old tables, every edit of them) as before the world genes (J-01)
+- genes: every species carries the fourteen world genes at 19 to 32, read from what it is (J-01)
+- genes: a world product not its own (a gas, a dye, a slime, a shell, a poison) costs its line, its own nothing (J-01)
+- genes: a line written on the editor into a flask, read as a strain is: its culture, its drop, the sequencer, the collection, its twig (Y-02)
+- genes: a kept line by its own name in the editor's and the sequencer's choosers, as on the microscope (B-472)
+- genes: W asks for the new strain's folder, then its name, the parent's to start (R-445)
+- genes: a gene known for its species the moment it is changed; its letters' guide; a vital change refused (R-450)
+- genes: the editor, its lines and their flasks over a save and a load (Y-02)
+- genes: a kin beside it on the editor, another life refused with its words; M moves its kin's gene in, over its own and into a gap (Y-03)
+- genes: a moved gene's line on its world's tree, from its donor's leaf to the line's twig (Y-03)
+- genes: a gene not its own slows its line by its donor's distance: its doubling, and beside its parent in a flask (Y-03)
+- genes: D copies a gene to a free place of its kind; changed by hand, the line does something new (Y-03)
+- genes: what a gene needs: a sense in a still cell answers nothing (said); a pigment or a food in one that lives another way (Y-03)
+- genes: the kin beside it, its moved and copied genes over a save and a load (Y-03)
+- genes: a switch's condition in the culture's segments: the light, the warmth against its best, starving, its crowd's share (Y-04)
+- genes: a gene off costs nothing: a gene not its own switched off pays nothing, NEVER nowhere (Y-04)
+- genes: S sets a gene's switch on the editor, kept over a save; a switched line's drop as its flask has it (Y-04)
+
+## world (`unit_lab_genes.cpp`, `unitLabWorld`, 1x): 3
+
+- world: each world gene the lab shows, changed once in a line alone, shows in its flask and is said with its gene (J-01, R-450)
+- world: POISON kills the other in its flask, CARRIER passes its genes to it; each said with its gene (J-01, R-450)
+- world: the editor's two pages walked and turned; a world gene written, its flask's look and the editor over a save and a load (J-01)
+
+## seeding (`unit_seeding.cpp`, `unitSeeding`, 1x): 15
+
+- seeding: a desert world
+- seeding: the layer, any order
+- seeding: a map with and without
+- seeding: the world as generated
+- seeding: the guide's lines
+- seeding: the clock
+- seeding: the verdict as a flask's
+- seeding: what a line needs and a place gives, and why a seeding died, in full (R-451)
+- seeding: GREEN and PINK waters (R-453)
+- seeding: the drift
+- seeding: the trip
+- seeding: the seed page offers every culture alive in a flask and says its state (B-473)
+- seeding: refused at home
+- seeding: a loan, an unseeded world
+- seeding: samples
+
+## animals (`unit_animals.cpp`, `unitAnimals`, 1x): 18
+
+- animals: the bestiary a pure function
+- animals: no two of a world alike
+- animals: every plan's poses within bounds
+- animals: the gaits within bounds, the feet put down
+- animals: the record and its names; N the map, Shift+N names (R-452)
+- animals: the herds' cells
+- animals: an older save's notice
+- animals: the fates' shares fixed by world and line
+- animals: remains a pure function of their cell
+- animals: the record's marks
+- animals: a kill kept, remains aged
+- animals: a kill kept past the landing (B-489)
+- animals: a climber round its trunk
+- animals: a climber along its trunk's lean, on a trunk it can hold (B-491)
+- animals: the flyers' and the swimmers' fates
+- animals: a flock's and a shoal's changed young and sick (B-490)
+- animals: the shallows' swimmers
+- animals: the shallows' stretch along a curving shore (B-492)
+
+## files (`unit.cpp`, `unitFiles`, 1x): 2
+
+- files: a test game's under shots/tests (B-440)
+- files: the player's untouched (B-440)

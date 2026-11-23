@@ -377,6 +377,7 @@ void genGate(Gen& g) {
     const Building& b = g.b; const Culture& c = g.c;
     if (b.age == AGE_PREHISTORIC) {   // two great posts in the palisade's gap
         g.post(-b.hw, 0, b.hWall + 1.0, 0.3, 10); g.post(b.hw, 0, b.hWall + 1.0, 0.3, 11);
+        g.opening(0, 0, 0, b.hw - 0.3, 0, std::min(3.0, b.hWall + 0.6), 0.6, true);   // KI-478: the gap between them
         return;
     }
     const int mat = worksOf(b, c); const double Dm = g.D(mat);
@@ -385,7 +386,9 @@ void genGate(Gen& g) {
         double h = b.hWall * (1 - 0.5 * Dm), f0 = 1 - Dm * g.U(10), f1 = 1 - Dm * g.U(11);
         g.box(-b.hw, 0, 0, 0.5, 0.5, g.sink, g.sink + std::max(0.5, h * f0), 0, mat, 1);
         g.box(b.hw, 0, 0, 0.5, 0.5, g.sink, g.sink + std::max(0.5, h * f1), 0, mat, 1);
-        if (f0 > 0.8 && f1 > 0.8 && g.lod < 2) g.box(0, 0, 0, b.hw + 0.5, 0.5, g.sink + h - 0.7, g.sink + h, 0, mat, 4);
+        const bool lintel = f0 > 0.8 && f1 > 0.8;
+        if (lintel && g.lod < 2) g.box(0, 0, 0, b.hw + 0.5, 0.5, g.sink + h - 0.7, g.sink + h, 0, mat, 4);
+        g.opening(0, 0, 0, b.hw - 0.5, g.sink, g.sink + (lintel ? h - 0.7 : std::max(0.5, h * std::min(f0, f1))), 1.0, true);   // KI-478: the way between the piers
         return;
     }
     // a gatehouse: two towers over the wall (the people's section) and the passage's arch between them (its opening's shape)
@@ -406,7 +409,7 @@ void genGate(Gen& g) {
         e.p[1] = 0.46;
         e.p[2] = 3.0;
         e.broken = Dm < 0.4 ? 0 : clampd(Dm, 0.4, 0.8);
-    }
+    } else g.opening(0, 0, 0, b.hw, g.sink, g.sink + std::max(0.6, std::min(archTop, std::min(t0, t1))), 2.0, true);   // KI-478: its arch fallen, the passage between the towers
 }
 
 void genWallTower(Gen& g) {   // a tower astride the town wall in the people's section and profile, its top the people's

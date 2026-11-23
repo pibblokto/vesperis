@@ -37,6 +37,7 @@ Contents:
 - Q-03 (2026-10-22): the sounds of the ground
 - D-01 (2026-10-23): a drifter's worlds
 - D-04 (2026-10-23): the ground in the dark
+- J-02 to J-05 (2026-11-20, 21): the made world's last pass, the waters, the made climate, the looks by class
 <!-- /contents -->
 
 ## Inputs
@@ -78,7 +79,7 @@ The orbital map uses `detail = 2 pi R * 1000 / 256 * 0.6` (about 110 km for R = 
 * **Craters with history** (`CraterMarks`): rays (young craters, 6-13 bright streaks to seven radii, albedo +0.3), multi-ring basins (r > 60 km, 55%), mare flooding of old large basins (flat floors, basalt), secondary fields around large craters raise the density of the 0.5 km pass.
 * **Volcanism**: felisian volcanic islands (0.25 R grid, calderas become lakes), thin-atmosphere shield volcanoes (0.35 R grid, 1400 m) with basalt plains, rocky old shields, icy cryovolcanic domes (25 km grid, bright fresh ice) and geyser spots (2 km grid), volcanic moons (two cone scales, lava in calderas and pools).
 * **Dune seas** (`duneField`): the prevailing wind is the body's `windAngle` flipped per hemisphere and turned per 30-degree band; styles transverse, barchan-like or star (`duneStyle`), wavelength `duneWl` 0.12-0.37 km; on thin-atmosphere lowlands (below 200 m) and felisian deserts (moist < 0.28, 5-700 m, flat).
-* **Seasons** (`BodyGen::season`, `StarSystem::seasonOf` = dot(spin axis, direction to the star)): the winter hemisphere's cap edge drops 11 degrees, the snow line 900 m; sea ice follows; tundra snows over; `seasonName` gives "NORTHERN SUMMER" etc. `SurfaceSite::init(..., t)` and `SpaceRenderer::setSeason` pass it; maps are regenerated per season step (eight per orbit). B-419: the season is the terrain's alone: what is made on a world (a people's plan, its extent, its histories, its settlements, roads and works, the scanner's sights) reads the planet without it (`unseasoned`: the generator itself where its season is 0, else a copy at 0, at every entry of those readers), so a people's towns stand where they stand whatever the season the explorer came in (a winter's sea ice had counted as land and its snow as ice sheet: nearly every place of a plan moved with the season, a tenth to a fifth of them came and went).
+* **Seasons** (`BodyGen::season`, `StarSystem::seasonOf` = dot(spin axis, direction to the star)): the winter hemisphere's cap edge drops 11 degrees, the snow line 900 m; sea ice follows; tundra snows over; `seasonName` gives "NORTHERN SUMMER" etc. `SurfaceSite::init(..., t)` and `SpaceRenderer::setSeason` pass it; maps are regenerated per season step (eight per orbit), each world's step and the season its generator is made at kept by its seed (B-438: by its index, another system's body of that index decided them). B-419: the season is the terrain's alone: what is made on a world (a people's plan, its extent, its histories, its settlements, roads and works, the scanner's sights) reads the planet without it (`unseasoned`: the generator itself where its season is 0, else a copy at 0, at every entry of those readers), so a people's towns stand where they stand whatever the season the explorer came in (a winter's sea ice had counted as land and its snow as ice sheet: nearly every place of a plan moved with the season, a tenth to a fifth of them came and went).
 * **New types**: ocean (global sea at -150 m with ice floes as worley plates toward the poles), metal (dark iron, sharp craters, MAT_METAL with speculars), volcanic (cones at two scales, MAT_SULPHUR plains, basalt, lava), carbon (MAT_GRAPHITE plains with diamond (quartz material) patches).
 * **Gas giants**: polar vortex pattern beyond 76 degrees in the map; zonal jets (longitude drifts by `0.06 sin(lat bandCount)` rotations) and night-side lightning are applied when the globe is drawn.
 
@@ -715,9 +716,19 @@ cut through it where a noise says; behind it the lagoon's floor lifted to 0.8-6 
 
 **The hot springs** (`landformsAt`, `springGrid`, `springOf`, `hotSpringsNear`): clusters of three to six springs within 0.7 km on a third of the
 cells of a 3 km grid in a geothermal province, each a terraced mound 80-300 m across and 3-17 m high (four to eight terraces): the vent's pool
-(`MAT_BRINE`, deep blue), white sinter round it (`MAT_SALT`), the terraces' rims white and their pools coloured by their mats (`MAT_MATS`, the
-thermophiles' orange: bright near the vent, darker as the water cools; every other terrace white where the eye sees the terraces, the inner half
-white from further), the runoff's mats streaking the ground round it.
+(`MAT_BRINE`, deep blue), white sinter round it (`MAT_SALT`), the terraces' rims white and their pools coloured by their mats (`MAT_MATS`; every
+other terrace white where the eye sees the terraces), the runoff's mats streaking the ground round it. Z-03: the pools' mats lie in bands by their
+water's heat (`springWaterC`: 92 C at the vent, falling down the terraces to 26 C at the outer pools; a terrace's at its middle where the eye sees
+the terraces, else at the point; Brock 1978): over 73 C bare (white sinter under clear water), yellow to 63, orange to 52, orange-brown to 38, brown
+below (`springBand`, `SPRING_BAND_ALBEDO`: one ramp on the ground turns with the shade); from further the inner third white. `springPartAt` finds
+where a point lies in a spring (the vent's pool, the sinter, a pool, the runoff) and its water's heat, for the search's samples.
+
+**Red snow** (`TR_SNOW_ALGAE`, Z-03): a life trait given, never drawn: after the new slots' draw, by its own hash (`SALT_SNOW_ALGAE`, a third of them,
+`SNOW_ALGAE_SHARE`) to the worlds of its process (`KS_SNOW_ALGAE`: the felisian, superhabitable, steppe, tundra, terminator, archean and snowball
+kinds) under a sun, without a people nor the home world, colder than 8 C at fifty degrees, with a new slot free and no trait of the life in them
+(`snowAlgaeSlot`); it moves no other trait. On their snow `snowAlgae` lays the algae's patches tens of metres across in regions of a few
+kilometres (`SurfaceSample::snowTint`, where the eye resolves them: within 100 m detail), drawn in bank 28 on the ground; the biota's snow alga
+lives in them (`life/biota.cpp`'s fixes).
 
 **The fungal forests** (`materialPalette`: the forest family's colour cream, ochre, white or a lilac grey; `make`: the second family's another
 pale) and **the petrified forests** (`landformsAt`'s province of the open dry ground; its density in `lifeTint` on the land for the surface's stone
@@ -795,3 +806,44 @@ lights left on, lights in the water) and the dark ocean are D-04's.
   crusts on the summits' fumarole fields; the sea at 0. Its lights in the water (`qualityWater`): shoals some hundreds of kilometres across
   and the islands' flanks under 500 m, a quarter of their water lit in patches of a hundred metres or two; from afar the shoals' cores'
   sheen.
+
+## J-02 to J-05 (2026-11-20, 21): the made world's last pass, the waters, the made climate, the looks by class
+
+A seeded world's layer (`galaxy/made.h`, `MadeWorld`) rides in the generator (`BodyGen::made`). A generator from `make` has none: only
+the game puts one in, where the drawing gets its generator (`SpaceRenderer::genFor`, `SurfaceSite::initFrame`, the landing map's probe
+site). `sampleSurface` reads it last of all, after `darkGround` (`madeGround`), and only when its key is not 0 and it draws on the ground
+(`MadeWorld::ground`: a cover, a tint, a runaway's dry seas).
+
+* **The spreads:** each seeding has a place and a reach (radians of arc). `madeReachAt` gives the share a point has, 1 inside and 0
+  outside, across a band of 3% of the reach. The edge wanders by a quarter of the reach in lobes a quarter of it across. Its noise is
+  at the reach's own scale and never fades with the detail (B-404's rule), so the globe, the maps and the ground draw one edge.
+* **The looks:** a cover (J-02's test) is a material laid over the land with its albedo, where the share is a half or more, never on
+  water or lava; a tint is the share itself, `SurfaceSample::madeTint`, over the land (the test's) or the waters (J-03: a line's dye or
+  glow, `MadeWorld::tintOn`). Nothing moves a height.
+* **Where a line lives (J-03):** each spread carries its line's habitat: the waters by their salt (the sea's, fresh for lakes, rivers and
+  pools, brine for a pink lake), the land (a line that lives dried out, or in snow and ice), and a band of mean warmth. A point's share is
+  the greatest of the spreads that colour and live there (`madeSpreadAt`, `madeLives`). The warmth is `placeMeanC` at the point's ground or
+  water level (a sea's never under its freezing), read only where a spread has a band. `placeMeanC` is the samples' formula, moved here
+  from the surface's sampling with each expression as it was; the layer carries the body's equilibrium and whether it is sunless.
+* **The made climate (J-04):** a living world (`felisianSample`) reads the layer's warmth now (`MadeWorld::warmC`): the caps' edge moves
+  1.6 degrees of latitude a degree, the snow line 154 m a degree, and an endless rain on a cold world (`snowMore`) brings both down; the
+  ice biome, a lake's or a river's ice and the sea's ice read the made warmth. Nothing else does: a biome moves only across the ice's edge,
+  the glacial valleys, the fjords, the reefs (the cap as generated) and the alpine belt (the snow line as generated) keep their heights
+  and places, and the drainage never sees the layer. The other kinds' caps stay as generated.
+* **A runaway's dry seas (J-04):** where the layer's runaway has dried its waters (`MadeWorld::dried`), the made pass lays the old beds
+  bare at their own heights, a scorched world's way: the sea's floor salt past 1,500-2,100 m deep (`oldSea` set) and dust above it, a
+  river's bed sand, a lake's playa salt, a pool's clay. `madeWetAt`, `madeSaltAt` and `madeMeanAt` are the pass's reads of a water, its
+  salt and its warmth, shared with a seeding's habitat share (`life/seeding`).
+* **The looks by class (J-05):** a point's class is its material's (`madeClassOf`: the waters, the snow and ice, a world's plants, its
+  land), and each class has its own look (`MadeWorld::land`, `snow`, `plant`; the waters' is the tint). The pass sets a point's share of
+  its class's look where a spread whose line makes one lives (`MadeSpread::makes`): on the land within its `landOn` (bare ground, rock,
+  sand and dust, or the shores: ground within 8 m over a river's, a lake's or the sea's water, its line living in that water's salt), in
+  the plants within its band and, for a frost's burn, under 10 C. A blight in spots or stands takes a fixed noise of 120 m or 1.5 km off
+  its share. At a share over a half a land look lays its spread's cover (mats, stromatolites, crusts, sulphur) and its albedo (chalk,
+  glass), a dark ice its grey. A rust's waters' look lies on fresh water alone (`lookWaters`). The world-wide colours never touch the
+  pass: `madeMatColour` turns a sulphide's waters, an oxygen's rusted ground and the lush or bleached plants, `madeLifeTint` a sour sea's
+  bleached reefs, in every view.
+* **What stays as generated:** `unseasoned` and `thenWorld` take the layer off, so the peoples' plans, the sights and the histories read
+  the world as generated. A drainage tile is built without it too (`buildTile`), and its key (`genKey`) never reads it.
+* **The maps:** `PlanetMap::mtint` holds the tint (empty without one; J-05: the share of each point's class's look), and
+  `PlanetMap::madeKey` the layer the map was made with.

@@ -44,7 +44,7 @@ const std::vector<RecordKeyTable>& recordSchemaKeys() {
         addKeys(k, "plan", PLAN_KEYS); addKeys(k, "roof", ROOF_KEYS); addKeys(k, "ornament", ORNAMENT_KEYS); addKeys(k, "motif", MOTIF_KEYS);
         addKeys(k, "tops", TOPS_KEYS); addKeys(k, "accent", ACCENT_KEYS); addKeys(k, "land", LAND_KEYS); addKeys(k, "streets", STREETS_KEYS);
         addKeys(k, "public", PUBLIC_KEYS); addKeys(k, "edge", EDGE_KEYS); addKeys(k, "links", LINKS_KEYS); addKeys(k, "light", LIGHT_KEYS);
-        addKeys(k, "sunway", SUN_WAY_KEYS);
+        addKeys(k, "sunway", SUN_WAY_KEYS); addKeys(k, "madeway", MADE_WAY_KEYS); addKeys(k, "madeplace", MADE_PLACE_KEYS);
         // the fields (`$e.kind=war`, `$x.role=ruler`): an event's, a person's, a place's (genres.cpp's `field`)
         addKeys(k, ".kind", KIND_KEYS); addKeys(k, ".warkind", WAR_KEYS); addKeys(k, ".workkey", WORK_KEYS);
         std::vector<std::string> inv; for (const InvKey& x : INV_KEYS) inv.push_back(x.key);

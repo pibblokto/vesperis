@@ -28,7 +28,9 @@ Ubuntu 20.04 in Docker, Windows x86_64/arm64 with llvm-mingw), raylib 5.5 built 
    <out dir>` (about 8 minutes; from a checkout or worktree of the commit). It prints `<build>: exit N, W warnings` for each (macOS
    and Windows 0, Linux the 46 old GCC style warnings, 38 of them parallel.h's), runs the Linux builds last and one at a time
    (Docker's VM died beside them once), and makes no zip unless all six built. A failure only one compiler shows (a missing
-   `<cstdlib>` for `atoi` broke Windows twice) is fixed on the branch first. An interrupted `docker run` leaves its container
+   `<cstdlib>` for `atoi` broke Windows three times, five files in 1.5.0: Xcode's `<string>` or `<cmath>` bring it in,
+   llvm-mingw's only a few headers such as `<sstream>`) is fixed on the branch first. Build the macOS and Windows binaries on their own
+   (`build-mac.sh`, `build-win.sh`) before the release commit to find one early. An interrupted `docker run` leaves its container
    behind: `docker rm -f` it.
 5. **Checked:** each zip's file list against the previous release's public zips
    (`https://github.com/pibblokto/vesperis/releases/download/v<old>/<zip>`); `otool -L` and minos 11.0 on the macOS binaries,

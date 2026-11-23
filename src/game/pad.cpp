@@ -71,13 +71,13 @@ int Game::padContext() const {
 std::string Game::padContextName(int ctx) const {
     switch (ctx) {
         case PCX_TITLE: return "VESPERIS";
-        case PCX_SHIP: return tele.on ? "THE TELESCOPE" : (radar.on ? "THE RADAR" : (ship.targeting ? "THE AIM" : (settings.cabin ? "THE CABIN" : "THE SHIP")));
+        case PCX_SHIP: return tele.on ? "TELESCOPE" : (radar.on ? "RADAR" : (ship.targeting ? "AIM" : (settings.cabin ? "CABIN" : "SHIP")));
         case PCX_FOOT: return photoMode ? "PHOTO MODE" : "ON FOOT";
-        case PCX_BUGGY: return "THE BUGGY";
-        case PCX_DRONE: return "THE DRONE";
-        case PCX_PROBE: return "THE PROBE";
-        case PCX_RECORDING: return "THE RECORDING";
-        case PCX_INSTRUMENT: return "THE INSTRUMENT";
+        case PCX_BUGGY: return "BUGGY";
+        case PCX_DRONE: return "DRONE";
+        case PCX_PROBE: return "PROBE";
+        case PCX_RECORDING: return "RECORDING";
+        case PCX_INSTRUMENT: return "INSTRUMENT";
     }
     return padMenuOf(*this).title;   // a screen's own, its row's (COMMANDS without one)
 }
@@ -92,8 +92,8 @@ void Game::padBindings(int ctx, std::vector<PadBind>& out) const {
             break;
         case PCX_SHIP: {
             const bool aim = ship.targeting;
-            add(PR_A, KEY_ENTER, tele.on ? "TRACK" : (radar.on ? "FLY TO THE LOCK" : (aim ? "LOCK THE STAR" : "APPROACH")));
-            if (aim || radar.on || tele.on) add(PR_B, KEY_ESCAPE, aim ? "CANCEL" : (radar.on ? "LEAVE THE RADAR" : "STOW"));
+            add(PR_A, KEY_ENTER, tele.on ? "TRACK" : (radar.on ? "FLY TO LOCK" : (aim ? "LOCK STAR" : "APPROACH")));
+            if (aim || radar.on || tele.on) add(PR_B, KEY_ESCAPE, aim ? "CANCEL" : (radar.on ? "LEAVE RADAR" : "STOW"));
             add(PR_X, KEY_E, "USE");
             add(PR_LB, KEY_PAGE_UP, tele.on ? "ZOOM IN" : (radar.on ? "GAIN UP" : "ROOF DECK"));
             add(PR_RB, KEY_PAGE_DOWN, tele.on ? "ZOOM OUT" : (radar.on ? "GAIN DOWN" : "CABIN"));
@@ -137,7 +137,7 @@ void Game::padBindings(int ctx, std::vector<PadBind>& out) const {
             break;
         case PCX_PROBE: {
             const bool ended = probe.active && probe.endClock >= 0;
-            add(PR_A, ended ? KEY_ENTER : KEY_SPACE, ended ? "LET IT GO" : "CHUTE");
+            add(PR_A, ended ? KEY_ENTER : KEY_SPACE, ended ? "LET GO" : "CHUTE");
             add(PR_B, KEY_ESCAPE, "CABIN"); add(PR_X, KEY_X, "CENTRE"); add(PR_RT, KEY_LEFT_SHIFT, "FAST"); add(PR_START, KEY_ESCAPE, "CABIN");
             break;
         }
@@ -189,14 +189,14 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
     if (scene) m.item("THE LOG", KEY_J);
     if (scene && (ground || inSystem)) m.item("THE DATA SHEET", KEY_I);
     if (stateHas(state, ST_CLOCK)) {
-        m.item(almanacRunning ? "STOP THE ALMANAC'S RUN" : fmt("TIME WARP X%.0f TO X%.0f", timeWarp, timeWarp >= 10000 ? 1.0 : timeWarp * 10), KEY_T);
+        m.item(almanacRunning ? "STOP ALMANAC RUN" : fmt("TIME WARP X%.0f TO X%.0f", timeWarp, timeWarp >= 10000 ? 1.0 : timeWarp * 10), KEY_T);
         m.item("THE ALMANAC", KEY_T, MOD_CTRL);
     }
     if (stateHas(state, ST_PHOTO)) {
         m.item("PHOTOGRAPH", KEY_P);
         m.item(photoMode ? "END PHOTO MODE" : "PHOTO MODE", KEY_P, MOD_CTRL);
         if (scene) m.item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT);
-        m.item(recording ? "STOP RECORDING" : "RECORD THE FRAMES", KEY_R, MOD_CTRL);
+        m.item(recording ? "STOP RECORDING" : "RECORD FRAMES", KEY_R, MOD_CTRL);
     }
     if (scene || ground) m.item(fmt("SAVE (SLOT %d)", currentSlot), KEY_S, MOD_CTRL);   // the capsule's way down and up too
     if (scene) m.item(fmt("LOAD (SLOT %d)", currentSlot), KEY_L, MOD_CTRL);
@@ -319,8 +319,8 @@ void Game::padFrame(Input& in, double realDt) {
     if (P.announce && inScene(state)) {   // a new controller, said once where the status shows
         P.announce = false;
         const std::string name = trunc(upper(in.pad.name[0] ? in.pad.name : "A CONTROLLER"), 22);
-        const std::string msg = in.pad.mapped ? fmt("CONTROLLER: %s - Y OPENS THE COMMANDS", name.c_str())
-                                              : fmt("%s: NOT RECOGNISED - SETTINGS > CONTROLS SETS ITS BUTTONS", name.c_str());
+        const std::string msg = in.pad.mapped ? fmt("CONTROLLER: %s - Y OPENS COMMANDS", name.c_str())
+                                              : fmt("%s: NOT RECOGNISED - SET BUTTONS IN SETTINGS > CONTROLS", name.c_str());
         if (realTime < statusUntil) { statusNext = msg; statusNextSecs = 6; } else status(msg, 6);
     }
     auto deliver = [&]() {   // the queue's next key, its modifiers held with it
@@ -403,7 +403,7 @@ void Game::renderPad() {
         const bool digits = P.keyboard && P.kbFor == 1;
         const int y0 = digits ? 4 : UH - 94;   // the aim keeps the crosshair and its jump line clear: the keyboard at the top
         drawPanel(canvas, 8, y0, UW - 8, y0 + 90, rgb(0, 0, 0), 225);
-        drawTextCentered(canvas, UW / 2, y0 + 3, digits ? "DIGITS: THE LIGHT YEARS  START JUMPS  B CLOSES" : padMenuOf(*this).typing, HUD_DIM);
+        drawTextCentered(canvas, UW / 2, y0 + 3, digits ? "DIGITS: LIGHT YEARS  START JUMPS  B CLOSES" : padMenuOf(*this).typing, HUD_DIM);
         renderPadKeyboard(20, y0 + 12, false);
         return;
     }
@@ -428,7 +428,7 @@ void Game::renderPad() {
     drawLineRGB(canvas, x0 + 4, legendY - 4, x1 - 4, legendY - 4, rgb(40, 60, 48));
     if (P.page == 2) {
         renderPadKeyboard(x0 + 8, y0 + 18, true);
-        drawTextCentered(canvas, UW / 2, y0 + 18 + 7 * 11 + 4, "A PRESSES THE KEY  SHIFT CTRL ALT: WITH THE NEXT", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, y0 + 18 + 7 * 11 + 4, "A PRESSES  SHIFT CTRL ALT: WITH NEXT KEY", HUD_DIM);
         return;
     }
     const std::vector<PadItem> items = padItems(P.page);
@@ -497,7 +497,7 @@ void Game::updatePadScreen(const Input& in) {
             return;
         } else {
             padMap.set(in.pad, P.capture == PR_BUTTONS ? PR_WALK_X : PR_LOOK_X, c);
-            P.note = fmt("THE %s STICK IS SET", P.capture == PR_BUTTONS ? "WALK" : "LOOK");
+            P.note = fmt("%s STICK SET", P.capture == PR_BUTTONS ? "WALK" : "LOOK");
         }
         P.noteUntil = realTime + 3;
         P.capture = -1; P.resync = true; audio.beep = BEEP_UI;
@@ -521,7 +521,7 @@ void Game::updatePadScreen(const Input& in) {
     if (dir && s == 20) { settings.padDeadZone = std::round((settings.padDeadZone + 0.02 * dir) * 100) / 100; settings.clampAll(); audio.beep = BEEP_UI; }
     if (!enterKey(in)) return;
     if (s == 19) { settings.padInvertY = !settings.padInvertY; audio.beep = BEEP_UI; return; }
-    if (s == 21) { padMap.reset(in.pad); P.note = "THIS CONTROLLER IS BACK TO ITS DEFAULTS"; P.noteUntil = realTime + 3; audio.beep = BEEP_UI; return; }
+    if (s == 21) { padMap.reset(in.pad); P.note = "CONTROLLER RESET TO DEFAULTS"; P.noteUntil = realTime + 3; audio.beep = BEEP_UI; return; }
     if (s >= 18) return;
     if (!in.pad.present) { P.note = "NO CONTROLLER"; P.noteUntil = realTime + 3; audio.beep = BEEP_ERROR; return; }
     P.capture = s;   // 16 the walk stick, 17 the look stick
@@ -543,9 +543,9 @@ void Game::renderPadScreen() {
     auto valueOf = [&](int row) -> std::string {
         if (P.capture >= 0 && row == P.capture) {
             const int left = std::max(0, (int)std::ceil(CAPTURE_S - P.capT));
-            if (P.capture < PR_BUTTONS) return fmt("PRESS IT  %d", left);
-            if (!P.capArmed) return "LET THE STICK GO";
-            return fmt("%s  %d", P.capStep == 0 ? "PUSH IT UP" : "PUSH IT RIGHT", left);
+            if (P.capture < PR_BUTTONS) return fmt("PRESS  %d", left);
+            if (!P.capArmed) return "LET GO";
+            return fmt("%s  %d", P.capStep == 0 ? "PUSH UP" : "PUSH RIGHT", left);
         }
         if (row < PR_BUTTONS) return padControlLabel(padMap.bind[row]);
         if (row == 16) return padControlName(padMap.bind[PR_WALK_X]) + " " + padControlName(padMap.bind[PR_WALK_Y]) + fmt("  %+.1f %+.1f", live.walkX, live.walkY);
@@ -562,7 +562,7 @@ void Game::renderPadScreen() {
         else { x = 20; y = y0 + 8 * 9 + 5 + (row - PR_BUTTONS) * 9; }
         const bool sel = row == P.screenSel;
         const bool held = row < PR_BUTTONS && live.down[row];
-        static const char* const REST[6] = {"WALK STICK", "LOOK STICK", "LOOK SPEED", "INVERT LOOK", "DEAD ZONE", "RESET THIS CONTROLLER"};
+        static const char* const REST[6] = {"WALK STICK", "LOOK STICK", "LOOK SPEED", "INVERT LOOK", "DEAD ZONE", "RESET CONTROLLER"};
         const char* label = row < PR_BUTTONS ? ROLE_SCREEN[row] : REST[row - PR_BUTTONS];
         if (sel) drawText(canvas, x - 7, y, ">", HUD_AMBER);
         drawText(canvas, x, y, label, held ? HUD_CYAN : (sel ? HUD_WHITE : HUD_GREEN));
@@ -572,5 +572,5 @@ void Game::renderPadScreen() {
     }
     const std::string foot = P.capture >= 0 ? "ESC OR WAIT: NOTHING CHANGES" : (realTime < P.noteUntil ? P.note : "ENTER SETS  \x04\x05 CHANGE  TAB KEYBOARD  ESC SAVES");
     drawTextCentered(canvas, UW / 2, bottom - 19, foot.c_str(), realTime < P.noteUntil && P.capture < 0 ? HUD_AMBER : HUD_DIM);
-    drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_PAD.TXT, A SET EACH CONTROLLER", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_PAD.TXT, A SET PER CONTROLLER", HUD_DIM);
 }

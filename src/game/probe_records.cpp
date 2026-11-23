@@ -230,7 +230,7 @@ bool Game::recordingContext(int rec) {
     if (slash == std::string::npos || !Guide::parseStarKey(r.body, sx, sy, sz)) return false;
     const int bi = atoi(r.body.c_str() + slash + 1);
     Star s;
-    if (!placeInSector(sx, sy, sz, s, true)) { refuse("THE GALAXY WAS REBUILT SINCE THIS RECORDING - ITS STAR IS GONE", 5); return false; }
+    if (!placeInSector(sx, sy, sz, s, true)) { refuse("STAR GONE - THE GALAXY WAS REBUILT", 5); return false; }
     const bool here = sys.star.sx == sx && sys.star.sy == sy && sys.star.sz == sz && !sys.bodies.empty();
     if (!here && (replay.here || replay.sys.star.seed != s.seed || replay.sys.bodies.empty())) {
         replay.sys = StarSystem(); replay.sys.generate(s); replay.sys.valid = true;
@@ -239,7 +239,7 @@ bool Game::recordingContext(int rec) {
     }
     replay.here = here;
     const StarSystem& S = here ? sys : replay.sys;
-    if (bi < 0 || bi >= (int)S.bodies.size() || !isProbeGiant(S.bodies[bi].type)) { refuse("THE GIANT OF THIS RECORDING IS GONE: THE WORLDS WERE REGENERATED", 5); return false; }
+    if (bi < 0 || bi >= (int)S.bodies.size() || !isProbeGiant(S.bodies[bi].type)) { refuse("GIANT GONE - THE WORLDS WERE REGENERATED", 5); return false; }
     if (replay.rec != rec || replay.p.seed != r.seed || replay.p.starSeed != s.seed) {
         ProbeState& p = replay.p;
         p = ProbeState();
@@ -262,7 +262,7 @@ bool Game::openRecording(int rec) {
     replay.clock = 0; replay.playing = true; replay.fast = false; replay.lookYaw = replay.lookPitch = 0;
     replay.p.lastFlashSlot = -1;
     openScreen(GameState::RECORDING);
-    status(fmt("THE RECORDING OF %s", recordTitle(guide.probes[rec]).c_str()), 4);
+    status(fmt("RECORDING: %s", recordTitle(guide.probes[rec]).c_str()), 4);
     audio.beep = BEEP_UI;
     return true;
 }
@@ -310,7 +310,7 @@ void Game::updateRecording(const Input& in, double dt, double realDt) {
     replay.lookPitch = clampd(replay.lookPitch - in.mouseDy * rate * (settings.invertY ? -1 : 1), -60 * DEG, 60 * DEG);
     if (in.wasPressed(KEY_X) && !in.ctrl()) replay.lookYaw = replay.lookPitch = 0;
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // the storm it fell into
-        if (r.storm.empty()) { refuse("THIS PROBE FELL INTO NO STORM", 3);
+        if (r.storm.empty()) { refuse("NO STORM TO NAME", 3);
         } else {
             textStormKey = r.storm;
             const std::string n = nameOfKey(r.storm);
@@ -322,10 +322,10 @@ void Game::updateRecording(const Input& in, double dt, double realDt) {
 // U-04: a recording's commands (the controller's first page; its name is its context's)
 void Game::recordingPad(PadMenu& m) const {
     m.item(replay.playing ? "PAUSE" : "PLAY", KEY_SPACE);
-    m.item("TO THE START", KEY_HOME); m.item("TO THE END", KEY_END);
-    m.item("THE NEXT LAYER", KEY_PAGE_DOWN); m.item("THE LAYER BEFORE", KEY_PAGE_UP);
-    m.item("CENTRE THE VIEW", KEY_X); m.item("NAME THE STORM", KEY_N);
-    m.item("BACK TO THE GALLERY", KEY_ESCAPE);
+    m.item("TO START", KEY_HOME); m.item("TO END", KEY_END);
+    m.item("NEXT LAYER", KEY_PAGE_DOWN); m.item("PREVIOUS LAYER", KEY_PAGE_UP);
+    m.item("CENTRE VIEW", KEY_X); m.item("NAME STORM", KEY_N);
+    m.item("BACK", KEY_ESCAPE);
 }
 
 void Game::renderRecording() {
@@ -457,11 +457,11 @@ void Game::renderProbeProfile(int rec) {
         where = "INTO " + (n != "UNKNOWN" ? trunc(upper(n), 20) : std::string(r.storm.substr(r.storm.size() - 2) == "TG" ? "THE GREAT STORM" : "A STORM"));
     }
     drawText(canvas, 8, 15, (where + "  " + epocOf(r.launchT)).c_str(), HUD_DIM);
-    const std::string end = r.endCause == 3 ? std::string("THE RELAY WAS CUT: ") + recordLine(r).substr(epocOf(r.launchT).size() + 2)
-                                            : fmt("%.0f KM DOWN, %.1f ATM, %+.0f C - %s", r.endKm, atmOf(r.endBar), r.endK - 273.15, r.endCause == 1 ? "THE HULL GAVE WAY" : "THE HEAT TOOK IT");
+    const std::string end = r.endCause == 3 ? std::string("RELAY CUT: ") + recordLine(r).substr(epocOf(r.launchT).size() + 2)
+                                            : fmt("%.0f KM DOWN, %.1f ATM, %+.0f C - %s", r.endKm, atmOf(r.endBar), r.endK - 273.15, r.endCause == 1 ? "HULL GAVE WAY" : "OVERHEATED");
     drawText(canvas, 8, 23, end.c_str(), HUD_GREEN);
     drawTextCentered(canvas, UW / 2, UH - 9, "LEFT/RIGHT PROBES  ANY OTHER KEY CLOSES", HUD_DIM);
-    if (r.profile.size() < 2) { drawTextCentered(canvas, UW / 2, 100, "THE RELAY WAS CUT OVER THE CLOUDS", HUD_DIM); return; }
+    if (r.profile.size() < 2) { drawTextCentered(canvas, UW / 2, 100, "RELAY CUT OVER THE CLOUDS", HUD_DIM); return; }
     const int y0 = 46, y1 = 176, xL = 38, xT0 = 128, xT1 = 186, xW0 = 192, xW1 = 250, xQ0 = 256, xQ1 = 312;
     double pMax = PROBE_TOP_BAR * 100, tMin = 1e9, tMax = -1e9, wMax = 20;   // the scales: every probe of the giant's
     for (int i : all)

@@ -4,7 +4,7 @@
 
 namespace {
 thread_local int g_bandY0 = 0, g_bandY1 = 1 << 30;   // B-310: the rows this thread may write
-struct SV { double sx, sy, iz, shade, u, v, w; };
+using SV = ScreenVert;
 
 // F-07: a pixel whose depth test has passed (izb: its 1/z with the bias). The opaque replace, nearly every pixel of the ground, the
 // forms and the leaves, inline; the other blends and the quantized shade out of line
@@ -120,7 +120,27 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                 if (rp.grain) go += z < lerpZ1 ? rp.grain->atLerp(uu * gs - 0.5, vv * gs - 0.5) : (double)rp.grain->at((int)std::floor(uu * gs), (int)std::floor(vv * gs));
                 if (g2) go += (z < lerpZ2 || g2s < 1.0) ? g2->atLerp(uu * g2s - 0.5, vv * g2s - 0.5) : (double)g2->at((int)std::floor(uu * g2s), (int)std::floor(vv * g2s));
                 go *= gw;
-                if (rp.pattern) {   // the windows
+                const bool shut = rp.pattern && (rp.patternShut == 2 || (rp.patternShut == 1 && rp.patternAbove && bank == rp.bank2));   // KI-478: grown shut
+                if (shut) {   // a window's shape under the cover, a membrane's tone (its cell's mean far off), nothing lit, no dress
+                    const FacePattern& P = *rp.pattern;
+                    if (vv >= P.fromV) {
+                        const double cellPx = pj.f * std::min(P.bay, P.storey) * iz / FB_SCALE;
+                        const double fade = cellPx <= 2.0 ? 0.0 : (cellPx >= 4.0 ? 1.0 : (cellPx - 2.0) * 0.5);
+                        bool in = false;
+                        if (fade > 0) {
+                            double fu = uu / P.bay, fv = vv / P.storey;
+                            const double iu = std::floor(fu), iv = std::floor(fv);
+                            fu -= iu; fv -= iv;
+                            in = fu >= P.x0 && fu < P.x1 && fv >= P.y0 && fv < P.y1;
+                            if (in && P.scatter > 0) {
+                                uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663);
+                                h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
+                                if ((h & 1023) < (uint32_t)(P.scatter * 1024)) in = false;
+                            }
+                        }
+                        go += rp.shutTone * (fade * (in ? 1.0 : 0.0) + (1 - fade) * P.meanShare);
+                    }
+                } else if (rp.pattern && !(rp.patternAbove && bank == rp.bank2)) {   // the windows
                     const FacePattern& P = *rp.pattern;
                     if (P.stripe > 0 || P.dado > 0) {   // the wall's courses and its dado, faded to their mean where a course is under two pixels
                         const double coursePx = P.stripe > 0 ? pj.f * P.stripe * iz / FB_SCALE : 1e9;
@@ -219,7 +239,9 @@ void setRasterBand(int y0, int y1) { g_bandY0 = y0; g_bandY1 = y1; }
 // [ceil(min - 0.5), floor(max - 0.5)] (an integer edge n: ceil(y) > n exactly when y > n, floor(y) < n when y < n)
 inline bool outsideBand(double miny, double maxy) { return maxy - 0.5 < g_bandY0 || miny - 0.5 > g_bandY1 - 1; }
 
-void rasterPolygon(Framebuffer& fb, const RVert* v, int n, const RasterParams& rp, const Proj& pj) {
+namespace {
+// I-01: rasterPolygon's two halves. The clip and the projection: the vertex count, 0 when it fills nothing in the frame
+inline int projectPolygonIn(const RVert* v, int n, const Proj& pj, SV* p, double& miny, double& maxy) {
     // Sutherland-Hodgman against z = NEAR_Z (B-315: up to 16 vertices; a leaf cluster is a fan of 12)
     RVert out[16];
     const RVert* src = out;
@@ -239,18 +261,34 @@ void rasterPolygon(Framebuffer& fb, const RVert* v, int n, const RasterParams& r
             }
             if (m >= 15) break;
         }
-    if (m < 3) return;
-    SV p[16];
-    double minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    if (m < 3) return 0;
+    double minx = 1e9, maxx = -1e9;
+    miny = 1e9; maxy = -1e9;
     for (int i = 0; i < m; i++) {
         p[i] = project(src[i], pj);
         minx = std::min(minx, p[i].sx); maxx = std::max(maxx, p[i].sx);
         miny = std::min(miny, p[i].sy); maxy = std::max(maxy, p[i].sy);
     }
-    if (maxx < 0 || minx > FBW || maxy < 0 || miny > FBH) return;
+    if (maxx < 0 || minx > FBW || maxy < 0 || miny > FBH) return 0;
+    return m;
+}
+// the fill in the calling thread's band: its fan
+inline void fillPolygonIn(Framebuffer& fb, const SV* p, int m, double miny, double maxy, const RasterParams& rp, const Proj& pj) {
     if (outsideBand(miny, maxy)) return;
     for (int i = 1; i + 1 < m; i++) rasterProjected(fb, p[0], p[i], p[i + 1], rp, pj);
 }
+}
+
+void rasterPolygon(Framebuffer& fb, const RVert* v, int n, const RasterParams& rp, const Proj& pj) {
+    SV p[16];
+    double miny, maxy;
+    const int m = projectPolygonIn(v, n, pj, p, miny, maxy);
+    if (m) fillPolygonIn(fb, p, m, miny, maxy, rp, pj);
+}
+
+int projectPolygon(const RVert* v, int n, const Proj& pj, ScreenVert* out, double& miny, double& maxy) { return projectPolygonIn(v, n, pj, out, miny, maxy); }
+
+void fillPolygon(Framebuffer& fb, const ScreenVert* p, int m, double miny, double maxy, const RasterParams& rp, const Proj& pj) { fillPolygonIn(fb, p, m, miny, maxy, rp, pj); }
 
 void rasterTriangle(Framebuffer& fb, const RVert* v, const RasterParams& rp, const Proj& pj) {
     if (v[0].z >= NEAR_Z && v[1].z >= NEAR_Z && v[2].z >= NEAR_Z) {
@@ -294,16 +332,26 @@ bool rasterPoint3(Framebuffer& fb, const RVert& a, int bank, const Proj& pj, boo
     return drawn;
 }
 
-void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bool ztest, int thickness) {
+namespace {
+// I-01: rasterLine3's two halves. The clip and the projection (its thickness scaled): false when it draws nothing
+inline bool projectLineIn(RVert a, RVert b, const Proj& pj, int thickness, ProjectedLine& l) {
     thickness *= FB_SCALE;
-    if (a.z < NEAR_Z && b.z < NEAR_Z) return;
+    if (a.z < NEAR_Z && b.z < NEAR_Z) return false;
     if (a.z < NEAR_Z) a = clipLerp(a, b, (NEAR_Z - a.z) / (b.z - a.z));
     else if (b.z < NEAR_Z) b = clipLerp(b, a, (NEAR_Z - b.z) / (a.z - b.z));
-    SV p = project(a, pj), q = project(b, pj);
-    double dx = q.sx - p.sx, dy = q.sy - p.sy;
+    l.p = project(a, pj); l.q = project(b, pj);
+    double dx = l.q.sx - l.p.sx, dy = l.q.sy - l.p.sy;
     int steps = (int)std::ceil(std::max(std::fabs(dx), std::fabs(dy)));
-    if (steps > 4000) return;
+    if (steps > 4000) return false;
     if (steps < 1) steps = 1;
+    l.steps = steps; l.thickness = thickness;
+    return true;
+}
+// the steps in the calling thread's band
+inline void fillLineIn(Framebuffer& fb, const ProjectedLine& l, int bank, bool ztest) {
+    const SV& p = l.p; const SV& q = l.q;
+    const int steps = l.steps, thickness = l.thickness;
+    double dx = q.sx - p.sx, dy = q.sy - p.sy;
     // B-310: walk only the steps whose rows fall into this thread's band (and the frame): walking every trunk and branch of a
     // forest in full and rejecting per pixel would be most of a forest frame
     int y0 = std::max(0, g_bandY0), y1 = std::min(FBH, g_bandY1);
@@ -335,5 +383,97 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
                 row[px] = pv; zrow[px] = fiz;
             }
         }
+    }
+}
+}
+
+void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bool ztest, int thickness) {
+    ProjectedLine l;
+    if (projectLineIn(a, b, pj, thickness, l)) fillLineIn(fb, l, bank, ztest);
+}
+
+bool projectLine(const RVert& a, const RVert& b, const Proj& pj, int thickness, ProjectedLine& out) { return projectLineIn(a, b, pj, thickness, out); }
+
+void fillLine(Framebuffer& fb, const ProjectedLine& l, int bank, bool ztest) { fillLineIn(fb, l, bank, ztest); }
+
+// ---- I-01: shapes projected once, filled band by band ------------------------------------------------------------------------------
+
+namespace {
+// every field of the two: a field added to RasterParams joins this
+bool sameParams(const RasterParams& a, const RasterParams& b) {
+    return a.bank == b.bank && a.grain == b.grain && a.grainScale == b.grainScale && a.grain2 == b.grain2 && a.grain2Scale == b.grain2Scale &&
+           a.grainWeight == b.grainWeight && a.bank2 == b.bank2 && a.grain2b == b.grain2b && a.shade2 == b.shade2 && a.edge == b.edge &&
+           a.edgeScale == b.edgeScale && a.edgeAmp == b.edgeAmp && a.cutout == b.cutout && a.quantize == b.quantize && a.zbias == b.zbias &&
+           a.darken == b.darken && a.sheen == b.sheen && a.maskBank == b.maskBank && a.reflectMix == b.reflectMix && a.ztest == b.ztest &&
+           a.zwrite == b.zwrite && a.blend == b.blend && a.shadeMin == b.shadeMin && a.shadeMax == b.shadeMax && a.pattern == b.pattern &&
+           a.patternAbove == b.patternAbove && a.patternShut == b.patternShut && a.shutTone == b.shutTone;
+}
+}
+
+void ShapeList::begin(const Proj& p) {
+    pj = p;
+    shapes.clear(); sv.clear(); lines.clear(); pts.clear(); params.clear();
+    clipped = false;
+}
+
+void ShapeList::clip(double x0, double y0, double x1, double y1) { clipped = true; cx0 = x0; cy0 = y0; cx1 = x1; cy1 = y1; }
+void ShapeList::noClip() { clipped = false; }
+
+void ShapeList::polygon(const RVert* q, int n, const RasterParams& rp) {
+    ScreenVert p[16];
+    Shape s;
+    s.n = projectPolygonIn(q, n, pj, p, s.miny, s.maxy);
+    if (!s.n) return;
+    if (clipped) {
+        double minx = 1e30, maxx = -1e30;
+        for (int i = 0; i < s.n; i++) { minx = std::min(minx, p[i].sx); maxx = std::max(maxx, p[i].sx); }
+        if (outside(minx, s.miny, maxx, s.maxy)) return;
+        rows(s);
+    }
+    int k = (int)params.size() - 1;   // the same as the last or an earlier one, else its own
+    while (k >= 0 && !sameParams(params[k], rp)) k--;
+    if (k < 0) { k = (int)params.size(); params.push_back(rp); }
+    s.kind = POLYGON; s.params = k; s.first = (int)sv.size();
+    sv.insert(sv.end(), p, p + s.n);
+    shapes.push_back(s);
+}
+
+void ShapeList::line(const RVert& a, const RVert& b, int bank, bool ztest, int thickness) {
+    ProjectedLine l;
+    if (!projectLineIn(a, b, pj, thickness, l)) return;
+    Shape s; s.kind = LINE; s.first = (int)lines.size(); s.bank = bank; s.ztest = ztest;
+    if (clipped) {
+        if (outside(std::min(l.p.sx, l.q.sx), std::min(l.p.sy, l.q.sy), std::max(l.p.sx, l.q.sx) + l.thickness, std::max(l.p.sy, l.q.sy) + l.thickness)) return;
+        rows(s);
+    }
+    lines.push_back(l);
+    shapes.push_back(s);
+}
+
+void ShapeList::point(const RVert& a, int bank, bool ztest, int size) {
+    Shape s; s.kind = POINT; s.first = (int)pts.size(); s.bank = bank; s.ztest = ztest; s.size = size;
+    if (clipped) {
+        double sx, sy;
+        const double h = size * FB_SCALE;
+        if (!projectPoint(a, pj, sx, sy) || outside(sx - h, sy - h, sx + h, sy + h)) return;
+        rows(s);
+    }
+    pts.push_back(a);
+    shapes.push_back(s);
+}
+
+void ShapeList::fill(Framebuffer& fb) const {
+    const int b0 = g_bandY0, b1 = g_bandY1;
+    for (const Shape& s : shapes) {
+        const bool narrow = s.y0 > b0 || s.y1 < b1;   // I-02: a clipped shape's rows within the band's
+        if (narrow) {
+            const int y0 = std::max(b0, s.y0), y1 = std::min(b1, s.y1);
+            if (y0 >= y1) continue;
+            g_bandY0 = y0; g_bandY1 = y1;
+        }
+        if (s.kind == POLYGON) fillPolygonIn(fb, &sv[s.first], s.n, s.miny, s.maxy, params[s.params], pj);
+        else if (s.kind == LINE) fillLineIn(fb, lines[s.first], s.bank, s.ztest);
+        else rasterPoint3(fb, pts[s.first], s.bank, pj, s.ztest, s.size);
+        if (narrow) { g_bandY0 = b0; g_bandY1 = b1; }
     }
 }

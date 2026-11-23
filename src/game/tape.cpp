@@ -196,7 +196,7 @@ void Game::tapeUpdate(double realDt) {
                 fprintf(stderr, "tape: %s/%s would not play\n", T.dir.c_str(), T.tracks[T.track].file.c_str());
                 if (++T.failed >= n) {
                     T.phase = TAPE_OFF; audio.duck = 1; settings.autoMusic = false; settings.save(settingsPath);
-                    T.capAuthor = "THE TAPE WOULD NOT PLAY"; T.capTitle = "NONE OF ITS FILES COULD BE READ"; T.captionT = 0; audio.beep = BEEP_ERROR;
+                    T.capAuthor = "TAPE WOULD NOT PLAY"; T.capTitle = "NO FILE COULD BE READ"; T.captionT = 0; audio.beep = BEEP_ERROR;
                     return;
                 }
                 nextCassette();

@@ -28,7 +28,7 @@
 
 const char* const AUTO_PROFILE_NAMES[AP_COUNT] = {"WANDERER", "STARGAZER", "PLANETFALL", "SURVEYOR", "ARCHAEOLOGIST", "GIANTS"};
 const char* const AUTO_PROFILE_LINES[AP_COUNT] = {"A LITTLE OF EVERYTHING, AT RANDOM", "STARS, SKIES AND LONG FLIGHTS", "WORLDS FROM ORBIT, MOONS AND RINGS",
-                                                  "THE GROUND: WALKS, DRIVES, FLIGHTS", "THE OLD PEOPLES' RUINS AND RECORDS", "GAS GIANTS AND PROBES INTO THEM"};
+                                                  "GROUND: WALKS, DRIVES, FLIGHTS", "RUINS AND RECORDS", "GAS GIANTS AND PROBES INTO THEM"};
 
 namespace {
 enum AutoScene { AS_NONE = 0, AS_SPACE, AS_LANDING, AS_FALL, AS_GROUND, AS_PROBE, AS_TITLE, AS_SCREEN };
@@ -67,7 +67,7 @@ void Game::autoStop() {
     if (settings.clockMode == 0 && timeWarp > 1 && !almanacRunning) timeWarp = 1;
     if (surf.valid) { surf.scanWanted = scanMode >= 0; surf.player.autoWalk = 0; }
     statusNext.clear();   // what its steps queued (a probe's chute hint) is not the player's
-    status("AUTO-EXPLORE OFF - THE CONTROLS ARE YOURS", 4);
+    status("AUTO-EXPLORE OFF", 4);
     audio.beep = BEEP_UI;
     tapeHalt(false);   // R-420: the music fades with it, its place kept
 }
@@ -200,10 +200,10 @@ void Game::renderAutoScreen() {
     }
     if (!tape.tracks.empty()) {   // R-420: the tape
         drawTextCentered(canvas, UW / 2, bottom - 30, padInUse() ? "A BEGINS  B BACK" : "ENTER BEGINS  ESC BACK", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, bottom - 20, padInUse() ? "THEN SELECT STARTS AND STOPS THE MUSIC" : "THEN M STARTS AND STOPS THE MUSIC", HUD_DIM);
-        drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "AND ANY OTHER BUTTON TAKES THE CONTROLS BACK" : "AND ANY OTHER KEY TAKES THE CONTROLS BACK", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, bottom - 20, padInUse() ? "THEN SELECT STARTS AND STOPS MUSIC" : "THEN M STARTS AND STOPS MUSIC", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "AND ANY OTHER BUTTON ENDS AUTO-EXPLORE" : "AND ANY OTHER KEY ENDS AUTO-EXPLORE", HUD_DIM);
         return;
     }
     drawTextCentered(canvas, UW / 2, bottom - 20, padInUse() ? "A BEGINS  B BACK" : "ENTER BEGINS  ESC BACK", HUD_DIM);
-    drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "THEN ANY BUTTON TAKES THE CONTROLS BACK" : "THEN ANY KEY TAKES THE CONTROLS BACK", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "THEN ANY BUTTON ENDS AUTO-EXPLORE" : "THEN ANY KEY ENDS AUTO-EXPLORE", HUD_DIM);
 }

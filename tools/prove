@@ -93,7 +93,7 @@ snapshot() {
     cp -p $BIN $S/vesperis_test
     if [[ -z $PROVE_BIN ]]; then   # the objects the binary was linked from (PROVE_BIN's are not known)
       mkdir -p $S/objects
-      (cd $ROOT/build && for o in {core,galaxy,peoples,space,surface,game,harness}/*.o(N) *.o(N); do mkdir -p $S/objects/${o:h}; cp -p $o $S/objects/$o; done)
+      (cd $ROOT/build && for o in {core,galaxy,life,peoples,space,surface,game,harness}/*.o(N) *.o(N); do mkdir -p $S/objects/${o:h}; cp -p $o $S/objects/$o; done)
     fi
     { print "snapshot $name, $(date '+%Y-%m-%d %H:%M')"
       print "head $(git -C $ROOT rev-parse --short HEAD), $(git -C $ROOT status --short | wc -l | tr -d ' ') paths changed"
@@ -151,7 +151,7 @@ objects() {
     if cmp -s $S/objects/$o $ROOT/build/$o; then (( ++same )); else moved+=($o); fi
   done
   local -a added
-  for o in $ROOT/build/{core,galaxy,peoples,space,surface,game}/*.o(N) $ROOT/build/*.o(N); do
+  for o in $ROOT/build/{core,galaxy,life,peoples,space,surface,game}/*.o(N) $ROOT/build/*.o(N); do
     o=${o#$ROOT/build/}; [[ -f $S/objects/$o ]] || added+=($o)
   done
   print "prove objects $1: $same the same, $#moved differ${moved:+: ${(j:, :)moved}}${missing:+; missing: ${(j:, :)missing}}${added:+; new: ${(j:, :)added}}"

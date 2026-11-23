@@ -11,14 +11,14 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/archive/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0` to `1.4.0` shipped in that release, `later` is for a release not planned yet.
+column: `1.1.0` to `1.5.0` shipped in that release, `later` is for a release not planned yet.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
 
 **Released as 1.3.0 (2026-10-11), generation 13:** the iteration `ITERATION-1.3.0.md`, planned 2026-10-08 as one release with
-everything in it, the far, the faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar turned up to hear
-farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
+everything in it, the far, the faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar
+turned up to hear farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
 G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
 generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first; C-18
 (the drone bay) on 2026-10-11, the twenty-second; with R-412 to R-417 and B-411 to B-422. The rows not done move to `1.4.0`.
@@ -40,7 +40,23 @@ E-13, the repo made cheaper to read and change, nothing generated or drawn movin
 screen in one row, done 2026-10-26 and 2026-10-27; with B-429 to B-433 (the last four the known issues KI-423, KI-432, KI-433
 and KI-434). The rows not done are marked `later`.
 
-**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
+**Released as 1.5.0 (2026-11-23), generation 18:** the iteration `ITERATION-1.5.0.md` (planned 2026-11-16) on the branch
+`release/v1.5.0` (from main bb0e58b), on the user's request of 2026-11-16 (R-425 microorganisms on every world, searched for and
+studied aboard; R-426 a Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-spacious.md`: eleven
+milestones, Z-01 and Z-02, I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03
+done 2026-11-16, I-04, Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
+Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
+Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
+fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10
+to J-12 2026-11-22: all twelve done.
+Added 2026-11-22 on R-454 (a culture for any world): J-13 to J-15 (the cold worlds, the clouds, greening a desert), no generation change.
+J-13 done 2026-11-22. J-14 and J-15 done 2026-11-23: all three done.
+Added 2026-11-23 on the user's word: J-16, the known issues 1.5.0 found and left open, fixed or closed; done 2026-11-23 (33 bugs fixed,
+B-474 to B-507; KI-502's cap and KI-503 proposed closed, the user's word; the chemotroph's sources riding generation 18). Before the
+release, the Windows builds' `<cstdlib>` in fourteen files. Every row is done.
+
+**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0,
+done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -144,7 +160,8 @@ grammar, C-03's shards, C-08's reading of the site, C-09's roads, C-12's graves)
 | V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | later |
 | V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | later |
 
-V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this series, or GPU rendering through raylib) is to be discussed before any of it starts.
+V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this
+series, or GPU rendering through raylib) is to be discussed before any of it starts.
 
 ## W: the world and the sky (`IDEAS-world-and-sky.md`)
 
@@ -242,7 +259,8 @@ Planned 2026-10-12 from a day of measurements and an audit of every subsystem; t
 targets and the method. Every item but F-10 is bit-identical (the 22 regress hashes stay); F-10 is one blessed batch.
 The audit's own measurement found B-423 (the forest's picture depends on the core count: the flora's coverage grid is
 per band), which is fixed before any band-boundary work (F-05, F-06); the plan's section 4 has the two ways. Progress (2026-10-15):
-F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 2026-10-13); F-02 done; F-03 done; F-04 done; F-05 done; F-06 done; F-07 done; F-08 done; F-09 done; F-10 done; F-11 done: the series is closed, released as 1.3.1 on 2026-10-15.
+F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 2026-10-13); F-02 done; F-03 done; F-04 done; F-05 done;
+F-06 done; F-07 done; F-08 done; F-09 done; F-10 done; F-11 done: the series is closed, released as 1.3.1 on 2026-10-15.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
@@ -295,6 +313,69 @@ Every step is proven identical to the binary before it, and nothing is blessed.
 | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | 1.4.0, done 2026-10-26 |
 | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | 1.4.0, done 2026-10-26 |
 | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0, done 2026-10-27 |
+
+## Z: the living small (`IDEAS-small-and-spacious.md` section 1) — generation 17 from Z-01
+
+Planned 2026-11-16 for 1.5.0 (R-425): microorganisms on every world, each world's life at a stage of its own and its organisms
+through the stages of theirs, found by where life would be, seen six ways, grown, woken, mixed and read aboard. Z-01 and Z-02 come
+first (the look judged on plates before any screen), Z-03 to Z-07 after the I series (the lab is a room of the new ship).
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Z-01 | Where life is: each world's stage, chemistry, genesis and species; the kin cells; generation 17 | L | 1.5.0, done 2026-11-16 |
+| Z-02 | What it looks like: the form genome, six ways of seeing, the life cycle's animations; plates to judge | XL | 1.5.0, done 2026-11-16 |
+| Z-03 | The search: microhabitats, the kit, the activity, the lamp's ultraviolet, the signs, the capsule's scoop | XL | 1.5.0, done 2026-11-17 |
+| Z-04 | The microscope: a camera you enter, six ways of seeing, zoom, tracking, light and field; names and sheets | XL | 1.5.0, done 2026-11-17 |
+| Z-05 | The cultures: the incubator, growth and the stages, waking spores, mixed flasks, strains, the jars (taken out by R-447) | XL | 1.5.0, done 2026-11-17 |
+| Z-06 | The genome and the tree: the sequencer, kin across worlds and stars, the geneses, the made organisms | L | 1.5.0, done 2026-11-17 |
+| Z-07 | The record: the catalogue, the LIFE page, lending, auto-explore's samples, the docs and the battery | M | 1.5.0, done 2026-11-17 |
+
+## I: the interior (`IDEAS-small-and-spacious.md` section 2) — the drawing alone, no generation change
+
+Planned 2026-11-16 for 1.5.0 (R-426): the Stardrifter's one 5 m room becomes three decks and eight spaces, a home rather than a
+cockpit. I-01 changes nothing drawn (the old room proven as the first plan of rows); I-02 to I-04 bless `cabin_1x` where named.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| I-01 | The ship as rows: rooms, openings, fixtures and devices; the harness reads them; nothing drawn changes | L | 1.5.0, done 2026-11-16 |
+| I-02 | The new Stardrifter: three decks, eight spaces, the stair and the arches, the devices in their rooms | XL | 1.5.0, done 2026-11-16 |
+| I-03 | Light, materials and views: lamps, the star's light through the windows, the hull seen outside | L | 1.5.0, done 2026-11-16 |
+| I-04 | Life aboard: the quarters, the garden, the library's shelves, the hangar's capsule, sound by room | L | 1.5.0, done 2026-11-17 |
+
+## Y: the genes (`IDEAS-genes.md`) — no generation change
+
+Planned 2026-11-19 for 1.5.0 (R-443, R-444), after Z-07, on the user's requests talked through first: a gene editor of its own in the
+laboratory (a species' genes cut and changed by hand, then genes from its kin and switches), the edited lines grown in the flasks, and
+the tree of kin by world and by folder. A species' genes are read from what it is: no world moves.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Y-01 | The trees by world and by folder: a page a world and a folder, the lab's lines as twigs, A and Backspace (R-444) | M | 1.5.0, done 2026-11-19 |
+| Y-02 | The gene editor: a species' own genes, cut and changed by hand, written into a flask, learned as seen (R-443) | XL | 1.5.0, done 2026-11-20 |
+| Y-03 | Genes from others: moved from kin read and cultures kept, their price, duplicates, what a gene needs (R-443) | L | 1.5.0, done 2026-11-20 |
+| Y-04 | The switches: when a gene is on, in the culture's segments and the drop; the close (R-443) | L | 1.5.0, done 2026-11-20 |
+
+## J: seeded worlds (`IDEAS-seeded-worlds.md`) — generation 18 from J-06
+
+Planned 2026-11-20 for 1.5.0 (R-448), after Y-04 and R-447, on the user's request talked through first: a gene-edited culture sent down
+to a world changes it, more often for the worse; fourteen world genes; made traits; die-offs, remains and changed animals; worlds
+overgrown with flesh, fungus or other tissue, ruins included; and the animals drawn again with far more variety. A world nobody seeds
+stays as generated.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| J-01 | World genes: fourteen new genes on every species, seen in the lab; the editor's second page | XL | 1.5.0, done 2026-11-20 |
+| J-02 | The world now: a seeded world's layer over the world as generated; nothing drawn changes | L | 1.5.0, done 2026-11-20 |
+| J-03 | Sending: the drones' seed trip, whether it takes, the spread, the record; the waters' colours | XL | 1.5.0, done 2026-11-21 |
+| J-04 | Air and sky: the made climate, haze, ozone, clouds, rain | L | 1.5.0, done 2026-11-21 |
+| J-05 | Water, ground and plants: seas, snow, crusts, mats, blight, galls, new leaves | XL | 1.5.0, done 2026-11-21 |
+| J-06 | Animal bodies: parts, sixteen plans, a world's style, hides of their own; generation 18; plates to judge | XL | 1.5.0, done 2026-11-21 |
+| J-07 | Animal ways and the record: gaits, hunters, swimmers, flocks; animals named by the explorer | L | 1.5.0, done 2026-11-21 |
+| J-08 | Fates: die-offs and remains, sickness, changed young, thriving, silence | XL | 1.5.0, done 2026-11-21 |
+| J-09 | The overgrowth: flesh, fungus and eight more over the ground, with structures; plates to judge | XL | 1.5.0, done 2026-11-21 |
+| J-10 | Ruins overgrown, and the sounds of an overgrown world | L | 1.5.0, done 2026-11-22 |
+| J-11 | Made kinds: hothouse, snowball, haze, purple, rust, overgrown, charnel, greened | M | 1.5.0, done 2026-11-22 |
+| J-12 | The record and the close: catalogue, LIFE page, docs, battery | M | 1.5.0, done 2026-11-22 |
 
 ## Suggested order for 1.2.0
 

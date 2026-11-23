@@ -55,7 +55,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
         printf("    %s\n", fn.c_str());
     };
     auto held = [&]() { std::set<std::string> h(game.guide.shards.begin(), game.guide.shards.end()); h.insert(game.guide.instruments.begin(), game.guide.instruments.end()); return h; };
-    auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.1); };
+    auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_BAY); run(0.1); };
     run(0.2); game.testParkAt(st, W.body); run(0.2); game.setState(GameState::SPACE); run(0.2);
     // ---- the rack with the drones aboard, E, the screen
     atRack(); run(0.2);
@@ -81,7 +81,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testDronesSkip(3.6);
     const double gone = game.testDroneRackX(0);
     // the lights: the ship's nose on the world, the explorer at the front window
-    game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05);
+    game.testAimAtBody(W.body); game.testCabinView("OUT TO THE DRONES' WAY"); run(0.05);
     game.testDronesSkip(4.0); run(0.02);
     shot("lights");
     game.testDronesSkip(6.5); run(0.02);
@@ -89,9 +89,10 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testDronesSkip(9.0); game.testOpenDroneBay(); run(0.05);
     const std::string descent = game.testDroneState(0);
     shot("screen_descent");
-    ck("the drone bay: the launch (C-18)", sent && x1 < -2.3 && y1 > 1.0 && std::fabs(x3 - (-2.19)) < 0.01 && gone < -90 && game.testDronesPlanned() && descent == "DESCENDING",
-       fmt("sent %s; at 1.2 s drone 1 at x %.2f (backing into the hull from -2.19) %.2f m up, drone 3 at x %.2f (waiting its turn); at 3.6 s drone 1 %s; the haul %s; at 9 s drone 1 %s",
-           sent ? "yes" : "NO", x1, y1, x3, gone < -90 ? "gone through its port" : "STILL IN THE CABIN", game.testDronesPlanned() ? "drawn" : "NOT DRAWN", descent.c_str()));
+    const double shelfX = shipFixtureOf(FX_RACK).droneX;   // I-01: where a drone stands on its shelf, the plan's
+    ck("the drone bay: the launch (C-18)", sent && x1 < shelfX - 0.1 && y1 > 1.0 && std::fabs(x3 - shelfX) < 0.01 && gone < -90 && game.testDronesPlanned() && descent == "DESCENDING",
+       fmt("sent %s; at 1.2 s drone 1 at x %.2f (backing into the hull from %.2f) %.2f m up its rack, drone 3 at x %.2f (waiting its turn); at 3.6 s drone 1 %s; the haul %s; at 9 s drone 1 %s",
+           sent ? "yes" : "NO", x1, shelfX, y1, x3, gone < -90 ? "gone through its port" : "STILL IN THE CABIN", game.testDronesPlanned() ? "drawn" : "NOT DRAWN", descent.c_str()));
     // ---- the search: a hand closing on a find, the ways on the map; each drone two minutes from its first place to its last (the user's)
     std::string info = game.testDronesInfo();
     double arrive = 0;
@@ -137,19 +138,14 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
                 "%d aboard, the guide %d more; %d found twice, %d held before; %s",
                     searching.c_str(), searches.c_str(), searchOk, total, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], wantedSum, perOk, aboard, grew, dup, old,
                     trunc(game.testStatus(), 40).c_str()));
-    // ---- the charge: refused until five minutes from the return (not from the launch), then a second trip that brings none of the first's,
-    // watched on the decoder: the world's records listed open there grow as the drones dock (the user's: "when drones arrive everything
-    // immediately appears on shard decoder")
-    const bool refused = !game.testDronesLaunch();
-    const std::string why = game.testStatus();
-    const double back1 = game.testDronesBack();
-    game.testDronesSkip(DRONE_COOLDOWN_S + 0.1); const bool refusedAtOld = !game.testDronesLaunch();   // five minutes from the launch: still charging
-    game.testDronesSkip(back1 + DRONE_COOLDOWN_S - 2); const bool stillRefused = !game.testDronesLaunch();
-    game.testDronesSkip(back1 + DRONE_COOLDOWN_S + 0.1);
+    // ---- no charge (R-449): sent again the moment the trip ends, a second trip that brings none of the first's, watched on the decoder: the
+    // world's records listed open there grow as the drones dock (the user's: "when drones arrive everything immediately appears on shard decoder")
+    const double back1 = game.testDronesClock();
     const std::set<std::string> before2 = held();
     const bool second = game.testDronesLaunch();
+    const std::string why = game.testStatus();
     game.testDronesSettle();
-    game.setState(GameState::SPACE); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.1);
+    game.setState(GameState::SPACE); game.testCabinAtDevice(FACE_DECODER); run(0.1);
     press(KEY_E); run(0.1);
     const bool decoderOpen = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
     press(KEY_ENTER); run(0.1);
@@ -169,14 +165,12 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     press(KEY_ESCAPE); run(0.05); press(KEY_ESCAPE); run(0.05);
     int again = 0, n2 = 0;
     for (int k = 0; k < DRONE_COUNT; k++) for (int i = 0; i < game.testDronesOfDrone(k); i++) { n2++; if (before2.count(game.testDronesFindKey(k, i))) again++; }
-    ck("the drone bay: five minutes charging from the return (C-18)", refused && refusedAtOld && stillRefused && second && !game.testDronesOut() && n2 >= 6 && again == 0,
-            fmt("refused after the trip (%s), at %.0f s from the launch still, and at %.0f s (back at %.1f), sent at %.1f; the second brought %d, %d of them held before", trunc(why, 40).c_str(),
-                    DRONE_COOLDOWN_S + 0.1, back1 + DRONE_COOLDOWN_S - 2, back1, back1 + DRONE_COOLDOWN_S + 0.1, n2, again));
+    ck("the drone bay: sent again as the trip ends, no charging (R-449)", second && !game.testDronesOut() && n2 >= 6 && again == 0,
+            fmt("sent again at %.1f s, as the first trip ended (%s); the second brought %d, %d of them held before", back1, trunc(why, 40).c_str(), n2, again));
     ck("the decoder open as the drones dock (C-18)", decoderOpen && levelBefore == 1 && levelAfter == 1 && which >= 0 && listedAfter == heldNow && listedAfter >= listedBefore,
             fmt("the decoder %s; people %d's records listed %d before the docks, %d after (the guide %d), at the world's records %s", decoderOpen ? "open" : "NOT OPEN", which + 1, listedBefore,
                     listedAfter, heldNow, levelBefore == 1 && levelAfter == 1 ? "throughout" : "NOT THROUGHOUT"));
     // ---- a recall: the ship leaves its parking mid-trip; what was found comes aboard, the rest stays down there
-    game.testDronesSkip(game.testDronesBack() + DRONE_COOLDOWN_S + 0.1);
     const std::set<std::string> before3 = held();
     const bool third = game.testDronesLaunch();
     game.testDronesSettle();
@@ -191,7 +185,6 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
             fmt("sent %s; %d of the %d planned aboard when the ship left at %.0f s; %s", third ? "yes" : "NO", brought, wantedAll, arrive + 40, trunc(game.testStatus(), 44).c_str()));
     // ---- saved in a trip and loaded: it goes on and docks
     game.setState(GameState::SPACE); game.testParkAt(st, W.body); run(0.1); game.setState(GameState::SPACE);
-    game.testDronesSkip(game.testDronesClock() + DRONE_COOLDOWN_S + 1);
     const bool fourth = game.testDronesLaunch();
     game.testDronesSettle();
     game.testDronesSkip(25);
@@ -227,7 +220,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     const bool two = peoplesOf(BodyGen::make(sys.bodies[W.body])) > 1;
     for (int p = 0; p < 2 && two; p++) caseAdd(W.sx, W.sz, W.body, p);
     auto keyFits = [&](const std::string& k, const std::string& world, int which) { return k.rfind(world + "/I", 0) == 0 && atoi(k.c_str() + world.size() + 2) / 1000 == which; };
-    game.setState(GameState::SPACE); game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.1);
+    game.setState(GameState::SPACE); game.testCabinView("CLOSE AT THE CASE"); run(0.1);
     press(KEY_E); run(0.1);
     const bool caseOpen = game.state == GameState::INSTRUMENTS && game.testCaseLevel() == 0;
     int counted = 0; for (int w = 0; w < game.testCaseWorlds(); w++) counted += game.testCaseWorldItems(w);

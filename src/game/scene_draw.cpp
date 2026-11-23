@@ -59,13 +59,19 @@ void Game::renderSpace() {
     c.detailBody = titleCam ? -1 : telescopePlateBody();   // the eyepiece's body gets the planet function at its footprint (the plate)
     c.detailBudget = (wantsScreenshot || telePlateFinish) ? 0 : TELE_PLATE_BUDGET;   // a photo reads the plate out whole
     telePlateFinish = false;
-    spaceR.render(fb, c);
-    // the cabin round the view, the drones' lights outside its windows (M2): not on the landing map (auto-explore's is the cabin still), nor
-    // with the radar camera (outside the cabin) or the eye at the eyepiece
-    if (settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }
+    // the ship round the view, the drones' lights outside its windows (M2): not on the landing map (auto-explore's is the ship still), nor
+    // with the radar camera (outside the ship) or the eye at the eyepiece. I-02: what the eye sees of the ship first; with no window,
+    // oculus or dome in view the space view is not drawn (the frame cleared under the ship's walls, the bodies' places on the screen kept
+    // for the HUD, the flight's band kept building)
+    const bool aboard = settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on;
+    if (aboard) cabinSight(); else cabinFrame.aboard = false;   // B-501: the HUD's marks kept to the glass aboard alone
+    if (!aboard || cabinFrame.sight.seesOut) spaceR.render(fb, c);
+    else { fb.clear(0); fb.clearDepth(); spaceR.bodiesOnScreen(c); keepFlightBand(); }
+    if (aboard) { cabinDeal(); cabinPalette(); if (cabinFrame.sight.seesOut) drawDroneLights(); drawCabin(); }
     if (radar.on && !titleCam) radarCameraFeed(fb);
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // arrival flash
+    fb.raiseUnder();   // B-437: the outside's own banks back in the frame (a flight's next frame fades this one)
 }
 
 // U-02: the scene under an overlay, the one it was opened from (`returnState`): the ground, the title over space, else space;
@@ -87,11 +93,12 @@ void Game::keepFlightBand() {
 
 void Game::renderSurfaceScene() {
     surf.floodlights = state == GameState::DESCENT || state == GameState::ASCENT;   // D-04: the capsule's, on its way down and up
+    surf.sight = visionMode == VISION_ACTIVITY && state == GameState::SURFACE;   // R-434: the activity vision's pass, on the ground alone
     surf.render(fb, t, nb.stars, spaceR, fade);
     fb.mush(surf.valid && hasOpaqueDeck(surf.site.gen.type) ? 3 : 2);   // the thick air blurs everything
     bool feed = surf.inVehicle() && !surf.chaseCam && !photoMode && surf.cameraOverrideAlt < 0;   // driving is seen through the nose camera; R-403: flying too
     if (feed) surf.cameraFeed(fb, realTime);
-    else if (visionMode != 0) applyVision();
+    else if (visionMode != 0 && visionMode != VISION_ACTIVITY) applyVision();   // R-434: the activity vision's colours are its pass's
     fb.toRGB(rgbBuf.data(), visionMode == 1 ? 1.25 : 1.0, settings.dither);
 }
 

@@ -1,5 +1,5 @@
 // E-02: the fingerprint modes, what the generators make written as keyed lines, so that a step meant to change nothing is proven by
-// comparing two runs' files (`tools/prove`, `tools/keydiff.py`). `fingerprint bodies|stream|peoples|modules [n] [out] [full]`:
+// comparing two runs' files (`tools/prove`, `tools/keydiff.py`). `fingerprint bodies|stream|peoples|modules|life [n] [out] [full]`:
 //   bodies   every body of four scan regions (Q-03's fp5): its generated state, its made generator, its data sheet's sentence and
 //            traits, its sky and climate, its ground at four scales; the drifters nearest home with their moons (the dark bodies
 //            and the dark ocean, which no scan reaches); three bodies of each drained kind with the drainage on
@@ -8,6 +8,7 @@
 //   peoples  every people of D-05's fixed worlds and of every n-th people's world round home (D-05's recdump): its profile, lore,
 //            culture, history, record catalogue, homes, records and texts
 //   modules  for a fixed sample of worlds, what nothing else pins: see fingerprint_modules.cpp
+//   life     Z-01: the biota of every landable body of bodies' four regions and of the forty drifters nearest home, the ship's species
 // A line is `<what> <key...> <field>=<value> ...`, a field's value a number or the FNV-1a hash of its bytes: a new field adds a
 // column instead of changing every line. `n` thins the sample (every n-th; the defaults are the battery's); `full` writes the
 // texts the hashes are taken over (bodies has none), to read what moved. Files go to shots/tests/fingerprint_<kind>.txt by default.
@@ -18,6 +19,7 @@
 #include "galaxy/drainage.h"
 #include "galaxy/drifters.h"
 #include "galaxy/kinds.h"
+#include "life/biota.h"
 #include "peoples/peoples.h"
 #include "peoples/history.h"
 #include "peoples/records.h"
@@ -395,6 +397,73 @@ int fingerprintPeoples(FILE* out, int every, bool full) {
     return 0;
 }
 
+// Z-01: the biota of every landable body of the four scan regions and of the drifters nearest home (as `bodies` takes them): its stage, its
+// chemistry, its genesis, its habitats, its species' count and every field of them, hashed
+int fingerprintLife(FILE* out, int every) {
+    long bodies = 0, species = 0;
+    auto system = [&](const char* what, int64_t x, int64_t y, int64_t z, const StarSystem& sys) {
+        auto L = lifeOf(sys);
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            if (!KINDS[sys.bodies[bi].type].landable) continue;
+            const Biota& B = L->bodies[bi];
+            std::string sp;
+            for (const Microbe& s : B.species)
+                fpPut(sp, "%d %d %d %d %u %d %d %d %d %.17g %.17g %.17g %d %d %.17g %.17g %.17g %.17g %u %d %d %u %d %.17g %d %016llx %016llx %.17g %d %d;", s.index,
+                      s.state, s.plan, s.niche, s.niches, s.way, s.substrate, s.pigment, s.oxygen, s.tMin, s.tOpt, s.tMax, s.saltLo, s.saltHi, s.phLo, s.phHi,
+                      s.doseGy, s.sporeYears, s.cycle, s.division, s.motion, s.taxis, s.glows ? 1 : 0, s.abundance, s.clade, (unsigned long long)s.genesis,
+                      (unsigned long long)s.seed, s.ageYears, s.fromBody, s.fromIndex);
+            std::string g;
+            fpPut(g, "%016llx %d %d %d %d %u %.17g %lld %lld %lld %d", (unsigned long long)B.genesis.id, B.genesis.chemistry, B.genesis.origin, B.genesis.mirrored ? 1 : 0,
+                  B.genesis.letters, B.genesis.style, B.genesis.ageGyr, (long long)B.genesis.cx, (long long)B.genesis.cy, (long long)B.genesis.cz, B.genesis.cellIndex);
+            std::string w;
+            fpPut(w, "%d %d %d %x %.17g %.17g", B.stage, B.second, B.chemistry, B.habitats, B.dormantYears, B.meanC);
+            fprintf(out, "%s %lld %lld %lld %d type=%d stage=%d second=%d chem=%d genesis=%016llx habitats=%x species=%zu living=%d all=%016llx world=%016llx "
+                         "lineage=%016llx microbes=%016llx\n",
+                    what, (long long)x, (long long)y, (long long)z, bi, sys.bodies[bi].type, B.stage, B.second, B.chemistry, (unsigned long long)B.genesis.id, B.habitats,
+                    B.species.size(), B.count(SS_LIVING), (unsigned long long)fpHash(w + g + sp), (unsigned long long)fpHash(w), (unsigned long long)fpHash(g),
+                    (unsigned long long)fpHash(sp));
+            bodies++; species += (long)B.species.size();
+        }
+    };
+    struct Scan { int64_t x0, x1, y, z0, z1; };
+    const Scan scans[] = {{150, 340, 0, 20, 160}, {4000, 4060, 0, 4000, 4060}, {-20000, -19940, 0, 3000, 3060}, {195, 196, 0, 46, 47}};
+    for (const Scan& sc : scans)
+        for (int64_t x = sc.x0; x < sc.x1; x += every)
+            for (int64_t z = sc.z0; z < sc.z1; z++) {
+                Star st;
+                if (!starInSector(x, sc.y, z, st)) continue;
+                StarSystem sys; sys.generate(st);
+                system("life", x, sc.y, z, sys);
+            }
+    long dark = 0;
+    {
+        Star home;
+        starInSector(HOME_SX, HOME_SY, HOME_SZ, home, true);
+        std::vector<Star> near;
+        driftersNear(home.pos, 3000.0, near);
+        int taken = 0;
+        for (const Star& n0 : near) {
+            if (taken >= 40) break;
+            Star d;
+            if (!drifterInSector(n0.sx, n0.sy, n0.sz, d, true)) continue;
+            StarSystem sys; sys.generate(d);
+            const long before = bodies;
+            system("dark", d.sx, d.sy, d.sz, sys);
+            dark += bodies - before;
+            taken++;
+        }
+    }
+    const Genesis h = homeGenesis();
+    fprintf(out, "home genesis=%016llx origin=%d cell=%d mirrored=%d letters=%d style=%08x\n", (unsigned long long)h.id, h.origin, h.cellIndex, h.mirrored ? 1 : 0,
+            h.letters, h.style);
+    for (int k = 0; k < SHIP_SPECIES; k++) {
+        const Microbe s = shipSpecies(k);
+        fprintf(out, "ship %d plan=%d niche=%d way=%d seed=%016llx genesis=%016llx\n", k, s.plan, s.niche, s.way, (unsigned long long)s.seed, (unsigned long long)s.genesis);
+    }
+    printf("fingerprint life: %ld worlds (%ld in the dark), %ld species\n", bodies, dark, species);
+    return 0;
+}
+
 }   // namespace
 
 int runFingerprint(int argc, char** argv) {
@@ -408,8 +477,8 @@ int runFingerprint(int argc, char** argv) {
     const int defaults = kind == "peoples" ? 6 : kind == "modules" ? 1 : 1;
     const int every = !rest.empty() && atoi(rest[0].c_str()) > 0 ? atoi(rest[0].c_str()) : defaults;
     const std::string path = rest.size() > 1 ? rest[1] : "shots/tests/fingerprint_" + kind + (full ? "_full" : "") + ".txt";
-    if (kind != "bodies" && kind != "stream" && kind != "peoples" && kind != "modules") {
-        fprintf(stderr, "fingerprint bodies|stream|peoples|modules [n] [out] [full]\n");
+    if (kind != "bodies" && kind != "stream" && kind != "peoples" && kind != "modules" && kind != "life") {
+        fprintf(stderr, "fingerprint bodies|stream|peoples|modules|life [n] [out] [full]\n");
         return 2;
     }
     FILE* out = fopen(path.c_str(), "w");
@@ -418,6 +487,7 @@ int runFingerprint(int argc, char** argv) {
     if (kind == "bodies") rc = fingerprintBodies(out, every);
     else if (kind == "stream") rc = fingerprintStream(out, every, full);
     else if (kind == "peoples") rc = fingerprintPeoples(out, every, full);
+    else if (kind == "life") rc = fingerprintLife(out, every);
     else rc = fingerprintModules(out, every, full);
     fclose(out);
     printf("fingerprint %s -> %s\n", kind.c_str(), path.c_str());

@@ -1,11 +1,11 @@
 # Rules: rendering and the frame
 
-The rules in force for the framebuffer, the palette, the rasteriser and the frame, a line each with the entries behind them
-(`log/`, by release). A milestone that sets or changes one edits its line here; a replaced one moves to `superseded.md`
-(`docs/CLAUDE.md`). The order, threads and time: `rules-rendering-frame.md`.
+Rules in force for the framebuffer, palette, rasteriser and frame, one line per rule with its log entries (`log/`, by release). A
+milestone that sets or changes a rule edits its line here; a replaced rule moves to `superseded.md` (`docs/CLAUDE.md`). Order,
+threads and time: `rules-rendering-frame.md`.
 
 ## The pixel and the palette
-- A pixel is a 5-bit bank and an 11-bit intensity (32 a shade): writers use banks and shades, never colours [M10-03], [O0-02], [B-305]
+- A pixel is a 5-bit bank and an 11-bit intensity (32 per shade): writers use banks and shades, never colours [M10-03], [O0-02], [B-305]
 - The mush averages intensities, never across banks (edges melt, no colour bleeds); two hues take two banks, never a blend [table], [B-403]
 - Resolution is a setting (1x-4x, `setFramebufferScale`), not a build variant; the user's default is 4x with the fine 3x3 mush [table], [M10-01], [B-310]
 - The HUD draws after the mush in RGB, in logical units; the 5x7 font has no lowercase, all text in capitals [table], [M10-01], [C-02]
@@ -14,10 +14,10 @@ The rules in force for the framebuffer, the palette, the rasteriser and the fram
 ## Banks and the light across them
 - Banks are allocated per view (`setupPalette`, `02-rendering.md`'s tables), not from one pool: a new use takes a free one [R-404], [W-03]
 - Each world with a disc owns its banks (A 2, 6, 11, 13-15, 31; B 3, 7, 16-19; belt rocks 20): two in a frame never share one [O0-02], [B-305], [Q-02]
-- Lent banks: trait colours 25-27 only without a people (`TraitDef::moves`), floraless accents grass and forest, sunless aurorae 12 [Q-02], [P-00], [D-02]
+- Lent banks: trait colours 25-27 only with no people (`TraitDef::moves`), floraless accents in grass and forest, sunless aurorae in 12 [Q-02], [P-00], [D-02]
 - Ramps that meet agree at the shades met (the mush averages across banks); light and depth scale colours, never shades [B-408], [X-01], [X-02]
-- A bank over the sky starts at its colour (aurora 11, 21, band 22: no hue edge); an airless sky lies all in 22, sun and glows [B-403], [G-03], [B-408]
-- A pixel changes bank by luminance read from the palette, never by shade number; light added to a sky is summed so [B-408], [B-427]
+- A bank over the sky starts at its colour (aurora 11, 21, band 22: no hue edge); an airless sky lies all in 22, sun and glows too [B-403], [G-03], [B-408]
+- A pixel changes bank by luminance read from the palette, never by shade number; light added to a sky is summed likewise [B-408], [B-427]
 - An overlay takes its bank where its light beats the pixel's (band 22, nebulae; the tail dithered 4x4); `glowDisc` only on empty pixels [G-03], [B-427]
 - The sky bank is black under shade 30, dark to 44: what is drawn in it uses its bright shades (earthshine 30-42) [O0-01], [B-301], [W-04], [B-427]
 
@@ -34,14 +34,15 @@ The rules in force for the framebuffer, the palette, the rasteriser and the fram
 - Suns draw by angle per pixel; a globe is culled only wholly behind the camera, else boxed exactly (`sphereBox`, `ringBox`) [B-308], [O0-03], [B-304], [B-312]
 - One material palette, tint path and exposure rule in every view (`matColor`, `waterTint`, `exposureStop`): globe, map, ground agree [N1], [B-202], [Q-02]
 - The landing map takes the globe's shadows per texel; relief shading subtracts the slope toward the star, map and plate alike [O0-04], [B-306], [B-407]
-- The telescope's `DetailPlate` samples the planet function body-fixed; plate and zoom draw what the ground has, none exaggerated [W-06 reworked], [T-01]
+- The telescope's `DetailPlate` samples the planet function body-fixed; plate and zoom draw what the ground has, nothing exaggerated [W-06 reworked], [T-01]
 - The telescope is the window's view at a multiplied focal length (`Game::telescopeProj`); only it sets `detailBody` [W-06], [W-06 reworked]
 - One `SurfaceView` only: the drone screen draws schematics, never a second camera [C-18]
 
 ## Small things and the mush
-- No visible squares: grain perspective-correct and bilinear past 2.5 px a texel, material edges noisy, smooth shading by default [table], [B-311]
+- No visible squares: grain is perspective-correct and bilinear past 2.5 px a texel, material edges noisy, smooth shading by default [table], [B-311]
 - A point of light is a square `FB_SCALE` + 2 px wide in its glow's stops: a lone pixel dies in the mush [D-04]
-- A sub-pixel tower is one pixel at its own shade, never widened or paled; forms fog as terrain does; a window cell under two 1x px is its mean [A-02]
+- A body is a point or a globe by its size at the view's middle; a point near a globe's size dims less by day [B-436]
+- A sub-pixel tower is one pixel at its own shade, never widened or paled. Forms fog as terrain does; a window cell under two 1x px is its mean [A-02]
 - Against shimmer: far thin features are sized in screen pixels, never texels; sampling grids are anchored in the world [P-05], [P-06], [X-02], [G-05]
 
 [table]: log/0-1.0.0.md
@@ -94,3 +95,4 @@ The rules in force for the framebuffer, the palette, the rasteriser and the fram
 [D-01]: log/6-1.4.0.md
 [D-02]: log/6-1.4.0.md
 [D-04]: log/6-1.4.0.md
+[B-436]: log/7-1.5.0.md

@@ -51,7 +51,7 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
         std::vector<std::pair<double, const SiteMark*>> in_;
         for (const SiteMark& m : marksHere()) if (std::fabs(m.x - px) <= hw && std::fabs(m.z - pz) <= hh) in_.push_back({std::hypot(m.x - px, m.z - pz), &m});
         std::sort(in_.begin(), in_.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-        if (in_.empty()) status("NO MARK IN THE FRAME - ZOOM OUT (-)", 3);
+        if (in_.empty()) status("NO MARK ON THE MAP - ZOOM OUT (-)", 3);
         else {
             size_t k = 0;
             for (size_t i = 0; i < in_.size(); i++) if (in_[i].second->index == mapTabMark) { k = (i + 1) % in_.size(); break; }
@@ -88,19 +88,19 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
 // d-pad and the sticks)
 void Game::sectorMapPad(PadMenu& m) const {
     m.title = "SECTOR MAP";
-    m.item("MARK HERE, OR RENAME THE MARK", KEY_ENTER);
-    m.item("SHOW THE MARK OVER THE VIEW", KEY_ENTER, MOD_SHIFT);
+    m.item("MARK HERE OR RENAME", KEY_ENTER);
+    m.item("SHOW MARK OVER VIEW", KEY_ENTER, MOD_SHIFT);
     m.item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
-    m.item("WAYPOINT AT THE CURSOR", KEY_M);
-    m.item("THE NEXT MARK", KEY_TAB);
-    m.item("THE CURSOR BACK TO YOU", KEY_SPACE);
+    m.item("WAYPOINT AT CURSOR", KEY_M);
+    m.item("NEXT MARK", KEY_TAB);
+    m.item("CURSOR BACK TO YOU", KEY_SPACE);
     m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
     scannerPad(m);
-    m.item("CLOSE THE MAP", KEY_ESCAPE);
+    m.item("CLOSE", KEY_ESCAPE);
     m.button(PR_A, KEY_ENTER, "MARK"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "BACK TO YOU");
     m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN"); m.button(PR_L3, KEY_LEFT_SHIFT, "FASTER");
     m.button(PR_SELECT, KEY_TAB, "NEXT MARK"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
-    m.sticks = "STICKS MOVE THE CURSOR";
+    m.sticks = "STICKS MOVE CURSOR";
 }
 
 void Game::renderSectorMap() {
@@ -128,7 +128,7 @@ void Game::renderSectorMap() {
         });
         // the same colouring as the landing map (material ramps, exposure rule, hillshade from the north-west), so
         // the map you land by and the map you walk by agree
-        MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
+        MatRamp ramps[MAP_RAMPS]; double lf; bool atmo;
         mapRampsFor(body, ramps, lf, atmo);
         auto hAt = [&](int x, int y) { x = clampi(x, 0, sectorImgW - 1); y = clampi(y, 0, sectorImgH - 1); return (double)hs[y * sectorImgW + x]; };
         double sum2 = 0; int cnt = 0;
@@ -136,6 +136,7 @@ void Game::renderSectorMap() {
         double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * cell));   // a 3% grade at most for full shading
         const bool survey = sys.sunless();   // the survey look of a world with no sun, by the frame's heights
         double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
+        const bool greened = surf.site.gen.made.green > 0 && madeGreens(surf.site.gen.type);   // J-16 (KI-509): its grass a carpet's, each its line's
         for (int y = 0; y < sectorImgH; y++)
             for (int x = 0; x < sectorImgW; x++) {
                 const TerrainVertex& v = tv[y * sectorImgW + x];
@@ -143,7 +144,8 @@ void Game::renderSectorMap() {
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
                 if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // a tidal flat its wet sand
-                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1);
+                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1,
+                                                         greened && v.material == MAT_GRASS && v.mline > 0 ? 1.0 : v.mtint / 255.0, v.mline - 1);   // (J-16: a carpet's grass its line's)
             }
         if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // the tide lines, the high water's pale along the flat's landward edge, the low water's dark
             const double S = surf.site.seaLevel;
@@ -326,7 +328,7 @@ void Game::renderSectorMap() {
             drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
             drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // over the view
         }
-        else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "THE WAYPOINT", HUD_WHITE);
+        else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "WAYPOINT", HUD_WHITE);
     }
     {   // the scanner
         if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);

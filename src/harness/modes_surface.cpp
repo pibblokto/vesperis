@@ -95,6 +95,7 @@ void runConsistency() {
             double lat, lon;
             StarSystem::latLonFromBody(frame * toStar, lat, lon);   // the sub-solar point: noon, sun overhead
             // the site: within 3 deg of that point, standing on the material that covers most of the globe patch
+            sr.setSeason(sys, t);   // the map made for the season the globe is drawn in
             const PlanetMap& pm = sr.mapFor(b);
             int want = MAT_ROCK;
             {
@@ -118,7 +119,7 @@ void runConsistency() {
             nb.update(shipPos);
             Framebuffer fbg; SpaceContext c;
             c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-            warmMaps(sr, sys, bi);
+            warmMaps(sr, sys, bi, t);
             sr.setupPalette(fbg, &sys, bi, -1, 1.0); sr.render(fbg, c); fbg.mush(2);
             std::vector<uint32_t> globeRGB(FBW * FBH); fbg.toRGB(globeRGB.data(), 1.0);
             int wantBank = SpaceRenderer::globeBank(2, sys.bodies[bi].type, want);
@@ -326,10 +327,13 @@ int runBestiary() {
             printf("%s (%s): %d land, %d flyers, %d swimmers\n", b.name.c_str(), KINDS[b.type].name, B.landCount, B.flyerCount, B.swimmerCount);
             for (size_t i = 0; i < B.species.size(); i++) {
                 const Species& sp = B.species[i];
-                printf("  %-12s %-20s %4.1f m  gait %d/%d  bank %2d tone %.2f pattern %d crest %d  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n", sp.name.c_str(), PLAN_NAMES[sp.plan],
-                        sp.size, sp.gait, sp.runGait, sp.bank, sp.tone, sp.pattern, sp.crest, sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity],
-                        TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax);
-                if (sp.name != B2.species[i].name || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan) fails++;
+                printf("  %-22s %-20s %4.1f m  gait %s/%s  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d  %s %s%s\n    %s\n", B.words((int)i).c_str(),
+                        PLAN_NAMES[sp.plan], sp.size, GAIT_NAMES[sp.gait], GAIT_NAMES[sp.runGait], sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity],
+                        TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax, ANIMAL_WAY_NAMES[sp.way], SOCIAL_NAMES[sp.social],
+                        sp.prey >= 0 ? (" of " + B.words(sp.prey)).c_str() : "", animalWords(sp.body).c_str());
+                if (B.words((int)i) != B2.words((int)i) || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan || sp.way != B2.species[i].way ||
+                    sp.prey != B2.species[i].prey || animalDistance(sp.body, B2.species[i].body) != 0)
+                    fails++;
             }
             if (B.species.empty()) fails++;
             shown++;
@@ -759,6 +763,29 @@ int runScene(int argc, char** argv) {
         const CmpScene& sc = *found;
         StarSystem sys; SurfaceView sv; double t = 0;
         if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no body\n"); return 1; }
+        if (sc.uv) { sv.uvLamp = true; sv.lamp = false; printf("  the lamp's ultraviolet on\n"); }   // Z-03
+        if (sc.sight) {   // R-434: the activity vision, its square metres read a share a frame until all are
+            sv.sight = true;
+            Framebuffer w; int frames = 0;
+            for (; frames < 40; frames++) {
+                sv.render(w, t, nb.stars, sr, 1.0);
+                if (sv.testSightMissing() == 0) break;
+            }
+            int read = 0, faint = 0, strong = 0; sv.testSightCounts(read, faint, strong);
+            printf("  the activity vision: %d square metres read in %d frames, %d faint, %d strong\n", read, frames + 1, faint, strong);
+            if (std::getenv("VESPERIS_TRACE")) {   // a steady frame with it and without it, the best of ten each (the mush and the colours with them)
+                double on = 1e9, off = 1e9;
+                std::vector<uint32_t> px((size_t)FBW * FBH);
+                for (int k = 0; k < 20; k++) {
+                    sv.sight = k % 2 == 0;
+                    const double t1 = nowSec();
+                    sv.render(w, t, nb.stars, sr, 1.0); w.mush(2); w.toRGB(px.data(), 1.0);
+                    (sv.sight ? on : off) = std::min(sv.sight ? on : off, (nowSec() - t1) * 1000);
+                }
+                sv.sight = true;
+                fprintf(stderr, "  the activity vision's frame at %dx: %.2f ms, %.2f without it\n", FB_SCALE, on, off);
+            }
+        }
         if (warm > 0) {
             Input in;
             for (double w = 0; w < warm; w += 0.05) { t += 0.05; sv.update(0.05, in, t, false); }

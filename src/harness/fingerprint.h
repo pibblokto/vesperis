@@ -10,7 +10,7 @@
 #define FP_PRINTF
 #endif
 
-int runFingerprint(int argc, char** argv);                    // `fingerprint bodies|stream|peoples|modules [n] [out] [full]`
+int runFingerprint(int argc, char** argv);                    // `fingerprint bodies|stream|peoples|modules|life [n] [out] [full]`
 int fingerprintModules(FILE* out, int every, bool full);      // fingerprint_modules.cpp
 uint64_t fpHash(const std::string& bytes);                    // FNV-1a over the bytes (fp5's)
 void fpPut(std::string& s, const char* fmt, ...) FP_PRINTF;   // printf onto the end of s

@@ -1,6 +1,7 @@
 // The surface's play: the capsule's descent and ascent (DESCENT, ASCENT) and the ground (SURFACE): walking, the vehicles,
 // the scanner, the ground's sounds
 #include "game.h"
+#include <cstring>
 #include "peoples/plan.h"
 #include "ui.h"
 #include "core/rng.h"
@@ -21,19 +22,25 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         double s = 1 - std::pow(1 - u, 2.2);
         surf.cameraOverrideAlt = 1800 * (1 - s);
         surf.cameraOverridePitch = (-60 + 60 * s) * DEG;
-        fade = std::min(1.0, u * 4);
+        fade = transT < 0 ? 1.0 : std::min(1.0, u * 4);   // I-04: the hatch's drop (the ship's frame, unfaded), then the descent fading in
         surf.player.pitch = 0;
+        if (u > 0.15 && !scooped && (surf.biota().habitats & nicheBit(NI_CLOUD))) {   // Z-03: through the clouds (a save loaded after the scoop holds its vial)
+            bool held = false;
+            for (const Vial& v : kit) held = held || v.hab.niche == NI_CLOUD;
+            if (held) scooped = true; else scoopClouds(surf.placeMeanC(surf.player.x, surf.player.z, 0));
+        }
         if (u >= 1) {
             surf.cameraOverrideAlt = -1;
             state = GameState::SURFACE;
-            status(sys.sunless() && !surf.lamp ? "LANDED IN THE DARK - U THE LAMP, Q AT THE CAPSULE TO RETURN" : "LANDED - Q AT THE CAPSULE TO RETURN, H HELP", 6);
+            status(sys.sunless() && !surf.lamp ? "LANDED IN THE DARK - U LAMP, Q AT CAPSULE TO RETURN" : "LANDED - Q AT CAPSULE TO RETURN, H HELP", 6);
             {
                 const Body& lb = sys.bodies[surf.site.body];
                 guide.landed.insert(Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body));
                 guide.typesSeen.insert(lb.type);
-                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), KINDS[lb.type].name,
+                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), kindWordsNow(surf.site.body).c_str(),
                                         std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S", std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W",
                                         surf.env.temperatureC, surf.env.pressureAtm, lb.gravity / 9.8, surf.env.sun.altitude > 0 ? "DAY" : "NIGHT"));
+                madeLanding(surf.site.body);   // J-03: a seeded world's change since the last landing
                 walkMax = 0; lastWalkX = surf.player.x; lastWalkZ = surf.player.z; lastOdometer = 0; drivenLanding = 0; flownLanding = 0;
                 sectorIndexOf(surf.env.latDeg, surf.env.lonDeg, lastSecX, lastSecY);   // O2: the landing sector is not "entered"
             }
@@ -50,6 +57,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
             fade = 1;
             surf.cameraOverrideAlt = -1;
             status("BACK ABOARD THE STARDRIFTER", 4);
+            storeVials();   // Z-03: the vials to the cold store (its line over the last)
             logEvent("LAUNCH",
                     fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M%s", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding,
                             flownLanding > 0 ? fmt(", FLEW %.0f M", flownLanding).c_str() : ""));
@@ -63,12 +71,27 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
 }
 
+// the living's sounds the surface cues: the birds by day where flyers are, a creature's call, the herds' hoofs, the insects at dusk by the water.
+// J-10: none where every animal is gone (J-08's SILENCE: the silence of a dead world, the wind, the ground and the explorer's own alone)
+void lifeSoundsTo(SurfaceView& surf, AudioState& audio, bool waterNear) {
+    audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
+    if (!surf.pendingCalls.empty()) { audio.call = surf.pendingCalls.back().kind; audio.callPitch = surf.pendingCalls.back().pitch; surf.pendingCalls.clear(); }
+    audio.hoofs = surf.hoofLevel;
+    audio.insects = (kindHas(surf.site.gen.type, KT_FLORA) && waterNear && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
+    if (surf.silence) { audio.birds = audio.hoofs = audio.insects = 0; audio.call = 0; }
+}
+
 // Q-03: the sounds of the ground the surface cues into the synth's levels: the dunes' hum at their note, the ice's song, a quake's shaking and
 // its onset (consumed), all as much as the air carries (the wind's rule: a third of a bar and over whole, the thinnest air 0.15, none airless)
 void groundSoundsTo(SurfaceView& surf, AudioState& audio) {
     audio.air = surf.site.atmosphere ? clampd(surf.env.pressureAtm * 3, 0.15, 1.0) : 0.0;
     audio.dunes = surf.duneSong; audio.duneHz = surf.duneHz; audio.ice = surf.iceSong; audio.quake = surf.quake;
     if (surf.quakeCue > 0) { audio.quakeHit = surf.quakeCue; surf.quakeCue = 0; }
+    // J-10: an overgrowth's: its vents breathing at their lips' pace (a wet one's gurgling), its creaks, its hair; a membrane torn
+    const MadeWorld& mw = surf.site.gen.made;
+    audio.vents = surf.ventSong; audio.ventPace = TAU / GROWTH_BREATH_RATE; audio.creaks = surf.creakSong; audio.hair = surf.hairSong;
+    audio.ventWet = mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES ? mw.spread[mw.growthLine].growth.wet : 0;
+    if (surf.tearCue > 0) { audio.tear = surf.tearCue; surf.tearCue = 0; }
 }
 
 void Game::updateSurface(const Input& in, double dt, double realDt) {
@@ -136,12 +159,12 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_E) && !in.ctrl()) {
         if (surf.inDrone) {
             double trip = surf.drone.odometer, top = surf.drone.topSpeed;
-            if (surf.toggleDrone()) { status(fmt("OUT OF THE DRONE - %.2f KM FLOWN, TOP %.0f KM/H", trip / 1000.0, top * 3.6), 4); audio.beep = BEEP_UI; }
+            if (surf.toggleDrone()) { status(fmt("OUT OF DRONE - %.2f KM FLOWN, TOP %.0f KM/H", trip / 1000.0, top * 3.6), 4); audio.beep = BEEP_UI; }
             else { refuse("LAND FIRST - HOLD SHIFT TO COME DOWN"); }
         } else if (surf.inBuggy) {
             guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer);
             surf.toggleBuggy();
-            status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4);
+            status(fmt("OUT OF BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4);
             audio.beep = BEEP_UI;
         } else if (surf.buggy.deployed && surf.buggyDist() <= 3.5) {
             if (surf.toggleBuggy()) {
@@ -150,54 +173,78 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
             }
         } else if (surf.drone.deployed && surf.droneDist() <= 3.5) {
             if (surf.toggleDrone()) {
-                status("NOSE CAMERA: SPACE LIFTS OFF  W/S THRUST  A/D TURN  SHIFT DOWN", 5);
+                status("NOSE CAMERA: SPACE UP  SHIFT DOWN  W/S A/D FLY", 5);
                 audio.beep = BEEP_UI;
             } else {
-                refuse("THE DRONE IS STILL UNFOLDING", 3);
+                refuse("DRONE STILL UNFOLDING", 3);
             }
         } else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) takeInstrument();   // the nearer of the two
         else if (surf.nearShard.index >= 0) takeShard();
         else if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = BEEP_ARRIVE; autosave(); }
-        else { refuse(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); }
+        else { refuse(fmt("CAPSULE %.0f M AWAY (%s) - K CALLS IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); }
     }
     if (in.wasPressed(KEY_Q) && !surf.inVehicle()) {
         if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = BEEP_ARRIVE; autosave(); }
-        else { refuse(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); }
+        else { refuse(fmt("CAPSULE %.0f M AWAY (%s) - K CALLS IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); }
     }
     if (in.wasPressed(KEY_B) && !in.ctrl() && !surf.inVehicle()) {
         // B at the capsule always unfolds a new buggy; the old one, wherever it was left, is scrapped
         bool had = surf.buggy.deployed; double oldDist = surf.buggyDist();
-        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE BUGGY - IT WOULD FLOAT OFF AT THE FIRST BUMP");
+        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR A BUGGY");
         }   // a comet
         else if (surf.deployBuggy()) {
-            status(had ? fmt("NEW BUGGY UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "BUGGY UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5);
+            status(had ? fmt("NEW BUGGY UNFOLDING - OLD ONE (%.0f M AWAY) SCRAPPED", oldDist) : "BUGGY UNFOLDING - E TO GET IN", 5);
             audio.beep = BEEP_LOCK;
         } else if (had) {
-            refuse(fmt("THE BUGGY IS %.0f M AWAY - B AT THE CAPSULE UNFOLDS A NEW ONE", oldDist));
+            refuse(fmt("BUGGY %.0f M AWAY - B AT CAPSULE UNFOLDS A NEW ONE", oldDist));
         } else {
-            refuse("DEPLOY THE BUGGY WITHIN 10 M OF THE CAPSULE");
+            refuse("DEPLOY BUGGY WITHIN 10 M OF CAPSULE");
         }
     }
     if (in.wasPressed(KEY_F) && !in.ctrl() && !surf.inVehicle()) {   // F at the capsule unfolds a new drone; the old one, wherever it was left, is scrapped
         bool had = surf.drone.deployed; double oldDist = surf.droneDist();
-        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE DRONE - AT SPEED IT WOULD LEAVE THE WORLD");
+        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR A DRONE");
         } else if (surf.deployDrone()) {
-            status(had ? fmt("NEW DRONE UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "DRONE UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5);
+            status(had ? fmt("NEW DRONE UNFOLDING - OLD ONE (%.0f M AWAY) SCRAPPED", oldDist) : "DRONE UNFOLDING - E TO GET IN", 5);
             audio.beep = BEEP_LOCK;
         } else if (had) {
-            refuse(fmt("THE DRONE IS %.0f M AWAY - F AT THE CAPSULE UNFOLDS A NEW ONE", oldDist));
+            refuse(fmt("DRONE %.0f M AWAY - F AT CAPSULE UNFOLDS A NEW ONE", oldDist));
         } else {
-            refuse("DEPLOY THE DRONE WITHIN 10 M OF THE CAPSULE");
+            refuse("DEPLOY DRONE WITHIN 10 M OF CAPSULE");
         }
     }
     if (in.wasPressed(KEY_V) && surf.inVehicle()) { surf.chaseCam = !surf.chaseCam; audio.beep = BEEP_UI; }
-    if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // vision modes
+    if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // vision modes (R-434: from the activity vision to the eye's)
         static const char* const names[] = {"NORMAL VISION", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
-        visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = BEEP_UI;
+        visionMode = visionMode == VISION_ACTIVITY ? 0 : (visionMode + 1) % VISION_ACTIVITY; status(names[visionMode], 3); audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = BEEP_UI; }   // the readings in and out of the view
-    if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); audio.beep = BEEP_UI; }   // the helmet lamp
+    if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) {   // the helmet lamp; Z-03: Shift its ultraviolet, the living films' glow
+        if (in.shift()) {
+            surf.uvLamp = !surf.uvLamp;
+            const bool was = surf.uvLamp && visionMode == VISION_ACTIVITY;   // R-434: one at a time
+            if (was) visionMode = 0;
+            status(was ? "ULTRAVIOLET ON - NORMAL VISION" : (surf.uvLamp ? "ULTRAVIOLET ON" : "ULTRAVIOLET OFF"), 2);
+        }
+        else { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); }
+        audio.beep = BEEP_UI;
+    }
+    if (in.wasPressed(KEY_O) && !in.ctrl()) {
+        if (in.shift()) {   // R-434: the activity vision, straight to it and back to the eye's
+            visionMode = visionMode == VISION_ACTIVITY ? 0 : VISION_ACTIVITY;
+            const bool uv = visionMode == VISION_ACTIVITY && surf.uvLamp;
+            if (uv) surf.uvLamp = false;
+            status(visionMode == VISION_ACTIVITY ? (uv ? "ACTIVITY VISION - ULTRAVIOLET OFF" : "ACTIVITY VISION") : "NORMAL VISION", 3);
+            audio.beep = BEEP_UI;
+        } else takeSample();   // Z-03: a vial of the ground at the crosshair
+    }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
+        if (in.shift() && surf.lifeTarget.species >= 0) {   // J-07: the animal the crosshair rests on, named (R-452: Shift+N; N alone the map)
+            textAnimalKey = animalKey(surf.lifeTarget.species);
+            const auto it = guide.names.find(textAnimalKey);
+            beginTextEntry("NAME THE ANIMAL", TEXT_ANIMAL, it != guide.names.end() ? it->second : "");
+            return;
+        }
         returnState = GameState::SURFACE;
         openScreen(GameState::SECTOR_MAP);
         return;
@@ -206,20 +253,13 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         surf.highlightUntil = realTime + 4.0;
         status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3);
     }
-    // first sightings go to the log and the statistics
-    for (const std::string& sg : surf.sightings) {
-        size_t p1 = sg.find('|'), p2 = sg.find('|', p1 + 1);
-        std::string name = sg.substr(0, p1), plan = sg.substr(p1 + 1, p2 - p1 - 1), dist = sg.substr(p2 + 1);
-        logEvent("SIGHTING", fmt("%s, A %s, %s M AWAY ON %s", upper(name).c_str(), plan.c_str(), dist.c_str(), upper(bodyNameOf(surf.site.body)).c_str()));
-        guide.creaturesSeen++;
-        status(fmt("A %s: %s", plan.c_str(), upper(name).c_str()), 4);
-    }
-    surf.sightings.clear();
+    animalsSeen();   // first sightings go to the log and the statistics; J-07: what the landing saw of each species to the guide
+    deadToGuide();   // B-489: and the animals seen to die
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
         if (surf.hasWaypoint) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3); }
         else if (surf.lastRange > 8) {   // the waypoint goes to the spot under the crosshair, however far
             surf.hasWaypoint = true; surf.wpX = surf.lastRangeX; surf.wpZ = surf.lastRangeZ;
-            status(fmt("WAYPOINT SET %s AWAY%s - M CLEARS IT", metresString(surf.lastRange).c_str(), surf.lastRangeWater ? " ON THE WATER" : ""), 4);
+            status(fmt("WAYPOINT SET %s AWAY%s - M CLEARS IT", metresString(surf.lastRange).c_str(), surf.lastRangeWater ? " ON WATER" : ""), 4);
         } else { surf.hasWaypoint = true; surf.wpX = surf.player.x; surf.wpZ = surf.player.z; status("WAYPOINT SET HERE - M CLEARS IT", 4); }
         audio.beep = BEEP_UI;
     }
@@ -227,8 +267,8 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         // the capsule always comes, wherever the buggy is; a buggy left far away is replaced with B
         surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
         bool farBuggy = surf.buggy.deployed && !surf.inBuggy && surf.buggyDist() > 50, farDrone = surf.drone.deployed && !surf.inDrone && surf.droneDist() > 50;
-        status(farBuggy ? fmt("CAPSULE RECALLED - THE BUGGY IS %.0f M AWAY, B UNFOLDS A NEW ONE", surf.buggyDist())
-                        : (farDrone ? fmt("CAPSULE RECALLED - THE DRONE IS %.0f M AWAY, F UNFOLDS A NEW ONE", surf.droneDist()) : "CAPSULE RECALLED TO YOUR POSITION"), 4);
+        status(farBuggy ? fmt("CAPSULE RECALLED - BUGGY %.0f M AWAY, B UNFOLDS A NEW ONE", surf.buggyDist())
+                        : (farDrone ? fmt("CAPSULE RECALLED - DRONE %.0f M AWAY, F UNFOLDS A NEW ONE", surf.droneDist()) : "CAPSULE RECALLED"), 4);
         audio.beep = BEEP_LOCK;
     }
     if (dataKey(in)) { returnState = GameState::SURFACE; openScreen(GameState::DATA); }   // the sheet must return to the surface
@@ -265,11 +305,16 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
                                   ? 0.6
                                   : (std::fabs(surf.site.groundHeight(surf.player.x + 40, surf.player.z) - surf.site.groundHeight(surf.player.x - 40, surf.player.z)) > 12 ? 1.0 : 0.5));
         audio.surf = waterNear && surf.site.hasWater ? 0.6 : 0;
-        audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
+        lifeSoundsTo(surf, audio, waterNear);
         double stride = std::floor(surf.player.stridePhase);
         if (stride != surf.stepPhase && surf.player.onGround && !surf.inVehicle()) {
             surf.stepPhase = stride;
-            audio.step = surf.player.swimming ? 3 : ((mat == MAT_SAND || mat == MAT_SNOW || mat == MAT_GRASS || mat == MAT_DUST || mat == MAT_FOREST) ? 1 : 2);
+            // (J-09: an overgrowth's soft cover; J-10: a wet one's squelch, WET GROUND)
+            const MadeWorld& mw = surf.site.gen.made;
+            const bool wet = (mat == MAT_TISSUE || mat == MAT_THREADS) && mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES &&
+                             mw.spread[mw.growthLine].growth.wet >= MADE_WET_GROUND;
+            audio.step = surf.player.swimming ? 3 : (wet ? 4 : ((mat == MAT_SAND || mat == MAT_SNOW || mat == MAT_GRASS || mat == MAT_DUST || mat == MAT_FOREST ||
+                                                                 mat == MAT_TISSUE || mat == MAT_THREADS) ? 1 : 2));
             audio.stepGain = surf.player.sprinting ? 0.8 : 0.5;
         }
     }
@@ -283,13 +328,6 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
                 audio.leaves = clampd(dens * (0.25 + clampd(surf.env.windKnots / 20.0, 0, 1)) + (moving && tvp.material == MAT_FOREST ? 0.25 * dens : 0), 0, 1);
             }
         }
-    }
-    {   // creature calls, hoof-steps and the dusk insects
-        if (!surf.pendingCalls.empty()) { audio.call = surf.pendingCalls.back().kind; audio.callPitch = surf.pendingCalls.back().pitch; surf.pendingCalls.clear(); }
-        audio.hoofs = surf.hoofLevel;
-        bool waterNear2 = false;
-        for (int k = 0; k < 4 && !waterNear2; k++) { double a = k * PI / 2; waterNear2 = surf.site.waterAt(surf.player.x + std::cos(a) * 30, surf.player.z + std::sin(a) * 30) > -1e8; }
-        audio.insects = (kindHas(surf.site.gen.type, KT_FLORA) && waterNear2 && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
     }
     audio.rain = std::max(surf.env.rain, surf.env.hail);
     updateForecast();
@@ -313,30 +351,120 @@ void Game::surfacePad(PadMenu& m) const {
     if (!surf.valid) return;
     if (photoMode) { m.item("END PHOTO MODE", KEY_P, MOD_CTRL); m.item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT); m.item("PHOTOGRAPH", KEY_P); return; }
     if (surf.inVehicle()) {
-        m.item(surf.inBuggy ? "GET OUT OF THE BUGGY" : "GET OUT OF THE DRONE", KEY_E);
-        m.item(surf.chaseCam ? "THE NOSE CAMERA" : "THE CHASE VIEW", KEY_V);
+        m.item(surf.inBuggy ? "GET OUT OF BUGGY" : "GET OUT OF DRONE", KEY_E);
+        m.item(surf.chaseCam ? "NOSE CAMERA" : "CHASE VIEW", KEY_V);
     } else {
         std::string use;
-        if (surf.buggy.deployed && surf.buggyDist() <= 3.5) use = "GET IN THE BUGGY";
-        else if (surf.drone.deployed && surf.droneDist() <= 3.5) use = "GET IN THE DRONE";
-        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) use = "TAKE THE INSTRUMENT";
-        else if (surf.nearShard.index >= 0) use = "TAKE THE RECORD";
-        else if (surf.env.nearCapsule) use = "BOARD THE CAPSULE";
+        if (surf.buggy.deployed && surf.buggyDist() <= 3.5) use = "GET IN BUGGY";
+        else if (surf.drone.deployed && surf.droneDist() <= 3.5) use = "GET IN DRONE";
+        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) use = "TAKE INSTRUMENT";
+        else if (surf.nearShard.index >= 0) use = "TAKE RECORD";
+        else if (surf.env.nearCapsule) use = "BOARD CAPSULE";
         if (!use.empty()) m.item(use, KEY_E);
         m.item("UNFOLD A BUGGY", KEY_B);
         m.item("UNFOLD A DRONE", KEY_F);
     }
-    m.item("CALL THE CAPSULE", KEY_K);
-    m.item("THE SECTOR MAP", KEY_N);
+    m.item("CALL CAPSULE", KEY_K);
+    m.item("SECTOR MAP", KEY_N);
+    if (surf.lifeTarget.species >= 0) m.item("NAME THE ANIMAL", KEY_N, MOD_SHIFT);   // J-07: the animal the crosshair rests on (R-452: Shift+N)
     scannerPad(m);
-    m.item("MARK WHERE THE CROSSHAIR RESTS", KEY_L);
-    m.item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
-    m.item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
+    m.item("MARK AT CROSSHAIR", KEY_L);
+    m.item(surf.hasWaypoint ? "CLEAR WAYPOINT" : "WAYPOINT AT CROSSHAIR", KEY_M);
+    m.item(readings ? "PUT READINGS AWAY" : "READINGS", KEY_TAB);
+    m.item(visionMode == VISION_ACTIVITY ? "PUT ACTIVITY VISION AWAY" : "ACTIVITY VISION", KEY_O, MOD_SHIFT);   // R-434
     if (!surf.inVehicle()) {
-        m.item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
+        m.item(surf.lamp ? "LAMP OFF" : "LAMP ON", KEY_U);
+        m.item(surf.uvLamp ? "ULTRAVIOLET OFF" : "ULTRAVIOLET ON", KEY_U, MOD_SHIFT);
+        m.item("TAKE A SAMPLE", KEY_O);
         m.item("VISION MODE", KEY_V);
         m.item("CREATURES NEARBY", KEY_X);
         const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));
-        m.item(next ? fmt("AUTOWALK %d", next) : "STOP THE AUTOWALK", KEY_0 + next);
+        m.item(next ? fmt("AUTOWALK %d", next) : "STOP AUTOWALK", KEY_0 + next);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// J-07: the animals' record
+// ---------------------------------------------------------------------------
+
+std::string Game::animalKey(int species) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/A" + std::to_string(species); }
+
+bool Game::animalNamed(int species) const { const std::string k = animalKey(species); return guide.names.count(k) || guide.inbox.count(k); }
+
+// the explorer's name, else a friend's, else its words ("STRIPED HOPPER")
+std::string Game::animalNameOf(int species) const {
+    const std::string k = animalKey(species);
+    auto it = guide.names.find(k);
+    if (it != guide.names.end()) return it->second;
+    it = guide.inbox.find(k);
+    if (it != guide.inbox.end()) return it->second;
+    return surf.bestiary.words(species);
+}
+
+// B-489 (KI-494): the dead this world kept from the landings before (the guide's `dead` lines) into the landing, at a landing and a load: its
+// herds come without them and their remains lie where they fell, aged by the guide's clock since; those past DEAD_FORGET_S are forgotten
+void Game::deadToLanding() {
+    if (!sys.valid || surf.site.body < 0) return;
+    const auto it = guide.dead.find(Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body));
+    std::vector<SurfaceView::DeadKept> kept;
+    if (it != guide.dead.end()) {
+        std::vector<DeadRecord>& ds = it->second;
+        ds.erase(std::remove_if(ds.begin(), ds.end(), [&](const DeadRecord& d) { return guide.clock - d.died >= DEAD_FORGET_S; }), ds.end());
+        for (const DeadRecord& d : ds) {
+            SurfaceView::DeadKept k;
+            k.seed = d.seed; k.cell = d.cell; k.gLat = d.gLat; k.gLon = d.gLon; k.unit = Vec3(d.ux, d.uy, d.uz); k.species = d.species;
+            k.heading = d.heading; k.size = d.size; k.diedAt = d.died - guide.clock; k.eaten = d.eaten; k.stalks = d.stalks;   // (on the landing's clock)
+            kept.push_back(k);
+        }
+        if (ds.empty()) guide.dead.erase(it);
+    }
+    surf.deadIn(kept);
+}
+// B-489: this landing's dead into the guide as they die, with how long hunters fed at them: the guide's list for the world is the landing's
+// kept dead, in their order
+void Game::deadToGuide() {
+    if (surf.deadKept.empty() || !sys.valid) return;
+    std::vector<DeadRecord>& ds = guide.dead[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body)];
+    for (size_t i = 0; i < surf.deadKept.size(); i++) {
+        const SurfaceView::DeadKept& k = surf.deadKept[i];
+        if (i >= ds.size()) {
+            DeadRecord d;
+            d.seed = k.seed; d.cell = k.cell; d.gLat = k.gLat; d.gLon = k.gLon; d.ux = k.unit.x; d.uy = k.unit.y; d.uz = k.unit.z; d.species = k.species;
+            d.heading = k.heading; d.size = k.size; d.died = guide.clock - (surf.lifeClock - k.diedAt); d.stalks = k.stalks;
+            ds.push_back(d);
+        }
+        ds[i].eaten = k.eaten;
+    }
+}
+
+// a species first seen this landing: logged (SIGHTING) and counted when it is new to the guide, said on the status either way; what each
+// species was seen doing, the nearest and the most at once kept in its record
+void Game::animalsSeen() {
+    for (const SurfaceView::Sighting& sg : surf.sightings) {
+        if (sg.species < 0 || sg.species >= (int)surf.bestiary.species.size()) continue;
+        const std::string key = animalKey(sg.species), words = surf.bestiary.words(sg.species);
+        const std::string a = (std::strchr("AEIOU", words[0]) ? "AN " : "A ") + words;   // AN OCTOPOD
+        const std::string named = animalNamed(sg.species) ? animalNameOf(sg.species) : "";
+        const char* doing = DOING_NAMES[clampi(sg.doing, 0, DO_COUNT - 1)];
+        const std::string who = named.empty() ? a : upper(named);
+        const bool dead = sg.doing == DO_DEAD;   // J-08: its remains
+        if (!guide.animals.count(key)) {
+            logEvent("SIGHTING", fmt("%s%s%s, %s, %.0f M AWAY ON %s", named.c_str(), named.empty() ? "" : ", ", a.c_str(), doing, sg.dist, upper(bodyNameOf(surf.site.body)).c_str()));
+            guide.creaturesSeen++;
+            status(dead ? fmt("NEW SPECIES: REMAINS OF %s", who.c_str()) : fmt("NEW SPECIES: %s", who.c_str()), 4);
+            guide.animals[key];
+        } else status(dead ? "REMAINS OF " + who : who, 3);
+    }
+    surf.sightings.clear();
+    for (size_t i = 0; i < surf.lifeSeen.size(); i++) {
+        SurfaceView::SeenAnimal& s = surf.lifeSeen[i];
+        if (!s.fresh) continue;
+        s.fresh = false;
+        AnimalRecord& r = guide.animals[animalKey((int)i)];
+        const int near = (int)std::lround(std::min(s.nearest, 1e6));
+        r.nearest = r.most == 0 && r.doing == 0 ? near : std::min(r.nearest, near);
+        r.doing |= s.doing;
+        r.most = std::max(r.most, s.most);
+        r.marks |= s.marks;   // J-08: dying, gone, changed
     }
 }

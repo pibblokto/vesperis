@@ -30,20 +30,51 @@ Contents:
 
 ## Movement (M8, 2026-09-26)
 
-`Player` carries the walking state; `SurfaceView::updateWalking` runs it when on foot, `updateBuggy` when driving, `updateDrone` when flying (R-403).
+`Player` carries the walking state; `SurfaceView::updateWalking` runs it when on foot, `updateBuggy` when driving, `updateDrone` when
+flying (R-403).
 
-* Walk 4.2 m/s (x0.85 above 1.5 g, x0.5 crouched); sprint with `Shift` (hold, or toggle by setting) multiplies by `clamp(3.2 * (9.8/g)^0.44, 1.5, 4)` through a 0.6 s ramp and adds a 4-degree FOV kick (the sky table is rebuilt only when the focal length moves more than 1.2%). Stamina 0-100 drains at 12/s x max(0.6, g/9.8) while sprinting, recovers at 8/s walking and 16/s standing; below 1 you are winded until 25. The HUD shows the bar and a pulse (60 + 80 x fatigue + 30 x sprint); `AudioState::breath` breathes.
-* Head bob from a stride phase (1.6 m stride, 2.4 m sprinting; 3.5-6.5 cm vertical, 2 cm sway), landing dip 4.5 cm per m/s of fall speed above 3 m/s (x1.4 on heavy worlds), postures `C` crouch (eye 0.9 m) and `Z` held stands tall (2.1 m, no walking).
-* Slopes: the ground gradient (0.5 m finite differences) blocks climbing above rise/run 1.35 (only the along-slope motion remains) and slides you down at `0.8 g sin(slope)`.
-* Jump apex `clamp(1.1 sqrt(9.8/g), 0.6, 6)` m (M8-09); air control 4 m/s^2 below 3 m/s^2 gravity else 2; terminal velocity 55 m/s with atmosphere, 80 without.
-* Jetpack: hold `Space` in the air: +3 m/s^2 net, capped at 12 m/s up, heat +5/s (100 = 20 s), cools 8/s, ceiling 300 m above ground; the HUD shows altitude, vertical speed and heat while airborne. B-406 (2026-10-02): deep water (the ground 0.4 m or more under the water) is swum once the feet are within 0.3 m of the float level (0.6 m while already swimming); above it the air is the air, so the jet flies over a lake, and it fires from the water's surface too (afloat, not diving), lifting the explorer out; the wading slowdown wants the feet on the ground.
-* Microgravity (O4, R-303; `SurfaceSite::escapeVelocity = sqrt(2 g R)` under 30 m/s, i.e. comets): the ground speed is capped at 0.3 of the escape velocity (walking or sprinting, 1-3 m/s), the jet's climb at 0.35 of it, `Ctrl` in the air thrusts down at 3 m/s^2 (on any world under 1 m/s^2 of gravity), the buggy refuses to unfold. A jump keeps its 6 m apex and floats for minutes (KI-302). The HUD prints `GRAV 0.0005 G  ESCAPE 9.2 M/S` and `CTRL DESCENDS` while airborne.
+* Walk 4.2 m/s (x0.85 above 1.5 g, x0.5 crouched); sprint with `Shift` (hold, or toggle by setting) multiplies by
+  `clamp(3.2 * (9.8/g)^0.44, 1.5, 4)` through a 0.6 s ramp and adds a 4-degree FOV kick (the sky table is rebuilt only when the focal
+  length moves more than 1.2%). Stamina 0-100 drains at 12/s x max(0.6, g/9.8) while sprinting, recovers at 8/s walking and 16/s
+  standing; below 1 you are winded until 25. The HUD shows the bar and a pulse (60 + 80 x fatigue + 30 x sprint); `AudioState::breath`
+  breathes.
+* Head bob from a stride phase (1.6 m stride, 2.4 m sprinting; 3.5-6.5 cm vertical, 2 cm sway), landing dip 4.5 cm per m/s of fall speed
+  above 3 m/s (x1.4 on heavy worlds), postures `C` crouch (eye 0.9 m) and `Z` held stands tall (2.1 m, no walking).
+* Slopes: the ground gradient (0.5 m finite differences) blocks climbing above rise/run 1.35 (only the along-slope motion remains) and
+  slides you down at `0.8 g sin(slope)`.
+* Jump apex `clamp(1.1 sqrt(9.8/g), 0.6, 6)` m (M8-09); air control 4 m/s^2 below 3 m/s^2 gravity else 2; terminal velocity 55 m/s with
+  atmosphere, 80 without.
+* Jetpack: hold `Space` in the air: +3 m/s^2 net, capped at 12 m/s up, heat +5/s (100 = 20 s), cools 8/s, ceiling 300 m above ground;
+  the HUD shows altitude, vertical speed and heat while airborne. B-406 (2026-10-02): deep water (the ground 0.4 m or more under the
+  water) is swum once the feet are within 0.3 m of the float level (0.6 m while already swimming); above it the air is the air, so the
+  jet flies over a lake, and it fires from the water's surface too (afloat, not diving), lifting the explorer out; the wading slowdown
+  wants the feet on the ground.
+* Microgravity (O4, R-303; `SurfaceSite::escapeVelocity = sqrt(2 g R)` under 30 m/s, i.e. comets): the ground speed is capped at 0.3 of
+  the escape velocity (walking or sprinting, 1-3 m/s), the jet's climb at 0.35 of it, `Ctrl` in the air thrusts down at 3 m/s^2 (on any
+  world under 1 m/s^2 of gravity), the buggy refuses to unfold. A jump keeps its 6 m apex and floats for minutes (KI-302). The HUD
+  prints `GRAV 0.0005 G  ESCAPE 9.2 M/S` and `CTRL DESCENDS` while airborne.
 * Autowalk `1`-`9` holds a forward speed of n/4 walk speeds (up to 2.25x), `0` or any backward input stops it.
-* Collision (`collectColliders`): rocks larger than 0.6 m (radius 0.8 x size) and tree trunks in the 3x3 cells around you, as cylinders; you are pushed out along the normal. The placement formulas mirror `drawObjects`. B-405: every collider carries the span it blocks in absolute metres (`y0..y1`: a rock to 1.15 sizes over the ground, a trunk to the tree's height, a log to a diameter, a monolith to its drawn height, a settlement's piece from its drawn foot to its top); the explorer skips what ends under the feet (the jetpack over a wall, a slope's buried wall) or starts over the head, the buggy what lies under its wheels or over its roll bar.
-* Water levels are local (M9-04): `SurfaceSite::waterAt(x, z)` reads the per-vertex water surface (sea 0, lakes and rivers above it) and `surfaceHeight` is the higher of ground and water; the player, capsule, buggy, critters, trees and rocks all use it, water quads take their cell's level, reflections mirror about it. Wading slows you by up to 55% over 1.2 m of depth, swimming at 45% speed, `Ctrl` dives (down to 3.5 m, buoyancy returns you), underwater the palette goes blue-green and the fog closes to 22 m; swim stamina halves the speed when spent.
+* Collision (`collectColliders`): rocks larger than 0.6 m (radius 0.8 x size) and tree trunks in the 3x3 cells around you, as cylinders;
+  you are pushed out along the normal. The placement formulas mirror `drawObjects`. B-405: every collider carries the span it blocks in
+  absolute metres (`y0..y1`: a rock to 1.15 sizes over the ground, a trunk to the tree's height, a log to a diameter, a monolith to its
+  drawn height, a settlement's piece from its drawn foot to its top); the explorer skips what ends under the feet (the jetpack over a
+  wall, a slope's buried wall) or starts over the head, the buggy what lies under its wheels or over its roll bar.
+* Water levels are local (M9-04): `SurfaceSite::waterAt(x, z)` reads the per-vertex water surface (sea 0, lakes and rivers above it) and
+  `surfaceHeight` is the higher of ground and water; the player, capsule, buggy, critters, trees and rocks all use it, water quads take
+  their cell's level, reflections mirror about it. Wading slows you by up to 55% over 1.2 m of depth, swimming at 45% speed, `Ctrl`
+  dives (down to 3.5 m, buoyancy returns you), underwater the palette goes blue-green and the fog closes to 22 m; swim stamina halves
+  the speed when spent.
 * Footprints and the explorer's blob shadow as before; the site re-anchors at 50 km (0.35 radii on a small body).
-* Marks of a landing (B-303, 2026-09-27): `SurfaceView::init` clears the waypoint, the eruptions, the footprints and the buggy, and bumps `siteEpoch`; `reanchor` carries the waypoint into the new frame through its unit vector (like the capsule and the buggy) and bumps `siteEpoch` too, which tells the game's cached sector-map image to rebuild. (R-414, 2026-10-11: M4-02's trail of where the explorer walked, a point every 25 m drawn on the sector map, is gone.)
-* Rangefinder (O1, B-302): `SurfaceView::rangeToGround(maxDist, hitX, hitZ, water)` marches the camera's line of sight in steps of 0.6 m growing 3% per step, comparing the ray's height with the ground under it (`heightNear`: bilinear lod0 within 0.9 of its ring, then the lod1/lod2/lod3 cell heights by distance, with the cell's water level; the curvature applied as in `toView`, the exact sphere on small bodies), and bisects the hit to a few centimetres; `render` stores `lastRange`, `lastRangeX/Z`, `lastRangeWater` for the HUD (`8.4 KM  33 MIN WALK`, `WATER`) and for `M`, which sets the waypoint on the spot under the crosshair. Beyond the drawn rings it reports the sky (-1).
+* Marks of a landing (B-303, 2026-09-27): `SurfaceView::init` clears the waypoint, the eruptions, the footprints and the buggy, and
+  bumps `siteEpoch`; `reanchor` carries the waypoint into the new frame through its unit vector (like the capsule and the buggy) and
+  bumps `siteEpoch` too, which tells the game's cached sector-map image to rebuild. (R-414, 2026-10-11: M4-02's trail of where the
+  explorer walked, a point every 25 m drawn on the sector map, is gone.)
+* Rangefinder (O1, B-302): `SurfaceView::rangeToGround(maxDist, hitX, hitZ, water)` marches the camera's line of sight in steps of 0.6 m
+  growing 3% per step, comparing the ray's height with the ground under it (`heightNear`: bilinear lod0 within 0.9 of its ring, then the
+  lod1/lod2/lod3 cell heights by distance, with the cell's water level; the curvature applied as in `toView`, the exact sphere on small
+  bodies), and bisects the hit to a few centimetres; `render` stores `lastRange`, `lastRangeX/Z`, `lastRangeWater` for the HUD
+  (`8.4 KM  33 MIN WALK`, `WATER`) and for `M`, which sets the waypoint on the spot under the crosshair. Beyond the drawn rings it
+  reports the sky (-1).
 
 The buggy (`Buggy`, M8-06, rebuilt in N4, closed in N4-06, `surface/buggy.cpp`): `B` within 10 m of the capsule unfolds a buggy
 beside the capsule over two seconds (the hull grows out of its folded state, the wheels drop); a buggy already out, wherever it
@@ -114,9 +145,25 @@ ahead of a flight under 30 m at night (`vertexOf`'s light term, as the buggy's c
 
 ## Lighting and textures (M10, 2026-09-26)
 
-Per terrain vertex (`SurfaceView::vertexOf`): normal from the four cache neighbours; hemisphere ambient (`0.08 + 0.2 skyBrightness` with atmosphere, 0.11 without, times `0.55 + 0.45 n.y`, times `1 + 0.6 cloudCover`); sun term = Lambert x sunUp x light factor x (1 - 0.6 cloud) x cast shadow (`castShadowLit`: nine samples marched toward the sun over the same cache, inside the ring, soft edge, floor 0.4) x cloud shadow (the sky's cumulus layer projected along the sun ray); planetshine from `env.moonLight` at night (W-04: `bodyShineAt`, the light the brightest body above the horizon sheds, the formula a moon's earthshine reads too); capsule beacon pool within 14 m; wet shore albedo x0.8; lava glow within two cells on molten worlds (+16 shades max); three-step Blinn specular on ice/quartz/snow (+6/+12). Fog toward the ramp top uses a haze distance that shortens toward the sun and lengthens away from it, thicker when cloudy (scattering lite).
+Per terrain vertex (`SurfaceView::vertexOf`): normal from the four cache neighbours; hemisphere ambient (`0.08 + 0.2 skyBrightness` with
+atmosphere, 0.11 without, times `0.55 + 0.45 n.y`, times `1 + 0.6 cloudCover`); sun term = Lambert x sunUp x light factor x (1 - 0.6
+cloud) x cast shadow (`castShadowLit`: nine samples marched toward the sun over the same cache, inside the ring, soft edge, floor 0.4) x
+cloud shadow (the sky's cumulus layer projected along the sun ray); planetshine from `env.moonLight` at night (W-04: `bodyShineAt`, the
+light the brightest body above the horizon sheds, the formula a moon's earthshine reads too); capsule beacon pool within 14 m; wet shore
+albedo x0.8; lava glow within two cells on molten worlds (+16 shades max); three-step Blinn specular on ice/quartz/snow (+6/+12). Fog
+toward the ramp top uses a haze distance that shortens toward the sun and lengthens away from it, thicker when cloudy (scattering lite).
 
-Palette (`setupPalette`, N1-03): `lookFor(gen, star)` derives `ground`, `sand`, `snow`, `grass`, `secondary` and `tertiary` from `BodyGen::matColor` (times `lerp(star, white, 0.5)`, the same tint as the globe) and chooses only sky, fog distance, night colours and the cloud layer per type. `matRamp(bank, c)` = the shared `materialRamp(c, skyLight, day)` (stops 0/14/34/47/56/63, `05-planet-function.md`) with the surface's extras: the dark end blends toward the moon colour at night (on airless worlds "night" follows the sun's altitude, since the sky brightness there is always 0; before N1 planetshine washed out the ground by day), `lit` is warmed by the sunset tint and flattened by 12% per unit of overcast, stop 63 is the fog colour. Banks: 0 rock family, 2 water/lava (S-03: the glass of a glassed world, `L.secondary = matColor[MAT_GLASS]`), 3 forest, 8 snow/ice, 9 sand family, 10 grass (bank table in `02-rendering.md`). S-03: the quantised specular of ice, quartz, snow and iron applies to glass as well, brighter (18 and 9 shades), and the glass has its own meso tile (`RIPPLED`: a melt frozen in ripples, bubble pits, hairline cracks). The vertex shade is `exposureStop(albedo, light, atmosphere)` (plus emissive and speculars), the rule the globe and the landing map use as well. Bank 4 = stars.
+Palette (`setupPalette`, N1-03): `lookFor(gen, star)` derives `ground`, `sand`, `snow`, `grass`, `secondary` and `tertiary` from
+`BodyGen::matColor` (times `lerp(star, white, 0.5)`, the same tint as the globe) and chooses only sky, fog distance, night colours and
+the cloud layer per type. `matRamp(bank, c)` = the shared `materialRamp(c, skyLight, day)` (stops 0/14/34/47/56/63,
+`05-planet-function.md`) with the surface's extras: the dark end blends toward the moon colour at night (on airless worlds "night"
+follows the sun's altitude, since the sky brightness there is always 0; before N1 planetshine washed out the ground by day), `lit` is
+warmed by the sunset tint and flattened by 12% per unit of overcast, stop 63 is the fog colour. Banks: 0 rock family, 2 water/lava
+(S-03: the glass of a glassed world, `L.secondary = matColor[MAT_GLASS]`), 3 forest, 8 snow/ice, 9 sand family, 10 grass (bank table in
+`02-rendering.md`). S-03: the quantised specular of ice, quartz, snow and iron applies to glass as well, brighter (18 and 9 shades), and
+the glass has its own meso tile (`RIPPLED`: a melt frozen in ripples, bubble pits, hairline cracks). The vertex shade is
+`exposureStop(albedo, light, atmosphere)` (plus emissive and speculars), the rule the globe and the landing map use as well. Bank 4 =
+stars.
 
 Textures (`surface/textures.*`): per material a periodic 128x128 tile of signed shade offsets (a texel is 0.25 m, a tile 32 m),
 generated from periodic value and Worley noise per planet seed: sand ripples across the wind, dust pebbles and craterlets, rock
@@ -137,17 +184,41 @@ differ in family is drawn with two banks and a noisy contour between them (`grai
 the majority bank over the whole square (02, `RasterParams::bank2`). The terrain's shading mode is `SurfaceView::shadingMode` (0
 flat cells, 1 stepped, 2 smooth, the default since B-311).
 
-Foliage (M1-01, "greenmush", rebuilt in N2): a tree is a trunk with branches and 8-20 canopy blobs; each blob is a spray of hashed points inside an ellipsoid whose count follows the on-screen radius, points of 1 or 2 logical pixels in three stepped tones, solid diamonds when small; blobs under 1.2 px are a single dot. Bushes are sprays too. The mush melts the sprays into soft rounded canopies. Details in "Vegetation (N2)".
+Foliage (M1-01, "greenmush", rebuilt in N2): a tree is a trunk with branches and 8-20 canopy blobs; each blob is a spray of hashed
+points inside an ellipsoid whose count follows the on-screen radius, points of 1 or 2 logical pixels in three stepped tones, solid
+diamonds when small; blobs under 1.2 px are a single dot. Bushes are sprays too. The mush melts the sprays into soft rounded canopies.
+Details in "Vegetation (N2)".
 
-Water (M1-04): water quads at sea level get wind-driven wave rings (2.5 shades, stronger with wind), foam sparkle points where the shore is within 0.6 m of sea level and 90 m of the camera, and the sun glitter. The reflections mirror lod0/lod1 cells (within 20 cells) about sea level and blend them into bank-2 pixels only (`BLEND_REFLECT`, 45% reflected), sorted far to near, no depth test; F-05 (2026-10-14): gathered once a frame after the cells are binned (`gatherReflections`: the walk, the sort and the shore cut, serially, since during the descent the lod0 cells it reads are not warmed and the caches fill on a miss), each polygon kept with the rows it can fill (`polygonRows`, the bin's own bounds), and drawn by the terrain's band threads after their rings (`drawReflectionBand`), in order. Everything drops by d^2 / 2R with distance from the camera (the horizon curves, M1-07); since O1 the drop lives in `toView` (`03-coordinates-and-units.md`), so objects curve with the ground and small bodies use the exact sphere.
+Water (M1-04): water quads at sea level get wind-driven wave rings (2.5 shades, stronger with wind), foam sparkle points where the shore
+is within 0.6 m of sea level and 90 m of the camera, and the sun glitter. The reflections mirror lod0/lod1 cells (within 20 cells) about
+sea level and blend them into bank-2 pixels only (`BLEND_REFLECT`, 45% reflected), sorted far to near, no depth test; F-05 (2026-10-14):
+gathered once a frame after the cells are binned (`gatherReflections`: the walk, the sort and the shore cut, serially, since during the
+descent the lod0 cells it reads are not warmed and the caches fill on a miss), each polygon kept with the rows it can fill
+(`polygonRows`, the bin's own bounds), and drawn by the terrain's band threads after their rings (`drawReflectionBand`), in order.
+Everything drops by d^2 / 2R with distance from the camera (the horizon curves, M1-07); since O1 the drop lives in `toView`
+(`03-coordinates-and-units.md`), so objects curve with the ground and small bodies use the exact sphere.
 
-Sky (`drawSky`): two cloud layers (cumulus at 2600 m with lit tops and shaded bases judged by the density toward the sun; a thin veil at 6000 m), evaluated on a `4 x scale` pixel grid; 22-degree halo below -5 C with clear air; a darker twilight wedge opposite a low sun; the galactic band (`buildBandMap`: `buildGalaxyBand`'s 128 x 64 map per landing; since G-03 laid over the sky after the stars in bank 22, from the night sky's colour to a pale star-grey, where its light beats the sky pixel's, hidden by the clouds; 20 shades at full brightness, the bulge 17 on a dark night, the plane 6-8, fading with the day and the rain; B-408: down to the horizon of the drawn ground rather than the horizontal, behind the bodies, and on an airless world the whole sky with the sun in its bank, so a glow round the sun has no edge where the band's patch ends; W-04: the zodiacal light of a dusty system joins it, a cone along the plane of the worlds from the sun); stars twinkle through atmospheres; meteors at night (W-04: and a meteor shower's while the world crosses a comet's stream, `SurfaceView::showers` listed once a landing by `meteorShowersOf`, the streaks from `showerMeteorsAt` running away from the radiant, up to 60 a minute at a full stream's peak with the radiant overhead); rows in parallel.
+Sky (`drawSky`): two cloud layers (cumulus at 2600 m with lit tops and shaded bases judged by the density toward the sun; a thin veil at
+6000 m), evaluated on a `4 x scale` pixel grid; 22-degree halo below -5 C with clear air; a darker twilight wedge opposite a low sun;
+the galactic band (`buildBandMap`: `buildGalaxyBand`'s 128 x 64 map per landing; since G-03 laid over the sky after the stars in bank
+22, from the night sky's colour to a pale star-grey, where its light beats the sky pixel's, hidden by the clouds; 20 shades at full
+brightness, the bulge 17 on a dark night, the plane 6-8, fading with the day and the rain; B-408: down to the horizon of the drawn
+ground rather than the horizontal, behind the bodies, and on an airless world the whole sky with the sun in its bank, so a glow round
+the sun has no edge where the band's patch ends; W-04: the zodiacal light of a dusty system joins it, a cone along the plane of the
+worlds from the sun); stars twinkle through atmospheres; meteors at night (W-04: and a meteor shower's while the world crosses a comet's
+stream, `SurfaceView::showers` listed once a landing by `meteorShowersOf`, the streaks from `showerMeteorsAt` running away from the
+radiant, up to 60 a minute at a full stream's peak with the radiant overhead); rows in parallel.
 
-M0-07 additions (2026-09-26): every LOD ring hangs skirt walls 1.5 cells deep from its outer edge (KI-006); descent renders no 16 m cells above 800 m and `SurfaceView::prefetch(ms)` fills lod2, lod1, lod0 rings around the origin within a per-frame budget (KI-009); rain drops are world-space lines around the camera, depth-tested (KI-017); beyond 50 km from the origin `SurfaceView::reanchor()` re-initialises the site at the player's position, re-projects the capsule with `SurfaceSite::localAt` (the inverse azimuthal-equidistant mapping) and corrects headings by the meridian convergence (KI-007). exploration
+M0-07 additions (2026-09-26): every LOD ring hangs skirt walls 1.5 cells deep from its outer edge (KI-006); descent renders no 16 m
+cells above 800 m and `SurfaceView::prefetch(ms)` fills lod2, lod1, lod0 rings around the origin within a per-frame budget (KI-009);
+rain drops are world-space lines around the camera, depth-tested (KI-017); beyond 50 km from the origin `SurfaceView::reanchor()`
+re-initialises the site at the player's position, re-projects the capsule with `SurfaceSite::localAt` (the inverse azimuthal-equidistant
+mapping) and corrects headings by the meridian convergence (KI-007). exploration
 
 ## Site and caches (`surface/site.*`)
 
-`SurfaceSite::init(sys, body, lat, lon)` builds the site basis (see 03), sets `R` in metres, `gravity`, `atmosphere`, `hasWater` (felisian), `seaLevel = 0`, `lavaLevel`, and three toroidal caches:
+`SurfaceSite::init(sys, body, lat, lon)` builds the site basis (see 03), sets `R` in metres, `gravity`, `atmosphere`, `hasWater`
+(felisian), `seaLevel = 0`, `lavaLevel`, and three toroidal caches:
 
 | Cache | Cell | Size | Detail passed to the planet function |
 | --- | --- | --- | --- |
@@ -157,49 +228,90 @@ M0-07 additions (2026-09-26): every LOD ring hangs skirt walls 1.5 cells deep fr
 | lod2 | 512 m | 64 x 64 | 512 m |
 | lod3 (O1) | 2048 m | 64 x 64 | 2048 m |
 
-Rings drawn (`SurfaceView::ringR`, `computeRings`): the near ring (`ringN`, O6-02) 30 cells of 4 m (120 m), lod0 40 cells (640 m), lod1 36 (2.3 km), lod2 26 (13.3 km), lod3 26 (53 km); on a small body (`smallBody`, R under 300 km) each ring stops at 1.15 radii and a ring under four cells is dropped (a 5 km comet: 640 m, 2.3 km, 5.6 km, no far ring). `drawRadiusM()` is the outermost radius; `prefetch` fills the rings coarse to fine. The floor beyond the last ring (`drawFloor`) is a fan of 24 x 6 curved quads from 0.92 of the far radius out to 10.5 times it, at the sea level or 300 m under the lowest far cell (KI-301); small bodies have none, their terrain disc reaching past their own horizon. `SurfaceSite` also carries `escapeVelocity` and, on ringed worlds, `ringProf` (the shared ring profile, O0-01).
+Rings drawn (`SurfaceView::ringR`, `computeRings`): the near ring (`ringN`, O6-02) 30 cells of 4 m (120 m), lod0 40 cells (640 m), lod1
+36 (2.3 km), lod2 26 (13.3 km), lod3 26 (53 km); on a small body (`smallBody`, R under 300 km) each ring stops at 1.15 radii and a ring
+under four cells is dropped (a 5 km comet: 640 m, 2.3 km, 5.6 km, no far ring). `drawRadiusM()` is the outermost radius; `prefetch`
+fills the rings coarse to fine. The floor beyond the last ring (`drawFloor`) is a fan of 24 x 6 curved quads from 0.92 of the far radius
+out to 10.5 times it, at the sea level or 300 m under the lowest far cell (KI-301); small bodies have none, their terrain disc reaching
+past their own horizon. `SurfaceSite` also carries `escapeVelocity` and, on ringed worlds, `ringProf` (the shared ring profile, O0-01).
 
-`TerrainCache::at(cx, cz)` computes a vertex on demand (`site.sampleAt`) and tags it with its lattice coordinates, so moving simply overwrites stale entries. `groundHeight(x, z)` interpolates lod0 with the same two-triangle split the rasteriser uses, and inside the near ring the near cache blended by `nearBlend` (below); `groundHeightCoarse` is lod0 alone.
+`TerrainCache::at(cx, cz)` computes a vertex on demand (`site.sampleAt`) and tags it with its lattice coordinates, so moving simply
+overwrites stale entries. `groundHeight(x, z)` interpolates lod0 with the same two-triangle split the rasteriser uses, and inside the
+near ring the near cache blended by `nearBlend` (below); `groundHeightCoarse` is lod0 alone.
 
 ## Player (`SurfaceView::update`)
 
-Mouse look (0.0032 rad per pixel), arrows also turn, pitch clamped to +-85 deg. Walk 4.2 m/s, run x2.3 (Shift), swimming x0.45. Acceleration constant 10/s on the ground, 2/s in the air. Jump 4.6 m/s; gravity is the body's. Slopes with rise/run above 1.35 stop you. Swimming when the ground is more than 0.4 m below sea level (you float 1.15 m below the surface, eye at 1.65 m). Terrain is unbounded; there is no walking limit.
+Mouse look (0.0032 rad per pixel), arrows also turn, pitch clamped to +-85 deg. Walk 4.2 m/s, run x2.3 (Shift), swimming x0.45.
+Acceleration constant 10/s on the ground, 2/s in the air. Jump 4.6 m/s; gravity is the body's. Slopes with rise/run above 1.35 stop you.
+Swimming when the ground is more than 0.4 m below sea level (you float 1.15 m below the surface, eye at 1.65 m). Terrain is unbounded;
+there is no walking limit.
 
 ## Environment model (`computeEnvironment`)
 
 * `skyBrightness = smoothstep(-0.12, 0.2, sin(alt))` with atmosphere, else 0.
-* Cloud cover: map pattern at (lon + drift, lat), `drift = t * 2pi / (|rotPeriod| * 3.7) + 1`, x1.3 plus slow noise (`env.cloudPattern`); venusian = 1; W-03: `env.cloudCover` is the greater of it and the fronts' cloud at the place (`env.frontCloud`).
-* Rain (felisian only): `(cloudPattern - 0.72) / 0.25` clamped (the pattern's cloud alone: a front's deck ahead of its line must not rain); W-03: felisian, ocean and acidic worlds take the greater of it and the front's rain (`env.frontRain`, from the line to 150 km behind it), desert and thin-atmosphere worlds add the front's dust to `env.dust`.
-* Wind: base 10 kt (25 thin atmosphere, 4 venusian, 0 airless) x gusts (noise over 400 s) x (1 + 1.5 rain) x (W-03) (1 + the front's rise, up to the strength from 350 km ahead of the line to 250 behind), direction from noise over 2000 s blended toward the front's by its weight (along its line toward the pole ahead of it, with its motion behind); refreshed every 2 s of game time.
-* Temperature (C): from the body's `tempK`; with atmosphere `0.75 base + offset` (venusian +420, thin -25, felisian +30, quartz +6) `+ 12 sin(alt) - 0.4 |lat|`; airless `1.3 base - 60 + (110 sin(alt) or -70 at night) - 0.5 |lat|`; minus 6.5 C per km of altitude; molten +180; W-03: minus the front's cold (`env.frontCold`, 3-11 C behind its line, easing 500-900 km behind); floor -270.
+* Cloud cover: map pattern at (lon + drift, lat), `drift = t * 2pi / (|rotPeriod| * 3.7) + 1`, x1.3 plus slow noise
+  (`env.cloudPattern`); venusian = 1; W-03: `env.cloudCover` is the greater of it and the fronts' cloud at the place (`env.frontCloud`).
+* Rain (felisian only): `(cloudPattern - 0.72) / 0.25` clamped (the pattern's cloud alone: a front's deck ahead of its line must not
+  rain); W-03: felisian, ocean and acidic worlds take the greater of it and the front's rain (`env.frontRain`, from the line to 150 km
+  behind it), desert and thin-atmosphere worlds add the front's dust to `env.dust`.
+* Wind: base 10 kt (25 thin atmosphere, 4 venusian, 0 airless) x gusts (noise over 400 s) x (1 + 1.5 rain) x (W-03) (1 + the front's
+  rise, up to the strength from 350 km ahead of the line to 250 behind), direction from noise over 2000 s blended toward the front's by
+  its weight (along its line toward the pole ahead of it, with its motion behind); refreshed every 2 s of game time.
+* Temperature (C): from the body's `tempK`; with atmosphere `0.75 base + offset` (venusian +420, thin -25, felisian +30, quartz +6)
+  `+ 12 sin(alt) - 0.4 |lat|`; airless `1.3 base - 60 + (110 sin(alt) or -70 at night) - 0.5 |lat|`; minus 6.5 C per km of altitude;
+  molten +180; W-03: minus the front's cold (`env.frontCold`, 3-11 C behind its line, easing 500-900 km behind); floor -270.
 * Pressure per type (felisian 0.7-1.3 atm, venusian 60-95, thin 0.006-0.046, quartz 0.4-0.8) scaled by `exp(-alt/8000)`.
-* Fog distance from the look table (O1: felisian 12 km, ocean 9, quartz 5, thin air 14, comet 16, molten and volcanic 30, the airless worlds 45, venusian 0.7 km) x (1 - 0.7 rain) etc.; on a comet x (1 - 0.85 activity).
-* Ring shadow (O0-01): `SunInfo::ringShadow` from `SurfaceSite::sun` (the sun ray from the site crossing the ring plane inside the ring: `0.85 x` the profile's density) cuts the light factor by 80% of it and the sky brightness by 45%; `env.ringShadow` feeds the HUD's `RING SHADOW`.
-* Comet activity (O4): `env.cometActivity = clamp((1.6 ref / dStar)^2, 0, 1)` with the reference orbit of the tail's formula; drives the vents, the coma, the tail and the haze; the HUD prints `VENTING 40%`.
+* Fog distance from the look table (O1: felisian 12 km, ocean 9, quartz 5, thin air 14, comet 16, molten and volcanic 30, the airless
+  worlds 45, venusian 0.7 km) x (1 - 0.7 rain) etc.; on a comet x (1 - 0.85 activity).
+* Ring shadow (O0-01): `SunInfo::ringShadow` from `SurfaceSite::sun` (the sun ray from the site crossing the ring plane inside the ring:
+  `0.85 x` the profile's density) cuts the light factor by 80% of it and the sky brightness by 45%; `env.ringShadow` feeds the HUD's
+  `RING SHADOW`.
+* Comet activity (O4): `env.cometActivity = clamp((1.6 ref / dStar)^2, 0, 1)` with the reference orbit of the tail's formula; drives the
+  vents, the coma, the tail and the haze; the HUD prints `VENTING 40%`.
 * Capsule distance/bearing; `nearCapsule` within 7 m.
 
 ## Lighting
 
-Per vertex: normal from the four neighbours; `lambert = max(0, n . sun)`; `sunUp = smoothstep(-0.03, 0.06, sun.y)`; ambient `0.08 + 0.2 sky` with atmosphere, `0.11` airless; `light = ambient + (1 - ambient) lambert sunUp lightFactor`; `shade = 50 light^(0.65 | 0.55 airless) clamp(0.45 + 0.75 albedo, 0.5, 1.2)`; fog toward 63. Lava vertices ignore light: worley veins (11 m cells) bright, crust dark, animated with the day fraction. Quads are flat shaded (corner average).
+Per vertex: normal from the four neighbours; `lambert = max(0, n . sun)`; `sunUp = smoothstep(-0.03, 0.06, sun.y)`; ambient
+`0.08 + 0.2 sky` with atmosphere, `0.11` airless; `light = ambient + (1 - ambient) lambert sunUp lightFactor`;
+`shade = 50 light^(0.65 | 0.55 airless) clamp(0.45 + 0.75 albedo, 0.5, 1.2)`; fog toward 63. Lava vertices ignore light: worley veins
+(11 m cells) bright, crust dark, animated with the day fraction. Quads are flat shaded (corner average).
 
-Water quads (felisian, any corner below sea level): shade `20 + 14 sky + shallowness*9 + glint` where glint is `pow(max(0, reflect . sun), 28) * 24 * sunUp * lightFactor`, fogged, with an animated fine grain.
+Water quads (felisian, any corner below sea level): shade `20 + 14 sky + shallowness*9 + glint` where glint is
+`pow(max(0, reflect . sun), 28) * 24 * sunUp * lightFactor`, fogged, with an animated fine grain.
 
 ## Sky (`drawSky`)
 
-See 02 for the order. Notable formulas: airless glow `pow(cos, 300) * 22` (F-10: the powers as products of squares, `pow300` and `sunGlow`); atmosphere base `day (15 + 25 hz) + (1 - day)(2 + 5 hz)` with `hz = (1 - el)^2.2`, density from the look table (venusian 1.3, thin 0.5, quartz 1.15); sun glow `(cos^6 * 9 + cos^50 * 14) * sunUp`; clouds on a 2600 m plane with `fbm2` (4 octaves, 1800 m wavelength) thresholded at `1 - 0.75 cover`, lit by the sun direction, drifting with the wind (`windDriftX/Z`, the integral of the wind over game time at 0.5 m per knot-second, shared with the ground cloud shadows; B-206: the old `wind x 0.5 x t` jumped kilometres at every wind change); stars are hidden where the sky index exceeds 22 and scaled by `(1 - 0.9 day)(1 - rain)`.
+See 02 for the order. Notable formulas: airless glow `pow(cos, 300) * 22` (F-10: the powers as products of squares, `pow300` and
+`sunGlow`); atmosphere base `day (15 + 25 hz) + (1 - day)(2 + 5 hz)` with `hz = (1 - el)^2.2`, density from the look table (venusian
+1.3, thin 0.5, quartz 1.15); sun glow `(cos^6 * 9 + cos^50 * 14) * sunUp`; clouds on a 2600 m plane with `fbm2` (4 octaves, 1800 m
+wavelength) thresholded at `1 - 0.75 cover`, lit by the sun direction, drifting with the wind (`windDriftX/Z`, the integral of the wind
+over game time at 0.5 m per knot-second, shared with the ground cloud shadows; B-206: the old `wind x 0.5 x t` jumped kilometres at
+every wind change); stars are hidden where the sky index exceeds 22 and scaled by `(1 - 0.9 day)(1 - rain)`.
 
-Sun colour and sky ramps come from `setupPalette` (sunset tint when the sun is within ~12 deg of the horizon, rain dims, lightning flashes the palette).
+Sun colour and sky ramps come from `setupPalette` (sunset tint when the sun is within ~12 deg of the horizon, rain dims, lightning
+flashes the palette).
 
-On a comet (O4) the airless sky adds the coma, `activity x (6 + 14 cos^3)` toward the sun, and the ion tail: `pow(max(0, -cos), 18) x activity` (a cone some 15 degrees wide round the anti-solar point) drawn in bank 15 (a blue ramp set for comets) at `6 + 26 tail (0.8 + 0.3 knots)` with the five streaming knots of `SpaceRenderer::cometKnot`; by day the tail is under the horizon, at night overhead.
+On a comet (O4) the airless sky adds the coma, `activity x (6 + 14 cos^3)` toward the sun, and the ion tail:
+`pow(max(0, -cos), 18) x activity` (a cone some 15 degrees wide round the anti-solar point) drawn in bank 15 (a blue ramp set for
+comets) at `6 + 26 tail (0.8 + 0.3 knots)` with the five streaming knots of `SpaceRenderer::cometKnot`; by day the tail is under the
+horizon, at night overhead.
 
 ## Objects (`drawObjects`)
 
 Per lod0 cell within 22 cells, hashed by cell coordinates:
 
-* Rocks: density per type (cratered 1.1, rocky 1.6, thin 1.2, molten 0.7, icy 0.3, felisian 0.35, venusian 0.6, quartz 0.5, comet 1.4), none on sand, water or lava, a third on glass (S-03); size `scale * (0.35 + 2 u^2.5)` m; pyramid of three lit triangles, bank 3; culled below 0.8 px.
+* Rocks: density per type (cratered 1.1, rocky 1.6, thin 1.2, molten 0.7, icy 0.3, felisian 0.35, venusian 0.6, quartz 0.5, comet 1.4),
+  none on sand, water or lava, a third on glass (S-03); size `scale * (0.35 + 2 u^2.5)` m; pyramid of three lit triangles, bank 3;
+  culled below 0.8 px.
 * Quartz crystals on quartz worlds: 1-3 per cell (50%), 1-4 m spikes, bank 2.
 * Vegetation: since N2 in `surface/flora.cpp` (`drawFlora`, see "Vegetation (N2)" below); `drawObjects` keeps rocks and crystals.
-* Flora families (M4-04, N2-01): `BodyGen::floraFamily` and `floraFamily2` are hashed from the body seed (not drawn from the generator's rng, so the maps are unchanged), now seven silhouettes; 70% of trees use the first family. (History: 0 broadleaf (the M1 spray of 3-5 blobs), 1 conifer (one cone of points from 25% to 100% of the height; forced in taiga and tundra biomes), 2 fibrous (3-5 stalks of 45-75% height, each with a small tuft), 3 umbrella (a flat disc crown at 95%), 4 giant (2.4x height, five blobs, thicker trunk). Trunk width is `0.015 * height / distance` in logical pixels (1-4). Cacti on desert sand (a 1.2-3.7 m column with two arms, within 300 m) and low dark cushions on tundra.)
+* Flora families (M4-04, N2-01): `BodyGen::floraFamily` and `floraFamily2` are hashed from the body seed (not drawn from the generator's
+  rng, so the maps are unchanged), now seven silhouettes; 70% of trees use the first family. (History: 0 broadleaf (the M1 spray of 3-5
+  blobs), 1 conifer (one cone of points from 25% to 100% of the height; forced in taiga and tundra biomes), 2 fibrous (3-5 stalks of
+  45-75% height, each with a small tuft), 3 umbrella (a flat disc crown at 95%), 4 giant (2.4x height, five blobs, thicker trunk). Trunk
+  width is `0.015 * height / distance` in logical pixels (1-4). Cacti on desert sand (a 1.2-3.7 m column with two arms, within 300 m)
+  and low dark cushions on tundra.)
 * Ruins (C-01: `peoples/ruins.*`, `SurfaceView::ruinCell`, `drawRuins`, `drawSettlement`): M4-07's 2 km latitude/longitude grid,
   planet-fixed so a ruin stays where it was found whatever the landing site or the local-frame anchor (KI-007). B-417: M4-07's
   monoliths of the old ones (a ring of columns, a cube, a dome, three walls or a 40 m cube in one cell in twenty of every
@@ -297,11 +409,23 @@ Per lod0 cell within 22 cells, hashed by cell coordinates:
   `peoples/genome.*`, `docs/reference/civilisations/built-world.md`): its plans, roofs, profiles, windows, colours, focal accent and the
   rest; a slot of the ground's own material is tinted toward its colour, and the light's bank glows only for the futuristic and
   the far future's peoples.
-* Roads (C-09, `peoples/roads.*`, `civilisations/built-world.md`): on a world that had a civilisation the sited settlements within two cells of each other are joined by roads (the relative neighbourhood graph: the same network from either end, read by the view, the landing zoom and the harness alike), each a walk in 50 m steps that takes the gentlest heading and keeps out of the water, five to eight metres wide, paved (the rock family's material) or beaten (bare earth), worn into gaps by the culture's age. The site grows its network from the galaxy level as the explorer moves (`SurfaceSite::ensureRoads`: the cells within five of the explorer's, two cells on each time, the worker joined first because the vertices read the list on the render threads) and `sampleAt` draws it into the terrain vertices: `TerrainVertex::road` is the road's share of the vertex's footprint less the wear's gaps; on the 4 and 16 m rings a vertex on the bed takes the paving material, no vegetation and a darker albedo (so B-311's two-material contour draws the edge), on the 64 m ring the tone alone darkens, and the 512 m ring sees nothing. `forTrees`, `forLogs` and the rocks skip the bed (`roadCover` over 0.3); the buggy's traction and rolling resistance follow the paving's material. A probe site (`testLandSite`, the landing map's relief probe) builds no roads. C-13: a road carries its own paving and wear (`SiteRoad::paved`, `wear`); a road between two peoples' settlements is built as the bigger settlement's people built (`roadPeopleOf`).
+* Roads (C-09, `peoples/roads.*`, `civilisations/built-world.md`): on a world that had a civilisation the sited settlements within two
+  cells of each other are joined by roads (the relative neighbourhood graph: the same network from either end, read by the view, the
+  landing zoom and the harness alike), each a walk in 50 m steps that takes the gentlest heading and keeps out of the water, five to
+  eight metres wide, paved (the rock family's material) or beaten (bare earth), worn into gaps by the culture's age. The site grows its
+  network from the galaxy level as the explorer moves (`SurfaceSite::ensureRoads`: the cells within five of the explorer's, two cells on
+  each time, the worker joined first because the vertices read the list on the render threads) and `sampleAt` draws it into the terrain
+  vertices: `TerrainVertex::road` is the road's share of the vertex's footprint less the wear's gaps; on the 4 and 16 m rings a vertex
+  on the bed takes the paving material, no vegetation and a darker albedo (so B-311's two-material contour draws the edge), on the 64 m
+  ring the tone alone darkens, and the 512 m ring sees nothing. `forTrees`, `forLogs` and the rocks skip the bed (`roadCover` over 0.3);
+  the buggy's traction and rolling resistance follow the paving's material. A probe site (`testLandSite`, the landing map's relief
+  probe) builds no roads. C-13: a road carries its own paving and wear (`SiteRoad::paved`, `wear`); a road between two peoples'
+  settlements is built as the bigger settlement's people built (`roadPeopleOf`).
 * Towns' ground (T-02, `peoples/towns.*`, `civilisations/built-world.md`): a town's streets, squares and fields are drawn into the terrain
   vertices like C-09's roads (`SurfaceSite::addTownMarks`, `applyMarks`): `GroundMark`s in local metres found by 32 m cells, added as a
   town comes within two cells of the explorer (`SurfaceView::ensureTownMarks` at a landing, a re-anchor and every 250 m, the worker joined
-  first), the 4, 16 and 64 m rings' vertices under it sampled again (`TerrainCache::invalidate`). On the fine rings a vertex on a street takes
+  first), the 4, 16 and 64 m rings' vertices under it sampled again (`TerrainCache::invalidate`). On the fine rings a vertex on a street
+  takes
   the paving (setts at 0.6 of the albedo, a modern street's asphalt at 0.45, a lane's beaten earth) and loses its vegetation, on the 64 m
   ring the tone alone darkens; a field's strips or tone, its edge (a hedge on a living world, a wall or a bank on a dry one) and an
   irrigation circle's darker soil, all faded by the years since the town was left. The trees, the logs and the rocks keep off the streets
@@ -320,24 +444,53 @@ Per lod0 cell within 22 cells, hashed by cell coordinates:
   works are the world's and the land's within `PLAN_NEAR_M` (`worksAroundIfReady`, refreshed with the plan's places every kilometre:
   `WorkNear` holds each as a shared `Work`, a land's cell made on the main thread as the explorer comes within reach of it, a few
   milliseconds, and kept); none until the world's works are built.
-* The world's plan (T-01, `peoples/plan.*`, `civilisations/built-world.md`): on a world that had a people the cells read its plan: a place's own 2 km cell holds it (a capital's or a city's core spans cells: `forNearbyRuins` reaches its cell from every cell it covers through `SurfaceView::planNear`, the plan's places within `PLAN_NEAR_M` 24 km, refreshed each kilometre the explorer moves; `drawRuins` gathers them all to that distance, so a far city's towers stand on the skyline as silhouettes); the countryside's settlements stand only in the land the people held, by the plan's density, none in a core. The plan's ways lie on the ground in legs between waypoints every 3 km (`SurfaceSite::ensureRoads` walks the legs within its block, `roadLegWalk`), each drawn into the terrain by its kind (`SiteRoad::kind`: C-09's paving or beaten earth, a railway's dark ballast, a canal's silted bed, a highway's pale slabs, a path's worn line) and named under the explorer (`OLD RAILWAY NE-SW`); a maglev's spans stand on pylons in the cells it crosses (A-03's `BK_MAGLEV`; a cell of works alone is `SC_WORKS`). The landing's clearance moves a capsule out of a core anchored farther off.
-* Graves (C-12, `peoples/graves.*`, `civilisations/peoples-and-ages.md`): every settlement has a burial ground outside its edge, away from the shore: rows of stone slabs with a line of glyphs, standing or fallen by the culture's decay, each with a name in the people's style and the years it covers in the people's own count (`SurfaceView::RuinCell::graves`, their stones appended to the cell's lod 0 pieces, so they are drawn and collided with the ruins). Within 2.2 m of one on foot `findNearGrave` names it for the HUD (`A GRAVE: THAELU, 140-212`) and the game records it in the guide the first time, like a landmark. C-13: a settlement's stones are named and counted in its people's lore (`SurfaceView::lores`).
-* Instruments (C-11, `peoples/instruments.*`, `civilisations/sound.md`): beside a third of a settlement's music records, in the record's room, an
+* The world's plan (T-01, `peoples/plan.*`, `civilisations/built-world.md`): on a world that had a people the cells read its plan: a
+  place's own 2 km cell holds it (a capital's or a city's core spans cells: `forNearbyRuins` reaches its cell from every cell it covers
+  through `SurfaceView::planNear`, the plan's places within `PLAN_NEAR_M` 24 km, refreshed each kilometre the explorer moves;
+  `drawRuins` gathers them all to that distance, so a far city's towers stand on the skyline as silhouettes); the countryside's
+  settlements stand only in the land the people held, by the plan's density, none in a core. The plan's ways lie on the ground in legs
+  between waypoints every 3 km (`SurfaceSite::ensureRoads` walks the legs within its block, `roadLegWalk`), each drawn into the terrain
+  by its kind (`SiteRoad::kind`: C-09's paving or beaten earth, a railway's dark ballast, a canal's silted bed, a highway's pale slabs,
+  a path's worn line) and named under the explorer (`OLD RAILWAY NE-SW`); a maglev's spans stand on pylons in the cells it crosses
+  (A-03's `BK_MAGLEV`; a cell of works alone is `SC_WORKS`). The landing's clearance moves a capsule out of a core anchored farther off.
+* Graves (C-12, `peoples/graves.*`, `civilisations/peoples-and-ages.md`): every settlement has a burial ground outside its edge, away
+  from the shore: rows of stone slabs with a line of glyphs, standing or fallen by the culture's decay, each with a name in the people's
+  style and the years it covers in the people's own count (`SurfaceView::RuinCell::graves`, their stones appended to the cell's lod 0
+  pieces, so they are drawn and collided with the ruins). Within 2.2 m of one on foot `findNearGrave` names it for the HUD
+  (`A GRAVE: THAELU, 140-212`) and the game records it in the guide the first time, like a landmark. C-13: a settlement's stones are
+  named and counted in its people's lore (`SurfaceView::lores`).
+* Instruments (C-11, `peoples/instruments.*`, `civilisations/sound.md`): beside a third of a settlement's music records, in the record's
+  room, an
   instrument of its people and of the record's age (`RuinCell::instruments`, `instrumentIds`: one of each in a settlement), its object its
   parts as forms (C-17: `instrumentPartsToForms`, tubes as lathes lying, bodies as `FK_PLATE`s, strings as cables a millimetre thick, in the
-  records' banks or its people's) drawn with the records within 40 m (`gatherRecords`; past 7 m without its strings and its smallest parts), a
+  records' banks or its people's) drawn with the records within 40 m (`gatherRecords`; past 7 m without its strings and its smallest
+  parts), a
   point of light over it that pulses twice within 250 m (`drawShards`; a record's pulses once); within 2.2 m the HUD names it by its make
   (`A STRUNG GOURD - E`, the nearer of it and a record), `E` takes it
-  (`Game::takeInstrument`, `Guide::instruments`) and every copy on the world is gone (`instrumentsFound`, refilled from the guide at a landing
+  (`Game::takeInstrument`, `Guide::instruments`) and every copy on the world is gone (`instrumentsFound`, refilled from the guide at a
+  landing
   and a load). No colliders: it is picked up.
-* Life: since N3 in `surface/creatures.cpp` (see "Creatures (N3)" below); the M4-05 flocks, night eyes and swimmers live on there in their new form.
+* Life: since N3 in `surface/creatures.cpp` (see "Creatures (N3)" below); the M4-05 flocks, night eyes and swimmers live on there in
+  their new form.
 * Capsule: 1.6 m dome (10 x 4 quads) on a base ring, bank 1, with a pulsing 600 m beacon line. `relocateCapsule` moves it (K key).
 * Weather: rain lines in view space scaled by `env.rain`, lightning flashes with thunder when rain > 0.5.
-* Comet jets (O4, `drawCometJets`, called from `drawWeather`): vents hashed on a 250 m grid (6-22% of cells, more with the activity) within 750 m, active while the sun is up: 18-48 dust points per vent leave the ground every 30 s, rise at 3-7 m/s, spread and drift away from the sun at 1.2 m/s (radiation pressure), fading from shade 60; a bright spot marks the vent.
+* Comet jets (O4, `drawCometJets`, called from `drawWeather`): vents hashed on a 250 m grid (6-22% of cells, more with the activity)
+  within 750 m, active while the sun is up: 18-48 dust points per vent leave the ground every 30 s, rise at 3-7 m/s, spread and drift
+  away from the sun at 1.2 m/s (radiation pressure), fading from shade 60; a bright spot marks the vent.
 
 ## Vegetation (N2, 2026-09-26, `surface/flora.cpp`)
 
-One enumerator places everything: `forTrees(cx, cz, fn)` gives the trees of a 16 m cell (felisian forest/grass cells above the water, veg over 0.2) from the cell hash `hash2i(cx, cz, seed ^ 0xB0B)`; the count is `dens x per x (0.6..1.4)` with a fractional part as a probability (scattered trees on grass), `dens = canopyDensityAt(x, z, veg) = veg x (0.12 + 0.88 smoothstep(0.30, 0.55, fbm2(x/110, z/110, seed ^ 0xC1EA, 2)))` (the clearing mask: about a third of a forest is clearings with an eighth of the trees), `per` 6.5 on forest, 2.2 on grass, 3.0 on savanna (veg-based), 1.5 on tundra. Per tree: silhouette (70% family 1, 30% family 2; taiga and tundra cones, savanna umbrellas, wetland 60% fern trees, tropical 25% tiered giants), height `H0..H1 x sqrt(9.8/g) x (0.6 + 0.4 dens)` (dome 6-12 m, cone 8-16, umbrella 7-13, giant 18-28, fibrous 4-8, fern 4-7, mushroom 3-6), canopy radius 0.22-0.45 of the height, canopy centre 0.62-0.90, 3% dead (forest only), bare when deciduous (dome, umbrella, giant, mushroom) and `seasonPhaseLocal() < -0.6`, leaf bank 5 for family 2 or deciduous trees in the cold shoulder seasons (phase in [-0.6, 0)), 10 for 15% (the straw variant), else 3. `forLogs`: 12% x dens/0.5 of forest cells hold a fallen log (4-9 m, radius 0.3-0.5) that `collectColliders` turns into three circles; trunks are colliders of radius `0.12 + 0.02 h`.
+One enumerator places everything: `forTrees(cx, cz, fn)` gives the trees of a 16 m cell (felisian forest/grass cells above the water,
+veg over 0.2) from the cell hash `hash2i(cx, cz, seed ^ 0xB0B)`; the count is `dens x per x (0.6..1.4)` with a fractional part as a
+probability (scattered trees on grass),
+`dens = canopyDensityAt(x, z, veg) = veg x (0.12 + 0.88 smoothstep(0.30, 0.55, fbm2(x/110, z/110, seed ^ 0xC1EA, 2)))` (the clearing
+mask: about a third of a forest is clearings with an eighth of the trees), `per` 6.5 on forest, 2.2 on grass, 3.0 on savanna
+(veg-based), 1.5 on tundra. Per tree: silhouette (70% family 1, 30% family 2; taiga and tundra cones, savanna umbrellas, wetland 60%
+fern trees, tropical 25% tiered giants), height `H0..H1 x sqrt(9.8/g) x (0.6 + 0.4 dens)` (dome 6-12 m, cone 8-16, umbrella 7-13, giant
+18-28, fibrous 4-8, fern 4-7, mushroom 3-6), canopy radius 0.22-0.45 of the height, canopy centre 0.62-0.90, 3% dead (forest only), bare
+when deciduous (dome, umbrella, giant, mushroom) and `seasonPhaseLocal() < -0.6`, leaf bank 5 for family 2 or deciduous trees in the
+cold shoulder seasons (phase in [-0.6, 0)), 10 for 15% (the straw variant), else 3. `forLogs`: 12% x dens/0.5 of forest cells hold a
+fallen log (4-9 m, radius 0.3-0.5) that `collectColliders` turns into three circles; trunks are colliders of radius `0.12 + 0.02 h`.
 
 Drawing (`drawFlora`): cells sorted near to far within 24 cells and a 70-degree view cone (dot over 0.45 beyond 3 cells). A
 coverage grid of 8x8 (1x) tiles counts drawn spray points (weighted by point area); a tree farther than 40 m whose projected
@@ -358,9 +511,20 @@ the sun, mid 0.72, dark underside 0.46, and everything below 35% of the blob's h
 too. Blob shadows only for trees standing apart (`dens < 0.5`, within 120 m): under a closed canopy the floor is darker instead
 (`vertexOf` scales forest shade by `1 - 0.38 dens`; the far ring uses `0.55 veg`), since stacked darkening polygons went black.
 
-Undergrowth and biomes (all within short ranges, hashed per cell): ferns within 60 m on forest cells (2-6, six arching two-segment fronds, bank 3); mushrooms within 30 m (bank 9 points); bushes on grass and thin forest within 200 m as blobs, 30% with berries (bank 5 points) within 40 m; tall swaying grass (two-segment lines, bank 10) within 45 m on grass with veg over 0.45, short tufts otherwise within 60 m; flowers (bank 5 or 8 points) within 50 m on grassland, temperate, savanna cells in spring and summer (`seasonPhaseLocal() > 0.05`); reeds and cattails within 80 m where the ground is within 1.5 m above and 0.6 m below the local water (bank 10 lines, 40% with a dark head); lily pads (bank 3 hexagons at the water level) on still wetland water within 50 m; fireflies (bank 11 points, blinking, drifting) within 40 m over wetland and dense forest when the sky is below 0.35; deserts: cacti (65%) and succulent rosettes (flat sprays); tundra and alpine rock within 30 m: dark cushions and pale lichen points (bank 9). Counters for the tests: `lastTreesDrawn`, `lastNearTrees/MidTrees/FarTrees`, `lastTreesHidden`, `lastFloraPoints`, `lastFloraPolys`, `lastFloraMs[2]` (the trees, the cells: F-07 times the cells' loop whole, not each cell's parts); `testCanopyCoverage(r)` = the share of forest-ground sample points (4 m grid) under some canopy.
+Undergrowth and biomes (all within short ranges, hashed per cell): ferns within 60 m on forest cells (2-6, six arching two-segment
+fronds, bank 3); mushrooms within 30 m (bank 9 points); bushes on grass and thin forest within 200 m as blobs, 30% with berries (bank 5
+points) within 40 m; tall swaying grass (two-segment lines, bank 10) within 45 m on grass with veg over 0.45, short tufts otherwise
+within 60 m; flowers (bank 5 or 8 points) within 50 m on grassland, temperate, savanna cells in spring and summer
+(`seasonPhaseLocal() > 0.05`); reeds and cattails within 80 m where the ground is within 1.5 m above and 0.6 m below the local water
+(bank 10 lines, 40% with a dark head); lily pads (bank 3 hexagons at the water level) on still wetland water within 50 m; fireflies
+(bank 11 points, blinking, drifting) within 40 m over wetland and dense forest when the sky is below 0.35; deserts: cacti (65%) and
+succulent rosettes (flat sprays); tundra and alpine rock within 30 m: dark cushions and pale lichen points (bank 9). Counters for the
+tests: `lastTreesDrawn`, `lastNearTrees/MidTrees/FarTrees`, `lastTreesHidden`, `lastFloraPoints`, `lastFloraPolys`, `lastFloraMs[2]`
+(the trees, the cells: F-07 times the cells' loop whole, not each cell's parts); `testCanopyCoverage(r)` = the share of forest-ground
+sample points (4 m grid) under some canopy.
 
-Sound (N2-06): `audio.leaves` = canopy density at the explorer's cell x (0.25 + wind/20) plus 0.25 x density while walking in a forest cell (`game_states.cpp`); the synth adds a band-passed hiss swelling with its own gusts.
+Sound (N2-06): `audio.leaves` = canopy density at the explorer's cell x (0.25 + wind/20) plus 0.25 x density while walking in a forest
+cell (`game_states.cpp`); the synth adds a band-passed hiss swelling with its own gusts.
 
 **B-315 (2026-09-28): the trees rebuilt.** A canopy is a set of leaf clusters (`cluster` in `drawFloraBand`): each a ragged disc
 facing the camera, a fan round its centre with 6-10 rim vertices of hashed radii (by its size on screen), cut in the rasteriser by
@@ -393,26 +557,308 @@ test and the 16-vertex clipper are B-315's (02); forest 4x 12.7 ms, 2x 7.7.
 
 ## Creatures (N3, 2026-09-26, `surface/bestiary.*`, `surface/creatures.cpp`)
 
-**Bestiary.** `Bestiary::make(body, gen)` (`Rng(seed ^ 0xBE57)`) for felisian worlds: 2-4 land species, 1-2 flyers, 1 swimmer, one land species nocturnal half the time; ocean worlds get a flyer and a swimmer. A land species has a body plan (quadruped 30, long-necked browser 15, hexapod crawler 15, hopper 15, biped strider 15, giant walker 10, one giant at most), a size (shoulder height: quadruped 0.6-1.8 m, browser 1.5-3.5, hexapod 0.3-0.8, hopper 0.4-1.2, biped 0.8-2.2, giant 4-8) with body, neck, head, tail and leg lengths per plan, walk and run speeds, a gait and a run gait (walk, trot, gallop, hop, crawl, stride), a hide bank (3 forest, 10 straw, 9 sand, 0 rock, 5 flora-2, weighted by the habitat) and tone 0.45-0.95, a pattern (plain, stripes, spots, countershade), a crest (none, horns, ears, crest, antlers), a habitat (a biome or any), a diet (grass, canopy for browsers and giants, water), an activity (day, night, dusk), a temperament (shy 55%, curious 25%, indifferent 20%; giants indifferent), a call (chirp or click under 0.7 m, hoot or chirp under 2 m, low above) with a pitch, a herd size range and a name (`generateName`). `pickLand(h, biome)` prefers species of that habitat, then unrestricted ones.
+**Bestiary** (J-06, generation 18; `surface/bestiary`, `surface/animal_body`). `Bestiary::make(body, gen)` works for every world with
+animals. The world's own stream sets only the counts: 3 to 5 species on land where there are plants, 1 or 2 in the air, 2 or 3 in the
+water (3 or 4 on a world without land animals), and half the time one land species that is active at night. Each species then comes from
+its own seed (the world's, whether it lives on land, in the air or in the water, and its place among them), so a new value moves no other
+species. One stream of that seed draws the ecology: the plan, the size (a hand to a house), speeds, gaits, herd sizes, the habitat (a biome
+or any), the diet, the activity, the temperament (shy, curious or indifferent; giants are indifferent) and the call; J-07 draws the way
+and how many live together after the body (below). A species has no generated name: the explorer names it (`Bestiary::words` gives an
+unnamed one's words). Land plans are weighted by the kind's fauna style: quadruped, long-necked browser, hexapod, hopper, biped strider,
+giant
+walker (one a world at most), octopod, serpent, many-legged crawler, slug, burrower, climber. In the air: a flyer, a glider where there are
+trees, a floater (a gas bag with hanging strands) in an air of 1.3 atmospheres or more. In the water: a swimmer shaped as a fish, an eel, a
+ray or a long neck. Another stream draws the body (`bodyOf`): a trunk of 1 to 12 segments with a girth along it, 0 to 6 pairs of legs (2
+to 4 joints, knees forward or back, upright, sprawling or columns, hooves, pads, claws, spikes or flat feet), arms, a neck, a head (long
+snout, blunt face, beak, trunk, mandibles or shovel) with 0 to 8 eyes in a pair, a row, a ring or on stalks, an ornament (jaws, tusks,
+horns straight, curved or spiral, antlers, a nose horn, ears, a frill, feelers), a tail (whip, thick, club, fan, fin, stinger, curl), a
+back (plates, spines, a sail, a shell, humps, a fin), wings (feathers, a membrane, four insect wings, a gliding skin), a hide (fur,
+scales, plates, bare and wet, warts, quills, long hair) and a coat (plain, stripes, spots, rosettes, bands, a saddle, eyespots,
+countershaded, mottled, a back stripe) in one of the world's two hide colours. A world's animals share a style (`AnimalStyle`: eyes,
+joints, feet, hide, coat, head, ornament, tail, the two colours), kept where it fits a plan. A body is drawn again, up to 24 times, while
+it is alike one kept before it (`animalDistance` under `ANIMAL_ALIKE`, 2.5, measured as the microbes' forms are). `pickLand(h, biome)`
+prefers species of that habitat, then unrestricted ones.
 
-**Spawning** (`planLife`, deterministic from the site seed; `spawnLife` at `init`): 1-3 flocks of a flyer species (none on ice); a herd with the biome's encounter chance (tropical, temperate, grassland, savanna, wetland 0.85; taiga 0.55; desert, tundra 0.35; alpine 0.15; ice and open sea 0), then a second at 50% and a third at 30%, each centred on land within 180 m with `herdMin..herdMax` animals spread over `4 + 2 n` m, sizes 0.85-1.15 of the species. **B-316 (2026-09-28): habitat cells.** Beyond the landing's herds (`Herd::origin`), 512 m squares of the body's latitude and longitude (`lifeCellAt`, like the ruins' cells, so a re-anchor changes nothing) each hold a herd or not by hash (`planCellHerd`: one of six hashed spots on dry land, the biome's chance there: grassland and savanna 0.55, temperate, tropical and wetland 0.4, taiga 0.3, desert and tundra 0.18, alpine 0.1, else none; the species by `pickLand`, the size by the species). `updateHabitat` (from `updateLife`, every half second) spawns the herds whose spot lies within 900 m of the explorer or the buggy and forgets those beyond 1300 m (their animals go with them; a herd you return to starts afresh, KI-317); `SurfaceView::herds` lists every herd and `Critter::herd` indexes it; a herd stays within 300 m of its spot (400 m of the origin before). The grassland herd site holds 2 landing herds and 7 habitat herds, 49 animals; `encounters` prints the habitat herds within 900 m per site (0.7 over random sites, most of which are ice).
+**Ways** (J-07, `Species::way`, `social`, `prey`). A long-necked browser browses; a giant browses or grazes; a burrower burrows; a climber
+climbs; a slug grazes; a serpent hunts; a glider flies in a flock; a floater drifts. A quadruped, a hexapod, a hopper, a strider or an
+octopod grazes, hunts, scavenges or browses (an octopod climbs instead) by its plan's weights; a crawler grazes or scavenges. A flyer
+with insect wings under 0.35 m swarms; a bigger one soars (60% over 0.8 m, 12% under), else it flies in a flock. A swimmer's form sets
+its water: eels and most rays in the shallows, long necks in the shallows or a shoal, fish in a shoal or leaping. On land a species
+lives in herds, alone (20%; every serpent; half the hunters and scavengers) or territorial (12%: one or two holding a ground; never a
+giant, slug or crawler). A hunter's prey is the land species nearest its size that does not hunt, crawl as a slug or walk as a giant, at
+most twice its size; a hunter with none scavenges. The herds follow: one alone, one or two territorial, packs of 2-4, scavengers 2-3,
+soarers 1-3, swarms 20-40. `Bestiary::words(i)`: the species' kind ("QUADRUPED", a swimmer's "EEL") with the first word of its look
+(coat, ornament, back, hide, tail, eyes; else its size) that none of its world's others of that kind share: "STRIPED QUADRUPED".
 
-**Behaviour** (`updateLife`, `CritterState`): idle, walking, grazing, drinking, resting, alert, fleeing, curious. Decisions when the timer runs out: rest (20-40 s, lying) at midday (local time 0.46-0.54) or when the sky is dark for day species, by day for night species, in full day or deep night for dusk species; in the afternoon (0.55-0.78) grass and water eaters walk to the nearest water within 150 m and drink within 5 m; else graze 40%, walk 35% (followers keep 3-12 m from their herd's leader, the first animal of the herd, and take its heading with noise; the herd centre pulls back beyond 60 m), idle 25%; the leader calls now and then. Threat: the explorer within 25 m (15 m for curious species, never for indifferent ones), the buggy moving over 3 m/s within 60 m: alert for 0.8-1.6 s (frozen, head up, a call at most every 6 s), then flight (run speed away for 5-8 s, the herd mates within 40 m startled too) or, for curious species, an approach to 10 m facing the explorer. Movement keeps off water and slopes over about 0.3 m per step, adds stride cycles (`gaitPhase`, stride 0.75 or 1.3 leg lengths), drops a track every 0.7 m on sand and snow (16 kept), and feeds `hoofLevel` within 20 m. Flocks: circling, gliding, landing to rest every minute or two; at dusk (day species) or in full day (dusk species) they land until the light changes, perching in the tallest tree within two cells of their circle (`forTrees`) or on the ground.
+**Spawning** (`planLife`, deterministic from the site seed; `spawnLife` at `init`): 1-3 flocks of a flyer species (none on ice); a herd
+with the biome's encounter chance (tropical, temperate, grassland, savanna, wetland 0.85; taiga 0.55; desert, tundra 0.35; alpine 0.15;
+ice and open sea 0), then a second at 50% and a third at 30%, each centred on land within 180 m with `herdMin..herdMax` animals spread
+over `4 + 2 n` m, sizes 0.85-1.15 of the species. **B-316 (2026-09-28): habitat cells.** Beyond the landing's herds (`Herd::origin`),
+512 m squares of the body's latitude and longitude (`lifeCellAt`, like the ruins' cells, so a re-anchor changes nothing) each hold a
+herd or not by hash (`planCellHerd`: one of six hashed spots on dry land, the biome's chance there: grassland and savanna 0.55,
+temperate, tropical and wetland 0.4, taiga 0.3, desert and tundra 0.18, alpine 0.1, else none; the species by `pickLand`, the size by
+the species). `updateHabitat` (from `updateLife`, every half second) spawns the herds whose spot lies within 900 m of the explorer or
+the buggy and forgets those beyond 1300 m (their animals go with them; a herd you return to starts afresh, KI-317, but a member caught
+or fallen dead this landing stays dead, B-470); `SurfaceView::herds` lists every herd and `Critter::herd` indexes it; a herd stays
+within 300 m of its spot (400 m of the origin before). The grassland herd site holds 2 landing herds and 7 habitat herds, 49 animals;
+`encounters` prints the habitat herds within 900 m per site (0.7 over random sites, most of which are ice).
 
-**Drawing** (`drawLife`, up to 350 m and, B-316, to `250 + 120 size` m capped at 600 for the big species; full detail within 60 m, mid to 150 m): a body of three box segments (top and flanks, Gouraud lit, stripes as alternating segment tones, spots as dark points on the flanks, countershade as a darker top and lighter flanks), a neck box pitched by the plan (browser 55 deg, biped 60, hopper 45, giant 35, quadruped 22, hexapod 0) and lowered by `headPitch` to the ground, a head box with eyes (bank 8 points within 30 m) and the crest lines, a two-segment tail that wags, legs (4, 6 for hexapods, 2 for bipeds and hoppers, plus swinging arms for bipeds) as hip-knee-foot lines with the foot on the terrain height and lifted on the swing, phase offsets per gait (diagonal pairs for walk and trot, bounding pairs for the gallop, tripods for the crawl, alternating for the stride, all together with a body arc for the hop), folded under a lying body; a blob shadow; tracks as dark points within 80 m. Flyers: a body point and two wing lines flapping, held out in glides, folded when down or perched (positions around the perch tree's canopy). Swimmers: a fin triangle and a back arc quad scaled by the species, a breach when the surfacing phase peaks. Cost: a herd of nine at 18 m, 0.05 ms at 1x (`bench`).
+**Behaviour** (`updateLife`, `CritterState`): idle, walking, grazing, drinking, resting, alert, fleeing, curious; J-07's browsing,
+stalking, chasing, trailing, under the ground, climbing, displaying and charging (below). Decisions when the timer runs out: rest (20-40
+s, lying) at midday (local time 0.46-0.54) or when the sky is dark for day species, by day for night species, in full day or deep night
+for dusk species; in the afternoon (0.55-0.78) grass and water eaters walk to the nearest water within 150 m and drink within 5 m; else
+graze 40%, walk 35% (followers keep 3-12 m from their herd's leader, the first animal of the herd, and take its heading with noise; the
+herd centre pulls back beyond 60 m), idle 25%; the leader calls now and then. Threat: the explorer within 25 m (15 m for curious
+species, never for indifferent ones), the buggy moving over 3 m/s within 60 m: alert for 0.8-1.6 s (frozen, head up, a call at most
+every 6 s), then flight (run speed away for 5-8 s, the herd mates within 40 m startled too) or, for curious species, an approach to 10 m
+facing the explorer. Movement keeps off water and slopes over about 0.3 m per step, adds stride cycles (`gaitPhase`, stride 0.75 or 1.3
+leg lengths), drops a track every 0.7 m on sand and snow (16 kept), and feeds `hoofLevel` within 20 m. Flocks: circling, gliding,
+landing to rest every minute or two; at dusk (day species) or in full day (dusk species) they land until the light changes, perching in
+the tallest tree within two cells of their circle (`forTrees`) or on the ground.
 
-**Cues and the guide.** `pendingCalls` (kind, pitch) and `hoofLevel` are consumed by `Game::updateSurface` into `AudioState::call`, `callPitch`, `hoofs`; `insects` is set there at dusk within 30 m of water above 5 C. `sightings` (a species first within 60 m this landing) become `SIGHTING` log entries, a status line and `Guide::creaturesSeen`.
+**The ways at work** (J-07). A browser walks to the nearest live tree within 30 m (`treeNear`) and raises its neck into it for 10-18 s. A
+hunter whose herd's leader is hungry (its `hungerT` run out) stalks the nearest of its prey within 150 m, low and slow (0.6 of its walk
+plus 0.1 of its run), and chases from about two and a half seconds' run away (9 to 30 m), or as soon as its quarry runs; its pack follows
+the leader. The chase lasts 6-9 s at its run speed, aimed where the quarry is going. Within a body's length the hunter has one try a chase
+(J-08): it kills by a chance from 0.15 to 0.6 that grows with its size against its quarry's, and the quarry falls as fresh remains the
+pack feeds at for 40-70 s; else the quarry swerves, and the hunter rests 12-22 s and is not hungry for 70-130 s. A quarry flees a hunter
+of its kind chasing within 40 m or stalking within 12 m, its herd mates within 40 m running the same way. A scavenger feeds at the nearest
+fresh, bloated or sunken remains within 300 m where no hunter feeds (J-08), else keeps 25-60 m from the nearest hunter within 300 m, nose
+to the ground; a hungry hunter feeds at remains within 120 m before it hunts. A burrower goes under at a threat (anyone within 18 m) or to
+rest: it sinks in 1.2 s, stays under 12-40 s (longer while the explorer is near) and comes up where it went down. A climber runs to the
+nearest trunk within 25 m as thick as its body is wide at the most it climbs to (`climbTreeNear`, B-491; with none, it climbs none) and
+climbs the trunk as drawn (`trunkOf`: its girth tapering to the top, its axis leaning with the crown, its body laid along that axis:
+`climbPose`), each
+a side and a height of its own, clear of those on the trunk already by its body's width at the girth (a body's length up or down where the
+trunk is too thin for two side by side: `climbSide`, B-468), holding on while the explorer is near and coming down 8 s after; it rests in
+trees too and walks up slopes the others turn from. A territorial one faces an explorer on foot within 22 m, head up, calling; within 14 m
+it charges, stopping 4 m short, and goes back to watching and then to its ground (it keeps within 40 m of it). Night walkers are the species
+active at night (`ACT_NIGHT`); their eyes shine in the dark. A swarm hangs 1.2-3.5 m over the ground in a cloud a
+few metres across, settling at rest; a soarer circles 70-150 m up and drifts over the nearest hunter within 600 m; a floater goes with the
+wind at most of its speed and comes in again 600 m upwind once it is 700 m off.
+
+**Drawing** (`drawLife`, `surface/animal_mesh`; to `250 + 120 size` m, 600 at most). Each species' rig is built at the landing (`rigOf`:
+the rings along the trunk, a leg's bones, the hips' heights). Each frame the main thread lists the animals to draw, reads the ground
+under each (3 by 3 heights) and draws their blob shadows. The pool then poses each one (`poseAnimal`) and makes its shapes into a
+shape list of its own (`emitAnimal`), and the lists are filled in bands in their order. A pose sets the trunk's rings (a serpent's and an
+eel's waved, a slug's rippled), the neck lowered to graze, the head, the tail's curve and wag, each leg's joints by a two-bone reach with
+the foot on the ground at its gait's place in the cycle (a walk's sequence, a trot's pairs, a gallop, a bound, a hop, an insect's
+tripods, a wave from back to front), folded legs lying down, the arms, the wings and a floater's strands; no joint, tail or wing goes
+under the ground. J-07: the gait by speed (`speciesGait`: the walk, a four-legged runner's trot past a Froude number of 0.4, the run's gait
+past 2.5 or in flight) and the metres a cycle (`speciesStride`: 2.3 hip heights times the Froude number's 0.3th power, Alexander's; a
+serpent's a wave, a body length over 1.5). A foot stays where it was put for its gait's share of the cycle (`gaitDuty`: a walk 0.65, a
+trot 0.5, a gallop 0.36, a wave of legs 0.7; less where the stride outreaches the leg) while the body goes over it, then swings forward
+lifted. A gallop or a bound arches the back and stretches it once a cycle, the head nods to a walk, a hop's arc comes while its feet are
+up, the serpent's waves run back as fast as it goes (they stay where they lie) and a swimmer's run back by the clock. A browser's neck
+reaches up (`reach`), a stalker goes low (`crouch`), a burrower sinks (`sink`), a climber is posed on level ground whose round is the bark's
+(`trunkR`: its feet on it, within the girth's sides) and turned onto its trunk (`climbing`, `turnPose`), a leaper is tilted along its arc
+(`tilt`). How much is drawn depends on the animal's height in pixels: under about 7 at 1x a few lines, under 24 a coarse mesh, else the
+whole (an 8-sided trunk rounded at its ends, tapered legs, the beak or trunk, eyes, horns, spots, warts, quills, hair). Hides
+take the world's two hide banks (`setupPalette`: 24 and 20 where no people built, 13 with no glowing body in the sky, 12 with no second
+sun, then a lent bank no trait holds; the forest's 3 and the rock's 0 where none is free); horns, tusks, claws and beaks the bone bank 29,
+hooves and mandibles the dark 30, eyes and insect wings the snow's 8. Flyers within 160 m that show 3 pixels get a body (flapping,
+gliding or folded when perched); farther they are a point and two strokes (a swarm's members dart about their places, and a soarer
+mostly glides). Floaters drift on day and night. Swimmers (`swimmersNear`, J-07: also where no herd or flock is near) within 120 m show
+their body breaking the surface, and the water hides the rest; farther, a fin and a back. A shoal's spot holds three in line, a
+swimmer of the shallows swims back and forth along a stretch of its cell's water 0.9 m deep (`shallowsPathOf`, B-467: halved from the
+cell's deep places toward its shallower, on the 16 m ground and the mean water, so it holds from anywhere and whatever the tide; B-492:
+each step 4 m along the line of that depth where the last point lies, its chord within the 0.3 to 1.5 m band, else 2 m, else the stretch
+ends; gone while the
+tide is out there), and a leaper jumps an arc out of the water every 7-13 s
+with a splash where it leaves and where it comes down. A burrower's hole is a dark disc while it is under. Cost: the bench's herd (J-07:
+a pack of four hunters at 18 m) 0.08 ms at 1x, its update 0.01 (`bench`).
+
+**Cues and the guide.** `pendingCalls` (kind, pitch) and `hoofLevel` are consumed by `Game::updateSurface` into `AudioState::call`,
+`callPitch`, `hoofs`; `insects` is set there at dusk within 30 m of water above 5 C.
+
+**The record** (J-07). What `drawLife` draws whole (a coarse mesh or more) on the screen within 60 m (100 m in the air) is seen
+(`lifeSaw`): each species' doings (`AnimalDoing`: its state, or flying, perched, swarming, soaring, drifting, swimming, leaping), the
+nearest it came and the most at once (`lifeSeen`); a species' first of the landing is a sighting. The game (`Game::animalsSeen`) keeps
+them in the guide's `animal` lines, keyed `<body key>/A<index>`; a species new to the guide is logged (SIGHTING), counted
+(`creaturesSeen`) and said ("NEW SPECIES: A STRIPED HOPPER"), one seen before is said by its name or its words. The animal nearest the
+middle of the screen within its size (12 pixels at least) and 40 m (50 on the water, 80 in the air) is the crosshair's (`lifeTarget`):
+the HUD says it ("A STRIPED HOPPER - SHIFT+N") and Shift+N names it (`TEXT_ANIMAL`, the guide's `names`; R-452: N alone always opens
+the map, and so does Shift+N with no animal there). A
+name travels in a friend's export as every name does (the inbox's, the explorer's own winning). The data sheet's LIFE line lists the
+species seen there, named ones as "NAME (WORDS)", counting the ones it has no room for; X's labels and the landing map's LIFE (once seen;
+"A HERD" before) use the same words. J-08: remains seen record their species (`DO_DEAD`, "REMAINS OF A STRIPED HOPPER" said) and its
+marks (`AnimalMark`): DYING for remains or a sick one, GONE for remains where none of it lives there now, CHANGED for a changed young;
+old bones mark nothing. The LIFE line shows them after the words: "STRIPED HOPPER (DYING)".
+
+**Fates** (J-08, `animalFateOf`, `cellRemains`). On a seeded world each species' fate at a place comes from the layer's
+(`14-seeded-worlds.md`): its class's harm by how it resists (a hash of its seed: the hardiest lose half the harm's share, the frailest half
+again as much; past 0.95 none is spared), the shell rotter's on the shelled, the food lost on the plant eaters (half on the hunters, 0.7 on
+the burrowers), the sickness on the land's survivors, its changed young's share of a herd, the thriving. Its changes (`animalChangesOf`,
+one to three, the species' own on its world) are steered by the lines' genes where one fits (a big cell's giants, a small one's dwarfs,
+a dye's new colour, a glow's spots or stripes, a spiral's twisted spine, a line that never stops tumours or a leg more, a flesh rotter's
+sores, a shell's stone plates or horns, a weak nerve poison's circling), the rest by its hash among the 42 its body takes, none
+clashing. A herd (the landing's, a cell's) is drawn as before and loses its dead: a cell's last members' places are its remains (a
+thriving herd has a half more). Each living member is sick by its hash at the share (wasting thin with its ribs showing and slow,
+melting with its underside raw, sores and drips, growths, sprouting stalks and climbing to the high ground, bloated, stone skin grey and
+cracked, crazed circling and falling, a glow in its skin bright at night, a dyed hide in a third free bank), born changed at its herd's
+share (a changed rig built once a species: two heads, an extra leg or tail, a leg gone, a joined twin, legs short or long, a long neck,
+tusks, eyes more or none, a twisted spine, a new pattern, woolly, hairless, pale, dark; marks: ribs, sores, bare patches, flayed, tumours,
+stalks, stone plates, horn growths, glowing spots and stripes, iridescent, see-through to its bones; ways: calm, bold, by night,
+circling, stumbling, climbing, swarming, limping), a giant 1.6 times its size and a dwarf 0.55. Flocks lose their dead; a swimmer's spot
+is empty by its share. Where a line meets the air's or the water's animals (their class harmed, or a host's glow or dye on the skin), a
+flock's members and a shoal's are sick and born changed by their own hash as a herd's are (B-469), with the body's and the hide's
+changes (a flyer's wings stunted or long with its legs) and the ways a member can show on its own (B-490, `flockMembers`): a circler
+goes round 3 m about its place, a limper trails 5 m behind it (a swimmer at half its pace), a flyer stumbles 3 m in the air or, born to
+the night, flies on over its resting flock after dark. A crazed flyer is erratic and falls to the ground in some of its four seconds'
+windows, lies there a moment and flies up again; a crazed swimmer swims twice as fast. A sprouting one falls dead at its time (four to
+sixteen steps after its fate came, by its hash), its stalks up: on its high ground, a flyer from the air (`flockFalls`: its remains
+where it comes down, none in the water), a swimmer washed up on the dry ground nearest within 60 m. **Remains**
+are a pure function of their cell (`cellRemains`, read from the planet function, never the drawn ground): a herd's dead where they lived,
+two in five by the water within 150 m of its spot (where the sick go), half of a sprouting
+one's on the highest of twelve points within 100 m with their stalks; up to three of each flyer fallen over the cell and each swimmer
+washed up on its shore by their dead, a sprouting one fallen since on the high ground; and on any world, seeded or not, old bones by a
+herd's cell in eight. A kill's or a fall's remains are kept on the body (`deadKept`, B-470) and in the guide (`dead` lines, B-489:
+copied as they die, laid again at a landing and a load, forgotten 64 steps on the guide's clock after the death): they leave past 1,300
+m and come back where they fell within 900 m, and their cell comes back without them. Their stage follows the landing's clock
+(`lifeClock`, the
+real seconds the guide's clock runs by on the ground), staged again every half second (`restageRemains`): a cell's dead by their fate's age
+where they lie and the time since the landing (`remainsStageOf`, each death a share of the first 18 steps), a kill or a fall by the time
+since it died: fresh under 2 steps, bloated under 5, sunken under 10, bones under 20, then scattered; three times as fast with a flesh
+rotter; old bones are bones or scattered. A new anchor plans the flocks round the explorer again and leaves the old frame's remains (the
+cells' come again with their cells). Posed dead (`poseAnimal`'s `dead`): standing stiff at the origin, legs straight, the neck
+thrown back, then laid on its side and draped over the ground (a flyer nearly flat with its wings spread, a legless one on its belly);
+bloated 1.45 times its girth, sunken 0.78 with its ribs and its hide dark; bones a skeleton (spine, ribs, skull, legs, tail, the bone bank
+29), scattered apart and half buried with a few gone. A dried-blood stain lies under the fresh and the bloated, and flies circle them
+within 30 m (fewer and lower over a small one). Remains are drawn a few centimetres toward the eye, so the ground never hides them.
+Silence: no herd, flock, swimmer or night eyes, and the dusk insects quiet. The bench's herd among twelve remains (`bench`, `herd
+remains 1x`, budget 0.6 ms). J-09: remains on an overgrowth's cover are taken in: drawn in its bank, with no stain and no flies.
+
+**The overgrowth** (J-09, `surface/overgrowth.cpp`). On a seeded world the layer's overgrowth (`14-seeded-worlds.md`) lies on the ground as
+one of three cover materials (TISSUE, THREADS, HARD GROWTH), each with a tile of four looks chosen by the overgrowth's texture: blisters
+with a pore at their tops, muscle's fibres, a brain's folds, gut's coils, all veined; threads crossing with tufts; a hard ground's pores,
+plates, knobs or rings (`growthTexture`). It takes a lent bank of its own before the made looks (`growthBank`, the first free of 28, 27, 26,
+25; the rock's where none is free) in its colour, a wet one's top stops whiter and its faces glossy in the sun, and at night where it
+glows its upper stops in its light. The cover is mottled in 40 m lobes; on the near ring its veins run dark by day and lit at night.
+Its structures stand on a lattice fixed to the world (`growthCellOf`: an equal-angle cube map's cells about 16 m across, each cell's
+placed once a landing in its local metres), so any landing sees the same ones in the same places: 0.6 to 6 a cell by its type (a
+carpet's and a film's few), their sizes by its grain and its age, each inside its cell by its reach, none overlapping another.
+`forGrowths` gives a local 16 m cell the structures whose middles lie in it, from the world cells round its own (B-483: across a cube's
+edge, the face beyond's) whose four corners the cover holds (B-484: `growthCornerHolds`, each corner read on the world once a landing),
+none in a room, on a road, a street or a work's ground, or in water. Eighteen shapes (`GrowthShape`): mounds, ridges, blisters, sacs,
+stalks with a knob, folds, vents
+whose lip breathes, rib arches (three to five ribs), rows of teeth, membranes sagging between two posts, clusters of polyps waving
+their tentacles, caps on stalks, shelves stacked on a stump, creeping veins over the ground, spires (a coral's branching), vases, tufts
+of hair waving with the wind, bladders floating on their tethers and rising and sinking slowly. Each type has its own mix: a flesh's
+mounds, ridges, blisters, folds, vents, ribs, teeth and membranes; a fungus's caps and shelves; a slime mould's veins and stalks; a
+lichen's mounds and folds; a coral's spires and polyps; a sponge's vases; hair's tufts; bladders'. Each is drawn in the overgrowth's
+bank and tile (`drawGrowth`): a lathe of rings smoothly shaded (a hard one in facets), a wet one glossy, a glowing one's spots lit at
+night, cilia waving on a moving one's, a near one with a blob shadow. Those within 12 cells and over 2 pixels at 1x (4 for hair and
+veins) are chosen on the main thread with the ground's slope at their foot (`GrowthDraw`); their shapes are made on the pool into
+sixteen lists, each a fixed run of them so the frame is the same on any number of threads, their small parts (a cap's cluster, polyps,
+teeth, a membrane's posts, veins, hair) standing on that plane, a far one (under 8 pixels) plain; then filled in bands. The points
+each stands on (`growthFeet`: a round one's foot, a row's teeth, each rib's two feet, along a ridge, a fold or a membrane) are its
+colliders (`growthColliders`, in `collectColliders`) where it stands over a
+step; veins, hair, polyps and bladders are walked through. Trees on a covered forest are wrapped (`TreeInst::wrapped`: trunk, branches
+and canopy in its bank, the trunk in its tile and half again as thick, the canopy in smooth lumps) and none stands in a structure
+(`growthHolds`: its own cell's or one reaching over from a cell beside it); rocks on it are drawn in its bank and tile. J-15: on a
+desert or any bare world with air a carpet's or a lichen's grass (`SurfaceView::greenedAt`: grass with a line under it on a world that
+greens) lets the flora in on a world with no plants of its own, there alone: tufts and shrubs a shade darker than the grass, in its
+line's own growth bank (B-482: the line's pigment's colour, each line its own), no trees, logs, flowers or berries; on a scorched or
+frozen world's ground nothing else grows, as before. A vial on it says
+SOFT OVERGROWTH, THREADS OVER THE GROUND or HARD OVERGROWTH, and one off a structure what it was taken from (TISSUE FROM A MOUND, THREADS
+FROM A CAP, HARD GROWTH FROM A SPIRE: `growthAt`, read on the main thread; the activity vision's reads on the pool leave the name, the
+microhabitat the cover's), and the HUD names the ground. The bench's `forest 2x` and `4x overgrown` hold it to the forest's budgets (8.2
+and 13 ms),
+and `open 2x` and `4x overgrown`, a herd's grassland under a coral's, to their own (7.5 and 10.3 ms): the structures cost about what the
+plants they cover did. `bench overgrowth` times each of those views plain and overgrown, by the frame's sections.
+
+**Ruins overgrown** (J-10, `surface/overgrowth_ruins.cpp`). When a settlement's or a work's cell is laid out on an overgrown world, each
+building gets the height its cover has climbed (`RuinCell::climb`, the last for the graves' stones): 0.3 + s + 0.012 s³ metres after s
+steps since the edge passed its middle (`madeGrowthSince`), spread a sixth by its hash; a settlement whose middle is on snow, ice, water
+or lava stays bare. Each piece of a building takes its own (`pieceClimb`): a third more on the building's side toward the way the cover
+came (`RuinCell::towardX`, `towardZ`: toward the place of the line whose cover lies at the settlement's middle), a third less on the far
+side, a tenth either way by its hash. Each building takes the line whose cover lies at its own place (B-488: `RuinCell::lines`): its
+colour and bank, its tile, the grain of its nodules and drapes and its light at night, drawn with that line's raster parameters (the
+latest line's from 58, each other's from `RP_LINE0`). The forms are drawn with the cover in the rasteriser's second bank under it
+(`drawFormItems`):
+each vertex weighted by its height over its piece's climb, a face its edge crosses drawn in the growth bank and tile below it with the
+ground's edge noise (about 0.8 m of wobble), the cover there in its own light (B-486: the cover's light at the face's middle less the
+wall's, so its gloss and its night light), and a face wholly under it the cover alone, lit as the cover's structures are (`growthShade`:
+the sky, the sun, the lamp, a wet one's gloss), at night dimly all over and brightly in its veins as the ground's (the second bank under
+a tile of the ground's veins, `buildGrowthVeins`, lifted into the ramp's glow). Painted windows under the cover grow shut
+(`RasterParams::patternShut`: their
+shapes a membrane's tone in the cover's bank, nothing lit, their dress gone), on a face wholly under it and on the cover's part of a face
+its edge crosses. Past 4 km a building's silhouette is in the cover's bank under its climb (the slice its climb crosses split there). The
+people's pieces, their earth and their drifts take it; records, instruments and lit pieces stay bare. Each building's own pieces of the
+cover follow its pieces at level 0 (`overgrowCell`, `FORM_PART_GROWTH` and `Form::growth`), lit as the cover is with its glowing faces at
+night (`growthGlowShade`): a membrane across each doorway, window and arch's bay it climbed half way up (the openings the walls and rings
+leave, which `ruinElements` reports as `FormOpening`s, C-01's gate between its piers among them; and each arch piece's bays left
+standing, a gate's, an arcade's, a porch's or a work's, `archOpenings`, the membrane's top the arch's head), a sheet bulging in or out and
+a little darker; nodules (lumpy blobs) on the walls round its edge; drapes from the tops it nearly reached, cut out under a ragged foot.
+None has a collider: the explorer pushes through a membrane, and it tears (`tearCue`) once: it stays torn for the landing, slit up its
+middle as high as the explorer went through (`tornMembranes`, by its cell's key and its opening's index, kept across a re-anchor). The
+streets and roads under the cover keep it. A stone rotter's share of each building (`stoneRotOf`: where its line lives, within its band
+of warmth at the building's place) is the building's `stoneRot` when its cell's pieces are laid out (`layRuinPieces`): its earth, stone,
+brick and concrete decay further (`buildingDecay`), so its walls stand lower and its roofs and towers fall. While the explorer is on the
+ground the game hands on the world now (`setMadeNow`, `ruinsMade`): when a step passes, the cells grow their cover on and are laid out
+again where a building's share of a stone rotter moved (`regrowRuins`, the ahead worker joined), and where what the ground's samples
+read moved (`madeGroundKey`: the layer's key without the animals' fates and the steps the ruins and remains count on) the ground takes
+it too (B-485, `adoptMadeNow`): the rings round the camera and the corners of the structures' world cells in view are sampled again on a
+worker (`startResample`) and taken in on the 45th frame after (`takeResample`, waiting for it if need be, so the frame is the same
+however fast it ran), the rest of each ring dropped; the cover's tiles are made again where their look changed; the herds already about
+keep what they were. The bench's `city 4x overgrown` and `capital 4x overgrown` hold the overgrown city and capital, twenty steps on, to
+their budgets (8.3 ms).
+
+**The overgrowth's sounds** (J-10, `updateGrowthSongs`). Round the explorer on foot: the nearest vent within 24 m (`ventSong`), the tall
+and hard structures within 20 m in the wind (`creakSong`; a soft overgrowth's half), the hair within 15 m in the wind (`hairSong`), and a
+membrane crossed since the last frame (`tearCue`); the game sings them (`groundSoundsTo`) with a squelch for a step on a wet cover.
+
+**Made kinds on the ground** (J-11). A made hothouse's and a made snowball's ground is a dead world's (P-04's, below): the trees, the
+logs, the undergrowth, the bark's banks, the towns' frost and the reservoirs read `deadCoverOf(site.gen)` and `deadGroundOf`, so the old
+forests stand as stone stumps under a made hothouse and as frost-white skeletons on a made snowball. The ground's snow colour comes
+through `madeMatColour` like the rest (a made hothouse's salt, a made snowball's frost). A made hothouse never rains: its rain dries
+before it reaches the ground (`computeEnvironment`).
 
 ## Sky additions (N5, 2026-09-26)
 
-* Sun pillar (N5-02): in cold (below -5 C), fairly clear (cloud under 0.45) air with the sun between -2 and 11.5 deg of altitude, `drawSky` adds up to 8 shades in a column above the sun: `8 pillar exp(-(dAz / 0.9 deg)^2) exp(-dAlt / 4.5 deg)` for altitude differences up to 11 deg (and a quick fade 2 deg below), `pillar = 1 - alt / 11.5 deg`.
-* Nebula patches (N5-01): `buildBandMap` also collects the star-forming complexes' patches within 42 ly (G-03); the band pass takes `max(band, 0.9 nebulaGlow)`, so they show in the band's pale grey (bank 22) where the galactic band shows, fading with the day. S-04: under a protostar the sky adds the star's own cloud every frame (`starNebulaPatches` round the star's direction now: a patch of 1.1 rad at 0.8 and the whole sky at 0.3, so the night glows toward where the star set and faintly everywhere) and bank 22's pale grey is blended six tenths toward the cloud's tone (blue, red or white by the star's seed); the dust disc's band comes with the sun (`drawSun` with the plane's normal `localFrame(t) * Y` in view space; on an airless world the sun is drawn under the horizon too, so the band stands over the horizon at night; through an atmosphere neither is drawn once the sun is 3 degrees under). S-05: a Wolf-Rayet star's shell comes with the sun the same way (`drawSun`'s ring at five radii, its pattern fixed by the plane's normal): a ring round the blinding sun in the black day sky of its airless worlds, and after sunset its upper arc over the horizon until the sun is five radii under. S-06: a black hole in the sky comes the same way (`drawBlackHole` through `drawSun`): the shadow, the disc and the sky's stars bent into arcs round it, depth-tested against the ground; no veiling glare and no lens flare come from it, and its worlds' days are as dim as a white dwarf's (the disc's light, L 0.03).
-* Veiling glare (B-309, 2026-09-27, `SurfaceView::drawVeil`, in place of the visor glints below): over the finished picture, a broad faint brightening round the sun (a glow disc of 0.42 frame widths, 5 shades at the centre with an atmosphere, 3 without, squared falloff, no bank change, no depth test) that the mush melts into the scene; its strength follows the sun's height, clouds, rain and eclipse (`sunVeil`, set in `drawSky` with the sun's screen place `sunSx/Sy/Rpx`) and how much of the disc is still open to the sky once the ground, the trees and the objects are drawn (25 samples across the disc), so it fades smoothly behind a ridge or a canopy.
-* Visor glints (N5-02, `renderSurfaceHUD`; **removed in B-309**: their angle spun whenever the sun sat near the screen centre and they wobbled with every head bob; the paragraph stays as the record): when the sun disc is up and not eclipsed, two short arcs (radius 74 and 46 logical px, spans 0.32 and 0.22 rad) are drawn around the screen centre on the side opposite the sun's screen position, in a white that grows with the sun's strength (sun up, clear, light factor); the reflection of the sun in the curved visor. Space has none (KI-212).
+* Sun pillar (N5-02): in cold (below -5 C), fairly clear (cloud under 0.45) air with the sun between -2 and 11.5 deg of altitude,
+  `drawSky` adds up to 8 shades in a column above the sun: `8 pillar exp(-(dAz / 0.9 deg)^2) exp(-dAlt / 4.5 deg)` for altitude
+  differences up to 11 deg (and a quick fade 2 deg below), `pillar = 1 - alt / 11.5 deg`.
+* Nebula patches (N5-01): `buildBandMap` also collects the star-forming complexes' patches within 42 ly (G-03); the band pass takes
+  `max(band, 0.9 nebulaGlow)`, so they show in the band's pale grey (bank 22) where the galactic band shows, fading with the day. S-04:
+  under a protostar the sky adds the star's own cloud every frame (`starNebulaPatches` round the star's direction now: a patch of 1.1
+  rad at 0.8 and the whole sky at 0.3, so the night glows toward where the star set and faintly everywhere) and bank 22's pale grey is
+  blended six tenths toward the cloud's tone (blue, red or white by the star's seed); the dust disc's band comes with the sun (`drawSun`
+  with the plane's normal `localFrame(t) * Y` in view space; on an airless world the sun is drawn under the horizon too, so the band
+  stands over the horizon at night; through an atmosphere neither is drawn once the sun is 3 degrees under). S-05: a Wolf-Rayet star's
+  shell comes with the sun the same way (`drawSun`'s ring at five radii, its pattern fixed by the plane's normal): a ring round the
+  blinding sun in the black day sky of its airless worlds, and after sunset its upper arc over the horizon until the sun is five radii
+  under. S-06: a black hole in the sky comes the same way (`drawBlackHole` through `drawSun`): the shadow, the disc and the sky's stars
+  bent into arcs round it, depth-tested against the ground; no veiling glare and no lens flare come from it, and its worlds' days are as
+  dim as a white dwarf's (the disc's light, L 0.03).
+* Veiling glare (B-309, 2026-09-27, `SurfaceView::drawVeil`, in place of the visor glints below): over the finished picture, a broad
+  faint brightening round the sun (a glow disc of 0.42 frame widths, 5 shades at the centre with an atmosphere, 3 without, squared
+  falloff, no bank change, no depth test) that the mush melts into the scene; its strength follows the sun's height, clouds, rain and
+  eclipse (`sunVeil`, set in `drawSky` with the sun's screen place `sunSx/Sy/Rpx`) and how much of the disc is still open to the sky
+  once the ground, the trees and the objects are drawn (25 samples across the disc), so it fades smoothly behind a ridge or a canopy.
+* Visor glints (N5-02, `renderSurfaceHUD`; **removed in B-309**: their angle spun whenever the sun sat near the screen centre and they
+  wobbled with every head bob; the paragraph stays as the record): when the sun disc is up and not eclipsed, two short arcs (radius 74
+  and 46 logical px, spans 0.32 and 0.22 rad) are drawn around the screen centre on the side opposite the sun's screen position, in a
+  white that grows with the sun's strength (sun up, clear, light factor); the reflection of the sun in the curved visor. Space has none
+  (KI-212).
 
 ## Weather (M4-06, `computeEnvironment`)
 
-`SurfaceEnvironment` carries `rain`, `snow`, `dust`, `fogBank`, `hail`, `aurora`, `moonLight`. The cloud field that rains also snows below 0 C; thin-atmosphere worlds raise dust storms from a slow noise (visibility down to metres, palette tinted the dust colour in `setupPalette`, wind howl, the wind x`(1 + 2.5 dust)` applied in the two-second wind update, never compounded: B-206); fog banks drift by near 8 C; hail rides strong rain on cold fronts; aurorae (banks 11 and 21) appear at high latitude at night: R-402 decides the night by `auroraPotential` (the star's class, the world's hashed magnetic field `magneticField`, the star's storm `auroralStorm` over days; `env.auroraStorm`), the latitude ramp from 52 - 10 storm degrees over 16; B-403 draws them as curtains, three sheets of light 90-400 km up along an auroral oval at `auroraOvalLat` (59 + 8 field +- 3, less 6 storm), each a slab with a gamma profile in height (a bright lower border at 114 km in the lower colour, the tops in bank 21's colour, both per world by the air and a hash), folded, rayed and patched along its length; the cloud grid's cells take the profile's integral between the heights where their ray enters and leaves each slab, over the ray's climb, tone-mapped with a soft knee, and the grid is written over the sky pixels after the bodies and the stars (`auroraGrid`, `drawSky`), so the stars show through and nothing has a hard edge (they used to be five opaque lobes of azimuth meeting at the zenith); a sky body's night side shows them in front, its lit disc stays; rain and dust take them away (the night clouds hide neither them nor the stars: KI-336). `fogDistance` shrinks with rain (x0.3), snow (x0.45), dust (x0.06), fog (x0.1) and (W-03) a front's squall (x0.5 at its peak). Molten worlds erupt (`eruptions`, `nextEruption`): a plume of lit points with rumble, cued to the audio through `eruptionCue`.
+`SurfaceEnvironment` carries `rain`, `snow`, `dust`, `fogBank`, `hail`, `aurora`, `moonLight`. The cloud field that rains also snows
+below 0 C; thin-atmosphere worlds raise dust storms from a slow noise (visibility down to metres, palette tinted the dust colour in
+`setupPalette`, wind howl, the wind x`(1 + 2.5 dust)` applied in the two-second wind update, never compounded: B-206); fog banks drift
+by near 8 C; hail rides strong rain on cold fronts; aurorae (banks 11 and 21) appear at high latitude at night: R-402 decides the night
+by `auroraPotential` (the star's class, the world's hashed magnetic field `magneticField`, the star's storm `auroralStorm` over days;
+`env.auroraStorm`), the latitude ramp from 52 - 10 storm degrees over 16; B-403 draws them as curtains, three sheets of light 90-400 km
+up along an auroral oval at `auroraOvalLat` (59 + 8 field +- 3, less 6 storm), each a slab with a gamma profile in height (a bright
+lower border at 114 km in the lower colour, the tops in bank 21's colour, both per world by the air and a hash), folded, rayed and
+patched along its length; the cloud grid's cells take the profile's integral between the heights where their ray enters and leaves each
+slab, over the ray's climb, tone-mapped with a soft knee, and the grid is written over the sky pixels after the bodies and the stars
+(`auroraGrid`, `drawSky`), so the stars show through and nothing has a hard edge (they used to be five opaque lobes of azimuth meeting
+at the zenith); a sky body's night side shows them in front, its lit disc stays; rain and dust take them away (the night clouds hide
+neither them nor the stars: KI-336). `fogDistance` shrinks with rain (x0.3), snow (x0.45), dust (x0.06), fog (x0.1) and (W-03) a front's
+squall (x0.5 at its peak). Molten worlds erupt (`eruptions`, `nextEruption`): a plume of lit points with rumble, cued to the audio
+through `eruptionCue`.
 
 **W-03 (2026-10-06): weather that arrives.** The fronts live in `galaxy/fronts.*` (`Front`, `frontsOf`, `frontWeatherAt`,
 `frontsAhead`, `buildFrontMap`): a world's fronts come in slots (3-24 by its size), each a front every two to four days, born on a
@@ -444,80 +890,186 @@ function of the clock.
 temperature on the ground is its fixed sun's height round the edge of its pupil (`reachClimate`: `tempOffset` -1.8 C at the reach,
 `tempSwing` 34 degrees a unit of the sun's sine), so the HUD reads over freezing where its sea is open; the snowball's cold clear air takes
 the 22-degree halo and its pillar as any. The chemotroph's springs (`EV_SPRINGS`, `drawGeysers`): steam rising steadily off every pool its
-ground made (`springVents`, kept where the 16 m grid's vertex nearest the centre is the pool's brine), 3-10 m, one in five a geyser of 20-60 m
+ground made (`springVents`, kept where the 16 m grid's vertex nearest the centre is the pool's brine), 3-10 m, one in five a geyser of
+20-60 m
 now and then; at night (the sky under 0.55) its spores (`drawSpores`): 90-260 glowing points over each spring within 500 m, rising 4-16 m on
-the warm air, leaning downwind, pulsing and fading as they climb, in their own light (bank 15, a pale green-blue: the comet's tail's bank on a
+the warm air, leaning downwind, pulsing and fading as they climb, in their own light (bank 15, a pale green-blue: the comet's tail's
+bank on a
 comet alone).
 
 **P-04 (2026-10-21): the dead worlds.** A dead world's old forests (their density kept in the ground's `veg` under the cover) stand as its
-dead: on a frozen world skeletons white with frost (the dead tree of `forTrees`, 4.5 a cell of the canopy's density), on a scorched one stone
+dead: on a frozen world skeletons white with frost (the dead tree of `forTrees`, 4.5 a cell of the canopy's density), on a scorched one
+stone
 stumps a metre or three high, thick and broken, no branches (`TreeInst::stump`), and fallen stone trunks four times as often as a living
 forest's logs; nothing else of the flora grows (`drawFloraBand` stops after the trunks). The bark's and the cut wood's banks (16, 17) take
 the dead wood's colour: frost white on a frozen world, a petrified red-grey on a scorched one. Its HUD temperature is a world without a
 living ground's (its present's: a scorched world's a thin hot air's, a frozen one's -150 C and colder), its weather its row's (a scorched
-world's dust storms and devils, a frozen one's none). Its peoples' towns are the then-world's on the present's ground (`docs/decisions/log/`): on a
+world's dust storms and devils, a frozen one's none). Its peoples' towns are the then-world's on the present's ground
+(`docs/decisions/log/`): on a
 frozen world the roads, streets, squares and fields show through the frost as grey lines and tones (the frost thinner over a hard bed; the
 material stays snow), its reservoirs ice at their level, its ruins' drifts snow (bank 8) where a desert's are sand, its earthworks frosted;
 on a scorched world the reservoirs' beds salt as a dead desert's, the drifts sand.
 
 **P-05 (2026-10-22): the far cold.** The cryovolcanic world's plumes (`drawPlumes`, EV_PLUMES): from each active vent on its cap within
 220 km (`plumeVents`; half of them active by hash, `plumeActive`) a dark column 6-9 km high and 600-1,500 m wide, a ribbon facing the camera
-in bank 9 (the sand family's: the streaks' dust) with ragged edges, then its top bent over and carried downwind along the prevailing wind (the
+in bank 9 (the sand family's: the streaks' dust) with ragged edges, then its top bent over and carried downwind along the prevailing
+wind (the
 ground's streaks' direction) as a flag 40-90 km long, a cross of two ribbons (an upright one seen from the side, a flat one from under it)
 thickening from the column's width to three kilometres, billowing a little and fraying out; grey by day, a dim shape at night; the curvature
 hides the far columns' feet (`toView`) and a far one is kept a pixel wide. The dry ice world's spring (`drawSpringJets`, EV_SPRING_JETS):
 while the hemisphere's season stands between -0.75 and 0.35 and rises and the sun is up (`springJetsNow`), the spiders under the seasonal
 frost within 1.5 km (`springJets`) burst in jets of dark dust 15-60 m high (`drawJet` in the fans' bank 10, darkened by `JetSpec::shadeAdd`)
-a minute or two each, a third of their cycle (`springJetStrength`). A sky with `KindDef::limbHaze` draws a band of haze on the horizon over its
+a minute or two each, a third of their cycle (`springJetStrength`). A sky with `KindDef::limbHaze` draws a band of haze on the horizon
+over its
 dark sky by day (the nitrogen world's blue layers, the cryovolcanic world's faint grey), and an air of millionths of a bar lights nothing:
 the material ramps take no sky light under 0.001 atm (the nitrogen and the cryovolcanic worlds' shadows stay the sun's).
 
 **P-06 (2026-10-22): the strange moons.** The tiger stripes' curtains (`drawCurtains`, EV_CURTAINS): along each stripe within 300 km
 (`stripePoint`) a sheet of fine ice rising 25-60 km, its top wavering along the stripe and slowly with time, drawn in segments of 4 km in
 four bands up, the steam bank's (8) brightest at the foot and thinning upward: a cutout veil (`RasterParams::cutout`, its grain kept three
-pixels or so across at any distance: u and v in metres, the edge scale by the segment's distance) blended as the brighter of it and what lies
-behind (`BLEND_MAX`, no depth written: it lights the dark sky and never darkens the ground), bright in the sun; the stretch within 6 km of the
+pixels or so across at any distance: u and v in metres, the edge scale by the segment's distance) blended as the brighter of it and what
+lies
+behind (`BLEND_MAX`, no depth written: it lights the dark sky and never darkens the ground), bright in the sun; the stretch within 6 km
+of the
 explorer is its jets one by one (`curtainVents`, a vent a kilometre: R-307's columns, `drawJet`, 0.8-2.5 km high and 15-40 m wide by the
 vent's strength, steady and pulsing, their fallout drifting down for minutes in the moon's weak gravity).
 
 ## Sound per world (M4-09)
 
-`Game::updateSurface` sets `AudioState::windTone` (0.25 near water: low slow surges; 0.6 on sand and dust; 1.0 on relief over 12 m across 80 m: a whistle at 14 Hz over the noise; 0.5 elsewhere), `surf` (0.6 when water lies within 30 m), `birds` (0.6 by day with flocks present, on foot), N3-05 `call`/`callPitch` (a creature call: chirp = a rising sine 0.18 s, low = a 0.7 s growl with vibrato and harmonics, hoot = two soft notes, click = four noise ticks), `hoofs` (soft thumps whose pace quickens with the level) and `insects` (a thin amplitude-modulated buzz), N2-06 `leaves`, N4-04 `engineRpm` (a tone at 9-21x the drive's base pitch within the gear), `skid` (low-passed noise) and `thud` (a one-shot 55 Hz thump), and one `step` per integer stride of `Player::stridePhase` on the ground: 1 soft (sand, snow, grass, dust, forest), 2 hard (rock and the rest), 3 splash when swimming; `stepGain` 0.8 while sprinting. None of it is heard off the ground (B-413): `AudioState::surfaceOff` sets the levels to 0 in the capsule, aboard and at a load, and a sound added here goes on its list. `AudioSynth` renders the wind as low-pass noise whose cutoff follows the tone, surf as slow cubed surges of the same noise, bird calls as 90 ms sine sweeps at 1.8-4 kHz spaced 0.4-3 s over the level, and footsteps as 50 ms (160 ms for splashes) filtered bursts. `vesperis_test audio` renders six stages (ship, vimana, shore, desert storm, mountain rain, lava) to `shots/audio_test.wav` and fails on a non-finite or clipped sample.
+`Game::updateSurface` sets `AudioState::windTone` (0.25 near water: low slow surges; 0.6 on sand and dust; 1.0 on relief over 12 m
+across 80 m: a whistle at 14 Hz over the noise; 0.5 elsewhere), `surf` (0.6 when water lies within 30 m), `birds` (0.6 by day with
+flocks present, on foot), N3-05 `call`/`callPitch` (a creature call: chirp = a rising sine 0.18 s, low = a 0.7 s growl with vibrato and
+harmonics, hoot = two soft notes, click = four noise ticks), `hoofs` (soft thumps whose pace quickens with the level) and `insects` (a
+thin amplitude-modulated buzz), N2-06 `leaves`, N4-04 `engineRpm` (a tone at 9-21x the drive's base pitch within the gear), `skid`
+(low-passed noise) and `thud` (a one-shot 55 Hz thump), and one `step` per integer stride of `Player::stridePhase` on the ground: 1 soft
+(sand, snow, grass, dust, forest), 2 hard (rock and the rest), 3 splash when swimming; `stepGain` 0.8 while sprinting. None of it is
+heard off the ground (B-413): `AudioState::surfaceOff` sets the levels to 0 in the capsule, aboard and at a load, and a sound added here
+goes on its list. `AudioSynth` renders the wind as low-pass noise whose cutoff follows the tone, surf as slow cubed surges of the same
+noise, bird calls as 90 ms sine sweeps at 1.8-4 kHz spaced 0.4-3 s over the level, and footsteps as 50 ms (160 ms for splashes) filtered
+bursts. `vesperis_test audio` renders six stages (ship, vimana, shore, desert storm, mountain rain, lava) to `shots/audio_test.wav` and
+fails on a non-finite or clipped sample.
 
 ## Descent and ascent
 
-`cameraOverrideAlt` and `cameraOverridePitch` replace the eye height and pitch during transitions: descent from 1800 m at -60 deg to the standing eye (1.65 m) at 0 deg over 7 s (ease-out), ascent the reverse with a fade in the last 30% (B-422: the descent came down to the ground itself, its last third of a second under the near ground's triangles, the frame a landing's freeze held).
+`cameraOverrideAlt` and `cameraOverridePitch` replace the eye height and pitch during transitions: descent from 1800 m at -60 deg to the
+standing eye (1.65 m) at 0 deg over 7 s (ease-out), ascent the reverse with a fade in the last 30% (B-422: the descent came down to the
+ground itself, its last third of a second under the near ground's triangles, the frame a landing's freeze held).
 
 ## Two suns, rings and glowing parents in the sky (M5, 2026-09-26)
 
-* **Second sun (M5-01).** `SurfaceSite::sun2(t, out)` fills a `SunInfo` for the companion (direction, altitude, angular radius, `starLightFactor`, its colour, its hour angle). `computeEnvironment` keeps the primary in `env.sunDisc`, the companion in `env.sun2`, and makes `env.sun` the light used by every shading path: the two directions blended by `lightFactor x up-ness`, the factor `lf1 (1 - share) + (lf1 up1 + lf2) share` (B-425: a set primary adds none; it added its whole light, so a night under a far companion was lit as a day), the eclipse of the primary scaled by its share, `env.lightColor` mixed by `sun2Share`. The sky brightness takes the brighter sun, each by its light beside the world's own sun's, so a near companion keeps the day alive after the primary sets and a far one gives a twilight at most. B-425: the world's own sun (the primary, or the companion for its own worlds, `StarSystem::ofCompanion`) keeps the floor of 0.62 and the other its true perceptual factor (`starLightFactor(L, d, 0)`: the companion's floor of 0.35 lit a night like a dim day, and the far primary of a companion's world kept 0.62 and a full day sky); `env.glow` (the blended light over the own sun's, 1 with one sun) scales the sky's main glow and the blob shadows of a sun alone, `env.primaryRel` (the primary's light over the own sun's, 1 on the primary's worlds) the far primary's day sky, disc, glare and flare on a companion's world; the local time and the landing map's day are the own sun's. `drawSky` adds the companion's own glow term, draws its disc first in bank 12 (its colour), then the primary from `sunDisc` (flares and eclipse from the primary only). Blob shadows (`drawBlobShadowFrom`) are drawn once per sun when both matter (share 5-95%); terrain cast shadows follow the blended direction (KI-020).
-* **Ring arcs (M5-04, brightened in O0-01, B-301).** On a ringed world, each sky pixel's world direction is intersected with the ring plane (normal `spinAxis` through the centre, the site's offset from the centre in km): a hit between `ringInner` and `ringOuter` radii takes the ring profile density (`SurfaceSite::ringProf`, from `StarSystem::ringProfileOf`) and is drawn at `36 + 24 pow(dens 1.3, 0.35) lit` on the sky bank, whose bright part starts at 36 (the old `63 dens^0.35 ...` peaked at 39, near black there): `lit = (0.55 + 0.45 |axis . sun|) x face x max(lightFactor, 0.5)`, `face` 1 when the sun is on the observer's side of the ring plane, 0.5 for the unlit face seen by transmitted light; the part in the world's own shadow is not drawn; with an atmosphere `rv (1 - 0.3 day) + v 0.45 day` washes it like the day moon. From a moon, the parent's rings come with `drawGlobe` in sky mode at `36 + 27 ...` (same reason), so they read like a moon.
-* **Glowing parents (M5-02).** A substellar parent in the sky is drawn whole in bank 13 (its own red ramp, set in `setupPalette` when `env.moonBody` is substellar); `moonLight` takes `0.3 selfGlow (angR / 4 deg)^2` when that beats the reflected light, with a warm `moonColor`, so its moons have warm night skies and dim red ground light.
-* **Comets and wandering stars (M5-07, M5-09).** `SpaceContext::skyDark` (1 at night, 0 by day) fades comet tails and far-body points in a bright sky; far bodies are `scale + 1` squares at 30-60 shade with phase, albedo and closeness, so they survive the mush; substellar bodies never fall below 40, comets 36 at night.
+* **Second sun (M5-01).** `SurfaceSite::sun2(t, out)` fills a `SunInfo` for the companion (direction, altitude, angular radius,
+  `starLightFactor`, its colour, its hour angle). `computeEnvironment` keeps the primary in `env.sunDisc`, the companion in `env.sun2`,
+  and makes `env.sun` the light used by every shading path: the two directions blended by `lightFactor x up-ness`, the factor
+  `lf1 (1 - share) + (lf1 up1 + lf2) share` (B-425: a set primary adds none; it added its whole light, so a night under a far companion
+  was lit as a day), the eclipse of the primary scaled by its share, `env.lightColor` mixed by `sun2Share`. The sky brightness takes the
+  brighter sun, each by its light beside the world's own sun's, so a near companion keeps the day alive after the primary sets and a far
+  one gives a twilight at most. B-425: the world's own sun (the primary, or the companion for its own worlds, `StarSystem::ofCompanion`)
+  keeps the floor of 0.62 and the other its true perceptual factor (`starLightFactor(L, d, 0)`: the companion's floor of 0.35 lit a
+  night like a dim day, and the far primary of a companion's world kept 0.62 and a full day sky); `env.glow` (the blended light over the
+  own sun's, 1 with one sun) scales the sky's main glow and the blob shadows of a sun alone, `env.primaryRel` (the primary's light over
+  the own sun's, 1 on the primary's worlds) the far primary's day sky, disc, glare and flare on a companion's world; the local time and
+  the landing map's day are the own sun's. `drawSky` adds the companion's own glow term, draws its disc first in bank 12 (its colour),
+  then the primary from `sunDisc` (flares and eclipse from the primary only). Blob shadows (`drawBlobShadowFrom`) are drawn once per sun
+  when both matter (share 5-95%); terrain cast shadows follow the blended direction (KI-020).
+* **Ring arcs (M5-04, brightened in O0-01, B-301).** On a ringed world, each sky pixel's world direction is intersected with the ring
+  plane (normal `spinAxis` through the centre, the site's offset from the centre in km): a hit between `ringInner` and `ringOuter` radii
+  takes the ring profile density (`SurfaceSite::ringProf`, from `StarSystem::ringProfileOf`) and is drawn at
+  `36 + 24 pow(dens 1.3, 0.35) lit` on the sky bank, whose bright part starts at 36 (the old `63 dens^0.35 ...` peaked at 39, near black
+  there): `lit = (0.55 + 0.45 |axis . sun|) x face x max(lightFactor, 0.5)`, `face` 1 when the sun is on the observer's side of the ring
+  plane, 0.5 for the unlit face seen by transmitted light; the part in the world's own shadow is not drawn; with an atmosphere
+  `rv (1 - 0.3 day) + v 0.45 day` washes it like the day moon. From a moon, the parent's rings come with `drawGlobe` in sky mode at
+  `36 + 27 ...` (same reason), so they read like a moon.
+* **Glowing parents (M5-02).** A substellar parent in the sky is drawn whole in bank 13 (its own red ramp, set in `setupPalette` when
+  `env.moonBody` is substellar); `moonLight` takes `0.3 selfGlow (angR / 4 deg)^2` when that beats the reflected light, with a warm
+  `moonColor`, so its moons have warm night skies and dim red ground light.
+* **Comets and wandering stars (M5-07, M5-09).** `SpaceContext::skyDark` (1 at night, 0 by day) fades comet tails and far-body points in
+  a bright sky; far bodies are `scale + 1` squares at 30-60 shade with phase, albedo and closeness, so they survive the mush; substellar
+  bodies never fall below 40, comets 36 at night. B-436: a body is a point while its size at the view's middle (`f tan(angR)`) is under
+  1.2 x the scale, wherever it stands on the screen (its projected size grows off the middle, and a moon at 0.98 of it was a globe
+  looking down and a point, hidden by the day sky, nearer the middle); by day a point near a globe's size is dimmed less (the day factor
+  eased to 1 from 0.75 to 1 of it), as the globe's lit face would show.
 
 ## Prefetch worker (M7-01, 2026-09-26)
 
-`SurfaceView::prefetchAhead` runs every frame after the movement update. When a previous job has finished (an atomic flag), its samples are copied into the cache slots that are still empty; then, if the explorer or the buggy moves faster than 1 m/s, the uncached cells between 24 and 46 cells ahead within 55 degrees of the velocity (the near ring every other job with up to 640 cells 22-50 cells ahead, since it sweeps fastest, then lod0 and lod1 in turn with 320; O6-02) are handed to a new worker thread that calls `SurfaceSite::sampleAt` (pure, thread-safe) into a staging vector. `init` and `reanchor` join and discard any pending job, the destructor joins. The result is bit-identical to on-demand sampling, so determinism is untouched; the benchmark's sprint worst frame is 1.6 ms. Since F-03 (2026-10-13) the caches are written by the main thread, or by the pool inside the warm pass's joined fill, each cell by one worker on its own slot (below); the ahead worker keeps its staging buffer.
+`SurfaceView::prefetchAhead` runs every frame after the movement update. When a previous job has finished (an atomic flag), its samples
+are copied into the cache slots that are still empty; then, if the explorer or the buggy moves faster than 1 m/s, the uncached cells
+between 24 and 46 cells ahead within 55 degrees of the velocity (the near ring every other job with up to 640 cells 22-50 cells ahead,
+since it sweeps fastest, then lod0 and lod1 in turn with 320; O6-02) are handed to a new worker thread that calls
+`SurfaceSite::sampleAt` (pure, thread-safe) into a staging vector. `init` and `reanchor` join and discard any pending job, the
+destructor joins. The result is bit-identical to on-demand sampling, so determinism is untouched; the benchmark's sprint worst frame is
+1.6 ms. Since F-03 (2026-10-13) the caches are written by the main thread, or by the pool inside the warm pass's joined fill, each cell
+by one worker on its own slot (below); the ahead worker keeps its staging buffer.
 
 ## The near ring (O6-02, 2026-09-27)
 
-Within 120 m the ground is drawn at 4 m cells (`SurfaceSite::lodN`, a 256 x 256 torus one kilometre across; `SurfaceView::ringN` 30 cells, `vcN`), the last stage of `prefetch` after lod0 and the first customer of the ahead worker. It shows the two finest octaves of the relief spectrum (64 and 32 m wavelengths, 1-4 m of relief in the mountains) that 16 m cells cannot carry, and gives the near ground the fine facets the original's polymap had; lod0 skips its inner six cells under it. The ring fades with speed (`updateNearRing`, called before the movement update): on foot and in a buggy under 12 m/s `nearBlend` is 1, above 20 m/s it is 0 with a quarter-second time constant between (a buggy at 20 m/s would sweep 750 new cells a frame). While it fades, the near vertices are drawn at `lod0 + (near - lod0) nearBlend` (`vertexOf`) and `groundHeight` blends the same way inside the ring (`SurfaceSite::nearBlend`, `nearCx/Cz`, `nearR`, set by the view each frame), so the feet and the wheels always sit on the ground that is drawn and nothing jolts when the relief melts into the 16 m cells; during the descent it is drawn only under 60 m. Foam sparkles come from one near cell in sixteen so the shore keeps its density; cast shadows, meso tiles and the grain are the lod0 rules. On a body under 16 m radius the ring is dropped. Cost: surface 2x 4.3 ms (3.9 before), the sprint's worst frame 2.7 ms.
+Within 120 m the ground is drawn at 4 m cells (`SurfaceSite::lodN`, a 256 x 256 torus one kilometre across; `SurfaceView::ringN` 30
+cells, `vcN`), the last stage of `prefetch` after lod0 and the first customer of the ahead worker. It shows the two finest octaves of
+the relief spectrum (64 and 32 m wavelengths, 1-4 m of relief in the mountains) that 16 m cells cannot carry, and gives the near ground
+the fine facets the original's polymap had; lod0 skips its inner six cells under it. The ring fades with speed (`updateNearRing`, called
+before the movement update): on foot and in a buggy under 12 m/s `nearBlend` is 1, above 20 m/s it is 0 with a quarter-second time
+constant between (a buggy at 20 m/s would sweep 750 new cells a frame). While it fades, the near vertices are drawn at
+`lod0 + (near - lod0) nearBlend` (`vertexOf`) and `groundHeight` blends the same way inside the ring (`SurfaceSite::nearBlend`,
+`nearCx/Cz`, `nearR`, set by the view each frame), so the feet and the wheels always sit on the ground that is drawn and nothing jolts
+when the relief melts into the 16 m cells; during the descent it is drawn only under 60 m. Foam sparkles come from one near cell in
+sixteen so the shore keeps its density; cast shadows, meso tiles and the grain are the lod0 rules. On a body under 16 m radius the ring
+is dropped. Cost: surface 2x 4.3 ms (3.9 before), the sprint's worst frame 2.7 ms.
 
-B-313 (2026-09-28): the speed fade is gone; the near ring is drawn at every speed (`nearBlend` is 1 whenever the ring is drawn, 0 when the capsule is high) and the buggy's suspension (above) takes its bumps; braking to get out of the buggy, the 4 m relief used to rise over half a second in front of you. `SurfaceSite::nearX/nearZ/nearR/nearBand` and `nearMorph(x, z)` carry the ring's centre and morph band, so `groundHeight` returns the ground as drawn: the near height in the core, sliding onto lod0 across the band.
+B-313 (2026-09-28): the speed fade is gone; the near ring is drawn at every speed (`nearBlend` is 1 whenever the ring is drawn, 0 when
+the capsule is high) and the buggy's suspension (above) takes its bumps; braking to get out of the buggy, the 4 m relief used to rise
+over half a second in front of you. `SurfaceSite::nearX/nearZ/nearR/nearBand` and `nearMorph(x, z)` carry the ring's centre and morph
+band, so `groundHeight` returns the ground as drawn: the near height in the core, sliding onto lod0 across the band.
 
 ## Geomorphing (B-313, 2026-09-28)
 
-Each ring samples the planet function at its own detail (`lodFade` in `sampleSurface`), so a coarser ring is a smoother terrain, and at the pinned mountain site the vertices of a ring's edge differed from the coarser ring's surface by 3 m (the near ring at 120 m), 17 m (lod0 at 640 m), 84 m (lod1 at 2.3 km) and 1015 m (lod2 at 13 km): as an edge swept over the ground with the camera, every cell crossing it jumped to the other ring's height (KI-301's "a ridge shifts by a cell", the user's "hills morphing"). `vertexOf` now morphs: within a ring's band a vertex takes the coarser ring's drawn surface at its spot (`coarseAt`: the height of the coarser cell's triangle with the same diagonal split, water vertices half a metre under their water as drawn) and, when the coarser vertices were computed this frame, their Gouraud shade, in proportion to `smoothstep(radius - band, radius - 0.5, distance from the camera in cells)`, so the two surfaces coincide at the edge and the finer relief rises as the edge approaches instead of popping. The band reaches from the finer ring's cover plus two cells to the edge (`render`: 20 cells of the near ring beyond a 40 m core, 14 of lod0, 24 of lod1, 20 of lod2): a six-cell band turned the far edge's gap of hundreds of metres into twisted cells and a sawtooth skyline. The rings are warmed coarse to fine (`warmTerrainLOD` takes the coarser ring; its vertices are warmed three cells into its skip disc, since the finer ring's edge lies there), a coarser ring skips the cells the finer one covers up to a cell of overlap (`skipOf`: 8, 10, 5, 7 cells; it used to overlap by two or three, 4 km of both rings drawn at the far edge) and draws with `zbias` 0.999 so the finer ring wins where the two coincide. `SurfaceView::testRingSeams` (tests) inverts the view transform of the edge vertices and reports the largest gap to the coarser surface per edge, and what it would have been unmorphed: `unit` requires 0.
+Each ring samples the planet function at its own detail (`lodFade` in `sampleSurface`), so a coarser ring is a smoother terrain, and at
+the pinned mountain site the vertices of a ring's edge differed from the coarser ring's surface by 3 m (the near ring at 120 m), 17 m
+(lod0 at 640 m), 84 m (lod1 at 2.3 km) and 1015 m (lod2 at 13 km): as an edge swept over the ground with the camera, every cell crossing
+it jumped to the other ring's height (KI-301's "a ridge shifts by a cell", the user's "hills morphing"). `vertexOf` now morphs: within a
+ring's band a vertex takes the coarser ring's drawn surface at its spot (`coarseAt`: the height of the coarser cell's triangle with the
+same diagonal split, water vertices half a metre under their water as drawn) and, when the coarser vertices were computed this frame,
+their Gouraud shade, in proportion to `smoothstep(radius - band, radius - 0.5, distance from the camera in cells)`, so the two surfaces
+coincide at the edge and the finer relief rises as the edge approaches instead of popping. The band reaches from the finer ring's cover
+plus two cells to the edge (`render`: 20 cells of the near ring beyond a 40 m core, 14 of lod0, 24 of lod1, 20 of lod2): a six-cell band
+turned the far edge's gap of hundreds of metres into twisted cells and a sawtooth skyline. The rings are warmed coarse to fine
+(`warmTerrainLOD` takes the coarser ring; its vertices are warmed three cells into its skip disc, since the finer ring's edge lies
+there), a coarser ring skips the cells the finer one covers up to a cell of overlap (`skipOf`: 8, 10, 5, 7 cells; it used to overlap by
+two or three, 4 km of both rings drawn at the far edge) and draws with `zbias` 0.999 so the finer ring wins where the two coincide.
+`SurfaceView::testRingSeams` (tests) inverts the view transform of the edge vertices and reports the largest gap to the coarser surface
+per edge, and what it would have been unmorphed: `unit` requires 0.
 
-B-404 (2026-10-01): the materials are the same in every ring. The planet function decides them on scale-free terms (`matVisible`, the material chain of the relief spectrum: `05-planet-function.md`), so a patch of ground never ends at a ring's edge in front of the explorer (the europan stain did, at the near ring's 120 m, and the lava tongues, the cliffs' rock and every landform's walls at one ring or another); what still differs between the rings is KI-341, and `vesperis_test matlod` measures it.
+B-404 (2026-10-01): the materials are the same in every ring. The planet function decides them on scale-free terms (`matVisible`, the
+material chain of the relief spectrum: `05-planet-function.md`), so a patch of ground never ends at a ring's edge in front of the
+explorer (the europan stain did, at the near ring's 120 m, and the lava tongues, the cliffs' rock and every landform's walls at one ring
+or another); what still differs between the rings is KI-341, and `vesperis_test matlod` measures it.
 
 ## The rings' cover, the water's drawing, the life sensor and the clutter (O10, 2026-09-28)
 
-* **Cover** (B-318): `SurfaceView::cellCovered(cs, cx, cz, coverM)` skips a coarse cell only when its farthest corner from the camera lies within `coverM`, the finer ring's guaranteed cover (`coverOf(rf, csf) = (rf - 0.71) csf` metres: a ring of rf cells draws the cells whose centre is within rf, so every point within rf - 0.71 cells lies in one of them). The warm pass warms three cells further in (`coverM - 3 cs`). The old scalar skip on cell centres left the skipped cells' outer corners bare (sawtooth holes at every edge, `vesperis_test capsule`).
-* **Objects on the drawn ground** (B-319): `SurfaceSite::groundHeight` blends lod0's height onto lod1's across lod0's outer morph band (`lod0R`, `lod0Band`, `camX/camZ`, set by `render` with the ring table), as it blends the near ring's; a far canopy's cutout fades out under 8 logical pixels of radius and its tile under 6.
-* **Water** (B-320): `VtxCache::wy` is the vertex's water level as drawn (`vertexOf` morphs it onto the coarser ring's `coarseWaterAt`, bilinear over the wet corners, with the height); `drawTerrainLOD` builds the water quad from the four corners' `wy` (a dry corner takes the mean of the wet ones; F-04: a corner with its own level is made once with its vertex, `waterCorner` into `VtxCache::wv`, where four cells and every band made it again), wet when any corner has water and the lowest ground lies under the highest water plus half a metre, the foam on corners within 0.6 m of their own level. The shade: `body = 24 + 8 (1 - depth/8)` from above, `55` (the ramp's horizon stop) at grazing angles through a Fresnel term `0.04 + 0.96 (1 - cos)^4`, plus the sun's glint and the wind's waves; the felisian and ocean water ramp is scaled by `0.25 + 0.75 day`. `drawReflections` mirrors a cell round the sea, and round its own water level when its vertices carry a lake or river level over the sea (`Cell::level`). `SurfaceSite::waterAt` is bilinear over the wet corners.
-* **Life sensor** (B-321): the HUD (on foot, not in the buggy's seat) prints `LIFE <distance> <bearing>` for the nearest herd or flock within 1.5 km (`LIFE HERE` under 25 m, `(FLYERS)` for a flock), right-aligned above the capsule line. The habitat chances: grassland and savanna 0.72, temperate, tropical and wetland 0.52, taiga 0.4, desert and tundra 0.26, alpine 0.14.
-* **Clutter** (R-306, `drawFloraBand`, `drawObjects`): bushes `(0.5 + 3.5 veg) per (0.6..1.6)` a cell on grass to 320 m (savanna 1.6, tundra 0.7 and small, desert 0.35 on sand, thin forest 0.6), banks 3/5/10, the big ones with a second cluster within 120 m; mounds (1-3 tapered cones 0.8-2.5 m) on one warm open cell in six to 260 m; tufts to 120 m (3 + 4 veg beyond 60 m); boulders at density 0.7 on open felisian ground and an outcrop of three on one cell in sixteen. Trait hooks: `treeScale x 1.9` (giant flora), 60% dead trees (dead forests), `leafBase` held at 40 x the dark and bank 3 re-ramped toward the flora colour at night (luminous flora), `fogDistance x 0.3` (haze).
+* **Cover** (B-318): `SurfaceView::cellCovered(cs, cx, cz, coverM)` skips a coarse cell only when its farthest corner from the camera
+  lies within `coverM`, the finer ring's guaranteed cover (`coverOf(rf, csf) = (rf - 0.71) csf` metres: a ring of rf cells draws the
+  cells whose centre is within rf, so every point within rf - 0.71 cells lies in one of them). The warm pass warms three cells further
+  in (`coverM - 3 cs`). The old scalar skip on cell centres left the skipped cells' outer corners bare (sawtooth holes at every edge,
+  `vesperis_test capsule`).
+* **Objects on the drawn ground** (B-319): `SurfaceSite::groundHeight` blends lod0's height onto lod1's across lod0's outer morph band
+  (`lod0R`, `lod0Band`, `camX/camZ`, set by `render` with the ring table), as it blends the near ring's; a far canopy's cutout fades out
+  under 8 logical pixels of radius and its tile under 6.
+* **Water** (B-320): `VtxCache::wy` is the vertex's water level as drawn (`vertexOf` morphs it onto the coarser ring's `coarseWaterAt`,
+  bilinear over the wet corners, with the height); `drawTerrainLOD` builds the water quad from the four corners' `wy` (a dry corner
+  takes the mean of the wet ones; F-04: a corner with its own level is made once with its vertex, `waterCorner` into `VtxCache::wv`,
+  where four cells and every band made it again), wet when any corner has water and the lowest ground lies under the highest water plus
+  half a metre, the foam on corners within 0.6 m of their own level. The shade: `body = 24 + 8 (1 - depth/8)` from above, `55` (the
+  ramp's horizon stop) at grazing angles through a Fresnel term `0.04 + 0.96 (1 - cos)^4`, plus the sun's glint and the wind's waves;
+  the felisian and ocean water ramp is scaled by `0.25 + 0.75 day`. `drawReflections` mirrors a cell round the sea, and round its own
+  water level when its vertices carry a lake or river level over the sea (`Cell::level`). `SurfaceSite::waterAt` is bilinear over the
+  wet corners.
+* **Life sensor** (B-321): the HUD (on foot, not in the buggy's seat) prints `LIFE <distance> <bearing>` for the nearest herd or flock
+  within 1.5 km (`LIFE HERE` under 25 m, `(FLYERS)` for a flock), right-aligned above the capsule line. The habitat chances: grassland
+  and savanna 0.72, temperate, tropical and wetland 0.52, taiga 0.4, desert and tundra 0.26, alpine 0.14.
+* **Clutter** (R-306, `drawFloraBand`, `drawObjects`): bushes `(0.5 + 3.5 veg) per (0.6..1.6)` a cell on grass to 320 m (savanna 1.6,
+  tundra 0.7 and small, desert 0.35 on sand, thin forest 0.6), banks 3/5/10, the big ones with a second cluster within 120 m; mounds
+  (1-3 tapered cones 0.8-2.5 m) on one warm open cell in six to 260 m; tufts to 120 m (3 + 4 veg beyond 60 m); boulders at density 0.7
+  on open felisian ground and an outcrop of three on one cell in sixteen. Trait hooks: `treeScale x 1.9` (giant flora), 60% dead trees
+  (dead forests), `leafBase` held at 40 x the dark and bank 3 re-ramped toward the flora colour at night (luminous flora),
+  `fogDistance x 0.3` (haze).
 
 ## The water's edge, the eye at the surface, the new types' events (O11, 2026-09-28)
 
@@ -539,9 +1091,37 @@ B-404 (2026-10-01): the materials are the same in every ring. The planet functio
   stand in the water as bars. The inner rings hang no skirts (their edges lie on the coarser surface since B-313; a skirt peeked
   through as a bright line). KI-323/324 note the limits: a lake the coarser ring cannot see fades across the band, the 512 m
   ring's outlines are 512 m polygons.
-* **The eye at the water** (B-322): the Fresnel term's grazing angle is clamped at cos 0.04 (the water stays water from an eye at the surface); `viewUnderwater` (`render`) tints the palette and closes the fog to 22 m whenever the eye is under the drawn water surface, whatever the body does (a dive's first frames, the free camera); crouching afloat keeps the eye at 1.65 m. The capsule (and its beacon beam) is not drawn while the camera flies with it (`cameraOverrideAlt >= 0`): from the air the beam was a bright line across the ground.
-* **Geysers and fountains** (R-307, `drawGeysers`, `drawJet`, `jetStrength`; `drawWeather` calls the geysers on europan and tectonic worlds and wherever `TR_GEYSERS` is a trait). A jet is a dense core column of eight camera-facing segments, each two quads round the axis (the vertex weight 1.15 at the centre and 0.2 at the sides, so the boundary tile's cutout cuts the sides ragged; the fine grain scrolls up it at the jet's ejection speed `sqrt(2 g H)`; the throat narrow, the top twice as wide and fraying as the centre weight falls), a crown of 130-340 spray points thrown out where the column breaks and falling from it for three seconds, a veil of 110-300 drops on full ballistic arcs from the throat, and a bright pool; steam and ice take bank 8 at `38 + 22 sunUp`, lava bank 2 at 61. Its height and width are the vent's class times its strength this frame: `jetStrength` returns a steady vent's `0.82 + 0.18 sin(0.9 t)` pulse or, for a periodic one, a cycle's `smoothstep(0, 0.035)` build with a `1 + 0.35 exp(-phase/0.05)` burst (a third over full height in the first seconds) dying over the cycle's last tenth; the column's height follows `0.55 + 0.45 strength`. Three vent sets: europan cracks (hashed on 300 m cells where the 16 m ring is stained, within 2.5 km; small 160 m x 7 m, tall 400 x 15, huge 800 x 30 by hash, 35% steady, cycles 90-180 s at 25-55% duty), geyser basins (`geyserVents`: the sinter mounds' centres within 2.5 km on sinter; 30 / 80 / 180 m by 2.5 / 5 / 10 m, 30% steady, cycles 60-180 s at 20-50%; `basinJetStrength` is the one rule for the drawing and the tests), tectonic crusts and lava (hashed on 200 m cells within 1.1 km: on sulphur three vents in four steam steadily at 15-40 m and one is a periodic hot spring of 60-150 m; on lava a steady fountain of 30-90 m).
-* **Lava fountains, quakes, strikes, devils** (R-307): `Eruption::kind` 1 is a tectonic world's great fountain, drawn with the same jet (from a lava cell of the 16 m ring within 600 m, every 15-40 s, 250-450 m by 14-26 m, a 2.5 s build with the burst, dying over the last 8 s of 30), kind 2 a meteorite strike on a bombarded world (within 1.2 km every 20-60 s: a white flash for a third of a second, eight seconds of dark ejecta with glowing chips, a shake); `quake` (0..1, decaying over 4 s) heaves and trembles the camera (up to 1.1 degrees of pitch, 0.8 of roll, 10 cm of eye) and swells the rumble, every 60-180 s on a tectonic world for ten seconds; `devils` are dust devils on desert worlds (and thin-air worlds in a storm): up to four within 500 m, born every 20-50 s, 30-110 m tall, radius 5-17 m, walking with the wind for 2-5 minutes, 160-420 points spiralling up. Per type the environment sets the temperature offsets and swings (desert +22 / 32 degrees, hydrocarbon -75 / 3, acidic +55 / 6, tectonic +65 / 14), the pressures (0.3-1, 1.4-1.7, 2-5, 0.08-0.38 atm), acid rain over cloud 0.6, methane drizzle by a slow noise, desert dust storms (threshold 0.45), the wind bases (18 and 3 knots). `hasOpaqueDeck` replaces every venusian branch (no sun disc, halo, pillar or wedge; cloud 1; no cast shadows; the picture blurred; the aurora off) and `isLavaWorld` every molten-or-volcanic one (bank 2's lava ramp, the ground glow, the infrared view, the eruptions, the rumble).
+* **The eye at the water** (B-322): the Fresnel term's grazing angle is clamped at cos 0.04 (the water stays water from an eye at the
+  surface); `viewUnderwater` (`render`) tints the palette and closes the fog to 22 m whenever the eye is under the drawn water surface,
+  whatever the body does (a dive's first frames, the free camera); crouching afloat keeps the eye at 1.65 m. The capsule (and its beacon
+  beam) is not drawn while the camera flies with it (`cameraOverrideAlt >= 0`): from the air the beam was a bright line across the
+  ground.
+* **Geysers and fountains** (R-307, `drawGeysers`, `drawJet`, `jetStrength`; `drawWeather` calls the geysers on europan and tectonic
+  worlds and wherever `TR_GEYSERS` is a trait). A jet is a dense core column of eight camera-facing segments, each two quads round the
+  axis (the vertex weight 1.15 at the centre and 0.2 at the sides, so the boundary tile's cutout cuts the sides ragged; the fine grain
+  scrolls up it at the jet's ejection speed `sqrt(2 g H)`; the throat narrow, the top twice as wide and fraying as the centre weight
+  falls), a crown of 130-340 spray points thrown out where the column breaks and falling from it for three seconds, a veil of 110-300
+  drops on full ballistic arcs from the throat, and a bright pool; steam and ice take bank 8 at `38 + 22 sunUp`, lava bank 2 at 61. Its
+  height and width are the vent's class times its strength this frame: `jetStrength` returns a steady vent's `0.82 + 0.18 sin(0.9 t)`
+  pulse or, for a periodic one, a cycle's `smoothstep(0, 0.035)` build with a `1 + 0.35 exp(-phase/0.05)` burst (a third over full
+  height in the first seconds) dying over the cycle's last tenth; the column's height follows `0.55 + 0.45 strength`. Three vent sets:
+  europan cracks (hashed on 300 m cells where the 16 m ring is stained, within 2.5 km; small 160 m x 7 m, tall 400 x 15, huge 800 x 30
+  by hash, 35% steady, cycles 90-180 s at 25-55% duty), geyser basins (`geyserVents`: the sinter mounds' centres within 2.5 km on
+  sinter; 30 / 80 / 180 m by 2.5 / 5 / 10 m, 30% steady, cycles 60-180 s at 20-50%; `basinJetStrength` is the one rule for the drawing
+  and the tests), tectonic crusts and lava (hashed on 200 m cells within 1.1 km: on sulphur three vents in four steam steadily at 15-40
+  m and one is a periodic hot spring of 60-150 m; on lava a steady fountain of 30-90 m).
+* **Lava fountains, quakes, strikes, devils** (R-307): `Eruption::kind` 1 is a tectonic world's great fountain, drawn with the same jet
+  (from a lava cell of the 16 m ring within 600 m, every 15-40 s, 250-450 m by 14-26 m, a 2.5 s build with the burst, dying over the
+  last 8 s of 30), kind 2 a meteorite strike on a bombarded world (within 1.2 km every 20-60 s: a white flash for a third of a second,
+  eight seconds of dark ejecta with glowing chips, a shake); `quake` (0..1, decaying over 4 s) heaves and trembles the camera (up to 1.1
+  degrees of pitch, 0.8 of roll, 10 cm of eye) and swells the rumble, every 60-180 s on a tectonic world for ten seconds; `devils` are
+  dust devils on desert worlds (and thin-air worlds in a storm): up to four within 500 m, born every 20-50 s, 30-110 m tall, radius 5-17
+  m, walking with the wind for 2-5 minutes, 160-420 points spiralling up. Per type the environment sets the temperature offsets and
+  swings (desert +22 / 32 degrees, hydrocarbon -75 / 3, acidic +55 / 6, tectonic +65 / 14), the pressures (0.3-1, 1.4-1.7, 2-5,
+  0.08-0.38 atm), acid rain over cloud 0.6, methane drizzle by a slow noise, desert dust storms (threshold 0.45), the wind bases (18 and
+  3 knots). `hasOpaqueDeck` replaces every venusian branch (no sun disc, halo, pillar or wedge; cloud 1; no cast shadows; the picture
+  blurred; the aurora off) and `isLavaWorld` every molten-or-volcanic one (bank 2's lava ramp, the ground glow, the infrared view, the
+  eruptions, the rumble).
 
 ## Drainage on the surface, landmarks, scree, the far floor (O6-03..O6-07, 2026-09-28)
 
@@ -562,9 +1142,22 @@ once, its tiles are asked for, and it is drawn again when they are there (`zoomD
 every half second while the cursor's own prefetch supersedes it). The first descent frame fills the four rings (12,000 samples, a
 fifth of them drainage) in about 50-80 ms, under the fade-in; `bench check` allows 80.
 
-**The far floor and the warm pass sample a disc**, not a square: the square's corners lay 75 km out on the far ring, beyond the tiles a landing prefetches, and the first frame computed those tiles itself (270 ms). `drawFloor` reads only the far cells within the ring's radius; `warmTerrainLOD` fills cells within `radius + 2`.
+**The far floor and the warm pass sample a disc**, not a square: the square's corners lay 75 km out on the far ring, beyond the tiles a
+landing prefetches, and the first frame computed those tiles itself (270 ms). `drawFloor` reads only the far cells within the ring's
+radius; `warmTerrainLOD` fills cells within `radius + 2`.
 
-**The warm pass's fill on the pool** (F-03, 2026-10-13): `warmTerrainLOD` lists its disc's misses (`fillMisses`) and, over `FILL_SERIAL_MAX` (64) of them, samples them on the pool in equal shares of the list, each cell by one worker into its own slot: a ring's disc is 2r + 3 cells a side, within its torus (83, 75, 55, 55 and 63 against 128, 128, 64, 64 and 256 on a planet; the unit checks it on a planet and a comet), so distinct cells have distinct slots, and a sample is a pure function of the cell and the site whatever its thread asked before (the drainage read through each thread's own caches, its neighbourhood of reaches made from its lattice cell alone since F-03: `05-planet-function.md`; the roads, the streets and the works read, never written). The pool's join is the barrier before the vertex pass; fewer misses (a walk's edge) are sampled by the disc's walk as before. That walk then names the materials whose meso tiles are not made yet and `buildMesoTiles` makes them a material to a worker (a band thread reads a tile, never makes one). A landing's first frame at the home world's default site samples 12,084 cells (the fill 13.9 → 3.3 ms), standing 17,607, a comet's 15,023; `lastWarmMisses` counts a frame's (tests). The landing's three ground textures (`buildMacroTile`, `buildLeafTiles`, `buildBarkTile`, 7 ms) run their rows on the pool too. The descent's prefetch (`prefetch(3.0)`) stays serial: budgeted, done within the descent's first twenty frames.
+**The warm pass's fill on the pool** (F-03, 2026-10-13): `warmTerrainLOD` lists its disc's misses (`fillMisses`) and, over
+`FILL_SERIAL_MAX` (64) of them, samples them on the pool in equal shares of the list, each cell by one worker into its own slot: a
+ring's disc is 2r + 3 cells a side, within its torus (83, 75, 55, 55 and 63 against 128, 128, 64, 64 and 256 on a planet; the unit
+checks it on a planet and a comet), so distinct cells have distinct slots, and a sample is a pure function of the cell and the site
+whatever its thread asked before (the drainage read through each thread's own caches, its neighbourhood of reaches made from its lattice
+cell alone since F-03: `05-planet-function.md`; the roads, the streets and the works read, never written). The pool's join is the
+barrier before the vertex pass; fewer misses (a walk's edge) are sampled by the disc's walk as before. That walk then names the
+materials whose meso tiles are not made yet and `buildMesoTiles` makes them a material to a worker (a band thread reads a tile, never
+makes one). A landing's first frame at the home world's default site samples 12,084 cells (the fill 13.9 → 3.3 ms), standing 17,607, a
+comet's 15,023; `lastWarmMisses` counts a frame's (tests). The landing's three ground textures (`buildMacroTile`, `buildLeafTiles`,
+`buildBarkTile`, 7 ms) run their rows on the pool too. The descent's prefetch (`prefetch(3.0)`) stays serial: budgeted, done within the
+descent's first twenty frames.
 
 **The terrain's cells binned** (F-04, 2026-10-14): every band thread used to walk every cell of every ring (the distance, cover
 and frustum tests, the four corners, the water's corners) and cull by its rows late, sparing the wet cells and the rings' edge
@@ -587,7 +1180,8 @@ once the top corners went to the pool; 2r + 5 cells still fit every torus). F-05
 each band, and the reflections last (above), so the section `terrain` holds the bin, the reflections' gather and the bands, and
 `warm` the warm alone.
 
-**Scree** (`TerrainVertex::scree`, from `SurfaceSample::scree`): the talus of the cliff bands and the boulder fields raise the rock count of a cell (`x (1 + 5 scree/255)`) and the rock size (`x (1 + 0.6 scree/255)`) in `drawObjects` and `collectColliders`.
+**Scree** (`TerrainVertex::scree`, from `SurfaceSample::scree`): the talus of the cliff bands and the boulder fields raise the rock
+count of a cell (`x (1 + 5 scree/255)`) and the rock size (`x (1 + 0.6 scree/255)`) in `drawObjects` and `collectColliders`.
 
 **Landmarks** (O6-06), **the sights and the scanner** (R-408, 2026-10-07): `galaxy/landmarks.*` reads a world's sights from its
 terrain on a grid of 14 km cells, each kind on its own (`sightsOfCell`: the highest point standing 90 m over the cell's mean, 50
@@ -612,7 +1206,8 @@ the landmark stands when the ship is in their system, `cellsOfLegacyIds` finding
 on a thread: `Game::migrateLandmarkNames`, `collectMigration`).
 
 **The new landforms' sights** (Q-01, 2026-10-22): eleven kinds after `LM_WORK` (`landformSight`): a great shield's CALDERA, a TESSERA's
-crest, a LABYRINTH's deepest floor, a cluster of HOLLOWS, a CRATER CHAIN's crater, a field of PENITENTES, a COLONNADE, a MUD VOLCANO, a RIVER
+crest, a LABYRINTH's deepest floor, a cluster of HOLLOWS, a CRATER CHAIN's crater, a field of PENITENTES, a COLONNADE, a MUD VOLCANO, a
+RIVER
 RIDGE, a PINGO and a MAAR, each on a world that drew its landform. The ones built of points are found where the landform builds them
 (`landformFeatures`: the caldera's pits, the chains' craters, the cones, the pingos, the maars, by the same grids and sizes): the biggest
 centred in the cell whose ground carries the landform's mark (its province, its cold, its land hold it there); the fields by the cell's own
@@ -620,64 +1215,100 @@ scan, three of its samples at least the landform marks (`SurfaceSample::landform
 highest, a labyrinth's lowest, the middle of the hollows' and the penitentes' field.
 
 **The qualities on the ground** (Q-02, 2026-10-22; `05-planet-function.md` for what the ground holds):
-* **The sky's** (`drawSky`, `computeEnvironment`). *Noctilucent clouds*: silver-blue bands 83 km up where the ray meets their layer, lit while the
-  sun is 6-16 degrees under the horizon and their air is out of the planet's shadow (the sun's depression under each cloud from the ray's reach
-  toward its azimuth: low in the sky on the sun's side), at 35-50 degrees of latitude and over, in the local summer the more; in bank 22 (the
+* **The sky's** (`drawSky`, `computeEnvironment`). *Noctilucent clouds*: silver-blue bands 83 km up where the ray meets their layer, lit
+  while the
+  sun is 6-16 degrees under the horizon and their air is out of the planet's shadow (the sun's depression under each cloud from the
+  ray's reach
+  toward its azimuth: low in the sky on the sun's side), at 35-50 degrees of latitude and over, in the local summer the more; in bank 22
+  (the
   galactic band's, which rises from the sky's own colour to a pale silver), hidden by the clouds under them. *Ice halos*: the 22-degree ring
-  stronger and every day the sun is up through a sky not overcast (R-304's cold-air ring the weaker), the sky inside it darker, the parhelia at
+  stronger and every day the sun is up through a sky not overcast (R-304's cold-air ring the weaker), the sky inside it darker, the
+  parhelia at
   the sun's height a little outside the ring as the sun climbs (none past 60 degrees), the parhelic circle, the 46-degree ring faint, and at
-  night the ring round the brightest moon (its strength by the moon's light; in bank 22 as the clouds). *Airglow*: a pass after the stars over the
-  sky's pixels (banks 11 and 21, the aurora's, written where they beat the sky's; the galactic band's light added, not hidden), the green layer
-  brightest some ten degrees over the horizon, the red fainter higher, rippled by waves of 40 km where the ray is steep enough to resolve them;
-  gone with the day, the rain and the clouds. *Fog seas*: in the morning's calm (local time 0.10-0.40, no rain, dust or wind over 28 knots) the
-  fog fills the valleys to 60-170 m over their floor (`refreshFogFloor`: the 512 m ring's fifth lowest within 6 km, found again every 1.5 km), its
-  top waved by 6 m; an eye over it sees the ground and the trees under it as the fog's extinction along the ray (`fogSeaWall`, added to the rain's
-  wall), an eye inside it a few hundred metres. *Great aurorae*: R-402's oval 22 degrees nearer the equator (`auroraOvalNow`), the ramp reaching
+  night the ring round the brightest moon (its strength by the moon's light; in bank 22 as the clouds). *Airglow*: a pass after the
+  stars over the
+  sky's pixels (banks 11 and 21, the aurora's, written where they beat the sky's; the galactic band's light added, not hidden), the
+  green layer
+  brightest some ten degrees over the horizon, the red fainter higher, rippled by waves of 40 km where the ray is steep enough to
+  resolve them;
+  gone with the day, the rain and the clouds. *Fog seas*: in the morning's calm (local time 0.10-0.40, no rain, dust or wind over 28
+  knots) the
+  fog fills the valleys to 60-170 m over their floor (`refreshFogFloor`: the 512 m ring's fifth lowest within 6 km, found again every
+  1.5 km), its
+  top waved by 6 m; an eye over it sees the ground and the trees under it as the fog's extinction along the ray (`fogSeaWall`, added to
+  the rain's
+  wall), an eye inside it a few hundred metres. *Great aurorae*: R-402's oval 22 degrees nearer the equator (`auroraOvalNow`), the ramp
+  reaching
   the tropics (from 8 degrees), the field's glow most nights (the potential 0.7 at the least), the tops' colour half again.
 * **The waters' colours** (`setupPalette`, `drawTerrainLOD`): the water's sheet takes a second bank where its corners carry a trait's colour
-  (`ltint`, else `wtint`), split as two materials are (the corner's weight, its wobble lowered to 0.35 so a corner well inside never flips back):
-  a pink lake's (bank 25), a bloom's or a lagoon's (26: a bloom the water's colour three quarters turned), a water's ramp in its colour; a milky
-  sea's glow at night in bank 15 (its dark end the night sea's, its light the bacteria's pale blue: free on those worlds, no spores), its shade
-  the glow's share (no foam on it). The trait banks are the second people's (25-27), free on the worlds those traits come to; where the harness
+  (`ltint`, else `wtint`), split as two materials are (the corner's weight, its wobble lowered to 0.35 so a corner well inside never
+  flips back):
+  a pink lake's (bank 25), a bloom's or a lagoon's (26: a bloom the water's colour three quarters turned), a water's ramp in its colour;
+  a milky
+  sea's glow at night in bank 15 (its dark end the night sea's, its light the bacteria's pale blue: free on those worlds, no spores),
+  its shade
+  the glow's share (no foam on it). The trait banks are the second people's (25-27), free on the worlds those traits come to; where the
+  harness
   stages a people's forms they keep theirs.
-* **The tides** (`SurfaceSite::tideM`, set each frame from `tideOffsetM` at the explorer's place; `seaVertex`, `waterOf`, `waterNowAt`): the sea's
+* **The tides** (`SurfaceSite::tideM`, set each frame from `tideOffsetM` at the explorer's place; `seaVertex`, `waterOf`, `waterNowAt`):
+  the sea's
   vertices (their water the sea's level, no outline) stand at the tide; the drawn water, the shore's side and its cut (`vertexShore`, its
-  neighbours' fallback too), the coarser rings' water, the reflections and the floor read it, and so do the explorer's feet and eye, the buggy,
-  the drone, the wading animals and the swimmers, the rangefinder and auto-explore (`waterNowAt`); what is placed on the ground reads the mean
+  neighbours' fallback too), the coarser rings' water, the reflections and the floor read it, and so do the explorer's feet and eye, the
+  buggy,
+  the drone, the wading animals and the swimmers, the rangefinder and auto-explore (`waterNowAt`); what is placed on the ground reads
+  the mean
   (`waterAt`: a tree or a stone stays whatever the tide). The capsule stays where it landed: on a flat it stands in the sea at high water.
-* **The objects.** The hot springs' steam over each vent's pool (`drawGeysers`, `hotSpringsNear`), their mats in bank 25 (`materialLook`). The
-  fungal forests' trees the mushroom silhouette three in four (the parasol, the stalk the rest), whatever the biome, their caps smooth-edged, no
-  season's bare or turned leaves, their stems pale (banks 16 and 17). The petrified forests' trunks (`forLogs`, `LogInst::stone`): stone logs
-  where the ground keeps their density (`ltint`), thick and broken in sections, in the jasper's bank (26: a red-brown, an ochre or a purple grey),
-  no moss, roots or stubs; they are colliders as every log. The meteorites (`forMeteorites`): none to four iron masses a 16 m cell by the strewn
-  field's density (`gtint`), dark lumps of four to six facets in the chrome's bank (7) at its darkest, a facet glinting where it faces the sun
+* **The objects.** The hot springs' steam over each vent's pool (`drawGeysers`, `hotSpringsNear`), their mats in bank 25
+  (`materialLook`). The
+  fungal forests' trees the mushroom silhouette three in four (the parasol, the stalk the rest), whatever the biome, their caps
+  smooth-edged, no
+  season's bare or turned leaves, their stems pale (banks 16 and 17). The petrified forests' trunks (`forLogs`, `LogInst::stone`): stone
+  logs
+  where the ground keeps their density (`ltint`), thick and broken in sections, in the jasper's bank (26: a red-brown, an ochre or a
+  purple grey),
+  no moss, roots or stubs; they are colliders as every log. The meteorites (`forMeteorites`): none to four iron masses a 16 m cell by
+  the strewn
+  field's density (`gtint`), dark lumps of four to six facets in the chrome's bank (7) at its darkest, a facet glinting where it faces
+  the sun
   from the eye's side, the ones of 0.6 m and over colliders. The rainbow strata's accent layers in bank 27 (`materialLook` by `gtint`). No
   boulders on the gypsum's dunes or a spring's terraces.
-* **The strewn fields' sight** (`LM_METEORITES`, STREWN FIELD, `;`): a field heard by the cell's scan (three marked samples at least, the one
+* **The strewn fields' sight** (`LM_METEORITES`, STREWN FIELD, `;`): a field heard by the cell's scan (three marked samples at least,
+  the one
   nearest their middle), its extent the field's; the scanner's METEORITES mode, `IRON STONES, 4.3 KM`.
 
 **The sounds of the ground** (Q-03, 2026-10-22; `updateGroundSongs`, each frame after the quakes: the cues the game turns into the synth's
 levels, `groundSoundsTo`; `07-game-flow-and-controls.md` for the sounds):
 * **Singing dunes** (`duneSong`, `duneHz`). On a world with the trait, the explorer on foot on the ground (not swimming) or the buggy on its
-  wheels, on sand or dust sloping over 1.7 degrees whose sample at the near ring's 4 m is a slip face (`slipFace` 0.15 to 0.5 for the whole: every
-  world's dunes are whole at 4 m, some faded at 16): the hum's level the slide's (a third of the speed and two thirds of the speed down the face,
+  wheels, on sand or dust sloping over 1.7 degrees whose sample at the near ring's 4 m is a slip face (`slipFace` 0.15 to 0.5 for the
+  whole: every
+  world's dunes are whole at 4 m, some faded at 16): the hum's level the slide's (a third of the speed and two thirds of the speed down
+  the face,
   over 2.5 m/s on foot and 6 in the buggy), held as the sand runs on (it dies over 2.5 s). Standing on the face is silent. The note is the
   world's (`duneSongHz`: Andreotti's 0.4 sqrt(g / d) of its grains, 150-320 microns by a hash of the world).
-* **Singing ice** (`iceSong`). On a world with the trait: the ice within 64 m of the explorer or the vehicle (the 16 m vertices; snow over it
-  half) and how fast the day warms or cools it (the sun's height's rate over the world's day: the most at dawn and dusk, the cooling's whole and
+* **Singing ice** (`iceSong`). On a world with the trait: the ice within 64 m of the explorer or the vehicle (the 16 m vertices; snow
+  over it
+  half) and how fast the day warms or cools it (the sun's height's rate over the world's day: the most at dawn and dusk, the cooling's
+  whole and
   the warming's 0.7; a quarter of it always, the ice settling), the level following over 1.5 s.
-* **Quakes** (`quake`, `quakeCue`). R-307's quakes (the camera's heave and tremble) on a world with QUAKES every 90-240 s, the first 45 s after
-  the landing, as strong as a tectonic world's (0.6-1.0, dying over 4 s); `quakeCue` is each one's onset for its sound, a tectonic world's too
+* **Quakes** (`quake`, `quakeCue`). R-307's quakes (the camera's heave and tremble) on a world with QUAKES every 90-240 s, the first 45
+  s after
+  the landing, as strong as a tectonic world's (0.6-1.0, dying over 4 s); `quakeCue` is each one's onset for its sound, a tectonic
+  world's too
   (its quakes' thunder before; its fountains keep theirs).
 
-**Harness traces** (`VESPERIS_TRACE=1`): `SurfaceView::init` prints its stages, the first three renders print their sections and the warm pass's misses and fill times per ring, the descent update its time; the drainage prints every tile built (with the thread; F-03: its sampling and sort times and a hash of its arrays) and every prefetch and readiness check with a millisecond stamp, and the first drainage call of every thread with its detail (a caller sampling finer than 2100 m builds tiles). `VESPERIS_SKIP=cut|wq|refl` skips the shore cut, the water quads or the reflections (`08-testing-and-tools.md`).
+**Harness traces** (`VESPERIS_TRACE=1`): `SurfaceView::init` prints its stages, the first three renders print their sections and the
+warm pass's misses and fill times per ring, the descent update its time; the drainage prints every tile built (with the thread; F-03:
+its sampling and sort times and a hash of its arrays) and every prefetch and readiness check with a millisecond stamp, and the first
+drainage call of every thread with its detail (a caller sampling finer than 2100 m builds tiles). `VESPERIS_SKIP=cut|wq|refl` skips the
+shore cut, the water quads or the reflections (`08-testing-and-tools.md`).
 
 **The bands' trace** (F-01, 2026-10-12): every frame keeps its terrain bands' and flora bands' rows and milliseconds
 (`SurfaceView::lastTerrainBands`, `lastFloraBands`, two clock reads a band; `bandTraceLine`), which the bench prints under the surface
 rows and the forest; under `VESPERIS_TRACE` the terrain bands are also split (each drawn cell timed: the water corners' set-up, the
 fills of the ground, walls, water and foam; the rest of a band is its walk) and counted (F-04: the binned cells the band read, those
 reaching its rows, wet), and the first three renders print both lines; the terrain's line opens with the cells binned, the bin's
-milliseconds and the cells every band draws (`lastTerrainCells`, `lastTerrainBinMs`, `lastTerrainAllRows`). A re-anchor prints its parts (the worker's
+milliseconds and the cells every band draws (`lastTerrainCells`, `lastTerrainBinMs`, `lastTerrainAllRows`). A re-anchor prints its parts
+(the worker's
 join, the site's init, the roads, the marks, plan and vehicles, the tiles asked) and the next two frames' warm lines (the refill); a road
 rebuild on the main thread prints its milliseconds (`lastRoadsMs`, `roadsBuilds`).
 
@@ -724,6 +1355,9 @@ rebuild on the main thread prints its milliseconds (`lastRoadsMs`, `roadsBuilds`
 * **The thermometer.** On a drifter's worlds (`sunless()`) the ground is as warm as the world's own heat keeps it: `Body::tempK` (a
   drifter's by its kind, a moon's own and a brown dwarf's glow on it) less 6.5 K a kilometre up under an air, no day to swing it (a
   36 K rock reads -237 C, a dark ocean +7 to +77 C). The HUD's readings say `NO SUN` where the sun's row was.
+* **The lamp's ultraviolet** (Z-03: `SurfaceView::uvLamp`, Shift+U on foot, `UV ON` in the readings): the living films within 18 m
+  of the eye in a cone of 24 degrees glow by their world's biota (`drawFilmGlow` after the old result, bank 15; `13-life.md`, "The
+  search"); a sample of the ground at the crosshair is O's (`readSample`, the same note).
 * **The explorer's lamp** (`SurfaceView::lamp`, U on foot, the pad's commands `LIGHT THE LAMP`/`PUT THE LAMP OUT`, the readings'
   `LAMP ON`; on every night side as well as in the dark). `setupLamps` sets the frame's lights: the helmet lamp a cone from the eye
   along the view, full within 11 degrees of its axis, gone at 22, a spill to 45; its light 3 at the eye falling as 1 / (1 + (d / 16 m)^2),

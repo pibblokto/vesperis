@@ -41,12 +41,14 @@ void Game::renderSpaceScreen() { renderSpace(); if (!photoMode && !ax.on) render
 // the ground's picture, likewise
 void Game::renderSurfaceScreen() { renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); }
 
-// the capsule's way down and back up: the ground, the visor and its line (none while auto-explore plays)
+// the capsule's way down and back up: the ground, the visor and its line (none while auto-explore plays); I-04: the hatch's drop first,
+// the ship from the hangar (`cabinSeen`)
 void Game::renderCapsuleScreen() {
-    renderSurfaceScene();
+    if (cabinDropping()) renderSpace(); else renderSurfaceScene();
     if (!ax.on) {
         drawVisor(HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER);
+        const bool scoop = state == GameState::DESCENT && realTime < scoopUntil && !scoopLine.empty();   // Z-03: the scoop's line in the caption's place
+        drawTextCentered(canvas, UW / 2, UH - 10, scoop ? scoopLine.c_str() : (state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER"), HUD_AMBER);
     }
 }
 
@@ -65,17 +67,17 @@ void Game::renderSpaceHUD() {
     drawTextShadow(canvas, 8, 16, line2.c_str(), HUD_DIM, HUD_SHADOW);
     if (player.playing >= 0 && player.playing < (int)player.items.size()) {   // the ship's player, under the system's lines
         const uint32_t col = player.held || player.paused || player.waiting ? HUD_DIM : HUD_GREEN;
-        drawRecordKindGlyph(canvas, 8, 24, player.items[player.playing].music ? RC_MUSIC : RC_TEXT, col);
+        drawRecordKindGlyph(canvas, 8, 24, RC_MUSIC, col);
         drawTextShadow(canvas, 17, 24, playerHudLine().c_str(), col, HUD_SHADOW);
     }
     // mode
     const char* modeName = "STANDBY";
     if (ship.mode == ShipState::VIMANA) modeName = "VIMANA FLIGHT";
     else if (ship.mode == ShipState::APPROACH) modeName = "FINE APPROACH";
-    else if (ship.mode == ShipState::PARKED) modeName = ship.parkedBelt >= 0 ? "IN THE BELT" : (ship.orbiting ? "ORBIT" : "CHASE");
+    else if (ship.mode == ShipState::PARKED) modeName = ship.parkedBelt >= 0 ? "IN BELT" : (ship.orbiting ? "ORBIT" : "CHASE");
     drawTextShadow(canvas, 8, UH - 24, modeName, HUD_AMBER, HUD_SHADOW);
     if (probe.active && probeHere()) {   // the probe falling (or its last frame waiting) while the explorer is in the cabin
-        std::string pl = probe.endClock >= 0 ? "PROBE: SIGNAL LOST - C SHOWS ITS LAST FRAME"
+        std::string pl = probe.endClock >= 0 ? "PROBE: SIGNAL LOST - C SHOWS LAST FRAME"
                                              : fmt("PROBE: %s  %.2f ATM - C WATCHES", probeStageLabel(probe.clock).c_str(), probeBarAt(probe.flight, probe.clock) * 0.98692);
         drawTextShadow(canvas, 8, UH - 32, pl.c_str(), probe.endClock >= 0 ? HUD_RED : HUD_CYAN, HUD_SHADOW);
     }
@@ -101,7 +103,7 @@ void Game::renderSpaceHUD() {
         // marker on the remote star
         Mat3 cam = viewBasis();
         Vec3 v = cam * (ship.remote.pos - ship.pos);
-        if (v.z > 0) {
+        if (v.z > 0 && (!cabinFrame.aboard || cabinFrame.remoteOut)) {   // B-501: aboard, where the glass shows it alone
             int sx = (int)(UW / 2 + spaceR.proj.f * v.x / v.z / FB_SCALE), sy = (int)(UH / 2 - spaceR.proj.f * v.y / v.z / FB_SCALE);
             if (sx > 4 && sy > 4 && sx < UW - 4 && sy < UH - 4) {
                 drawRectRGB(canvas, sx - 4, sy - 4, sx + 4, sy + 4, HUD_CYAN);
@@ -115,11 +117,11 @@ void Game::renderSpaceHUD() {
             double d = length(rk.pos - ship.pos);
             std::string lt = fmt("LOCAL: %s %s", trunc(upper(beltNameOf(ship.targetBelt)), 18).c_str(), distanceString(std::max(0.0, d - rk.radiusKm)).c_str());
             drawTextShadow(canvas, UW - 8 - textWidth(lt.c_str()), UH - 24, lt.c_str(), HUD_GREEN, HUD_SHADOW);
-            std::string rs = fmt("ROCK %.1f KM ACROSS%s", 2 * rk.radiusKm, ship.parkedBelt >= 0 ? " - NO GROUND FOR THE CAPSULE" : "");
+            std::string rs = fmt("ROCK %.1f KM ACROSS%s", 2 * rk.radiusKm, ship.parkedBelt >= 0 ? " - NOT LANDABLE" : "");
             drawTextShadow(canvas, UW - 8 - textWidth(rs.c_str()), UH - 32, rs.c_str(), HUD_CYAN, HUD_SHADOW);
             Mat3 cam = viewBasis();
             Vec3 v = cam * (rk.pos - ship.pos);
-            if (v.z > 0) {
+            if (v.z > 0 && (!cabinFrame.aboard || cabinFrame.rockOut)) {   // B-501: aboard, where the glass shows it alone
                 int sx = (int)(UW / 2 + spaceR.proj.f * v.x / v.z / FB_SCALE), sy = (int)(UH / 2 - spaceR.proj.f * v.y / v.z / FB_SCALE);
                 int r = (int)std::max(6.0, spaceR.proj.f * rk.radiusKm / v.z / FB_SCALE + 5);
                 if (sx > -r && sy > -r && sx < UW + r && sy < UH + r) {
@@ -150,7 +152,7 @@ void Game::renderSpaceHUD() {
             if (bi.inFront) {
                 int r = (int)std::max(6.0, bi.radiusPx / FB_SCALE + 5);
                 int sx = (int)(bi.sx / FB_SCALE), sy = (int)(bi.sy / FB_SCALE);
-                if (sx > -r && sy > -r && sx < UW + r && sy < UH + r) {
+                if (sx > -r && sy > -r && sx < UW + r && sy < UH + r && (!cabinFrame.aboard || cabinFrame.localOut)) {   // B-501: aboard, through the glass alone
                     int l = std::max(3, r / 3);
                     uint32_t col = HUD_GREEN;
                     drawLineRGB(canvas, sx - r, sy - r, sx - r + l, sy - r, col); drawLineRGB(canvas, sx - r, sy - r, sx - r, sy - r + l, col);
@@ -249,7 +251,7 @@ void Game::renderSpaceHUD() {
                 const double fromCore = std::sqrt((end.x - GALAXY_CENTRE_SX) * (end.x - GALAXY_CENTRE_SX) + (end.z - GALAXY_CENTRE_SZ) * (end.z - GALAXY_CENTRE_SZ));
                 blendRectRGB(canvas, cx - 128, UH - 72, cx + 128, UH - 41, rgb(0, 0, 0), 150);
                 drawTextCentered(canvas, cx, UH - 69, fmt("JUMP %s LY %s", jumpDigits.c_str(), galacticHeading(ship.pos / SECTOR_KM, dir).c_str()).c_str(), HUD_WHITE);
-                drawTextCentered(canvas, cx, UH - 60, fmt("END: %s - %.0f LY FROM THE CORE", REGION_NAMES[galaxyRegion(ex, ey, ez)], fromCore).c_str(), HUD_CYAN);
+                drawTextCentered(canvas, cx, UH - 60, fmt("END: %s - %.0f LY FROM CORE", REGION_NAMES[galaxyRegion(ex, ey, ez)], fromCore).c_str(), HUD_CYAN);
                 drawTextCentered(canvas, cx, UH - 51, "ENTER JUMPS  BACKSPACE  R CANCELS", HUD_DIM);
             }
         }
@@ -319,6 +321,7 @@ void Game::renderSurfaceHUD() {
         else if (surf.nearShard.index >= 0) use = std::string(RECORD_MEDIUM_HUD[clampi(surf.nearShard.medium, 0, RM_COUNT - 1)]) + " - E";   // C-03; T-04: the object ("A CODEX - E")
         if (!use.empty()) act.push_back({use, HUD_AMBER});
         if (surf.nearGrave.k >= 0) act.push_back({fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()), HUD_AMBER});   // the stone's name and years
+        if (surf.lifeTarget.species >= 0) act.push_back({trunc(upper(animalNameOf(surf.lifeTarget.species)), 28) + " - SHIFT+N", HUD_AMBER});   // J-07, R-452: Shift+N names it
         for (size_t i = 0; i < act.size(); i++) drawTextShadow(canvas, UW - 8 - textWidth(act[i].first.c_str()), UH - 32 - 8 * (int)i, act[i].first.c_str(), act[i].second, HUD_SHADOW);
         // stamina bar and pulse (hidden while driving or flying)
         int bx = UW - 68, by = UH - 24;
@@ -383,8 +386,8 @@ void Game::renderSurfaceHUD() {
             if (lx < 4 || ly < 30 || lx > UW - 4 || ly > UH - 50) continue;
             drawRectRGB(canvas, lx - 4, ly - 4, lx + 4, ly + 4, HUD_CYAN);
             double d = std::sqrt((c.x - pl.x) * (c.x - pl.x) + (c.z - pl.z) * (c.z - pl.z));
-            const Species* sp = c.species >= 0 && c.species < (int)surf.bestiary.species.size() ? &surf.bestiary.species[c.species] : nullptr;
-            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", sp ? trunc(upper(sp->name), 10).c_str() : "CREATURE", CRITTER_STATE_NAMES[clampi(c.state, 0, 7)], d).c_str(), HUD_CYAN);
+            const bool known = c.species >= 0 && c.species < (int)surf.bestiary.species.size();   // J-07: its name, else its words
+            drawText(canvas, lx + 6, ly - 3, fmt("%s %s %.0fM", known ? trunc(upper(animalNameOf(c.species)), 14).c_str() : "CREATURE", DOING_NAMES[clampi(c.state, 0, DO_COUNT - 1)], d).c_str(), HUD_CYAN);
         }
         for (const Flock& f : surf.flocks) {
             double a = f.phase + t * f.speed;
@@ -394,8 +397,8 @@ void Game::renderSurfaceHUD() {
             int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
             if (lx < 4 || ly < 30 || lx > UW - 4 || ly > UH - 50) continue;
             drawRectRGB(canvas, lx - 5, ly - 5, lx + 5, ly + 5, HUD_CYAN);
-            const Species* sp = f.species >= 0 && f.species < (int)surf.bestiary.species.size() ? &surf.bestiary.species[f.species] : nullptr;
-            drawText(canvas, lx + 7, ly - 3, fmt("%d %s%s", f.n, sp ? trunc(upper(sp->name), 10).c_str() : "FLYERS", f.landed > 0 ? (f.perched ? " (PERCHED)" : " (RESTING)") : "").c_str(), HUD_CYAN);
+            const bool known = f.species >= 0 && f.species < (int)surf.bestiary.species.size();
+            drawText(canvas, lx + 7, ly - 3, fmt("%d %s%s", f.n, known ? trunc(upper(animalNameOf(f.species)), 14).c_str() : "FLYERS", f.landed > 0 ? (f.perched ? " (PERCHED)" : " (RESTING)") : "").c_str(), HUD_CYAN);
         }
     }
     if (surf.hasWaypoint) {
@@ -437,7 +440,7 @@ void Game::drawReadings() {
         pack({fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading))), fmt("TRIP %.2f KM", d.odometer / 1000.0)}, HUD_GREEN);
         pack({fmt("ALT %.0f M", d.altAboveGround), fmt("VS %+.1f", d.vy)}, d.ceiling ? HUD_AMBER : HUD_GREEN);
         const std::string st =
-                d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT ITS CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
+                d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
         pack({st, d.lights ? "LIGHTS ON" : ""}, d.landed || d.ceiling ? HUD_AMBER : HUD_GREEN);
     } else if (surf.inBuggy) {   // the buggy's
         const Buggy& b = surf.buggy;
@@ -445,7 +448,7 @@ void Game::drawReadings() {
         const std::string st = b.airborne ? "AIRBORNE" : (b.skid > 0.3 ? "SKIDDING" : (b.brake ? "BRAKING" : ""));
         pack({fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? " REVERSE" : ""), st, b.lights ? "LIGHTS ON" : ""}, st.empty() ? HUD_GREEN : HUD_AMBER);
     }
-    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC), surf.lamp && !surf.inVehicle() ? "LAMP ON" : ""}, HUD_GREEN);
+    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC), surf.lamp && !surf.inVehicle() ? "LAMP ON" : "", surf.uvLamp && !surf.inVehicle() ? "UV ON" : ""}, HUD_GREEN);
     const double gg = surf.site.gravity / 9.8;
     if (gg < 0.01) pack({fmt("GRAV %.4f G", gg), fmt("ESCAPE %.1f M/S", surf.site.escapeVelocity)}, HUD_GREEN);   // a comet
     else pack({fmt("GRAV %.2f G", gg), fmt("%.2f ATM", e.pressureAtm)}, HUD_GREEN);
@@ -464,7 +467,11 @@ void Game::drawReadings() {
     }
     if (!surf.inDrone) {   // the suit's life sensor: the nearest herd or flock within 1.5 km (`X` still brackets what is in view)
         double best = 1e9, bx = 0, bz = 0; bool flock = false;
-        for (const SurfaceView::Herd& hd : surf.herds) { double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = false; } }
+        for (const SurfaceView::Herd& hd : surf.herds) {
+            if (hd.empty) continue;   // J-08: a cell held for its remains alone
+            double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz);
+            if (d < best) { best = d; bx = dx; bz = dz; flock = false; }
+        }
         for (const Flock& f : surf.flocks) {
             double a = f.phase + t * f.speed;
             double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz);
@@ -496,8 +503,9 @@ void Game::drawReadings() {
         if (pl.swimming) row(pl.underwater ? "DIVING" : "SWIMMING", HUD_CYAN);
         if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) pack({fmt("JET ALT %.0f M", pl.altAboveGround), fmt("VS %+.1f", pl.vy)}, HUD_AMBER);
         if (pl.autoWalk > 0) row(fmt("AUTOWALK %d", pl.autoWalk), HUD_GREEN);
-        static const char* const vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
-        if (visionMode > 0 && visionMode < 5) row(vn[visionMode], HUD_CYAN);
+        if (!kit.empty()) row(fmt("VIALS %d OF %d FILLED", (int)kit.size(), KIT_VIALS), HUD_GREEN);   // Z-03
+        static const char* const vn[VISION_MODES] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION", "ACTIVITY VISION"};
+        if (visionMode > 0 && visionMode < VISION_MODES) row(vn[visionMode], HUD_CYAN);
     }
     const bool seat = surf.inVehicle() && !surf.chaseCam;
     const int y0 = seat ? 44 : 36, maxRows = (UH - 56 - y0) / 8 - 1;   // under the pan gauge in a vehicle; over the prompts and the stamina on foot

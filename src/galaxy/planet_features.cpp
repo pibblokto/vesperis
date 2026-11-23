@@ -368,6 +368,31 @@ void hotSpringsNear(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>&
     });
 }
 
+int springPartAt(const BodyGen& g, const Vec3& unit, double& waterC) {
+    waterC = 0;
+    if (!g.hasTrait(TR_HOT_SPRINGS)) return SPP_NONE;
+    const PointGrid G = springGrid(g);
+    const Vec3 p = unit * g.R;
+    int part = SPP_NONE; double best = 1e9;
+    visitFeatures(p, g.R, G.cellKm, G.density, G.seed, 0.7, [&](const FeatureHit& f) {
+        if (f.d > 1.3) return;
+        for (int k = 0; k < springCount(f); k++) {
+            const HotSpring S = springOf(f, k, g.R);
+            const double x = length(p - S.c) / S.rKm;
+            if (x > 1.8 || x >= best) continue;
+            best = x;
+            if (x < 0.14) { part = SPP_VENT; waterC = springWaterC(0.14); }
+            else if (x < 0.24) { part = SPP_SINTER; waterC = springWaterC(x); }
+            else if (x < 1) {
+                const double u = (1 - x) * S.terraces; const int tk = (int)u;
+                part = u - tk < 0.16 ? SPP_SINTER : SPP_POOL;
+                waterC = springWaterC(1 - (tk + 0.5) / S.terraces);
+            } else { part = SPP_RUNOFF; waterC = springWaterC(1.0); }
+        }
+    });
+    return part;
+}
+
 void landformFeatures(const BodyGen& g, int trait, const Vec3& unit, double halfKm, std::vector<LandFeature>& out) {
     out.clear();
     if (!g.hasTrait(trait)) return;

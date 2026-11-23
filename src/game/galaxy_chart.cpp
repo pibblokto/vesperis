@@ -249,7 +249,7 @@ void Game::chartEnter() {
     const bool snap = chartDrifterAt(to, drifter) && !(sys.valid && sys.star.seed == drifter.seed);
     if (!plotJump(snap ? length(drifter.pos / SECTOR_KM - from) : ly, (to - from) / ly, true, snap ? &drifter : nullptr)) return;
     gchart.plotHere = true;
-    status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4);
+    status("PLOTTED - ENTER TO FLY, ESC TO KEEP FOR V", 4);
 }
 
 // N's stops: the locked signals, home, the named stars, the marks, the systems visited (nearest first in each)
@@ -395,7 +395,7 @@ void Game::finishGalaxyMark(const std::string& name) {
     GalaxyMark m; m.x = textGalaxyAt.x; m.y = textGalaxyAt.y; m.z = textGalaxyAt.z; m.name = name; m.when = (long long)std::time(nullptr);
     guide.galaxyMarks.push_back(m);
     logEvent("MARK", fmt("%s IN THE GALAXY: %s", name.empty() ? "A MARK" : name.c_str(), galaxyPlace(textGalaxyAt, true).c_str()));   // saves the guide
-    status(name.empty() ? "A MARK PLACED - L ON IT NAMES IT" : fmt("MARKED: %s", name.c_str()), 4);
+    status(name.empty() ? "MARK PLACED - L TO NAME IT" : fmt("MARKED: %s", name.c_str()), 4);
     audio.beep = BEEP_LOCK;
 }
 
@@ -693,7 +693,7 @@ void Game::renderGalaxyChart() {
             return std::fabs(y) < 50 ? std::string("IN THE PLANE") : thousands(std::round(std::fabs(y) / 10) * 10) + (y > 0 ? " LY NORTH OF THE PLANE" : " LY SOUTH OF THE PLANE");
         };
         const std::string region = REGION_NAMES[galaxyRegion((int64_t)std::floor(cur.x), (int64_t)std::floor(cur.y), (int64_t)std::floor(cur.z))];
-        drawText(canvas, 6, 4, "THE GALAXY", HUD_AMBER);
+        drawText(canvas, 6, 4, "GALAXY", HUD_AMBER);
         drawText(canvas, UW - 6 - textWidth(region.c_str()), 4, region.c_str(), HUD_WHITE);
         std::string line; uint32_t col = HUD_GREEN;
         if (!away) {
@@ -704,7 +704,7 @@ void Game::renderGalaxyChart() {
             const std::string who = starNamed(ship.remote) ? trunc(upper(starNameOf(ship.remote)), 14) : std::string("A STAR");
             const double off = length(r - cur);
             line = jumpPlot.shortLy > 0 ? fmt("PLOTTED: %s %s LY SHORT, THE VOID", who.c_str(), thousands(off).c_str())
-                                        : fmt("PLOTTED: %s %s LY FROM THE CURSOR", who.c_str(), off < 9.5 ? fmt("%.0f", std::max(1.0, off)).c_str() : thousands(off).c_str());
+                                        : fmt("PLOTTED: %s %s LY FROM CURSOR", who.c_str(), off < 9.5 ? fmt("%.0f", std::max(1.0, off)).c_str() : thousands(off).c_str());
             col = HUD_CYAN;
         } else {
             const double d = galaxyDensity(cur.x, cur.y, cur.z), n = d > 0 ? 1.0 / d : 1e300;
@@ -750,7 +750,7 @@ void Game::renderGalaxyChart() {
     // the keys of the moment (the status over them while it shows)
     if (!drawMapStatus()) {
         const char* keys = ship.mode == ShipState::VIMANA ? "ARROWS MOVE  WHEEL ZOOM  N STOPS  L MARK" : "ARROWS MOVE  WHEEL ZOOM  N STOPS  TAB NEIGHBOURHOOD";
-        if (plotted) keys = "ENTER FLY  TAB LOOK THERE  ESC KEEP THE TARGET";
+        if (plotted) keys = "ENTER FLY  TAB LOOK THERE  ESC KEEP TARGET";
         else if (away && galaxyMarkNear(cur.x, cur.z, 4) >= 0) keys = "ENTER PLOT  L RENAME  DEL TWICE REMOVES  C YOU";
         else if (away) keys = ship.mode == ShipState::VIMANA ? "N STOPS  L MARK  PGUP/PGDN HEIGHT  C YOU" : "ENTER PLOT  N STOPS  L MARK  PGUP/PGDN HEIGHT  C YOU";
         drawTextCentered(canvas, UW / 2, UH - 12, keys, HUD_DIM);

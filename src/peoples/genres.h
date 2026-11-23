@@ -23,6 +23,12 @@ void recordWorldFacts(const StarSystem& sys, const Body& b, const BodyGen& g, co
 // in index order with the grammar's memory and the events told kept across them
 void writeRecordTexts(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L, const VgGrammar& G, ShardTexts& out);
 
+// Z-06: a made species' watermark (peoples/made.h), written outside the catalogue at its year in the people's count by a maker alive where it
+// was made: how the species lives (`MADE_WAY_KEYS`: 0 light, 1 chemical, 2 dead, 3 grazer, 4 predator), where (0 water, 1 soil, 2 rock, 3
+// ice, 4 salt, 5 a spring), whether its crowd glows; false with no history
+bool writeWatermark(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L, const VgGrammar& G, int year, int way, int where, bool glow,
+                    uint64_t seed, VgRecord& out);
+
 // the records' genres: the root's alternatives by their first rule ("letter", "annal", "the last")
 std::vector<std::string> recordGenreNames(const VgGrammar& G);
 // E-11: the words a fact (`age`) or an entity's field (`.kind`, `$e.kind`) takes, a table each in the schema's order (`vesperis_test grammar

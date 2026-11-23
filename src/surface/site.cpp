@@ -40,6 +40,9 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
     t.scree = (uint8_t)clampi((int)(s.scree * 255 + 0.5), 0, 255);
     t.wtint = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); t.ltint = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255);
     t.gtint = (uint8_t)clampi((int)(s.groundTint * 255 + 0.5), 0, 255);
+    t.stint = (uint8_t)clampi((int)(s.snowTint * 255 + 0.5), 0, 255);
+    if (s.madeTint > 0) t.mtint = (uint8_t)clampi((int)(s.madeTint * 255 + 0.5), 0, 255);   // J-02
+    if (s.madeLine >= 0) t.mline = (uint8_t)(s.madeLine + 1);   // KI-460
     if (!edits.empty()) applyEdits(x, z, detailM, t);   // T-03: the works' cuts, pits, ditches, craters, flats, reservoirs and lines
     if (!roads.empty() && detailM <= 100) {   // an old road through this vertex (the coarse rings see nothing: a seven-metre road is a hundredth of their cells)
         double d, along, hd; const SiteRoad* rd;
@@ -49,11 +52,12 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
             double cover = overlap / detailM * roadLeft(rd->id, along, rd->wear);                   // less what the wear took
             if (cover > 0.002) {
                 t.road = (uint8_t)clampi((int)(cover * 255 + 0.5), 1, 255);
-                const bool frost = t.material == MAT_SNOW && KINDS[gen.type].cover == DC_FROZEN;   // a frozen world's roads under its frost
+                const bool frost = t.material == MAT_SNOW && deadCoverOf(gen) == DC_FROZEN;   // a frozen world's roads under its frost
                 bool dry = t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS &&
                         !(t.water > -1e8f && t.h < t.water + 0.3f);
                 double maxCover = std::min(1.0, 2 * half / detailM);
                 if (dry && frost && detailM <= 24 && cover >= 0.5 * maxCover) { t.albedo *= 0.72f; t.veg = 0; }   // the frost thinner over the hard bed: a grey line
+                else if (dry && detailM <= 24 && cover >= 0.5 * maxCover && madeGrowthMaterial(t.material)) { t.albedo *= 0.9f; t.veg = 0; }   // J-10: under an overgrowth
                 else if (dry && detailM <= 24 && cover >= 0.5 * maxCover) {   // on the bed (the fine rings): the paving, or the beaten earth, bare and darker
                     int fam = matFamily(t.material);
                     switch (rd->kind) {   // the networks' beds by their kind
@@ -149,7 +153,7 @@ double SurfaceSite::markCover(double x, double z) const {
 void SurfaceSite::applyMarks(double x, double z, double detailM, TerrainVertex& t) const {
     auto it = markCells.find(markKey((int64_t)std::floor(x / MARK_CELL), (int64_t)std::floor(z / MARK_CELL)));
     if (it == markCells.end()) return;
-    const bool frost = t.material == MAT_SNOW && KINDS[gen.type].cover == DC_FROZEN;   // P-04: a frozen world's town under its frost
+    const bool frost = t.material == MAT_SNOW && deadCoverOf(gen) == DC_FROZEN;   // P-04: a frozen world's town under its frost
     const bool dry =
             t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
     if (!dry) return;
@@ -177,6 +181,7 @@ void SurfaceSite::applyMarks(double x, double z, double detailM, TerrainVertex& 
     if (cover > 0.002) {   // the street's bed: the paving (the rock family, darker on rock ground) or the beaten earth, as C-09's roads
         t.road = (uint8_t)clampi((int)(cover * 255 + 0.5), std::max<int>(t.road, 1), 255);
         if (frost && detailM <= 24 && cover >= 0.5 * maxCover) { t.albedo *= paved ? 0.66f : 0.78f; t.veg = 0; }   // the frost thinner over the streets
+        else if (detailM <= 24 && cover >= 0.5 * maxCover && madeGrowthMaterial(t.material)) { t.albedo *= 0.9f; t.veg = 0; }   // J-10: under an overgrowth
         else if (detailM <= 24 && cover >= 0.5 * maxCover) {
             const int fam = matFamily(t.material);
             // the cut is deep: a fifth of the albedo vanishes in the ground's tone tile (C-09's lesson)
@@ -340,7 +345,7 @@ void SurfaceSite::applyEdits(double x, double z, double detailM, TerrainVertex& 
                                // gone (a dead desert), its old bed: silt laid flat and pale under the old waterline
                 const int i = (int)std::floor((x - e.gx0) / e.cell), j = (int)std::floor((z - e.gz0) / e.cell);
                 if (i < 0 || j < 0 || i >= e.nx || j >= e.nz || !e.mask[(size_t)j * e.nx + i]) return;
-                const int cover = KINDS[gen.type].cover;   // P-04: a scorched world's reservoir dry as a dead desert's, a frozen one's ice at its level
+                const int cover = deadCoverOf(gen);   // P-04 (J-11: a made kind's too): a scorched world's reservoir dry as a dead desert's, a frozen one's ice at its level
                 if (cover == DC_FROZEN) {
                     if (t.h < e.level) { t.h = (float)e.level; t.material = MAT_ICE; t.albedo = 0.6f; t.veg = 0; t.scree = 0; }
                     return;
@@ -598,6 +603,7 @@ void SurfaceSite::initFrame(const StarSystem* s, int bodyIndex, double lat, doub
     const Body& b = s->bodies[bodyIndex];
     season = s->seasonOf(bodyIndex, t);
     gen = BodyGen::make(b, season);
+    gen.made = made;   // J-02: what a seeding made of it (none on a world nobody seeded)
     R = b.radiusKm * 1000.0;
     gravity = b.gravity;
     up0 = StarSystem::bodyFromLatLon(lat0, lon0);
@@ -605,8 +611,9 @@ void SurfaceSite::initFrame(const StarSystem* s, int bodyIndex, double lat, doub
     east0 = normalize(cross(pole, up0));
     if (length(cross(pole, up0)) < 1e-6) east0 = Vec3(0, 1, 0);
     north0 = cross(up0, east0);
-    atmosphere = bodyHasAir(b);   // D-04: an air fallen as snow in the dark is no air
-    hasWater = (kindHas(b.type, KT_SEA) || gen.liquidLevel > -1e8) && !gen.frozenSeas;   // exotic seas are a sea too; D-04: a sea frozen in the dark is ice
+    atmosphere = gen.hasAir;   // D-04: an air fallen as snow in the dark is no air (J-02: read through the generator)
+    hasWater = (kindHas(b.type, KT_SEA) || gen.liquidLevel > -1e8) && !gen.frozenSeas && !gen.made.dried();   // exotic seas are a sea too; D-04: a sea frozen in the
+    // the dark is ice (KI-458: a made hothouse's boiled off)
     seaLevel = gen.liquidLevel > -1e8 ? gen.liquidLevel : 0;
     lavaLevel = KINDS[b.type].ground == GR_MOLTEN ? gen.lavaLevel : -1e9;   // the molten ground's lava lakes
     nearBlend = 0; nearR = 0;

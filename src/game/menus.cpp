@@ -16,8 +16,8 @@ namespace {
 struct KeyAction { int key; const char* label; };
 static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"},
         {KEY_LEFT_SHIFT, "SPRINT"}, {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"},
-        {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"}, {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"},
-        {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
+        {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"}, {KEY_M, "WAYPOINT"}, {KEY_N, "MAP / NEXT STAR (SHIFT: NAME ANIMAL)"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"},
+        {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / SAMPLE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
         {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 std::string onOff(bool on) { return on ? "ON" : "OFF"; }
@@ -89,7 +89,7 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
         const GameState at = openedFrom[(int)GameState::TITLE];
         state = ((stateHas(at, ST_GROUND) && surf.valid) || (at == GameState::PROBE && probe.active)) ? at : GameState::SPACE;
         status(state == GameState::SURFACE ? "EXPEDITION RESUMED ON THE SURFACE - H FOR HELP" : "STARDRIFTER READY - H FOR HELP", 6);
-        if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
+        if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC F KEYS NEED FN: USE H, I, P, CTRL+S/L/K/F"; statusNextSecs = 7; }
     }
     if (in.wasPressed(KEY_N) && hasSave) { newGame(); state = GameState::SPACE; }
     if (helpKey(in)) { returnState = GameState::TITLE; openScreen(GameState::HELP); }
@@ -98,7 +98,7 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
 
 // U-04: the title's commands (the controller's first page; its name is its context's)
 void Game::titlePad(PadMenu& m) const {
-    m.item(hasSave ? "CONTINUE" : "BEGIN THE EXPEDITION", KEY_ENTER);
+    m.item(hasSave ? "CONTINUE" : "BEGIN EXPEDITION", KEY_ENTER);
     if (hasSave) m.item("NEW EXPEDITION", KEY_N);
     m.item("HELP", KEY_H); m.item("CREDITS", KEY_C); m.item("QUIT", KEY_ESCAPE);
 }
@@ -115,7 +115,7 @@ void Game::updateHelp(const Input& in, double dt, double realDt) {
 }
 
 // U-04: help's commands (the controller's first page)
-void Game::helpPad(PadMenu& m) const { m.title = "HELP"; m.item("THE NEXT PAGE", KEY_SPACE); m.item("CLOSE", KEY_ESCAPE); }
+void Game::helpPad(PadMenu& m) const { m.title = "HELP"; m.item("NEXT PAGE", KEY_SPACE); m.item("CLOSE", KEY_ESCAPE); }
 
 void Game::menuEnter() { menuSel = 0; }   // U-05: the Esc menu opens on its first row
 
@@ -146,21 +146,21 @@ void Game::renderHelp() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), helpPage == 2 ? 245 : 200);
     static const char* const page0[] = {
         "STARDRIFTER - FLIGHT CONTROL", "",
-        "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
-        "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER",
-        "(TAB: PLAYER), THE CASE, THE DRONES OR THE CAPSULE",   // C-18: the drone bay
+        "MOUSE LOOKS, W A S D WALK IN CABIN, ARROWS TURN",
+        "SHIP. E USES CONSOLES, SCREENS, DECODER, CASE,",
+        "DRONES, LAB DEVICES AND CAPSULE",   // C-18: the drone bay; Z-04, Z-05: the microscope, the incubator
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
-        "R             AIM AT A STAR: N NEXT, ENTER LOCKS IT",
-        "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG THE AIM",
-        "V             VIMANA FLIGHT TO THE REMOTE TARGET",
+        "R             AIM AT A STAR: N NEXT, ENTER LOCKS",
+        "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG AIM",
+        "V             VIMANA FLIGHT TO REMOTE TARGET",
         "L / CLICK     LOCAL TARGET: BODIES, THEN BELTS",
-        "TAB           THE ANALYZER: BODIES AND BELTS",
-        "ENTER         FINE APPROACH TO THE LOCAL TARGET",
+        "TAB           ANALYZER: BODIES AND BELTS",
+        "ENTER         FINE APPROACH TO LOCAL TARGET",
         "X  CENTER ON TARGET   Z  TELESCOPE   F  FIELD AMP.",
-        "B             THE RADAR: HOLD A RISE, ENTER FLIES",
+        "B             RADAR: HOLD A RISE, ENTER FLIES",
         "O  ORBIT / CHASE   SHIFT+ARROWS  ROUND THE WORLD",
         "G GUIDE  M MAP, TAB GALAXY  J LOG  C CAPSULE/PROBE",
-        "I  DATA SHEET  T  TIME WARP  CTRL+T  THE ALMANAC",
+        "I  DATA SHEET  T  TIME WARP  CTRL+T  ALMANAC",
         "CTRL+S / L    SAVE / LOAD         P  SCREENSHOT",
         "CTRL+K / F    SCANLINES / FULLSCREEN   ESC MENU",
         "F1 F2 F5 F9 F10 F11 F12 DO THE SAME (MAC: HOLD FN)",
@@ -169,30 +169,30 @@ void Game::renderHelp() {
         "SURFACE EXPLORATION", "",
         "MOUSE         LOOK AROUND",
         "W A S D       WALK   SHIFT SPRINT (STAMINA)",
-        "SPACE         JUMP; HOLD IN THE AIR: JETPACK",
+        "SPACE         JUMP; HOLD IN AIR: JETPACK",
         "1-9 / 0       AUTOWALK SPEED / STOP    C CROUCH",
         "Z (HOLD)      STAND TALL    CTRL (SWIMMING) DIVE",
-        "B / F         A (NEW) BUGGY / DRONE AT THE CAPSULE",
-        "E             IN/OUT, TAKE, THE CAPSULE (Q TOO)",
+        "B / F         A (NEW) BUGGY / DRONE AT CAPSULE",
+        "E             IN/OUT, TAKE, CAPSULE (Q TOO)",
         "  BUGGY: W/S DRIVE  A/D STEER  SPACE BRAKE  V VIEW",
         "  DRONE: SPACE LIFTS OFF  W/S THRUST  A/D TURN",
         "         SPACE / SHIFT CLIMB, DESCEND, LAND  V VIEW",
-        "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
-        "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
-        "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
-        "L / U         MARK AT THE CROSSHAIR / THE LAMP",
-        "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
-        "TAB           THE READINGS: TIME, SUN, AIR, GROUND",
-        "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
+        "  MOUSE PANS NOSE CAMERA 70 DEG",
+        "M WAYPOINT  L MARK  U LAMP  K CALL CAPSULE",   // Z-04: one line (Z-03's pushed the footer off the page)
+        "R / SHIFT+R   SCANNER MODE / MARKED OUT OR IN",
+        "O SAMPLE (8 VIALS)  SHIFT+O ACTIVITY  SHIFT+U UV",   // Z-03; R-434: the activity vision
+        "N             MAP, OR NAMES THE ANIMAL AIMED AT",   // J-07: the map's own keys on its footer
+        "TAB           READINGS: TIME, SUN, AIR, GROUND",
+        "I (F2)  DATA  T  TIME WARP  CTRL+T  ALMANAC",
         "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
         "PAGE 2/3 - SPACE: NEXT PAGE, OTHER KEYS: CLOSE"};
     static const char* const page3[] = {   // the controller
         "CONTROLLER", "",
-        "Y          THE COMMANDS: EVERY ACTION HERE, ANY KEY",
+        "Y          COMMANDS: EVERY ACTION HERE, ANY KEY",
         "START MENU  SELECT TAB  D-PAD ARROWS  R STICK LOOKS",
         "SCREENS   A ENTER  B BACK  X SPACE  LB/RB PAGES",
         "          LT/RT ZOOM  L3 SHIFT  LEFT STICK ARROWS",
-        "SHIP      A APPROACH, LOCK  B LEAVE THE AIM/RADAR",
+        "SHIP      A APPROACH, LOCK  B LEAVE AIM/RADAR",
         "          X USE  LT TARGET  L3 AIM  R3 CENTRE",
         "          LB/RB ROOF, ZOOM, GAIN  RT+D-PAD ORBIT",
         "ON FOOT   A JUMP  B CROUCH  X USE  LT STAND TALL",
@@ -200,9 +200,9 @@ void Game::renderHelp() {
         "BUGGY     RT/LT DRIVE  A BRAKE  B VIEW  X OUT",
         "DRONE     A/RT CLIMB  B/LT DESCEND  X OUT  R3 VIEW",
         "PROBE     A CHUTE  B CABIN  X CENTRE  RT FAST",
-        "PLAYING   A X LB RB LT RT L3 R3: THE NOTES 1-8",
+        "PLAYING   A X LB RB LT RT L3 R3: NOTES 1-8",
         "TEXT      A TYPES  X DELETES  Y SPACE  START DONE",
-        "MAPS      THE STICKS MOVE THE CURSOR, LT/RT ZOOM",
+        "MAPS      STICKS MOVE CURSOR, LT/RT ZOOM",
         "SETTINGS > CONTROLS: EACH BUTTON OF A CONTROLLER",
         "GAMECONTROLLERDB.TXT BESIDE THE GAME: NEW LAYOUTS", "",
         "PAGE 3/3 - SPACE: FIRST PAGE, OTHER KEYS: CLOSE"};
@@ -292,7 +292,7 @@ void Game::renderKeysScreen() {
         drawText(canvas, x + 96, y, v.c_str(), (sel && keysCapture) ? HUD_AMBER : (sel ? HUD_WHITE : HUD_CYAN));
         if (sel) drawText(canvas, x - 6, y, ">", HUD_AMBER);
     }
-    drawTextCentered(canvas, UW / 2, bottom - 18, keysCapture ? "PRESS THE KEY TO USE FOR THIS ACTION (ESC CANCELS)" : "ENTER REBIND  BACKSPACE RESET  TAB CONTROLLER  ESC SAVE", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, bottom - 18, keysCapture ? "PRESS A KEY FOR THIS ACTION (ESC CANCELS)" : "ENTER REBIND  BACKSPACE RESET  TAB CONTROLLER  ESC SAVE", HUD_DIM);
     drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_KEYS.TXT NEXT TO THE GAME", HUD_DIM);
 }
 

@@ -7,6 +7,8 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 
 | Gen | Date | By | What changed | Its entry |
 | --- | --- | --- | --- | --- |
+| 18 | 2026-11-21 | J-06 | the animals: each species from its own seed, a body of parts in sixteen plans, its world's style and two hide colours | [J-06](log/7-1.5.0.md) |
+| 17 | 2026-11-16 | Z-01, Z-03 | the biota: every landable world's stage of life, chemistry, genesis and species; red snow, the springs' bands | [Z-01](log/7-1.5.0.md), [Z-03](log/7-1.5.0.md) |
 | 16 | 2026-10-21 | P-01..P-07, Q-01, Q-02 | 1.4.0's made kinds of world (P) and the six trait slots (Q) | [P-01](log/6-1.4.0.md) and after |
 | 15 | 2026-10-18 | B-428 | a solid world's moons spread out (the first at 5-40 radii) | [B-428](log/5-1.3.2.md) |
 | 14 | 2026-10-18 | B-425 | the companion stars keep clear of the other sun's worlds | [B-425](log/5-1.3.2.md) |
@@ -23,6 +25,39 @@ what each bump changed, as it was noted beside the constant until E-02 moved it 
 | 3 | 2026-09-26 | M5 | astronomy: companion stars, substellar objects, comets, Kepler orbits, double planets | [the table](log/0-1.0.0.md) |
 | 2 | 2026-09-26 | M9 | plates, rivers, biomes, seasons, four new types | [the table](log/0-1.0.0.md) |
 | 1 | before 2026-09-26 | iteration 1 | the first worlds | |
+
+## 18
+
+J-06 the animals (R-448): every world's bestiary is drawn again (`Bestiary::make`, `surface/bestiary.h`). Each species comes from its
+own seed (its world's, whether it lives on land, in the air or in the water, and its place among those), so a new value moves no other
+species. A species is a body of parts (`surface/animal_body.h`): a trunk in segments, 0 to 6 pairs of legs, a neck and a head, a tail
+and a back, wings, a hide and a coat, in sixteen plans. A world's animals share a style and two hide colours, and no two of a world look
+alike. A world has 3 to 5 species on land (2 to 4 before), 1 or 2 in the air (a floater in a thick air) and 2 to 4 in the water (1). No
+star, system, body, map or ground moves: the herds' habitat cells and their spots stay where they were (the unit's `animals` group).
+What moves is the animals drawn, their names and their calls. J-07 (still 18): each species' way and how many live together, drawn
+after every draw before them (the herds' sizes follow: a lone one, a pack); the generated names gone (the explorer names them). J-08
+(still 18): old bones by a herd's cell in eight on every world, and hunts that end in kills; the regress's 24 hashes unmoved. J-09
+(still 18): three ground materials appended (TISSUE, THREADS, HARD GROWTH: no map hash moves) for a seeded world's overgrowth; a world
+nobody seeded is drawn as before. J-10 (still 18): a seeded world's ruins overgrown and crumbled, and its sounds; a world nobody seeded
+draws its ruins and plays its sounds as before. J-11 (still 18): a seeded world's made kind (the data sheet's line, sentence and phrase; a
+made hothouse's or snowball's dead cover over its own ground); a world nobody seeded is drawn and named as before. J-12 (still 18): a
+seeded world's record (the natives a line drove out gone from its vials, a line found wild, the catalogue's rows and the LIFE page's); a
+world nobody seeded is drawn and sampled as before. B-504 in J-16 (still 18): a chemotroph is made only from a world under 300 K as drawn
+(its mean under 50 C), so a hot tectonic or rocky world of a dead star or a brown dwarf stays as drawn: 65 chemotrophs of 20,004 bodies
+near the start are 48.
+
+## 17
+
+Z-01 the biota, a new part of every landable body (`src/life/`): the stage its life reached (sterile, prebiotic, small cells,
+large cells, colonies; spores and fossils where life ended or was carried), the chemistry it is built on (water, acid, ammonia,
+hydrocarbon), the genesis it descends from (a system's own, or one living system in five its kin cell's oldest; a drifter's the
+star's it left, a wanderer's its own) and its species, drawn on salts of their own after every draw of 16 from the body, its
+system and its traits; a system's living worlds' spores carried to their airless and icy neighbours. No star, system, body,
+map or ground moves: no regress hash, no `fingerprint bodies` line; the saves and the guides record 17
+
+Z-03 rides it (2026-11-17): red snow (`TR_SNOW_ALGAE`), a life trait given by its own hash after the trait draw into a free new slot of
+a cold living world without a people (its algae on the snow, bank 28 on the ground; the biota's snow alga), and the hot springs' mats in
+bands by their water's heat, the hottest pools bare (`springWaterC`). Only the worlds given red snow or with hot springs move.
 
 ## 16
 

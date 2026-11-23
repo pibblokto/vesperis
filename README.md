@@ -99,6 +99,26 @@ tell how they lost their sun. The worlds were regenerated (generation 16):
 saves load, 1.3.2's stars and peoples where they were, and a world may now be
 of a new kind.
 
+1.5.0 is the small and the spacious. Every landable world now has microbes,
+with a stage of life, a chemistry and an origin of its own, and life on one
+world can be kin to life on another, even around another star. On the ground
+`O` takes a sample (eight vials a landing), and the lamp's ultraviolet makes
+living films glow. The ship is a new Stardrifter of three decks and eight
+rooms, with a garden, a library, quarters, a hangar and an observatory. In its
+laboratory the microscope shows a sample six ways, an electron microscope among
+them; the incubator grows what you found in twelve flasks; the sequencer reads
+a species' genome and places it on a tree of kin; and the gene editor cuts,
+changes and borrows genes to make new strains. The drone bay can send a culture
+down to a world: onto the ground, down a drill hole or up into the clouds. If
+it takes, it spreads over the world in about half an hour of play. It can
+colour the seas, change the air and the climate, overgrow the land and the
+ruins, and change or kill the animals, and the catalogue keeps a record of what
+it did. The animals were made again, each species with a body and a way of
+living of its own (herds, packs, flocks, shoals, climbers), and they have no
+names until you give them one. The worlds were regenerated (generation 18):
+saves load with their stars where they were, and every world has its life and
+its animals anew.
+
 ## Playing
 
 Download the build for your machine from the
@@ -170,11 +190,17 @@ In space:
 | `Z` | The telescope (zoom, the reticle, photographs) |
 | `O` | Toggle orbit / fixed point chase; `Shift`+arrows carry the parked ship round its world |
 | `F` | Field amplificator (brighter star field) |
-| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map (`Tab` turns to the galaxy chart: `Enter` plots a jump to the cursor, `Enter` again flies it) / expedition log |
+| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import; the catalogue of the species seen, by world or by kin, each one's sheet with its form alive; the statistics, `L` their LIFE page) / star map (`Tab` turns to the galaxy chart: `Enter` plots a jump to the cursor, `Enter` again flies it) / expedition log |
 | `C` | Deploy the surface capsule (from orbit around a landable world), or drop a probe into a gas giant |
 | `B` | The signal radar (the sweep, lock a signal, its distance and age; `+`/`-` turn the gain up to hear farther) |
-| `E` at the cabin's back wall | The shard decoder: a world's records, timeline and history (`Tab`; `Shift` with the arrows runs the cursor), read, hear and play what the ruins held, name a piece with `N`; `Tab` at the worlds turns to the ship's player |
-| `E` at the cabin's left wall | The instruments' case (play what the ruins held) and, by the front window, the drone bay (`Enter` sends three drones down for records and instruments) |
+| `E` at the library's shard decoder | A world's records, timeline and history (`Tab`; `Shift` with the arrows runs the cursor): read, hear and play what the ruins held, name a piece with `N` |
+| `E` at the library's case / deck | The instrument case (play what the ruins held) / the ship's player (play what the ship has heard and held) |
+| `E` at the hangar's drone bay | `Enter` sends three drones down for records and instruments. `S` seeds a world: `C` picks a culture from the flasks, the arrows a place on the map (`PgDn` down a drill hole, `PgUp` up into the clouds), `Enter` sends a drone down with it |
+| `E` at the laboratory's microscope | The cold store's vials and the cultures (`Enter` puts a vial, or a drop of a culture, on the stage; `Backspace` empties a vial); on the slide `1`-`6` (or `V`) the six ways of seeing, `+`/`-` zoom, `[`/`]` focus, the arrows and the mouse move the stage, `Enter` tracks a cell, `L` a spot of light, `M` the magnet, `H` the warm stage, `F` a drop of food, `Tab` the species' sheet, `N` names it, `K` keeps it in a folder, `P` a micrograph |
+| `E` at the laboratory's incubator | Twelve flasks: `Enter` puts in a species seen in a vial or a culture (on a culture, a second), `←`/`→` the medium's field (its cell, warmth, light, energy, salt) and `+`/`-` change it (`Shift` ten degrees), `W` as its world, `F` a fresh broth, `Backspace` empties it, `N` names a strain, `K` keeps a copy in a folder |
+| `E` at the laboratory's sequencer | `Enter` chooses a species seen in a vial or growing in a flask and reads its genome (about ten seconds, its letters in its life's own alphabet), then its place among its kin; `Backspace` takes it off, `Tab` the tree |
+| `E` at the tree of kin | Every species read and the ship's own by kinship, each origin of life its own clade: `←`/`→` the tree of each world and each folder, `↑`/`↓` a species (its nearest kin and when they parted), `Enter` its world's star the remote target; on a world's tree `Backspace` takes a strain off and `A` puts one back; `Tab` the sequencer |
+| `E` at the laboratory's gene editor | `Enter` chooses a culture whose species was read; the arrows choose a gene (`PgUp`/`PgDn` the cell genes or the world genes), `Enter` opens its letters (`←`/`→` a letter, `↑`/`↓` change it), `C` cuts it out, `S` sets when it is on, `K` puts a kin beside it and `M` moves the kin's gene in, `D` copies a gene, `Backspace` undoes a change; `W` writes the new strain into an empty flask |
 | `I` (`F2`) | Data sheet of the local target |
 | `T` / `Ctrl+T` | Time warp x1 / x10 / x100 / x1000 / x10000 / the almanac |
 | `Ctrl+S` / `Ctrl+L` (`F5` / `F9`) | Save / load |
@@ -183,11 +209,19 @@ In space:
 | `H` (`F1`) | Help |
 | `Esc` | Menu |
 
-You live in the ship's cabin: the mouse turns your head, `W A S D` walk between
-the windows, `E` uses what you face (the console on the left, the flight
-computer at the front, the screens on the right, the capsule in its cage), `U`
-lights the cabin, `Y` turns the hull to glass, `PgUp`/`PgDn` take the lifter to
-the roof deck. The classic cockpit camera is one setting away (SHIP VIEW).
+You live aboard the ship, the Stardrifter: three decks and eight rooms joined by
+a stair and a lift. The bridge holds the GOES console, the flight computer and
+the screens (the star map, the landing map, the target's data). The hall has a
+garden, and the library the shard decoder, the instrument case and the player's
+deck. The laboratory holds the microscope, the incubator, the sequencer, the
+tree of kin and the gene editor. In the quarters the bunk rests you until an
+event, the desk opens the log, and a wall holds your photographs. The hangar
+holds the capsule and the drone bay, the maintenance room the buggy and the
+drone, and the observatory the signal radar and the telescope. The mouse turns
+your head, `W A S D` walk, `E` uses what you face, `U` lights the ship, `Y`
+turns the hull to glass, and `PgUp`/`PgDn` ride the lift up to the observatory
+and down to the bridge. The classic cockpit camera is one setting away (SHIP
+VIEW).
 
 Landing map: arrows move the cursor (`Shift` = fast), `Z` zooms into the
 cursor's sector, `R` picks a random lit land site, `C` toggles the cloud
@@ -213,7 +247,9 @@ On the surface:
 | `R` / `Shift+R` | The scanner: ruins, works, lakes, peaks, craters, canyons, mesas, geysers, crystals, off / leave out or take in what you have marked |
 | `Tab` | The readings: the place, the sky, the air, the ground, the vehicle |
 | `L` | Mark the spot under the crosshair and name it |
+| `O` / `Shift+U` | A sample of the ground at the crosshair (eight vials a descent, to the ship's cold store at the climb aboard) / the lamp's ultraviolet |
 | `N` | Sector map (2 km to 2048 km wide): a cursor (arrows or mouse), `Enter` marks or renames, `Delete` twice removes, `M` places the waypoint, `Tab` the next mark, `+`/`-` zoom |
+| `Shift+N` | Name the animal under the crosshair |
 | `G` | The GUIDE: name the world, write a note |
 | `V` | Vision modes |
 | `X` | Highlight nearby creatures |
@@ -224,6 +260,8 @@ On the surface:
 Auto-explore: the menu's `AUTO-EXPLORE` hands the game to an explorer that plays
 by itself in one of six profiles (WANDERER, STARGAZER, PLANETFALL, SURVEYOR,
 ARCHAEOLOGIST, GIANTS), with no HUD; any key or button gives the controls back.
+On the ground it takes samples at the water and the springs it walks to; what
+is in them is left for you to study in the laboratory.
 While it plays, `M` (a controller's `SELECT`) starts and stops a tape: the game
 comes with four tracks, Jarrad Wright's *Forwards*, *It's time to wake up* and
 *BLUE-MEAN-EYES* and Black Sabbath's *Planet Caravan*, in its `music` folder.
@@ -243,6 +281,7 @@ src/core      math, hashing, noise, 8-bit framebuffer + palette + smoothing filt
               scanline rasteriser with depth buffer, 5x7 font, PNG writer, input
 src/galaxy    star field and star classes, system generator, the planet function,
               drainage, landmarks and maps
+src/life      the microorganisms of every world: their stages, species and origins, their forms and the slide they are seen on
 src/peoples   the peoples that lived on some worlds: their histories, towns, buildings and ruins,
               records and their grammar, music and signals
 src/space     star field, suns, ray-traced globes and rings, sky bodies

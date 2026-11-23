@@ -1,0 +1,516 @@
+// Z-03: the search (docs/archive/ideas/IDEAS-small-and-spacious.md section 1.7): what a vial takes at a place of the ground (`readSample`: its
+// microhabitat, its name, the temperature read) and the living films under the lamp's ultraviolet (`drawFilmGlow`). A microhabitat is read
+// from what is fixed to the world (the planet function at the square metre, the springs' and vents' finders, the ruins' walls), never from
+// what the landing lays (the rocks, the domes, the trees are dealt on its own grid), so the same place gives the same sample from any landing
+#include "surface/surface_view.h"
+#include "galaxy/planet_features.h"
+#include "core/parallel.h"
+#include "core/rng.h"
+#include <algorithm>
+#include <cmath>
+
+namespace {
+// the world's liquid by its life's chemistry (an exotic sea's own where the world has one)
+const char* liquidName(int chem, bool exotic) {
+    if (exotic) return "LIQUID";
+    switch (chem) {
+        case CH_ACID: return "ACID";
+        case CH_AMMONIA: return "AMMONIA WATER";
+        case CH_HYDROCARBON: return "METHANE";
+        default: return "WATER";
+    }
+}
+const char* waterPlace(int waterKind) {
+    switch (waterKind) {
+        case 1: return "A RIVER";
+        case 2: return "A LAKE";
+        case 3: return "A POOL";
+        case 4: return "A RIFT LAKE";
+        default: return "THE SEA";
+    }
+}
+bool rockFamily(int m) { return m == MAT_ROCK || m == MAT_BASALT || m == MAT_METAL || m == MAT_GRAPHITE || m == MAT_GLASS || m == MAT_QUARTZ; }
+// KI-476: what a vial scraped off an overgrowth's structure was taken from (its shape)
+const char* const GROWTH_SHAPE_WORDS[GS_COUNT] = {"A MOUND", "A RIDGE", "A BLISTER", "A SAC", "A STALK", "A FOLD", "A VENT'S LIP", "AN ARCH'S RIB", "A ROW OF TEETH",
+                                                  "A MEMBRANE", "POLYPS", "A CAP", "A SHELF", "A VEIN", "A SPIRE", "A VASE", "A TUFT OF HAIR", "A BLADDER'S TETHER"};
+}   // namespace
+
+// the sea's level here now (its tide), -1e9 on a world with none: a beach's wet edge is within 0.6 m of it (its vertices carry no water)
+double SurfaceView::seaLevelNow() const {
+    if (kindHas(site.gen.type, KT_SEA)) return site.tideM;
+    return site.gen.liquidLevel > -1e8 ? site.gen.liquidLevel + site.tideM : -1e9;
+}
+
+const Biota& SurfaceView::biota() const {
+    static const Biota none;
+    if (!life || site.body < 0 || site.body >= (int)life->bodies.size()) return none;
+    return life->bodies[site.body];
+}
+
+// the site's own formula (`computeEnvironment`) with the year's season at its mean and the day's swing averaged out, at the place's height
+// and latitude (J-03: galaxy's `placeMeanC`, which a seeding's place reads too; the site's air is its generator's), and the warmth a seeded
+// world's air made, as the HUD's TEMP reads it (KI-457: a vial of a world made 20 C warmer is read at its warmth now)
+double SurfaceView::placeMeanC(double x, double z, double h) const {
+    const double c = ::placeMeanC(site.gen, site.sys->bodies[site.body].tempK, site.sys->sunless(), site.unitAt(x, z), h);
+    return site.atmosphere ? c + site.gen.made.warmC : c;
+}
+
+SampleRead SurfaceView::readSample(double x, double z, bool onWater, bool walls) {
+    SampleRead R;
+    const Body& b = site.sys->bodies[site.body];
+    const Biota& B = biota();
+    const TerrainVertex v = site.sampleAt(x, z, 1.0);
+    R.unit = site.unitAt(x, z);
+    const int waterKind = sampleSurface(site.gen, R.unit, 1.0).waterKind;   // (the vertex keeps no kind of water)
+    Microhabitat& H = R.hab;
+    H.place = placeKey(b.seed, R.unit, b.radiusKm);
+    H.meanC = placeMeanC(x, z, v.h);
+    H.oldRock = B.second == LS_FOSSIL || B.stage == LS_FOSSIL;
+    const int chem = B.chemistry != CH_NONE ? B.chemistry : BIOTA[b.type].chemistry;
+    const bool exotic = site.gen.hasTrait(TR_EXOTIC_SEAS);
+    const double readC = env.temperatureC;
+    auto livesIn = [&](int n) { for (const Microbe& m : B.species) if (m.state == SS_LIVING && (m.niches & nicheBit(n))) return true; return false; };
+    auto put = [&](int niche, const std::string& name, double meanC, double readingC) {
+        H.niche = niche; H.meanC = meanC; R.name = name; R.readingC = readingC; R.ok = true;
+        // mats no species of the world's lives in are its springs' life spreading (a vent world's on its hot ground): the springs' outflow
+        if (niche == NI_MAT && !livesIn(NI_MAT) && livesIn(NI_SPRING)) { H.niche = NI_SPRING; if (H.meanC > 60) H.meanC = 45; }
+    };
+    if (v.material == MAT_LAVA) { R.refusal = "GROUND IS MOLTEN HERE"; return R; }
+    // a world whose life is seen on its ground lives whatever its mean (rules-life.md, Z-01): the visible life's ground (its mats, soil, crusts,
+    // wet edges) no hotter than the biota's limits were drawn round (45 C and a span); its square metre's temperature to a tenth of a degree
+    const bool seen = livingGround(b.type) || kindHas(b.type, KT_FLORA | KT_FAUNA | KT_MICROBIAL | KT_VENT_LIFE);
+    struct Tenth {
+        Microhabitat& h; bool seen;
+        ~Tenth() {
+            if (seen && (h.niche == NI_MAT || h.niche == NI_SOIL || h.niche == NI_CRUST || h.niche == NI_SILT) && h.meanC > 50) h.meanC = 50;
+            h.meanC = std::round(h.meanC * 10) / 10;
+        }
+    } tenth{H, seen};
+    // out of the sun the year round: a slope turned to the pole, a cliff's foot (the planet function's own heights, a metre and a half each way)
+    {
+        const double hn = site.sampleAt(x, z + 1.5, 2.0).h, hs = site.sampleAt(x, z - 1.5, 2.0).h;
+        const double northward = -(hn - hs) / 3.0;   // the normal's lean to the north (a slope falling to the north)
+        const bool north = std::asin(clampd(R.unit.z, -1, 1)) >= 0;
+        H.shade = (north ? northward : -northward) > 0.45 || v.scree > 128;
+    }
+    const bool hasWater = v.water > -1e8f;
+    const bool inLiquid = onWater || (hasWater && (v.material == MAT_WATER || v.h < v.water - 0.05));
+    const double freezeC = chem == CH_HYDROCARBON ? -183 : (chem == CH_AMMONIA ? -97 : (v.wtint > 0 || H.salt >= 1 ? -2 : 0));
+    // the springs and the vents, by their finders (the ground's material says the feature is there)
+    {
+        double waterC = 0;
+        const int part = springPartAt(site.gen, R.unit, waterC);
+        const bool springGround = v.material == MAT_BRINE || v.material == MAT_SALT || v.material == MAT_MATS;
+        if (part != SPP_NONE && springGround && (part != SPP_RUNOFF || v.material == MAT_MATS)) {
+            static const char* const MAT_BAND[5] = {"CLEAR POOL", "YELLOW MAT", "ORANGE MAT", "BROWN MAT", "BROWN MAT"};
+            if (part == SPP_VENT) put(NI_SPRING, "WATER FROM A SPRING'S VENT", waterC, waterC);
+            else if (part == SPP_SINTER) put(NI_SPRING, "SINTER AT A SPRING'S RIM", waterC - 4, waterC - 4);
+            else if (part == SPP_POOL) {
+                const int band = springBand(waterC);
+                H.bloom = band != 0;
+                put(band == 0 ? NI_SPRING : NI_MAT, band == 0 ? std::string("CLEAR POOL IN A SPRING") : std::string(MAT_BAND[band]) + " IN A SPRING'S POOL", waterC, waterC);
+                if (band != 0 && !(B.habitats & nicheBit(NI_MAT))) H.niche = NI_SPRING;   // a world with no mats of its own: the spring's
+            } else put(NI_SPRING, "MAT IN A SPRING'S RUNOFF", 0.5 * (waterC + H.meanC), 0.5 * (waterC + readC));
+            return R;
+        }
+        if (KINDS[b.type].events & EV_SPRINGS) {   // the chemotroph's hot pools and their pale mats (its chimneys are the landing's: their sinter is the pool's)
+            std::vector<GeyserVent> vents;
+            springVents(site.gen, R.unit, vents);
+            for (const GeyserVent& gv : vents) {
+                const double dKm = length(R.unit - gv.unit) * b.radiusKm;
+                const double poolC = 55 + 40 * hash01(mix64(gv.id ^ 0x5A3E1ULL));
+                if (dKm < gv.radiusKm && (v.material == MAT_BRINE || inLiquid)) { put(NI_SPRING, "WATER FROM A HOT POOL", poolC, poolC); return R; }
+                if (dKm < 2.5 * gv.radiusKm && (v.material == MAT_MATS || v.material == MAT_SALT)) {
+                    const double c = poolC - 30 * (dKm / gv.radiusKm - 1) / 1.5;
+                    H.bloom = v.material == MAT_MATS;
+                    put(v.material == MAT_MATS ? NI_MAT : NI_VENT, v.material == MAT_MATS ? "PALE MAT ROUND A HOT POOL" : "SINTER ROUND A HOT POOL", c, c);
+                    if (!(B.habitats & nicheBit(H.niche))) H.niche = NI_VENT;
+                    return R;
+                }
+            }
+        }
+        if (site.gen.hasTrait(TR_GEYSERS) && v.material == MAT_SALT) {
+            std::vector<GeyserVent> vents;
+            geyserVents(site.gen, R.unit, vents);
+            for (const GeyserVent& gv : vents)
+                if (length(R.unit - gv.unit) * b.radiusKm < 1.3 * gv.radiusKm) { put(NI_SPRING, "SINTER BY A GEYSER", 70, std::max(readC, 40.0)); return R; }
+        }
+    }
+    // the plumes' fall on their worlds' ice (the cryovolcanic's vents, the tiger stripes' curtains)
+    if ((B.habitats & nicheBit(NI_PLUME)) && (v.material == MAT_SNOW || v.material == MAT_ICE)) {
+        std::vector<GeyserVent> vents;
+        const uint32_t ev = KINDS[b.type].events;
+        if (ev & EV_PLUMES) plumeVents(site.gen, R.unit, vents);
+        else if (ev & EV_CURTAINS) curtainVents(site.gen, R.unit, vents);
+        for (const GeyserVent& gv : vents)
+            if (length(R.unit - gv.unit) * b.radiusKm < std::max(3.0, (ev & EV_PLUMES) ? gv.radiusKm : 3.0)) {
+                put(NI_PLUME, "FROST FROM A PLUME'S FALL", H.meanC, std::min(readC, 0.0)); return R;
+            }
+    }
+    // a dead people's walls: their foot (the settlements stand where the world put them, whatever the landing); R-434: a read on the pool
+    // leaves them to the main thread (the ruins' cells fill as they are asked for), the place's mean kept for its OLD WALL
+    if (B.habitats & nicheBit(NI_RUINS)) {
+        if (!walls) { R.wallsAsked = true; R.placeC = H.meanC; }
+        else if (wallNear(x, z)) { put(NI_RUINS, "OLD WALL", H.meanC, readC); return R; }
+    }
+    // the liquid and its edge
+    if (inLiquid) {
+        const std::string what = std::string(liquidName(chem, exotic && waterKind == 0)) + " FROM " + waterPlace(waterKind);
+        H.salt = v.material == MAT_BRINE || (exotic && chem == CH_WATER) ? 2 : (waterKind == 0 ? 1 : 0);
+        if (site.gen.hasTrait(TR_PINK_LAKES) && v.wtint > 127) H.salt = 2;
+        put(NI_LIQUID, what, std::max(H.meanC, freezeC), std::max(readC, freezeC));
+        return R;
+    }
+    const double sea = seaLevelNow();
+    const bool shoreMat = v.material == MAT_SAND || v.material == MAT_MUD || v.material == MAT_DUST || v.material == MAT_GRASS || v.material == MAT_ROCK;
+    const bool edge = shoreMat && ((hasWater && v.h < v.water + 0.6) || std::fabs(v.h - sea) < 0.6);
+    if (edge) {
+        H.salt = waterKind == 0 ? 1 : 0;
+        const char* what = waterKind == 0 ? "WET SAND AT THE SEA'S EDGE" : (waterKind == 1 ? "MUD ON A RIVER'S BANK" : (waterKind == 3 ? "WET SILT AT A POOL'S EDGE" : "WET SILT AT A LAKE'S EDGE"));
+        put(NI_SILT, what, H.meanC, readC);
+        return R;
+    }
+    // the ground's own
+    switch (v.material) {
+        // the snow's and the ice's life lives in the summer's melt (its films at 0 C, Hoham and Remias 2020): their mean the year's, warmed by the summer
+        case MAT_SNOW: H.bloom = v.stint > 127; put(NI_SNOW, H.bloom ? "RED SNOW" : "SNOW", clampd(H.meanC + 8, -40, 0), std::min(readC, 0.0)); break;
+        case MAT_ICE: put(NI_ICE, hasWater && waterKind == 0 ? "SEA ICE" : "ICE", clampd(H.meanC + 8, -40, 0), std::min(readC, 0.0)); break;
+        case MAT_SALT: case MAT_POTASH: H.salt = 2; put(NI_SALT, "SALT CRUST", H.meanC, readC); break;
+        case MAT_BRINE: H.salt = 2; put(NI_SALT, "BRINE FROM A POOL", std::max(H.meanC, -10.0), std::max(readC, -10.0)); break;
+        case MAT_MATS: H.bloom = true; put(NI_MAT, kindHas(b.type, KT_VENT_LIFE) ? "PALE MAT ON THE SINTER" : "MICROBIAL MAT ON THE WET FLAT", H.meanC, readC); break;
+        case MAT_STROMATOLITE: put(NI_MAT, "STROMATOLITE REEF FLAT", H.meanC, readC); break;
+        case MAT_CRUST: put(NI_CRUST, kindHas(b.type, KT_FLORA) || b.type == PT_LICHEN ? "LICHEN CRUST ON STONE" : "CRUST ON THE DRY GROUND", H.meanC, readC); break;
+        case MAT_MOSS: put(NI_CRUST, "MOSS IN A WET HOLLOW", H.meanC, readC); break;
+        case MAT_TISSUE: case MAT_THREADS: case MAT_HARD: {   // J-09: an overgrowth's cover; KI-476: or a structure of it, the world's own (a read on
+            // the main thread: the pool's leaves the name, its microhabitat the cover's)
+            H.bloom = true;
+            const int shape = walls ? growthAt(x, z, 0.2) : -1;
+            const char* cover = v.material == MAT_TISSUE ? "SOFT OVERGROWTH" : (v.material == MAT_THREADS ? "THREADS OVER THE GROUND" : "HARD OVERGROWTH");
+            const char* stuff = v.material == MAT_TISSUE ? "TISSUE" : (v.material == MAT_THREADS ? "THREADS" : "HARD GROWTH");
+            put(NI_MAT, shape >= 0 ? std::string(stuff) + " FROM " + GROWTH_SHAPE_WORDS[shape] : std::string(cover), H.meanC, readC);
+            break;
+        }
+        case MAT_FOREST: H.shade = true; put(NI_SOIL, "SOIL UNDER THE TREES", H.meanC, readC); break;
+        case MAT_GRASS: put(NI_SOIL, "SOIL UNDER THE GRASS", H.meanC, readC); break;
+        case MAT_MUD: put(NI_SILT, "MUD", H.meanC, readC); break;
+        case MAT_SAND: put(B.habitats & nicheBit(NI_SOIL) ? NI_SOIL : NI_DUST, "SAND", H.meanC, readC); break;
+        case MAT_SULPHUR: put(NI_DUST, "SULPHUR", H.meanC, readC); break;
+        case MAT_DUST: put(NI_DUST, site.atmosphere ? (H.shade ? "DUST IN SHADE" : "DUST") : (H.shade ? "REGOLITH IN SHADE" : "REGOLITH"), H.meanC, readC); break;
+        default:
+            if (b.type == PT_QUARTZ && v.material == MAT_QUARTZ) put(NI_ROCK, "UNDER A TRANSLUCENT STONE", H.meanC, readC);   // hypoliths (Pointing et al. 2009)
+            else if (rockFamily(v.material)) put(NI_ROCK, H.shade ? "ROCK IN SHADE" : "WEATHERED ROCK", H.meanC, readC);
+            else put(NI_DUST, site.atmosphere ? "DUST" : "REGOLITH", H.meanC, readC);
+            break;
+    }
+    return R;
+}
+
+// R-434: a read on the pool (`walls` false) finished on the main thread: an old wall's foot near, readSample's OLD WALL (from the place's
+// mean, rounded as it rounds it); else the read's own microhabitat
+Microhabitat SurfaceView::wallsDone(const SampleRead& r, double x, double z) {
+    if (!r.wallsAsked || !wallNear(x, z)) return r.hab;
+    Microhabitat h;
+    h.niche = NI_RUINS; h.meanC = std::round(r.placeC * 10) / 10; h.shade = r.hab.shade; h.oldRock = r.hab.oldRock; h.place = r.hab.place;
+    return h;
+}
+
+bool SurfaceView::wallNear(double x, double z) {
+    std::vector<Collider> walls;
+    forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) { settlementColliders(r, cell, x, z, walls); });
+    for (const Collider& c : walls)
+        if (std::hypot(c.x - x, c.z - z) < c.r + 1.2) return true;
+    return false;
+}
+
+// ---- the lamp's ultraviolet
+int SurfaceView::filmNicheOf(const TerrainVertex& v, bool springs, double sea, double& share) {
+    share = 0;
+    if (v.material == MAT_WATER || v.material == MAT_LAVA || v.material == MAT_GLASS) return -1;
+    if ((v.water > -1e8f && v.h < v.water - 0.05f) || v.h < sea - 0.05) return -1;   // under the liquid: its own glow is the sea's (the milky seas)
+    if (((v.water > -1e8f && v.h < v.water + 0.6f) || std::fabs(v.h - sea) < 0.6) && v.material != MAT_SNOW && v.material != MAT_ICE) { share = 0.8; return NI_SILT; }   // a shore's line
+    switch (v.material) {
+        case MAT_MATS: share = 1.0; return springs ? NI_SPRING : NI_MAT;
+        case MAT_STROMATOLITE: share = 0.85; return NI_MAT;
+        case MAT_CRUST: share = 0.8; return NI_CRUST;
+        case MAT_MOSS: share = 0.9; return NI_CRUST;
+        case MAT_SNOW: share = v.stint > 127 ? 1.0 : 0.1; return NI_SNOW;
+        case MAT_ICE: share = 0.08; return NI_ICE;
+        case MAT_SALT: case MAT_POTASH: share = 0.3; return NI_SALT;
+        case MAT_BRINE: share = 0.6; return NI_SALT;
+        case MAT_GRASS: case MAT_FOREST: share = 0.35; return NI_SOIL;
+        case MAT_MUD: share = 0.6; return NI_SILT;
+        case MAT_SAND: case MAT_DUST: case MAT_SULPHUR: share = 0.04; return NI_DUST;
+        default: share = 0.12; return NI_ROCK;   // the endoliths' faint glow in the rock (Friedmann 1982)
+    }
+}
+
+void SurfaceView::setupFilmGlow() {
+    life = lifeOf(*site.sys);
+    const Biota& B = biota();
+    for (int n = 0; n < NI_COUNT; n++) filmD[n] = (B.habitats & nicheBit(n)) ? filmDensity(B, n) : 0.0;
+    filmColour = filmGlowColour(B);
+}
+
+// the frame's grid: the near ring's corners round the eye, their height and their films' glow (their niche's density by their share)
+void SurfaceView::prepareFilmGlow() {
+    uvFrame = false;
+    if (!uvLamp || sight || inVehicle() || cameraOverrideAlt >= 0 || freeCam) return;   // R-434: none under the activity vision
+    const bool springs = site.gen.hasTrait(TR_HOT_SPRINGS) || (KINDS[site.gen.type].events & EV_SPRINGS);
+    const double cs = site.lodN.cellSize, sea = seaLevelNow();
+    uvCx0 = (int)std::floor(camPos.x / cs) - UV_GRID / 2; uvCz0 = (int)std::floor(camPos.z / cs) - UV_GRID / 2;
+    bool any = false;
+    for (int j = 0; j < UV_GRID; j++)
+        for (int i = 0; i < UV_GRID; i++) {
+            const TerrainVertex& v = site.lodN.at(uvCx0 + i, uvCz0 + j);
+            double share = 0;
+            const int n = filmNicheOf(v, springs, sea, share);
+            const double s = n >= 0 ? share * filmD[n] : 0.0;
+            uvH[j * UV_GRID + i] = v.h; uvS[j * UV_GRID + i] = (float)s;
+            any = any || s > 0;
+        }
+    uvFrame = any;
+}
+
+// after the old result: within the lamp's narrow cone and reach, a ground pixel whose films glow takes the glow's light added to its own
+// (its luminance read from the palette, the sum's shade found in a bank: a pixel changes bank by luminance, never by shade), in bank 15 where
+// the glow's light is the brighter, in its own where it is not: the sum is continuous across the change. Patchy as films are (two value
+// noises anchored in the world, half a metre and fifteen centimetres); a mat's world's domes and stones wear its mats (their films up to
+// 1.6 m over the ground). Rows pure: each pixel reads the frame's grid and writes itself
+void SurfaceView::drawFilmGlow(Framebuffer& fb) {
+    if (!uvFrame) return;
+    const Vec3 R0 = camLocal.row(0), R1 = camLocal.row(1), F = camLocal.row(2);
+    constexpr double REACH = 18.0, NEAR = 6.0, COS_IN = 0.9781, COS_OUT = 0.9135;   // full within 12 degrees, gone at 24
+    float lum[BANKS][64];
+    for (int bk = 0; bk < BANKS; bk++)
+        for (int s = 0; s < 64; s++) {
+            const uint8_t* c = &fb.pal[(bk * 64 + s) * 3];
+            lum[bk][s] = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
+        }
+    const float* L15 = lum[15];
+    const double cs = site.lodN.cellSize, f = proj.f, pcx = proj.cx, pcy = proj.cy;
+    const uint64_t seed = site.gen.seed ^ 0xF11A6ULL;
+    const double rise = kindHas(site.gen.type, KT_MICROBIAL) ? 1.6 : 0.35;
+    parallelFor(FBH, 16, [&](int y0, int y1) {
+        for (int py = y0; py < y1; py++) {
+            for (int px = 0; px < FBW; px++) {
+                const size_t idx = (size_t)py * FBW + px;
+                const float iz = fb.invz[idx];
+                if (iz <= 0) continue;
+                const double zv = 1.0 / iz;
+                if (zv > REACH) continue;
+                const double xv = (px + 0.5 - pcx) * zv / f, yv = (pcy - (py + 0.5)) * zv / f;
+                const Vec3 d = R0 * xv + R1 * yv + F * zv;
+                const double dist = length(d);
+                if (dist > REACH || dist < 0.3) continue;
+                const double c = dot(d, F) / dist;
+                if (c <= COS_OUT) continue;
+                const Vec3 p = camPos + d;
+                const double gx = p.x / cs - uvCx0, gz = p.z / cs - uvCz0;
+                const int ix = (int)std::floor(gx), iz0 = (int)std::floor(gz);
+                if (ix < 0 || iz0 < 0 || ix >= UV_GRID - 1 || iz0 >= UV_GRID - 1) continue;
+                const double fx = gx - ix, fz = gz - iz0;
+                const int k = iz0 * UV_GRID + ix;
+                auto bil = [&](const float* a) { return (a[k] * (1 - fx) + a[k + 1] * fx) * (1 - fz) + (a[k + UV_GRID] * (1 - fx) + a[k + UV_GRID + 1] * fx) * fz; };
+                const double s = bil(uvS);
+                if (s <= 0.002) continue;
+                const double above = p.y - bil(uvH);
+                if (above > rise || above < -0.5) continue;   // the ground's own pixels (not a trunk, the water's sheet)
+                auto vnoise = [&](double cell, uint64_t salt) {
+                    const double nx = p.x / cell, nz = p.z / cell;
+                    const int qx = (int)std::floor(nx), qz = (int)std::floor(nz);
+                    const double tx = nx - qx, tz = nz - qz, sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
+                    auto hv = [&](int a, int b) { return hash01(hash2i(a, b, seed ^ salt)); };
+                    return (hv(qx, qz) * (1 - sx) + hv(qx + 1, qz) * sx) * (1 - sz) + (hv(qx, qz + 1) * (1 - sx) + hv(qx + 1, qz + 1) * sx) * sz;
+                };
+                const double n = smoothstep(0.22, 0.78, 0.62 * vnoise(0.5, 0) + 0.38 * vnoise(0.15, 1));
+                const double cone = smoothstep(COS_OUT, COS_IN, c), fall = (1 - smoothstep(0.7 * REACH, REACH, dist)) / (1 + dist * dist / (NEAR * NEAR));
+                const double glow = s * (0.15 + 0.85 * n) * cone * fall;
+                const int gs = std::min(58, (int)(64 * glow));
+                if (gs < 4) continue;
+                const Pix p0 = fb.idx[idx];
+                const int bk = bankOf(p0), sh = std::min(63, (int)(intenOf(p0) / INTEN_PER_SHADE));
+                const float Lp = lum[bk][sh], Lg = L15[gs], want = Lp + Lg;
+                const int to = Lg > Lp ? 15 : bk;
+                const float* L = lum[to];
+                int t = to == 15 ? gs : sh;
+                while (t < 63 && L[t] < want) t++;
+                if (to == bk && t == sh) continue;
+                fb.idx[idx] = pix(to, t);
+            }
+        }
+    });
+}
+
+// ---- R-434: the activity vision
+// The game's sixth vision (Shift+O, or V round them): the ground and the water within SIGHT_REACH coloured by the activity a vial would read
+// there, the rest of the frame dimmed, a thermal camera's way. Each square metre is read at its middle as a vial reads it (`readSample`, then
+// `sampleOf`: the crowd at work), the nearest first and a share a frame on the pool (the ruins' walls after, on the main thread), and kept for
+// the landing; the pass is after everything drawn: every pixel into bank 15, whose ramp is the vision's while it is on
+namespace {
+constexpr double SIGHT_REACH = 40.0;
+constexpr int SIGHT_PER_FRAME = 384;   // the square metres read a frame at most
+constexpr int SIGHT_BANK = 15;
+int64_t sightPack(int ix, int iz) { return ((int64_t)ix << 32) ^ (int64_t)(uint32_t)iz; }
+// the square metres within reach, nearest first (ties by their place: the order fixed)
+const std::vector<std::pair<int, int>>& sightRing() {
+    static const std::vector<std::pair<int, int>> ring = [] {
+        std::vector<std::pair<int, int>> v;
+        const int R = (int)SIGHT_REACH + 1;
+        for (int dz = -R; dz <= R; dz++)
+            for (int dx = -R; dx <= R; dx++)
+                if ((dx + 0.5) * (dx + 0.5) + (dz + 0.5) * (dz + 0.5) <= (SIGHT_REACH + 1) * (SIGHT_REACH + 1)) v.push_back({dx, dz});
+        std::stable_sort(v.begin(), v.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+            return (a.first + 0.5) * (a.first + 0.5) + (a.second + 0.5) * (a.second + 0.5) < (b.first + 0.5) * (b.first + 0.5) + (b.second + 0.5) * (b.second + 0.5);
+        });
+        return v;
+    }();
+    return ring;
+}
+}   // namespace
+
+// the heat a reading shows: none at work 0; faint 0.25 (a protocell's chemistry, the threshold) to 0.55; strong 0.62 to 1 (ten thousand times
+// the threshold's crowd)
+float SurfaceView::sightHeatOf(const Sample& s) {
+    if (s.activity == VA_NONE) return 0;
+    if (s.activity == VA_FAINT) return (float)(0.25 + 0.30 * clampd((s.activeLog - 2.0) / 3.5, 0, 1));
+    return (float)(0.62 + 0.38 * clampd((s.activeLog - 5.5) / 4.0, 0, 1));
+}
+
+float SurfaceView::sightHeatAt(double x, double z) const {
+    if (sightKey.empty()) return -1;
+    const int ix = (int)std::floor(x), iz = (int)std::floor(z);
+    const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+    return sightKey[slot] == sightPack(ix, iz) ? sightHeat[slot] : -1.0f;
+}
+
+void SurfaceView::clearSight() {
+    sightKey.assign((size_t)SIGHT_N * SIGHT_N, INT64_MIN);
+    sightHeat.assign((size_t)SIGHT_N * SIGHT_N, -1.0f);
+    sightSea = -1e30;
+}
+
+// the frame's share of the square metres not yet read, the nearest first: each read on the pool as a vial reads it, its walls on the main
+// thread; then the frame's grid of the drawn ground's height, or the water's where it lies over it
+void SurfaceView::prepareSight() {
+    sightFrame = false;
+    if (!sight || cameraOverrideAlt >= 0 || freeCam) return;
+    if (sightKey.empty()) clearSight();
+    const double sea = seaLevelNow();
+    if (std::fabs(sea - sightSea) > 0.25) { clearSight(); sightSea = sea; }
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    std::vector<std::pair<int, int>> todo;
+    for (const std::pair<int, int>& o : sightRing()) {
+        const int ix = ex + o.first, iz = ez + o.second;
+        const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+        if (sightKey[slot] != sightPack(ix, iz)) todo.push_back({ix, iz});
+        if ((int)todo.size() >= SIGHT_PER_FRAME) break;
+    }
+    if (!todo.empty()) {
+        struct Out { SampleRead r; float heat = 0; };
+        std::vector<Out> out(todo.size());
+        const Biota& B = biota();
+        parallelFor((int)todo.size(), 8, [&](int a, int b) {
+            for (int i = a; i < b; i++) {
+                out[i].r = readSample(todo[i].first + 0.5, todo[i].second + 0.5, false, false);
+                if (out[i].r.ok) out[i].heat = sightHeatOf(sampleOf(B, out[i].r.hab));
+            }
+        });
+        for (size_t i = 0; i < todo.size(); i++) {
+            Out& o = out[i];
+            if (o.r.ok && o.r.wallsAsked) o.heat = sightHeatOf(sampleOf(B, wallsDone(o.r, todo[i].first + 0.5, todo[i].second + 0.5)));
+            const size_t slot = (size_t)(todo[i].second & (SIGHT_N - 1)) * SIGHT_N + (size_t)(todo[i].first & (SIGHT_N - 1));
+            sightKey[slot] = sightPack(todo[i].first, todo[i].second);
+            sightHeat[slot] = o.r.ok ? o.heat : 0.0f;
+        }
+    }
+    sightCx0 = (int)std::floor(camPos.x / 2.0) - SIGHT_GRID / 2; sightCz0 = (int)std::floor(camPos.z / 2.0) - SIGHT_GRID / 2;
+    for (int j = 0; j < SIGHT_GRID; j++)
+        for (int i = 0; i < SIGHT_GRID; i++) {
+            const double x = (sightCx0 + i) * 2.0, z = (sightCz0 + j) * 2.0;
+            double top = site.groundHeight(x, z);
+            const double w = site.waterAt(x, z);
+            if (w > -1e8) top = std::max(top, w);
+            if (sea > -1e8) top = std::max(top, sea);
+            sightTop[j * SIGHT_GRID + i] = (float)top;
+        }
+    sightFrame = true;
+}
+
+// after everything drawn: each pixel's luminance (its bank's own ramp) into the vision's ramp, dim; the ground's and the water's own pixels
+// within reach by the heat of their square metres (blended between their middles), the luminance a hair of it; none at work dark but for the
+// ground's shading; a square metre not yet read as the rest. Rows pure: each pixel reads the frame's grid and the read metres and writes itself
+void SurfaceView::drawSight(Framebuffer& fb) {
+    if (!sightFrame) return;
+    float lum[BANKS][64];
+    for (int bk = 0; bk < BANKS; bk++)
+        for (int s = 0; s < 64; s++) {
+            const uint8_t* c = &fb.pal[(bk * 64 + s) * 3];
+            lum[bk][s] = (0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2]) / 255.0f;
+        }
+    // cold violet to red, orange, yellow and white: none at work up to 16, faint 27-42, strong 45-63
+    setRamp(fb.pal, SIGHT_BANK, {{0, RGB(0, 0, 0)}, {6, RGB(0.04f, 0.02f, 0.10f)}, {16, RGB(0.17f, 0.07f, 0.32f)}, {26, RGB(0.56f, 0.09f, 0.30f)},
+                                 {36, RGB(0.86f, 0.24f, 0.10f)}, {46, RGB(0.98f, 0.56f, 0.08f)}, {55, RGB(1.0f, 0.86f, 0.26f)}, {63, RGB(1.0f, 1.0f, 0.86f)}});
+    const Vec3 R0 = camLocal.row(0), R1 = camLocal.row(1), F = camLocal.row(2);
+    const double f = proj.f, pcx = proj.cx, pcy = proj.cy;
+    auto heatAt = [&](int ix, int iz) -> float {
+        const size_t slot = (size_t)(iz & (SIGHT_N - 1)) * SIGHT_N + (size_t)(ix & (SIGHT_N - 1));
+        return sightKey[slot] == sightPack(ix, iz) ? sightHeat[slot] : -1.0f;
+    };
+    parallelFor(FBH, 16, [&](int y0, int y1) {
+        for (int py = y0; py < y1; py++)
+            for (int px = 0; px < FBW; px++) {
+                const size_t idx = (size_t)py * FBW + px;
+                const Pix p0 = fb.idx[idx];
+                const float L = lum[bankOf(p0)][std::min(63, intenOf(p0) / INTEN_PER_SHADE)];
+                double shade = 1 + 9 * L;   // the rest, dimmed
+                const float iz = fb.invz[idx];
+                if (iz > 0 && 1.0 / iz <= SIGHT_REACH) {
+                    const double zv = 1.0 / iz, xv = (px + 0.5 - pcx) * zv / f, yv = (pcy - (py + 0.5)) * zv / f;
+                    const Vec3 d = R0 * xv + R1 * yv + F * zv;
+                    const double dist = length(d);
+                    const Vec3 p = camPos + d;
+                    const double gx = p.x / 2.0 - sightCx0, gz = p.z / 2.0 - sightCz0;
+                    const int ix = (int)std::floor(gx), jz = (int)std::floor(gz);
+                    if (dist <= SIGHT_REACH && ix >= 0 && jz >= 0 && ix < SIGHT_GRID - 1 && jz < SIGHT_GRID - 1) {
+                        const double fx = gx - ix, fz = gz - jz;
+                        const float* T = &sightTop[jz * SIGHT_GRID + ix];
+                        const double top = (T[0] * (1 - fx) + T[1] * fx) * (1 - fz) + (T[SIGHT_GRID] * (1 - fx) + T[SIGHT_GRID + 1] * fx) * fz;
+                        const double above = p.y - top;
+                        if (above > -0.6 && above < 0.4) {   // the ground's or the water's own pixel (not a stone, a trunk, the buggy)
+                            const double mx = p.x - 0.5, mz = p.z - 0.5;
+                            const int qx = (int)std::floor(mx), qz = (int)std::floor(mz);
+                            const double ux = mx - qx, uz = mz - qz;
+                            const float h4[4] = {heatAt(qx, qz), heatAt(qx + 1, qz), heatAt(qx, qz + 1), heatAt(qx + 1, qz + 1)};
+                            const double w4[4] = {(1 - ux) * (1 - uz), ux * (1 - uz), (1 - ux) * uz, ux * uz};
+                            double hs = 0, ws = 0;
+                            for (int k = 0; k < 4; k++) if (h4[k] >= 0) { hs += h4[k] * w4[k]; ws += w4[k]; }
+                            if (ws > 0.25) {
+                                const double h = hs / ws;
+                                const double ground = h > 0.01 ? 16 + 47 * h + 4 * (L - 0.5) : 4 + 12 * L;
+                                const double fade = 1 - smoothstep(0.8 * SIGHT_REACH, SIGHT_REACH, dist);
+                                shade += (ground - shade) * fade;
+                            }
+                        }
+                    }
+                }
+                fb.idx[idx] = pixI(SIGHT_BANK, (int)(clampd(shade, 0, 63) * INTEN_PER_SHADE));
+            }
+    });
+}
+
+int SurfaceView::testSightMissing() const {
+    if (sightKey.empty()) return (int)sightRing().size();
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    int n = 0;
+    for (const std::pair<int, int>& o : sightRing()) n += sightHeatAt(ex + o.first + 0.5, ez + o.second + 0.5) < 0;
+    return n;
+}
+void SurfaceView::testSightCounts(int& read, int& faint, int& strong) const {
+    read = faint = strong = 0;
+    const int ex = (int)std::floor(camPos.x), ez = (int)std::floor(camPos.z);
+    for (const std::pair<int, int>& o : sightRing()) {
+        const float h = sightHeatAt(ex + o.first + 0.5, ez + o.second + 0.5);
+        if (h < 0) continue;
+        read++; faint += h >= 0.25f && h < 0.6f; strong += h >= 0.6f;
+    }
+}

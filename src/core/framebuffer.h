@@ -39,6 +39,19 @@ struct Framebuffer {
     std::vector<float> invz;    // 1/z per pixel, 0 = infinitely far
     uint8_t pal[BANKS * 64 * 3]; // 64 colour stops per bank, 0..255 per channel
     std::vector<Pix> back;      // F-07: the mush's output, swapped with idx after each pass (its contents are nobody's)
+    // B-437: a layer under the frame's own banks. Aboard, the outside is drawn first and the ship over it: the outside's pixels are sunk
+    // into one bank (`underBank`), each its own bank kept in `under` (read where the mush took its pixel's bank from) and their ramps in
+    // `underPal`, so the ship's ramps take every other bank whatever the outside shows; toRGB reads a pixel of that bank through them
+    int underBank = -1;         // the bank standing for the layer, -1 none
+    uint32_t underHeld = 0;     // the banks the layer holds, a bit a bank
+    int underX0 = 0, underX1 = 0, underY0 = 0, underY1 = 0;   // the box sunk
+    int underShift = 0, underKeep = 1;   // the mush's passes since the sink, and the bottom rows each pass kept as they were
+    std::vector<uint8_t> under;
+    uint8_t underPal[BANKS * 64 * 3];
+    // the row a pixel of row y took its bank from: each pass took a row's banks from the row below, the last `underKeep` rows kept;
+    // a pixel of the layer's bank is the layer's where that row is the box's (and its column)
+    int underRow(int y) const { return y >= FBH - underKeep ? y : (y + underShift < FBH - underKeep ? y + underShift : FBH - underKeep); }
+    bool underRowIn(int y) const { const int r = underRow(y); return r >= underY0 && r < underY1; }
 
     Framebuffer();
     void clear(Pix v = 0);
@@ -53,6 +66,11 @@ struct Framebuffer {
     // Convert to 0xAABBGGRR (little endian R,G,B,A) with brightness gain; the 64 stops of
     // each bank are interpolated to 256 steps.
     void toRGB(uint32_t* out, double gain, bool dither = false) const;   // dither: 2x2 ordered dither on the intensity
+    // B-437: the box's pixels of every bank but 0 sunk into `bank` (0 stays: its caller keeps its ramp in both palettes), the palette kept
+    // as the layer's; returns the banks they held, a bit a bank (an empty box: none, and no layer). `raiseUnder` puts them back (a
+    // flight's next frame fades this one) and ends the layer
+    uint32_t sinkUnder(int bank, int x0, int y0, int x1, int y1);
+    void raiseUnder();
 };
 
 // Define the 64 stops of a bank as a piecewise-linear ramp through colour stops

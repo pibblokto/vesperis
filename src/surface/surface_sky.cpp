@@ -49,9 +49,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // set (6-16 degrees under it) while the air under them is in the planet's shadow: low in the sky toward the sun's side, in bands and billows
     double nlc = 0, nlcLimitDeg = 0;
     const double nlcH = 83.0, RkmS = site.R / 1000.0;
-    if (site.gen.hasTrait(TR_NOCTILUCENT) && site.atmosphere && !venus) {
+    if ((site.gen.hasTrait(TR_NOCTILUCENT) || site.gen.made.silver > 0) && site.atmosphere && !venus) {   // (KI-483: or a seeding's methane's)
         const double dep = -std::asin(clampd(sinAlt, -1, 1)) / DEG, summer = clampd(0.5 + (env.latDeg >= 0 ? site.season : -site.season), 0, 1);
         nlc = smoothstep(3.5, 6.5, dep) * smoothstep(17.0, 12.5, dep) * smoothstep(35.0, 50.0, std::fabs(env.latDeg)) * (0.45 + 0.55 * summer) * (1 - env.rain) * (1 - 0.85 * env.cloudCover);
+        if (!site.gen.hasTrait(TR_NOCTILUCENT)) nlc *= site.gen.made.silver;
         nlcLimitDeg = std::acos(RkmS / (RkmS + nlcH)) / DEG;   // the depression past which the layer lies in the shadow (9 degrees on a world Earth's size)
     }
     // a sun pillar in cold, clear air when the sun is low (ice crystals in the air mirror it into a column)
@@ -65,6 +66,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     double aurora = env.aurora;
     const int CELL = 4 * FB_SCALE;
     const int GX = FBW / CELL + 1, GY = FBH / CELL + 1;
+    // J-04: a seeded world's glowing clouds at night, their light per cell by their form (patches, veins along a ridged field, whole decks)
+    const MadeWorld& mw = site.gen.made;
+    const bool madeGlow = clouds && madeCloudBank && mw.cloudGlow > 0 && day < 0.35, madeTint = clouds && madeCloudBank && !madeGlow && mw.cloudTintK > 0;
+    if (madeGlow) cloudGlowGrid.assign(GX * GY, 0.f);
     if (clouds) {
         cloudGrid.assign(GX * GY * 3, 0.f);   // per cell: the density, the index, and (W-03) the share that is a front's deck
         double thrP = 1.0 - env.cloudPattern * 0.75;   // the pattern's threshold; a front's deck is read per cell from its line
@@ -116,7 +121,33 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 cloudGrid[(gy * GX + gx) * 3] = dens;
                 cloudGrid[(gy * GX + gx) * 3 + 1] = idx;
                 cloudGrid[(gy * GX + gx) * 3 + 2] = storm;
+                if (madeGlow && dens > 0) {   // where the ray met the low layer (the decks' noise drifts with the wind)
+                    const double tt = 2600.0 / std::max(0.012, el), x = camPos.x + d.x * tt + wx, z = camPos.z + d.z * tt + wz;
+                    double form = 0.45 + 0.55 * smoothstep(0.35, 0.7, 0.5 + 0.5 * fbm2(x / 9000.0, z / 9000.0, site.gen.seed + 93, 2, 2.0, 0.5));   // a deck brighter and darker in parts
+                    if (mw.cloudGlowForm == MG_PATCHES) form = smoothstep(0.56, 0.74, 0.5 + 0.5 * fbm2(x / 5200.0, z / 5200.0, site.gen.seed + 91, 3, 2.0, 0.5));
+                    else if (mw.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm2(x / 2600.0, z / 2600.0, site.gen.seed + 92, 3, 2.0, 0.5)));
+                    cloudGlowGrid[gy * GX + gx] = (float)(form * mw.cloudGlow);
+                }
             }
+        });
+    }
+    // J-16 (KI-508): a deck world's overcast seen from its ground takes a cloud line's glow at night (its dye by day is the sky bank's own,
+    // `setupPalette`), by its form where the ray meets the deck's underside 12 km up, on a grid as the clouds' (the deck drifting with the wind)
+    const bool deckGlow = venus && !clouds && madeCloudBank && mw.cloudGlow > 0 && day < 0.35;
+    if (deckGlow) {
+        cloudGlowGrid.assign(GX * GY, 0.f);
+        parallelFor(GY, 4, [&](int gy0, int gy1) {
+            for (int gy = gy0; gy < gy1; gy++)
+                for (int gx = 0; gx < GX; gx++) {
+                    const int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
+                    const Vec3 d = camT * dirLUT[py * FBW + px];
+                    if (d.y <= 0.012) continue;
+                    const double tt = 12000.0 / d.y, x = camPos.x + d.x * tt + windDriftX, z = camPos.z + d.z * tt + windDriftZ;
+                    double form = 0.45 + 0.55 * smoothstep(0.35, 0.7, 0.5 + 0.5 * fbm2(x / 9000.0, z / 9000.0, site.gen.seed + 93, 2, 2.0, 0.5));
+                    if (mw.cloudGlowForm == MG_PATCHES) form = smoothstep(0.56, 0.74, 0.5 + 0.5 * fbm2(x / 5200.0, z / 5200.0, site.gen.seed + 91, 3, 2.0, 0.5));
+                    else if (mw.cloudGlowForm == MG_VEINS) form = smoothstep(0.80, 0.94, 1 - std::fabs(fbm2(x / 2600.0, z / 2600.0, site.gen.seed + 92, 3, 2.0, 0.5)));
+                    cloudGlowGrid[gy * GX + gx] = (float)(form * mw.cloudGlow);
+                }
         });
     }
     // the aurora as curtains. Three sheets of light hang 90-250 km up along the auroral oval, which lies a few degrees
@@ -345,6 +376,18 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     v = v + (ci - v) * dens;
                     paleV *= 1 - dens;   // the clouds under them hide them
                     stormW = ((c00[2] * (1 - fx) + c10[2] * fx) * (1 - fy) + (c01[2] * (1 - fx) + c11[2] * fx) * fy) * dens;
+                    if (madeTint && dens > 0.5) stormW = 1;   // J-04: a coloured cloud in its bank
+                    if (madeGlow) {
+                        const float* g0 = &cloudGlowGrid[gy * GX + gx];
+                        const double gl = ((g0[0] * (1 - fx) + g0[1] * fx) * (1 - fy) + (g0[GX] * (1 - fx) + g0[GX + 1] * fx) * fy) * dens;
+                        if (gl > 0.03) { v = std::max(v, 10 + 12 * gl); stormW = 1; }   // (a living light: faint)
+                    }
+                } else if (deckGlow && el > 0.012) {   // J-16 (KI-508): the deck's underside lit in patches, in the made clouds' bank
+                    const int gx = x / CELL, gy = y / CELL;
+                    const double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
+                    const float* g0 = &cloudGlowGrid[gy * GX + gx];
+                    const double gl = (g0[0] * (1 - fx) + g0[1] * fx) * (1 - fy) + (g0[GX] * (1 - fx) + g0[GX + 1] * fx) * fy;
+                    if (gl > 0.03) { v = 28 + 26 * gl * smoothstep(0.012, 0.08, el); stormW = 1; }   // (its light, fainter toward the horizon's haze)
                 }
                 if (curtain && el < 0.45) {   // over the clouds: the rain hangs in front of the deck's base, up to where the ray meets it
                     double hl = std::sqrt(d.x * d.x + d.z * d.z);

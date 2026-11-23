@@ -53,10 +53,20 @@ Contents:
   sources with the newest harness), keeping the old arithmetic. A generation change is proven by stream and per-body fingerprint
   diffs against the old sources: the draws identical and the peoples' worlds unchanged.
 - Keep an old formula exact when a new term is zero: add the term after the old sum, never inside it.
+- A drawing's new knobs with defaults that reproduce the old (Z-04: a specimen's `still`, `wander`, drift and blur; the slide's `lod`
+  and `step`) let one compare of the old outputs (`life_look`) prove the old drawing untouched while the new caller uses them.
+- Drawing code moved into rows keeps each expression's shape: clang fuses a multiply into an add within one expression, so a
+  place made at build time and a clock added in the frame (a screen's `v`) is an ulp off one made in a single expression. A
+  centre added to a place the old code took from the origin is exact (an `fma` with 0 rounds once, as the product did) but for
+  the sign of a zero. A constant folded at compile time and the same sum made from a row at run time agree (I-01: the cabin
+  drawn from its rows, every picture the same).
 - A scratch oracle (the old code verbatim against the new, on random inputs) proves a rewritten integer pass. Prove a cone or edge
   test with a sweep where the effect shows (near a glow's edge an added term rounds to 0).
 - `regress` hashes few frames and no HUD: prove the HUD, the cabin, forms and screens with `flow`, `screens` and harness frames;
   anything animated with `stability <scene>`.
+- A picture measure over a mostly empty frame counts the field: C-17's mean difference called thin and faint forms alike in a
+  bright field (Z-02's microbes: 4.9% of pairs) that a dark field told apart (0.61%). Fit the frame to the form's first look and
+  say which way the pictures were drawn; check what is compared on a sample sheet (Z-02's first thumbnails were empty).
 - Timings: `unit` 3-6 min, `flow` 35-45 s, `bench check` about 40 s, `regress` seconds.
 - A run far slower with identical output is the environment (sleep, load, battery): run it again alone, beside back-to-back
   control runs of the previous binary.
@@ -74,6 +84,13 @@ Contents:
 - raylib's `GetTime` stops in sleep and `steady_clock` does not: set aside runs that slept. Tag every run uniquely: a repeated
   tag overwrites its CSVs and log. `rot.sh` resolves its binaries before its `cd`.
 - The buggy 2x bench row is noisy (drainage work). Isolate a pool change with the old pool behind the new interface.
+- A bench row added before others must not move the game's clock: the rows after it read the sun's place. I-02's ship rows,
+  stepped a sixtieth of a second each, put the later rows five seconds on and `buggy 2x` read 6.1-6.8 ms against 4.0, twice;
+  timed at one instant (`frame(in, 0)`) it read 4.0 again.
+- An early-out or a clip of a whole frame (I-02: the ship's rooms filled only in their arches' rows, the space view skipped with no
+  window in view) is proven by the frame drawn again without it and the pixels counted (`ship rooms`: none differ). It holds only
+  while what is in front covers every pixel: walls between rooms are slabs (two faces in one plane would fight), and every piece
+  along a curve shares its points (the well's sixteen with the landings, the dome's base with the parapet).
 - `tools/prove` (E-02) is the proof: a snapshot of the binary, the objects and every item's outputs, compared item by item. Run
   it alone: D-05's `trait_ice_halos` sweep frame differed from today's in 18 px by one step, and three runs alone all matched
   today's (D-05's was drawn beside other jobs).
@@ -100,6 +117,9 @@ Contents:
   two peoples, the wet dam, the radar salts): pin them again by scans.
 - Keep one `Game` alive in the harness (a second corrupts the first); reach its state through TestGame's hooks
   (`src/harness/test_game.h`), never from the game's own files; join worker threads at exit (`atexit`).
+- A game writes where its paths say, and `Game`'s are the player's files in the working directory: a check's second game that set
+  none saved its guide over the user's in the repo root, and the battery never saw it, reading only `shots/` (B-440). `TestGame`
+  defaults every path under `shots/tests/`; the unit's `files` group holds the player's files as it found them.
 - The flow's frames are 1x, the unit's and the modes' 4x; a mode's checks may also run in the unit. A `Game`'s `applySettings`
   sets the global render scale and mush (its settings say 4x): every group of the unit after a scripted game draws at 4x, so
   `UNIT_GROUPS` states each group's starting scale and mush, and a group alone draws as in the full run (E-03).
@@ -137,7 +157,8 @@ Contents:
 - A frame with bodies in view waits for every map first (`testWaitMapOf`, or `SpaceRenderer::mapIfReady` on a view's own
   renderer): the maps are made on their thread at the binary's own pace (F-07), so without the wait a frame moves between runs
   by a faint disc or a dim background (E-02 found the data sheets, the surface sweep, the unit's lent piece and the rogues'
-  radar lock).
+  radar lock). A wait before the first frame sets the season is undone by that frame, which makes the map again for its season:
+  `rogues heard` waited so, and its lock frame still moved (B-506). At a new place, wait with `testWaitMaps` (the season set first).
 - A race can resolve the same way in every run of one binary and the other way in a binary whose code moved: E-02's radar lock
   frame lost the parked world's map in three relinks of the base engine and won it in the final one, though the code that draws
   it was the same instructions. A twice-run cannot see it; a move or split (which shifts every later address) shows it. Prove
@@ -149,11 +170,75 @@ Contents:
   function's IR at -O0 and without exceptions (`tools/samecode.py`): with exceptions, clang's `invoke`s and inferred `nounwind`
   follow the order it emits functions in, which a split changes. A chunk keeps the comments above it, so a comment the file
   had already cut off from its function travels with the wrong one (E-03: formsChecks' and agesChecks' sat above roomOpenness).
-- A unit check's fixed start point can lie in an ocean. The flow's `testCabinGoto` takes a pitch (a desk under the window band
-  needs -0.65 from 1.5 m).
+- A unit check's fixed start point can lie in an ocean. A cabin view takes a pitch (a desk's screen 1.1 m ahead and a metre under
+  the eye needs -0.6): the harness stands the explorer by the ship's plan (I-01: `testCabinView`, `testCabinAtDevice`), never by
+  numbers of its own, so a new plan moves its views with it (I-02: one check still held the old rack's place; it reads the plan's).
+- What a frame reports is the whole frame's: I-03's patches, kept a room at a time, were emptied by the next room drawn (the hall
+  through the library's arch) and the library's read none.
+- A walker round a ring with a way through it (I-02: the stair's well) must walk straight out of the way before it turns: a step
+  back into the way re-enters the stair, and auto-explore went round and round between the stair and the hangar. Steer round a
+  circle at the walker's own distance (never nearer than its edge), not toward a point beside it, whose straight line cuts it.
 - Pictures that print a time differ between runs by design: the landforms sheets' "COST N US", the town map's "IN N MS".
 - `charts rogues` named a drifter's chart's wanderers from the drifter's own system, but their indices are its former system's
   (`peoplesWorldOf`): it read past `sys.bodies` and printed freed memory, a different line each run (E-02 fixed the printout).
+- The harness includes every module's headers, so a new one's names meet all the others': Z-05's `Culture` met the peoples' (ruins.h),
+  its stages' `CS_COUNT` the probe's clouds and its pairs' `PR_COUNT` the pad's roles. Grep a new header's exact names first.
+- A test's pair must be able to live together: Z-05's first pairs, picked across worlds, came out mirrored or too warm for one of them.
+  Take both of one world (one genesis, one hand) and a medium where the slower of them grows best.
+- A site found on the planet function's 16 m samples is not the ground the landing makes (its finer relief, its tide): Z-07's coast
+  site 80 m inland landed the explorer in the sea. Land well clear (200 m) and let the game's own walk find the edge.
+- A test's picture of what the game writes is written as the game writes it: a micrograph is P's frame, its HUD and its caption beside
+  it; Z-07's first one turned photo mode on, which the game never does there.
+- A key a check presses on the cell under the microscope's crosshair runs a frame, and a swimmer leaves the crosshair in a few: R-440's
+  check kept a cell once and refused it after (no cell under it). Track the cell first (Enter), as the explorer would.
+- `newGame` writes a fresh guide at `guidePath`: a probe on a copy of the player's guide that set the path before it read an empty guide
+  (B-442's first look at the user's chooser had no worlds in it). Load the player's guide after `newGame`.
+- A flask filled in place starts from `Flask()`: the reset leaves every flask `made`, so one filled over it is never made again (Y-02's
+  first editor frames: no culture in it, the chooser empty). The harness's `putIn` does so.
+- A check's name is a literal (`tools/unitchecks.py` reads the source): a group of laws returns its verdicts (`GeneLaws`) and the unit's
+  function calls `check` on each by name, not a callback that names them.
+- The frame's size is the process's (`FBW`, `FBH`, the mush), set by the last game whose settings were applied: the flow's game at 1x,
+  drawn after the reload's two at 4x, read past its depth buffer (KI-450; an address-sanitised build found it, B-507). A game drawn after
+  another's takes its own size back first (`Flow::own`).
+- A field that means "by its rule" until set (`Microbe::flees` -1, the niche's flight) turns 0 or 1 at the first edit near it: a check
+  compares what it does (`fleesLight`), not the field (Y-03's copy of a sense read as a change till then).
+- A stage of animals turns the habitat cells off (`habitatT` far ahead): their herds come in with the first update, and `critters.back()`
+  is then one of theirs, not the one put down; find a put animal again by its seed (J-07's first trail was 404 m off its hunter).
+- A staged camera wants a clear line to what it frames: on a forest world the hunt was lost among trunks, on a hill the camera looked
+  into the ground. Leave a world with a tree near the stage, and try camera places round it till the ground stays under the line (J-07).
+- The ground's rings centre on the explorer: a free camera far from them sees a coarse ring's ground, and what lies low on the fine one
+  sinks under it. Put the explorer near the camera before a shot (J-08: remains 0.2 m thick drew no pixel till the explorer, 400 m off,
+  came within 40 m; a metre's pull toward the eye showed them).
+- A site found without the layer it will be drawn with is another site: a seeded world's made climate moved the snow line down, and the
+  herds left that high ground (J-08's die-off frames found herds there, then none). Choose under the layer that is drawn.
+- A search over a world's places pays for the rivers of each new place: the planet function at 16 m took 4 ms a sample with the
+  drainage, and J-09's forest search 230 s. Search round a few land sites (their rivers worked out once), or with the drainage off where
+  rivers do not matter (a forest by its rivers needs them).
+- A world turned to its sun has no night anywhere: a search that needs one gives the world up at its first place (J-09's plates waited on
+  three felisian worlds, then used a steppe's).
+- The bench's landing looks at the open sea: a cost that lives on land needs a land scene (J-09's overgrown rows there drew nothing).
+- A walk test runs `update` with the controls on: with them off the keys are read as nothing, the explorer stands still and a check that
+  nothing is walked through passes for nothing (J-09's did, till J-10 walked it).
+- A world's ruins can be foundations: an old people's town (31,600 years) stands 0.56 m on average, and nothing grows on walls that are
+  not there. Lay the same town out as if left 300 years ago to test what climbs walls (J-10). A harbour city's middle can lie under a lake
+  the rivers make (its site is checked without them): pick one whose middle is dry with the rivers.
+- A bench row that changes the game's world puts it back: the sector map's row after J-10's overgrown capital ran on its cover and went
+  over its budget.
+- A form wholly in the ground's bank vanishes from the air: J-10's taken buildings showed once drawn five shades under the ground.
+- Wait for a worker with its blocking call (`worldPlanOf`), not by running frames till it is done: their count moves the game's clocks
+  (the save's lab clock), so the output differs between two runs (J-10's ruins mode, caught by the snapshot's second run).
+- Moving the guide's clock gives a seeded world a new layer, and its maps are made again on their thread: wait for them after the skip,
+  not only at the parking (J-12's `seed record` drew a sheet over a globe whose map came or not, caught by the snapshot's second run).
+- A table of what seedings come to needs lines that take: one world's line let go on forty worlds took on 21 of 240 (J-03's), so J-11's
+  `seed kinds` sends each world's own sea line with six edits. A search for a look picks past a pale flesh on pale ground.
+- A mode's case and the unit's are one search (`seedRecordCase`), asked for everything the frames must show (a native driven out and a
+  made kind), so the pictures and the checks see the same world.
+
+- A check pinned to a digest over a set of worlds moves with any change to which worlds exist, not only with what it guards: B-504 made a
+  few hot chemotrophs their drawn kinds again, and the traits' and the cell genes' digests over the first worlds moved. Prove it by
+  building once with the change undone (both digests came back bit for bit), then pin the new values with the reason beside them.
+- In zsh, `path` is the array tied to `PATH`: `while read -r st path` in a script empties the command path and every command after it fails
+  as "not found". Name such a variable anything else (`f`).
 
 ## Pixels and the look
 
@@ -162,17 +247,24 @@ Contents:
   `canvas.px`. `drawText`'s scale multiplies the canvas's. 2-D helpers take `RGBCanvas&`, not `Framebuffer`. `rgb()` packs red
   low (0xFFBBGGRR).
 - The tone tile eats albedo steps under ~40% (steps of 20-28% vanished): judge ground marks by pixel columns, not by eye.
+- The font draws 32 to 95 (lower case as capitals), `|`, `` ` ``, `~` and the codes 1 to 7; anything else is a box. The tilde was a box
+  until B-445 (the lake landmark's mark, KI-451). Look at a frame of a new mark.
 - The sky bank runs from zenith to horizon: measure the sky column by pixel before tuning; a dark element on a coloured sky needs
   its own bank.
 - The mush averages shades across bank edges: two banks meet cleanly only where their ramps agree in light and colour over the
   shades both reach.
+- A per-pixel pass at 4x whose mush spans five pixels can evaluate a pixel in four and fill its 2 x 2 block (Z-04's slide: 45 ms to
+  12); a mesh's cost is its vertices, not its pixels, once it hits its cap (the electron's took half its 4x time at 1x), and drawn in
+  row bands it gains only where each band skips the rows of triangles it misses (147 ms to 40).
 - A scene's darkness scales the ramps' colours, not the shades; a lamp or a flash raises the frame's light itself
   (L = max(day, lamp, flash)). Colour-mixing layers (fog, haze, flash) composite in RGB with RGB ramp tables: a bank holds one
   colour per shade.
 - A sub-pixel silhouette is one framebuffer pixel at its own shade: paling it toward the fog makes ghosts. A point on a globe must
   outlive the mush: FB_SCALE+2 wide.
 - The banks are allocated per view (`docs/reference/02-rendering.md`'s table for each scene), each one thing within it: the
-  globe's 31 is body A's, the surface's 25-27 the peoples' (skipped when test-staged).
+  globe's 31 is body A's, the surface's 25-27 the peoples' (skipped when test-staged); a slide's 32 are its way of seeing's.
+- A part placed in a part's own frame needs that part's centre and axis: Z-02's colony cells all put their insides at the colony's
+  centre (one black blob) until a cell's frame carried where the cell lies.
 - Per-frame visuals get their own cheap noise (a gradient table at 4 ns against `gnoise2`'s 40 ns). Anchor sampling grids in
   world angle and distance (no shimmer); blend noise values, never coordinates, between frames; noise round a centre uses
   (cos, sin) times the arc's radius.
@@ -180,6 +272,27 @@ Contents:
   Judge a libm replacement in the frame, on the renderer's own input order, never by a micro-benchmark.
 - The pool: progressive work goes in slices inside the frame (worker timing depends on the machine). Decide pool changes at 4x;
   a pool on every core starves the game's own threads; one `notify_all` beats several `notify_one`; a row's cost counts pixels.
+- Light in the shades wants ramps that keep their hue at the top: I-03's sun patches on a dark floor came out grey while the
+  finishes' ramps ended in white; they end at 1.55 times the colour with a little white, and the lamps' powers were set by a model
+  of the floor's light first (four lamps of 4.6 summed to 2.7 under the hall's: clamped white).
+- Cutting surfaces into a light grid costs little when faces turned away are culled: I-03's ship has several times I-02's
+  polygons and draws its spaces no slower. A shape on a plane (a patch) lies there by `BLEND_ADD` with its depth a hair nearer and
+  unwritten: what is in front, or a hole behind, keeps it off.
+- A glow under tinted glass loses to the glass's sheen (the face's own shade wherever it outshines the pixel darkened): I-04's core
+  at 20 vanished under a sheen of 17, and a sheen over a grainy pit mottled the glass. Glass over a light darkens only. A thing that
+  slides under a floor sinks as it goes: 3 mm under it fought the floor's depth at a grazing angle. Z-05's jars vanished the same way
+  under their shelf's glass at a sheen of 30: a glass in front of lit things keeps a faint sheen (an eighth of the room's light).
+- A room seen asks for every colour in it, what stands behind the eye too: Z-05's jars' bands took the banks the stern bench's screens
+  needed. Ask only for what is drawn and in front of the eye, and rank a room's many small things after the screens near them. Z-06's two
+  screens behind the stern bench's eye took a flask's red the same way: a device behind the eye now asks none (the hall's sofa got its
+  red back too).
+- A device's home is a key: two devices asking one keep one colour (Z-06's sequencer first took 30, the drones' paint). Its colour keeps
+  R-404's 0.3 in RGB from every other screen's: the pastel middle is taken, so search the space (a saturated magenta and a deep green fit).
+- A fixture that only carries what the frame draws still needs a few millimetres of depth: its front is its corners' difference
+  (Z-06's tree on its wall). Which way a wall's t runs depends on the wall's yaw: look before trusting left from right (its tree came
+  out mirrored).
+- The mush averages a pixel's light with its neighbours': a lit line a pixel wide on a small globe goes dark with the ground round it.
+  A light seen from orbit wants bands a few pixels wide (J-09's veins: 1,189 lit pixels a frame, none left teal till they were broadened).
 
 ## Space
 
@@ -206,11 +319,38 @@ Contents:
 - A slope shadows only when steeper than the light; full-signal snow reads as stars. A cloud edge needs ~10 km and a horizon fade;
   heightfields seen from any pitch march per azimuth; expose for the subject.
 - Terrain fog sets how far cities show (a haze that thins with height is the user's call).
+- What must be a function of a place reads only what the world fixes: the rocks, the domes and the trees are dealt on the landing's
+  own grid, and a continuous field (a spring's heat) differs in its last digits from another landing's frame: quantise it (Z-03).
+- A light added over the frame changes bank where it beats the pixel's and adds within it where it does not: a switch alone made a
+  hard-edged disc of glow (Z-03).
+- A sea's beach carries no water in its vertices: its wet edge is the sea's level (and the tide) against the height (Z-03).
+- The capsule's screen draws no status: a line it must show is its caption's own (the scoop's), or every status of the moment would
+  take the caption (Z-03).
+- A read on the pool must touch no lazy cache: `readSample`'s ruins' walls fill the ruins' cells as they are asked for, so the activity
+  vision leaves them to the main thread after (`wallsDone`, the vial's own read unchanged: 194 places the same, 5 walls). A read is
+  about 20 us: 384 a frame cost a millisecond at 1x, and the reach's 5,284 metres fill in 14 frames (R-434).
+- `groundHeight` is such a cache: `TerrainCache::at` fills a missing vertex. An animal posed on the pool reads the ground from 3 by 3
+  heights the main thread read for it first (J-06).
+- A specimen frame for judging a body needs flat open ground and the capsule moved away: the first plates showed cliffs, a camera
+  under the ground and the capsule's dome over the animals (J-06).
+- A foot stays put only with the stride the phase was counted by (`AnimalPoseIn::stride`) and a stance its leg can reach: a gallop's
+  long stride keeps the foot down a shorter share of the cycle, and a hop's arc must come while its feet are up (J-07: the unit's slips
+  were a hopper's feet sliding forward on the ground).
+- A pure function of a cell reads the planet function (`sampleAt`), never the drawn ground (`groundHeight`, `waterAt`): those hold only
+  what is loaded near the explorer, so a cell's shore far off read as dry (J-08's remains washed up nowhere till the shore search moved).
+- Many small meshes are made, not filled: 922 overgrowth structures took 4 ms to make on the main thread and 1 ms to fill. Make them on
+  the pool, each list a fixed run of them so the frame is the same on any number of threads, their parts on the plane of the ground's
+  slope read on the main thread (J-09: the forest's cost with them as without).
+- An edge whose noise scales with its reach moves its lobes at every step and uncovers what it covered: fix the noise to the place, so
+  the edge only moves out (J-09's overgrowth).
 
 ## Generation: the worlds
 
 - Wide or many planet samples (plates over 200 km, site searches, globe scans) run under `DrainageOff`, or each builds a drainage
   tile. A drainage "lake cell" includes playas and frozen basins: test the water at 64 m before calling it a lake.
+- `DrainageOff` is the calling thread's alone. A landing's frame fills the rings' misses on the pool, whose threads sample with the
+  drainage, so a harness frame under it drew rivers in some cells and not others, by timing: 21 of 64 plates moved between two runs.
+  A frame switches the drainage off for every thread (`setDrainageEnabled(false)`, the scenes' `DrainOff`) (J-06).
 - The generation moves no star: companions and comets read the drawn moon orbits. The worlds' dead stars are white dwarfs,
   pulsars and neutron stars.
 - Picks stay bounded: `Rng::pick` falls to the last entry on rounding, and pseudo-entries (`STAR_ROGUE`) stay out of every pick
@@ -241,6 +381,32 @@ Contents:
   every row's arrays first, in order. It also copies a constexpr variable whole at each read (6.6 GB for
   `kindsOk(BUILT_KINDS)`): a `static_assert` reads a table built for it. After a change to how a table is built, compare its
   bytes between the compilers in the container (`build/b430/kdump.cpp`).
+- A new module's names meet every header in the harness: a global another module has fails at the link (`STAGE_NAMES` the
+  peoples', `PLAN_NAMES` the bestiary's), a type in the compile (`Species`, `BodyPlan`). Grep `src/` for a name before giving it
+  (Z-01: `Microbe`, `MicrobePlan`, `LIFE_STAGE_NAMES`).
+- A habitat a world has is not where its life lives: a venusian's ground is at 450 C under its living clouds, an ice moon's dust
+  is not its sea's. Z-01 draws species only in the livable habitats (the niches with a warmth of their own, the ground where the
+  mean lets the liquid be).
+- A pinned salt for home is found, not guessed: a scratch program against the build's objects steps the salt until home's facts
+  are the ones wanted (its water life its cell's oldest, ours, four letters), and the unit holds the id it gives.
+- `unitFromHash(h >> n)` spans [0, 2^-n) alone (it reads the top 53 bits): mix a shifted hash again before making it a share.
+  Z-02's first drawing made every grain of the section's rock pyrite and put every granule on one side of its cell.
+- A layer's reader that checks its key (`madeHarms` reads nothing when `on()` is false) reads nothing while the layer is built, as the
+  key is set last: J-11's greened worlds were judged unharmed so. The builder reads the guard-free `harmsOf`.
+- A made change judged by its size alone misreads its world: J-04's heat dried a tundra warmed from -3 C to 6 C as it dried a felisian
+  warmed to 26 C. J-11 weighs it by the mean the world reaches.
+- A cover laid after the made climate finds the forests already snow: a made kind's dead cover lies over the world as generated, as a
+  dead world's lies over its then-world (J-11's snowball stood no dead trees till then).
+- A species marked gone must be gone from every sample of its world, or the record and the vial disagree: J-12 drives a native out only
+  where it lives in no niche or salt the line does not (80% of those beaten, a scratch count found), then takes it from every vial.
+
+- A clock's value is no sentinel (B-453): a game's seedings are let go at its guide's clock, and the harness puts a line's going-down
+  hours before a new guide's 0, so a step boundary can lie under 0; a walk over them that kept -1 for "none passed" read every onset
+  under 0 as none, and the made hothouse and snowball recipes stopped drawing. A flag says whether one passed.
+- Two lines that both cover a world tie everywhere (B-457): the made pass took the first line it met and the overgrowth the later, so
+  one world drew one line's waters and the other's cover. The made pass now walks its lines latest first, as the overgrowth's tie did.
+- A pool's order is a priority (B-456): where a crowded world has three banks for four colours, the one dealt last goes without, and
+  the land's cover matters more there than a second line's tint; each use takes its bank in the order it is worth.
 
 ## Generation: the peoples
 
@@ -302,6 +468,9 @@ Contents:
   byte-identical.
 - The user's targets: about 5% repeats at 100 texts, no generic "jars, wells, chiefs", distinct names, every civilisation its own.
   Catalogue dryness 4 cut the repeats at fifty from 41% to 28%.
+- A genre measured across a hundred peoples (Z-06's watermarks, one a people) has no catalogue's memory to vary it: every long
+  sentence needs three or four parts (some two thousand frames each) carrying the people's own words. Sentences from fixed pools
+  repeated 55% at a hundred; composed, 3.1%. A short sentence (under six words) is free: the measure leaves it out.
 
 ## Game, screens and sound
 
@@ -310,15 +479,51 @@ Contents:
   re-imposes the attitude takes up turns made elsewhere: compare with the values it last set.
 - Long real-time sequences keep closed-form state and a clock-skip hook (`testProbeSkip`), so a replayed frame equals the live one
   bit for bit. Derived probe state is rebuilt by an every-frame ensure step (`probeEnsureClouds`), so loads and swaps keep it.
+- A closed-form law that ends at `t + (len - done)` and adds `end - t` back can fall an ulp short of `len`: the next law has no length
+  and repeats to the guard (B-444: a third of the cultures held at their crowd for good). A law that reaches its end sets its state
+  exactly; a check that every curve moves on past its longest stage finds it.
+- A condition that turns part of a thing off is evaluated against the thing as written, kept as a list beside it, never baked into
+  it: an off made twice is not always the same (a cut size halves again) and a lost value cannot come back (Y-04's switches). Judge the
+  condition of the thing as written too, or a switch can turn itself on and off at the same moment.
 - A new parking kind is left by every other approach: test the way out, not only the way in. A cross-cutting input change covers
   every screen, the maps included.
 - A member named like a free function hides it in every member: name helpers distinctly (`nameOfKey`, not `keyName`).
 - Overlay and page states (STAR_MAP, the galaxy page) skip `drawCommonHUD` and the scene: check that statuses show there;
   render-tied work stops while they are open.
+- An empty value is no flag: the sequencer's drift text is empty for a line the wild left unchanged, so a wild line's reading carries
+  its record's key of its own (`wildKey`). Key a found line by its world and seeding (`<world>/L<k>`), never by the line alone: one line
+  goes down on many worlds, each with its own drift.
 - A key-scheme change needs a marker line in the save, not a generation bump.
-- The HUD's room: the decoder's column 23 characters; the key line from x 18 to 49; help 51 a line and 21 lines; key labels 15;
+- A pure function's input is saved whole: Z-03's vial line left out the bloom, so a vial loaded held a crowd thirty times thinner;
+  a flag added to a field's bits keeps the older lines readable.
+- A tile, a cap or a clamp of a place's size keeps its count with it: a species' tile clamped to its longest kept its 160 cells and
+  packed them 178 times too densely (53 s for a sheet of frames).
+- A list's folders made each frame from what they hold keep an index, not the folder: a world's folder goes with its last vial and the
+  index then opens the next world's, so emptying the last closes the folder (R-432). A new step in a scripted run takes its frames from
+  a wait after it, or every later frame moves in time (the flow's three keys: its printout after the laboratory the same).
+- What a kind is said to do comes from what its copies do: R-438's answers said a magnetotactic eater gathered round lit cells while
+  `copyAt` gave a field-turner the field's branch alone (it never ran to food); and a crowd's disc sized to hold every cell of a reach
+  sent the cells near the spot outward to their places in it (capped at twice the spot's radius). Measure a law on the copies first.
+- A `thread_local` named inside a pool's lambda is each worker's own (empty): bind it to a reference outside (Z-04's crash).
+- A screen that simulates hears the game's own keys: P is a photograph and T the warp anywhere (KI-428), so a screen reads no letter it
+  does not own (the gene editor's letters by the arrows). A said line holds 51 characters (`UW - 12`): Y-02's findings were cut before
+  their verdict; say what was seen, then what it says (`statusNext`).
+- A tree drawn from its leaves' neighbours: sort the leaves so every clade is a run (`treeBefore`), keep each pair of neighbours' join;
+  the node of a run is its highest join, its two sides the runs either side of it (a Cartesian tree), drawn by recursion (Z-06's tree).
+- `%.2g` of a number of three figures prints it as an exponent (Z-06: "2.3E+02 MILLION YEARS"): two figures through the rounding to
+  whole tens, not the format.
+- The HUD's room: the decoder's column 23 characters; the key line from x 18 to 49; help 51 a line and 21 lines (Z-03's 22nd line
+  pushed the surface page's footer off the frame, found in Z-04); key labels 15;
   a 320 px line 53 (52 with the margins); the warp line owns y 24 on the right. Never truncate a label or a HUD line: drop a part,
   or place it.
+- Rows seen together are told apart by what each draws at its width, not by their strings: told apart over the whole tree, B-443's
+  leaves took colours and motions that ran past the row, and 3 still read alike once cut. Measure the fitted lines; drop the part that
+  tells nothing (an unnamed world) before the one that tells them apart.
+- A row under another says only what the one above does not: Y-01's twigs, indented, cut their species' look before the strain's number
+  (two strains read alike), so a twig says its strain and its move, its species' look on the row above. A hint line is 53 characters:
+  the tree's 60 had been cut at both edges since Z-06.
+- A helper in a file's anonymous namespace loses to a `Game` member of its name inside `Game`'s methods (Y-01's `worldKeyOf(string)`
+  against `Game::worldKeyOf(int)`): name a file's helper apart from every member.
 - Map labels need overlap avoidance (dy 0, ±9, ±18) and priorities (YOU and the cursor first); knots stay dimmer than markers;
   markers on lit maps get a dark rim. The cabin computers' screen colours stay at least 0.3 apart in RGB. The landing map's zoom
   never computes tiles.
@@ -331,7 +536,15 @@ Contents:
   A cabin facing spot reaches where the device shows whole.
 - Sound: hold levels by rendering (check the rms after adding effects: a hum and a 0.78 echo stacked to 0.165). Gate new receiver
   effects by the gain (0 at x1): the gain lifts the noise, not the loudness. Keep a meter's level and an overload's drive as two
-  readings. A synth peak of exactly 0.80 is the master clamp, which `RenderStats::clip` misses.
+  readings. A synth peak of exactly 0.80 is the master clamp, which `RenderStats::clip` misses. A sound made fuller by adding to it
+  is louder: I-04's library music clipped at 0.80 until its fullness took a share of its level (0.7 kept), the rms held and the
+  low end's share (58% to 68%) told it. A new sound draws its own noise (`aboardNoise`), so the old renders keep their bytes.
+- A walk's goals in a fixed order leave routes unwalked: I-04's bunk walked from the hangar up the stair and round to the quarters
+  first, and found auto-explore's rounding of a rail penned the walker in (one hard by the rail outside was taken for one inside it,
+  rounded from there it cut back in across the way off). A new goal is a new route: read `ship walk` whole.
+- An act's prelude breaks every harness timed in seconds after it (`run(7.5)` after the landing map's `Enter`): I-04's hatch's
+  drop came only with a boarding at the capsule (the plan's own words), so `C`'s landings kept their time. A harness reading a
+  directory clears what an earlier run left (the quarters' wall printed last run's photograph).
 - "On the air" is `audio.radio`: a machine programme has no speech or piece pointer.
 - A table of `Game`'s methods is a static member declared `const` in the class, defined `constexpr` in its own file (U-02): clang
   reads that definition as an inline variable (weak, emitted only where it is used), GCC as a plain one, so the file reads it out

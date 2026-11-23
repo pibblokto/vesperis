@@ -147,12 +147,18 @@ void unitKinds(const Check& check) {
     // first world of each kind in the scan region, sampled on its map's grid, has its ground
     {
         int made = 0, bad = 0, perKind[PT_COUNT] = {0}; std::string why;
+        int chemoHot = 0; double chemoMax = -1e9; std::string chemoWorst;   // B-504 (KI-436): a chemotroph is a cool world warmed from within
         const uint32_t dead = (1u << STAR_WHITE_DWARF) | (1u << STAR_PULSAR) | (1u << STAR_NEUTRON);
         int firstOf[PT_COUNT]; int64_t fx[PT_COUNT], fz[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) firstOf[k] = -1;
         for (auto& [x, z, st, sys] : scanSystems(150, 260, 20, 120)) {
             for (const Body& B : sys.bodies) {
                 if (B.type < PT_EYEBALL || B.type > PT_CHEMOTROPH) continue;
                 made++; perKind[B.type]++;
+                if (B.type == PT_CHEMOTROPH) {
+                    const double c = biotaMeanC(sys, B);
+                    chemoHot += c > 60;
+                    if (c > chemoMax) { chemoMax = c; chemoWorst = B.name; }
+                }
                 if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
                 const int d = drawnKind(B), pd = B.parent >= 0 ? drawnKind(sys.bodies[B.parent]) : -1;
                 const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;   // a companion's world by its own sun (P-01's facts)
@@ -172,6 +178,8 @@ void unitKinds(const Check& check) {
         for (int k = PT_EYEBALL; k <= PT_CHEMOTROPH; k++) counts += fmt("%s%s %d", k > PT_EYEBALL ? ", " : "", KINDS[k].name, perKind[k]);
         check("locked and deep kinds: from their sources, the locked ones locked and untilted, none half of a double planet (P-03)", bad == 0 && made > 400,
               fmt("%d made (%s)%s", made, counts.c_str(), why.empty() ? "" : (": " + why).c_str()));
+        check("locked and deep kinds: a chemotroph a cool world warmed from within, its mean under 60 C (B-504)", chemoHot == 0 && perKind[PT_CHEMOTROPH] > 20,
+              fmt("%d of %d over 60 C, the warmest %s at %.0f C", chemoHot, perKind[PT_CHEMOTROPH], chemoWorst.c_str(), chemoMax));
         struct Pin { int64_t sx, sz; const char* name; int type; };
         static const Pin PINS[] = {{150, 58, "Feeyeithis II", PT_FELISIAN}, {150, 58, "Feeyeithis III", PT_FELISIAN}, {150, 58, "Feeyeithis IV", PT_FELISIAN},
                                    {150, 36, "Wyariothmai I", PT_FELISIAN}, {150, 36, "Wyariothmai II", PT_OCEAN}, {150, 36, "Wyariothmai III", PT_OCEAN}};
@@ -822,7 +830,7 @@ void unitGiants(const Check& check) {
                 gnb.update(shipPos);
                 Framebuffer fb; SpaceContext c;
                 c.sys = &sys; c.stars = &gnb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-                gsr.mapFor(B); gsr.setupPalette(fb, &sys, bi, -1, 1.0); gsr.render(fb, c);
+                gsr.setSeason(sys, t); gsr.mapFor(B); gsr.setupPalette(fb, &sys, bi, -1, 1.0); gsr.render(fb, c);
                 std::vector<uint32_t> px((size_t)FBW * FBH); fb.toRGB(px.data(), 1.0);
                 int red = 0, disc = 0;
                 const int cx = FBW / 2, cy = FBH / 2, r = FBH / 6;
@@ -896,9 +904,11 @@ void unitTraits(const Check& check) {
                 for (int j = 3; j < TRAIT_SLOTS; j++) {
                     const int t = g.traits[j];
                     if (!t) { for (int jj = j + 1; jj < TRAIT_SLOTS; jj++) if (g.traits[jj]) { slotsOk = false; why = b.name + ": a gap"; } break; }
-                    got++; carried[t]++;
+                    got += TRAITS[t].cls != TC_GIVEN; carried[t]++;   // the share with none is the draw's (Z-03: red snow is given after it)
                     if (!first[t].s.seed) { first[t].s = st; first[t].bi = bi; }
-                    if (TRAITS[t].kind == TK_FIRST || !traitEligible(b.type, t) || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) {
+                    // eligible: drawn, the kind's; Z-03: given by its own hash, where `snowAlgaeSlot` lets it come
+                    const bool eligible = TRAITS[t].cls == TC_GIVEN && TRAITS[t].kind != TK_DARK ? snowAlgaeSlot(b, g) >= 0 : traitEligible(b.type, t);
+                    if (TRAITS[t].kind == TK_FIRST || !eligible || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) {
                         slotsOk = false;
                         why = b.name + ": " + TRAITS[t].name;
                     }
@@ -916,7 +926,8 @@ void unitTraits(const Check& check) {
                 if (b.type == PT_ACIDIC && g.hasTrait(TR_KARST) && !acidKarst.s.seed) { acidKarst.s = st; acidKarst.bi = bi; }
             }
         }
-        check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0xee430ab584b04f72ULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
+        // (B-504, J-16: a hot world of a dead star or a brown dwarf stays the kind it was drawn as, its traits that kind's: ee430ab584b04f72 before)
+        check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0x739a4b8e37618bebULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
         std::string missing;
         // the dark's own are the drifters' (`rogues dark`)
         for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (!carried[t] && TRAITS[t].kind != TK_DARK) missing += std::string(" ") + TRAITS[t].name;
@@ -1151,6 +1162,8 @@ void unitTraits(const Check& check) {
                 if (nm == "dunes_mars") { lo = 0.003; hi = 0.03; }
                 if (nm == "ice_dusk") { lo = 0.015; hi = 0.08; evDusk = ev; }
                 if (nm == "ice_noon") { lo = 0.005; hi = 0.04; evNoon = ev; }
+                if (nm == "squelch" || nm == "creaks" || nm == "tear") { lo = 0.004; hi = 0.04; }   // J-10: the overgrowth's, beside the wind's 0.02 to 0.05
+                if (nm == "vents_dry" || nm == "vents_wet" || nm == "hair") { lo = 0.01; hi = 0.05; }
                 bool ok = r.nan == 0 && r.peak < 0.75 && r.rms >= lo && r.rms <= hi;
                 std::string extra;
                 if (nm.rfind("dunes", 0) == 0) {
@@ -1170,6 +1183,44 @@ void unitTraits(const Check& check) {
             lvOk = lvOk && evDusk > evNoon && evDusk >= 10 && zcAirless < 0.7 * zcAir;
             check("sounds: the ground's within their levels, the dunes at their note, the ice oftener at dusk, a quake through the boots muffled (Q-03)", lvOk,
                   lv + fmt("the ice's sounds %d at dusk, %d at noon; a quake's pitch %.0f Hz with an air, %.0f through the boots", evDusk, evNoon, zcAir, zcAirless));
+        }
+        {   // J-10: an overgrowth's: the squelch's suck rising (its zero crossings later in a step over earlier), the vents breathing at their lips' pace (the
+            // loudest second of each breath one period apart), the wet ones bubbling (a higher peak), the creaks now and then, none of it without an air
+            std::map<std::string, std::vector<float>> X; std::map<std::string, RenderStats> RS; int creakEv = 0;
+            for (const GroundSound& gs : groundSounds()) {
+                const std::string nm = gs.name;
+                if (nm != "squelch" && nm != "vents_dry" && nm != "vents_wet" && nm != "creaks" && nm != "tear" && nm != "hair") continue;
+                int ev = 0;
+                std::vector<float> x;
+                RS[nm] = renderGroundSound(gs, nullptr, &ev, &x);
+                X[nm] = x;
+                if (nm == "creaks") { AudioSynth syn; AudioState st; st.master = 0.8; gs.set(st, 0); double tt = 0; renderReceiver(syn, st, gs.seconds, nullptr, [&](double dt) { tt += dt; gs.set(st, tt); }); creakEv = st.creakEvents; }
+            }
+            auto zcRate = [](const std::vector<float>& x, double t0, double t1) {
+                int zc = 0; const int i0 = (int)(t0 * 22050), i1 = std::min((int)x.size(), (int)(t1 * 22050));
+                for (int i = i0 + 1; i < i1; i++) if ((x[i - 1] < 0) != (x[i] < 0)) zc++;
+                return zc / 2.0 / std::max(1e-9, t1 - t0);
+            };
+            const std::vector<float>& sq = X["squelch"];
+            const double early = zcRate(sq, 0.55 + 0.12, 0.55 + 0.19), late = zcRate(sq, 0.55 + 0.26, 0.55 + 0.33);   // (the second step: the first at 0)
+            auto loudest = [](const std::vector<float>& x, double t0, double t1) {   // the second whose rms is the most, in [t0, t1)
+                double best = -1, at = 0;
+                for (double a = t0; a + 1 <= t1; a += 0.25) {
+                    double e = 0; const int i0 = (int)(a * 22050), i1 = std::min((int)x.size(), (int)((a + 1) * 22050));
+                    for (int i = i0; i < i1; i++) e += x[i] * x[i];
+                    if (e > best) { best = e; at = a; }
+                }
+                return at;
+            };
+            const double pace = TAU / GROWTH_BREATH_RATE, b1 = loudest(X["vents_dry"], 0, pace), b2 = loudest(X["vents_dry"], pace, 2 * pace);
+            AudioState airless; airless.air = 0; airless.vents = 1; airless.creaks = 1; airless.hair = 1;
+            AudioSynth syn; std::vector<float> buf(22050); airless.master = 0.8;
+            syn.render(buf.data(), (int)buf.size(), 22050, airless);
+            double quiet = 0; for (float v : buf) quiet = std::max(quiet, (double)std::fabs(v));
+            const bool ok = late > 1.3 * early && std::fabs((b2 - b1) - pace) < 0.6 && RS["vents_wet"].peak > 1.2 * RS["vents_dry"].peak && creakEv >= 4 && quiet < 1e-6;
+            check("sounds: an overgrowth's (J-10): the squelch's suck rising, the vents at their lips' pace, the wet ones bubbling, the creaks now and then, none airless", ok,
+                  fmt("(the suck's crossings %.0f a second early in a step, %.0f late; a breath's loudest second %.2f and %.2f s, the lips' period %.2f; the wet vents' peak %.2f, "
+                      "the dry's %.2f; %d creaks in 20 s; airless, the loudest sample %.1g)", early, late, b1, b2, pace, RS["vents_wet"].peak, RS["vents_dry"].peak, creakEv, quiet));
         }
         {
             std::string cw; bool cuesOk = true;

@@ -151,12 +151,12 @@ static int testPad() {
     report("pad: the controller announced", game.testStatus().find("CONTROLLER") != std::string::npos || game.testStatusNext().find("CONTROLLER") != std::string::npos,
             game.testStatus() + " / " + game.testStatusNext());
     {   // the left stick walks in the cabin (it walked nothing there before)
-        double x0, z0, y0, x1, z1, y1; game.testCabinGoto(1.6, -1.0, 0.0); frames(1); game.testCabinAt(x0, z0, y0);   // clear of the capsule's cage
+        double x0, z0, y0, x1, z1, y1; game.testCabinView("THE BRIDGE'S MIDDLE"); frames(1); game.testCabinAt(x0, z0, y0);   // the bridge's middle, the way ahead clear
         gi.pad.axes[1] = -1.0f; frames(20); gi.pad.axes[1] = 0; frames(1); game.testCabinAt(x1, z1, y1);
         gi.pad.axes[2] = 0.8f; frames(10); gi.pad.axes[2] = 0; frames(1); double x2, z2, y2; game.testCabinAt(x2, z2, y2);
         report("pad: the cabin walks and looks", z1 - z0 > 0.5 && std::fabs(y2 - y1) > 0.2, fmt("z %.2f -> %.2f, yaw %.2f -> %.2f", z0, z1, y1, y2));
     }
-    game.testCabinGoto(0.0, 1.3, 0.0); frames(2);
+    game.testCabinAtDevice(FACE_FLIGHT); frames(2);
     tap(PB_X);
     report("pad: X uses what the explorer faces", game.state == GameState::SHIPSCREEN, fmt("state %d", (int)game.state));
     tap(PB_B);
@@ -204,7 +204,7 @@ static int testPad() {
                 fmt("ran %d guide %d entry %d name '%s' state %d", (int)ran, (int)guide, (int)entry, game.testStarName().c_str(), (int)game.state));
     }
     {   // the console by the keyboard: SELECT opens the commands over it, WHERE typed and run
-        game.testCabinGoto(-1.3, 0.0, -PI / 2); frames(2);
+        game.testCabinView("NEAR THE GOES CONSOLE"); frames(2);
         tap(PB_X);
         const bool console = game.state == GameState::CONSOLE && game.testPadKeyboard();
         frames(1); shot("keyboard_console");

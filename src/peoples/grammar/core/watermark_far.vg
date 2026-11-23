@@ -1,0 +1,244 @@
+R"VG(
+# watermark_far.vg (Z-06): a made species' watermark (watermark.vg's root): what it was made for, by how it lives (`madeway`), where
+# (`madeplace`) and whether its crowd glows (`madeglow`), in either age; and the far future's own (`wm.ff.`: no names but where they are
+# owed, the life left to itself). Every word apart, every long sentence of parts.
+@apart
+
+# ---- what it was made for -----------------------------------------------------------------------------------------------------------
+
+wm.for
+  (madeway=light) {wm.open} {wm.light.work}{wm.why}.
+  (madeway=chemical) {wm.open} {wm.chem.work}{wm.why}.
+  (madeway=dead) {wm.open} {wm.dead.work}{wm.why}.
+  (madeway=grazer|madeway=predator) {wm.open} {wm.eat.work}{wm.why}.
+  (2 madeglow=1) {wm.open} light {wm.glowplace} without fire{wm.why}.
+  (1.5 stage>=1) {wm.late}
+wm.open
+  It was made to
+  We made it to
+  Its work is to
+  It was grown to
+  It was written to
+  We wrote it to
+  The first of it was let loose to
+  (age=farfuture) It was made, long ago, to
+  (age=farfuture) Once, it was meant to
+wm.why
+  , because nothing else would grow there
+  , after the {wm.harm}
+  , while there was still time
+  , as {$home} had asked
+  , because the machines had failed at it
+  , when the {wm.harm} would not end
+  , for the children of {wm.place}
+  ; it did, for longer than we hoped
+  ; for a while it did
+  ; it is doing it still, if you can read this
+  ; we never knew whether it would
+  , and it asks only for {wm.food}
+  , in the dark, for as long as there is anything there to eat
+  (1)
+wm.light.work
+  make air again over {wm.ruined}
+  green {wm.ruined}
+  feed the ponds of {wm.place}
+  cover {wm.ruined} before the soil could blow away
+  turn the light into food in the {fut.green} of {wm.place}
+  give {wm.place} back the colour it had
+  thicken {wm.waters} until {fish} could live there again
+  hold the sand of {wm.ruined} together
+  feed the {herd} when the grass failed
+  grow under {crop} and keep the ground wet
+wm.chem.work
+  eat the metals the old works left in {wm.waters}
+  take the poison out of {wm.waters}
+  keep {wm.waters} sweet
+  gather [copper|iron|silver|the rare metals] out of {wm.waters} into its own walls
+  close the old mines under {mountain} from the inside
+  clean the deep water under {wm.place}
+  turn the gas of the old wells into something that does not burn
+  feed on the stone of {wm.ruined} and leave soil behind
+wm.dead.work
+  turn the waste of {wm.place} back into soil
+  break down {wm.waste}
+  eat {wm.waste} until nothing of it was left
+  clear {wm.waters} of {wm.waste}
+  feed the {fut.green} with {wm.waste}
+  rot the old fields of {crop} into new ones
+  eat the dead {herd} before the sickness could spread
+wm.eat.work
+  hunt the sickness in {wm.waters}
+  keep the blooms in {wm.waters} down
+  eat the slime that choked {wm.waters}
+  clear the rot out of the fields of {crop}
+  eat the small things that sickened the {herd}
+  graze the fouled ponds of {wm.place} clean
+  keep the {pest} out of the stores of {crop}
+wm.glowplace
+  the streets of {wm.place}
+  the [halls|stairs|tunnels] under {wm.place}
+  the water gardens of {city2}
+  the long nights at {wm.place}
+  the {fut.green} in winter
+wm.late
+  (cause=climate|cause=drying) It was made to hold the soil when the rains {wm.rains}{wm.why}.
+  (cause=poisoned|cause=nuclear|cause=weapons) It was made to eat the poison that the end left in {wm.waters}{wm.why}.
+  We made it to outlast us{wm.why}.
+  When we are gone something of ours should still be alive {wm.still}, and this is it.
+  We made it because there was nothing else left {wm.left}.
+wm.rains
+  failed
+  stopped coming
+  came all at once
+wm.still
+  here
+  by {water}
+  in the {fut.green}
+  under {mountain}
+wm.left
+  that we could make
+  for us to do
+  that would last
+wm.ruined
+  the dry lands round {wm.place}
+  the old mines under {mountain}
+  the scorched fields by {wm.waters}
+  the bare slopes of {mountain}
+  the grey shore of {water}
+  the old fields of {crop}
+  (desert=1) the salt pans
+  (cold=1) the frozen marshes
+wm.waters
+  {water}
+  the deep water under {wm.place}
+  the canals of {wm.place}
+  (madeplace=ice) the ice of the far north
+  (madeplace=salt) the brine pools
+  (madeplace=spring) the hot springs under {mountain}
+  (madeplace=rock) the cracks in the rock under {wm.place}
+  (madeplace=soil) the soil of {wm.place}
+wm.food
+  a little [salt|iron|ash|water]
+  the dust of {wm.place}
+  what the rain brings
+wm.waste
+  the plastics of the old century
+  the ash of the burning years
+  the tar of the old roads
+  the drowned cities' rubbish
+  what the factories by {wm.waters} left
+  the old cloth and the old ropes
+  the sludge under {wm.place}
+
+# ---- the far future ---------------------------------------------------------------------------------------------------------------
+
+wm.ff.head (formula)
+  A signature, at {$home}.
+  We were here. This is how you will know.
+  Read slowly. This is the only part of it that was meant to be read.
+  At {$home}, once. This is a signature.
+  A mark, left at {$home} where a mark would last.
+
+wm.ff.end (formula)
+  The signature repeats.
+  It repeats, as everything alive does.
+  That is the whole of it.
+  Read on, and it says this again.
+
+wm.ff.what
+  (2) {wm.ff.it} {wm.ff.is}, {wm.ff.and}.
+  {wm.ff.it} {wm.ff.is}. {wm.ff.short}
+wm.ff.it
+  This life
+  This small thing
+  What carries these words
+  The life you have opened
+  The cell that carries this
+wm.ff.is
+  is ours the way a song is its singer's
+  was left to chance, all but this
+  could have been made in any shape, and we made it small
+  was the last thing we made with our hands
+  carries no law and no instruction, only this
+  was small enough to last
+  has no use now that we know of
+  outlived the {fut.sys.n} that grew it
+  was grown once at {$home} and never again
+wm.ff.and
+  and it no longer needs us
+  and that was the intention
+  and we let it be
+  and nothing else of ours is as old
+  and we did not mind
+  and we signed it
+wm.ff.short
+  That is all.
+  It needs nothing.
+  We let it go.
+  It was enough.
+  (1)
+
+wm.ff.say
+  (2) {wm.ff.th} {wm.ff.short}
+  {wm.ff.say.lead} {proverb}.
+  We did not leave a saying. Sayings are for the living.
+wm.ff.say.lead
+  If you need a saying, take the old one:
+  The old ones' saying was this, and we kept it:
+  Our first makers would have said that
+wm.ff.th
+  {wm.ff.th.a}, {wm.ff.th.b}.
+wm.ff.th.a
+  Nothing copied for ever stays the same
+  The smallest things last the longest
+  What is copied is remembered
+  A life is not a message, though it can carry one
+  Every made thing is a question
+  A signature is a kind of hope
+  The wild made everything else here
+  The letters outlast the hand that wrote them
+  What we made small is all that is left
+  A thing that copies itself is never finished
+wm.ff.th.b
+  and that is the beauty of it
+  or so we believed
+  we thought
+  as our makers said
+  if we were right
+  and this one is ours
+  in the end
+  which is enough
+
+wm.ff.reader
+  {wm.ff.r.a} {wm.ff.r.b}
+wm.ff.r.a
+  You owe us nothing.
+  Let it live.
+  Read on, or do not.
+  It will not mind.
+  Be gentle.
+  Leave it be.
+wm.ff.r.b
+  {wm.ff.r.if}, {wm.ff.r.then}.
+  (2)
+wm.ff.r.if
+  If you are reading this
+  Since you have read so far
+  Whoever you are
+  If this reached you
+  If anyone reads it
+  Now that you have it
+wm.ff.r.then
+  something of our kind is still at work in the dark
+  you have read further than we expected anyone to
+  we never thought of you, and yet here you are
+  the life did what it was made for
+  you know the last thing we wanted said
+  you are the end of a long line of copies
+  we were not the last to wonder
+
+wm.ff.signed
+  {$me:name} wrote these words; the rest of it wrote itself.
+  {$me:name} chose the words at the last.
+  {$me:name} signed it for all of us.
+)VG"

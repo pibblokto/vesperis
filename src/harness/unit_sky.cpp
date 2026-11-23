@@ -229,7 +229,7 @@ void unitStars(const Check& check) {
             const double t = 1000.0, R = sys.bodies[1].radiusKm;
             const Vec3 bp = sys.bodyPos(1, t), away = normalize(bp - sys.star.pos), side = normalize(cross(away, Vec3(0, 1, 0)));
             const Vec3 from[3] = {normalize(side - away), side, normalize(away * 0.8 + side * 0.6)};   // the sun's side, side-on, the night side
-            sr.mapFor(sys.bodies[1]);
+            sr.setSeason(sys, t); sr.mapFor(sys.bodies[1]);
             for (int k = 0; k < 3; k++) {
                 const Vec3 ship = bp + from[k] * (2.5 * R), f = normalize(bp - ship);
                 SpaceContext c; c.sys = &sys; c.t = t; c.shipPos = ship; c.cam = cameraBasis(std::atan2(f.x, f.z), std::asin(f.y)); c.bankBodyA = 1; c.nebulae = false;
@@ -667,15 +667,15 @@ void unitSky(const Check& check) {
             check("telescope: P reads the plate out whole for the photo", photo && prog3 >= 1, fmt("%.0f%% after the P frame: %s", prog3 * 100, game.testTelescopePlate().c_str()));
             press(KEY_Z); run(0.05);
         }
-        {   // the user's review: the telescope's own set on the cabin's back wall (E looks through it), and R-404: every computer in its own colour
-            game.testCabinGoto(1.55, -1.2, PI); run(0.2);
+        {   // the user's review: the telescope's own set (I-02: in the observatory; E looks through it), and R-404: every computer in its own colour
+            game.testCabinView("AT THE TELESCOPE'S SET"); run(0.2);
             int facing = game.testCabinFacing();
             press(KEY_E); run(0.1); bool on = game.testTelescopeOn();
             press(KEY_Z); run(0.05);
-            check("cabin: the telescope's set on the back wall, E looks through it", facing == 9 && on && !game.testTelescopeOn(),
+            check("cabin: the telescope's set in the observatory, E looks through it", facing == FACE_TELESCOPE && on && !game.testTelescopeOn(),
                     fmt("facing %d, E: %s, Z: %s", facing, on ? "the eye at the eyepiece" : "nothing", game.testTelescopeOn() ? "still on" : "stowed"));
-            double minDist = 0; int n = game.testScreenColours(minDist);
-            check("cabin: every computer in a colour of its own", n == 10 && minDist > 0.3,
+            double minDist = 0; int banks = 0; const int n = game.testScreenColours(minDist, banks);   // I-01: the table's count, each its own bank
+            check("cabin: every computer in a colour of its own", n > 0 && banks == n && minDist > 0.3,
                     fmt("%d computers, the instruments' case (C-11) and the drone bay (C-18), the nearest two %.2f apart in RGB", n, minDist));
         }
         {   // the light through a glass hull. Y makes the hull glass (the outside tinted through the walls, the floor and the
@@ -688,7 +688,7 @@ void unitSky(const Check& check) {
                 for (int i = 0; i < FBW * FBH; i++) { if (bankOf(game.fb.idx[i]) == 8) n++; const uint32_t c = px[i]; sum += ((c & 255) + ((c >> 8) & 255) + ((c >> 16) & 255)) / 3.0; }
                 share = (double)n / (FBW * FBH); lum = sum / (FBW * FBH);
             };
-            game.testCabinGoto(0.3, 0.0, -PI / 2, -0.35);   // toward the GOES console from the cage, the head bent to its desk
+            game.testCabinView("ACROSS THE BRIDGE");   // across the bridge to its port wall and the GOES console's alcove, the head bent to it
             const int before = game.testCabinLights();
             if (before & 2) press(KEY_Y);
             if (!(before & 1)) press(KEY_U);

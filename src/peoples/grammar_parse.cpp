@@ -1,5 +1,6 @@
 // E-10: the `.vg` format: the parser (`vgParse`), the link against the model's schema (`vgLink`) and an alternative's place
 #include "grammar_internal.h"
+#include <cstdlib>
 
 // ---------------------------------------------------------------------------
 // the format

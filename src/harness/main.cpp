@@ -79,7 +79,12 @@ static const Mode MODES[] = {
                     return 0;
                 }},
         {"drive", "surface", "", "N4-02: the buggy driven on open ground, frames from the seat", "modes_surface.cpp", [](int argc, char** argv) -> int { return runDrive(); }},
-        {"bestiary", "surface", "", "N3-01: the bestiary of the first living worlds near the start, made twice", "modes_surface.cpp", [](int argc, char** argv) -> int { return runBestiary(); }},
+        {"bestiary", "surface", "[plates [n] | ways]",
+         "N3-01: the first living worlds' bestiaries, made twice; J-06 `plates`: n worlds' (64) species alone, a herd each; J-07 `ways`: each way played and drawn, every plan's gaits",
+         "modes_bestiary.cpp", [](int argc, char** argv) -> int {
+             if (argc > 2 && std::string(argv[2]) == "ways") return runBestiaryWays();   // J-07: each way played and drawn, every plan's gaits
+             return argc > 2 && std::string(argv[2]) == "plates" ? runBestiaryPlates(argc > 3 ? std::atoi(argv[3]) : 64) : runBestiary();
+         }},
         {"encounters", "surface", "[n]", "N3-04: the share of n random felisian sites with a herd within 200 m, by biome", "modes_surface.cpp",
                 [](int argc, char** argv) -> int {
                     runEncounters(argc > 2 ? atoi(argv[2]) : 300);
@@ -152,6 +157,53 @@ static const Mode MODES[] = {
         {"datasheet", "kinds", "[n]", "Q-01: the n data sheets that run longest, in space and on the ground, a page a frame", "modes_kinds.cpp", runDataSheet},
         {"salt", "kinds", "scan [name|ground|family] [tries]", "E-07: the made kinds against the protected worlds as kindOf walks them: what each reaches and takes, the first salt taking none",
                 "modes_kinds.cpp", runSaltScan},
+        {"life", "life", "list [n] | survey [systems] | kin [ly] | plates [n] | strips [plan] | distinct [species] | forms [plan] | search [scene|all] | kit | made [n] | auto | sight",
+                "Z-01: the biota of the worlds nearest home; by kind over the scan region; the geneses and the kin cells. Z-02 (modes_life_look.cpp): the "
+                "forms' plates, the acts' strips, no two alike, every plan's variants in the six ways. Z-03: each microhabitat round the search's scenes "
+                "and what a sample there holds, read again from another landing; the kit played (its frames). Z-06 (modes_tree.cpp): `made`, the made "
+                "species of the late peoples' worlds nearest home and fifty of their watermarks as the decoder reads them, the checks, the repeats at a hundred. "
+                "Z-07: `auto`, auto-explore's water outing on a felisian world and at a terraced spring, run till it takes a sample (its steps, the vial's line). "
+                "R-434: `sight`, the activity vision played on a superhabitable world's shelf (on, from the buggy, a vial where it shows strong, off)",
+                "modes_life.cpp", runLife},
+        {"lab", "life", "microscope | time | cultures | tree | kin [r] | catalogue | genes", "Z-04: the microscope opened on samples of each stage and chemistry: every way of seeing at every zoom, a cell tracked, "
+                "the light's crowd, the magnet's turn, the warm stage, the food, a fossil's section; the mounts and the sheets. `time`: a dense slide's frame "
+                "timed by its parts. Z-05 (modes_cultures.cpp): `cultures`, twenty species an hour in four media (their curves, their stages' times), the pairs "
+                "(the cycles' periods, the winners, the mirrored), lines switched (Y-04: a glow IN THE DARK, a rest IN THE LIGHT), the incubator's screen. "
+                "Z-06 (modes_tree.cpp): `tree`, a sequenced set (the flow's world's, home's, a kin star's, its own genesis's, a mirrored one, a drifter's and "
+                "the star it left, a made one on the sequencer), the tree printed and drawn, the decoder's watermark, the kin near home; `kin`, those alone. "
+                "Z-07: `catalogue`, a guide as the lab fills it and a friend's file lent: the catalogue by world (the lent in cyan) and by kin, a sheet's form "
+                "live, a name given from it; the statistics' LIFE page, the data sheet's microbes, a micrograph in the gallery. Y-02 (modes_genes.cpp): `genes`, "
+                "a world's species' genes for each alphabet and hand (each genesis's map and code), every gene's edit and cut on a species (its values before "
+                "and after), the gene editor's screen (`lab_genes.png`: its chooser, its map, R-450's letter guides, its line writing and in its flask), "
+                "the genes' laws. Y-03: genes moved in from a world's kin (their values, their price by how far they came), the editor beside a kin "
+                "(`lab_genes_kin.png`: its chooser, the map beside it, its warmth moved in, a gene into a gap, the line on its world's tree). Y-04: "
+                "`lab_genes_switch.png` (a glow IN THE DARK by S, aglow in a dark flask; a rest IN THE LIGHT, resting lit, dying dark). J-01: the world "
+                "genes, forty species' world values, the editor's world page; `cultures`: `lab_cultures_world.png`",
+                "modes_lab.cpp", runLab},
+        {"seed", "life", "test | worlds | sea | climate | traits | looks | fates | kinds | record | cold | clouds", "J-02 `test`: a desert world's landing map, zoom, globe, telescope plate and ground as generated, with a test "
+                "layer's tint, with its cover, and as generated again (the first pictures pixel for pixel): `seed_test_<view>_<none|tint|cover>.png`. J-03 `worlds`: six lines "
+                "(wild, warm, cold, a dye, a methane-maker, STOP cut) let go on forty worlds: each verdict and why, the drift, the spread's steps and what each shows. `sea`: the "
+                "dye line in a sea off a coast, before and at its eighth step: `seed_sea_<map|zoom|globe|ground>_<before|after>.png`. J-04 `climate`: each gas on twenty worlds, "
+                "the mean warmth, pressure and air before and after. `traits`: each made air's trait from orbit and on the ground, before and after: "
+                "`made_<trait>_<orbit|ground>_<before|after>.png` (a runaway's `_dry` an hour on). J-05 `looks`: each made water's, ground's and plants' trait the same way, "
+                "`look_<trait>_<map|orbit|ground>_<before|after>.png`. J-08 `fates`: each fate a line brings a world's animals, each drawn on the ground "
+                "(`fates/fate_<tag>.png`), the remains' stages, each change on a young (`fates/change_<name>.png`), a seeded world's herd over its steps "
+                "(`fates/steps_NN.png`). J-11 `kinds`: the made kind forty worlds and six lines end as, the shares; each made kind's recipe on a world, J-15's greened "
+                "desert too (`kinds/<kind>_<orbit_before|orbit|sheet|ground>.png`). J-12 `record`: a poisoned world's record in the catalogue and on the LIFE page (`record/*.png`). "
+                "J-13 `cold`: forty worlds' warmth on the ground and down, a line tuned for each, the seed page 5 km down, a europan world's cracks (`cold/*.png`). "
+                "J-14 `clouds`: the cloud decks' heights, a cloud line tuned for each, a venusian and an acid world's clouds dyed, the seed page (`clouds/*.png`)",
+         "modes_seed.cpp", runSeed},
+        {"overgrowth", "life", "plates | world | ruins",
+         "J-09 `plates`: each overgrowth type and forty variants on a test ground (`overgrowth/type_<name>.png`, `overgrowth/variant_NN_<tag>.png`, the sheets "
+                "`types.png` and `variants.png`); `world`: a line that never stops and binds let go on a world, its overgrowth from orbit, on the landing map and on "
+                "the ground at four of its steps (`overgrowth/world_NN_<map|orbit|ground>.png`); J-10 `ruins`: the medieval test world's first city and its "
+                "capital overgrown at four steps (`overgrowth/ruins_<city|capital>_NN.png`), a doorway grown shut (`ruins_doorway.png`), the city crumbled by a "
+                "stone rotter and as generated (`ruins_crumbled.png`, `ruins_uncrumbled.png`)",
+         "modes_overgrowth.cpp", [](int argc, char** argv) -> int {
+             if (argc > 2 && std::string(argv[2]) == "world") return overgrowthWorld();
+             if (argc > 2 && std::string(argv[2]) == "ruins") return overgrowthRuins();
+             return overgrowthPlates();
+         }},
         {"signals", "radio", "[<sx> <sy> <sz>] [reach] [xG] | wav", "C-07: the far signals heard from a sector; their WAVs", "modes_signals.cpp", runSignals},
         {"voice", "radio", "<sx> <sz> <body> [index] [wav]", "C-05: a world's voice, a record spoken", "modes_signals.cpp", runVoice},
         {"sounds", "radio", "", "Q-03: the ground's sounds through the synth: the dunes, the ice, a quake", "modes_signals.cpp", runSounds},
@@ -199,6 +251,11 @@ static const Mode MODES[] = {
                 [](int argc, char** argv) -> int { return runFuzz(argc > 2 ? atoi(argv[2]) : 10000); }},
         {"zoom", "game", "<sx> <sz> <body> <latDeg> <lonDeg> [scale]", "C-09: the landing map's zoom window over a point", "modes_game.cpp", runZoom},
         {"drones", "game", "[frames] | check | world <sx> <sz> <body>", "C-18: the drone bay in a game", "modes_drones.cpp", runDrones},
+        {"ship", "game", "rooms [scale ...] | walk | light [scale] | life [scale]",
+                "I-02: each space from its arch and its middle; a walk to every device and through every arch; I-03: the light (lit and dark, the "
+                "sun's patches, the hull outside); I-04: life aboard (the photographs, the garden, the shelves, the core, the hatch's drop); J-01: the "
+                "incubator with the world genes' looks",
+                "modes_ship.cpp", runShip},
         {"parkings", "game", "", "B-428: twelve parkings of the scenes that were crowded", "modes_game.cpp", [](int argc, char** argv) -> int { return runParkings(); }},
         {"tape", "game", "[dir]", "R-420: auto-explore's tape, its tracks and the deck's sequences", "modes_game.cpp", runTape},
         {"tail", "game", "[<sx> <sy> <sz> <body>]", "B-427: a Wolf-Rayet star's giant and the tail its wind strips", "modes_game.cpp", runTail},
@@ -206,14 +263,16 @@ static const Mode MODES[] = {
         {"unit", "proof", "[list] [-q] [group ...]", "the unit's checks, all or by group (`unit list`); -q: only the failures", "unit.cpp", testUnit},
         {"regress", "proof", "[bless]", "M0-03: the determinism hashes against tests/regress_baseline.txt (bless: with GEN_VERSION only)", "modes_proof.cpp",
                 [](int argc, char** argv) -> int { return runRegress(argc > 2 && std::string(argv[2]) == "bless"); }},
-        {"fingerprint", "proof", "bodies | stream | peoples | modules [n] [out] [full]", "E-02: what the generators make, as keyed lines (tools/prove)", "fingerprint.cpp", runFingerprint},
+        {"fingerprint", "proof", "bodies | stream | peoples | modules | life [n] [out] [full]", "E-02: what the generators make, as keyed lines (tools/prove)", "fingerprint.cpp", runFingerprint},
         {"screens", "proof", "[scale ...]", "F-05: the game's frames the regress never hashes", "modes_proof.cpp", runScreens},
         {"pngdiff", "proof", "<a.png> <b.png> [diff.png]", "F-01: two PNGs pixel for pixel", "modes_proof.cpp", runPngDiff},
         {"bothways", "proof", "<scene> [scale]", "F-01: a scene by the workers and by one thread", "modes_proof.cpp", runBothWays},
         {"suncone", "proof", "", "F-05: the sun's cone test swept to the frame's corner", "modes_proof.cpp", [](int argc, char** argv) -> int { return runSunCone(); }},
-        {"bench", "bench", "[check [slack]] | forest | noise", "the frame's costs; `check` against the 38 budgets", "modes_bench.cpp",
+        {"bench", "bench", "[check [slack]] | forest | noise | overgrowth", "the frame's costs; `check` against the budgets; J-09 `overgrowth`: the "
+                "overgrown forest's and ground's views beside the plain ones", "modes_bench.cpp",
                 [](int argc, char** argv) -> int {
                     if (argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();
+                    if (argc > 2 && std::string(argv[2]) == "overgrowth") return runBenchOvergrowth();   // J-09
                     // `bench check <factor>`
                     return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check", argc > 3 ? std::max(0.1, atof(argv[3])) : 1.0);
                 }},
@@ -251,6 +310,7 @@ int main(int argc, char** argv) {
     std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still writing its histories and works is waited for before their caches go
     makeDir("shots");
     makeDir("shots/tests");   // every harness output lands here; shots/ itself holds the player's screenshots
+    makeDir("shots/tests/game_shots");   // B-440: a test game's photographs and probes' images (TestGame's `shotsDir`)
     Game::musicDirDefault = "shots/tests/tape_none";   // a player's own music folder plays in no check (`tape` reads it on purpose)
     // `scale=N` anywhere on the command line renders at that resolution scale
     std::vector<char*> args;

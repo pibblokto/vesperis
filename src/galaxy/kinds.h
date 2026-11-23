@@ -97,6 +97,9 @@ enum Material {
     MAT_STROMATOLITE,   // a stromatolite reef's flat, the pale carbonate between its domes (family rock; the archean's second accent; the domes, objects, wear the mats)
     MAT_CRUST,    // lichen crusts on bare ground and stone (family rock; the lichen world's first accent)
     MAT_MOSS,     // moss mats in the wet hollows (family grass; the lichen world's second accent)
+    MAT_TISSUE,   // J-09: an overgrowth's soft tissue (flesh, slime mould, bladders, films; family rock: drawn in the overgrowth's own bank)
+    MAT_THREADS,  // J-09: an overgrowth's threads (fungus, hair, carpets)
+    MAT_HARD,     // J-09: an overgrowth's hard ground (coral, sponge, lichen, a plated or bony tissue)
     MAT_COUNT
 };
 // N1-01: material families share a palette bank in every view (rock, water, forest, grass, sand, snow); P-00: a kind without flora
@@ -127,6 +130,8 @@ enum Trait {
     TR_SINGING_DUNES, TR_SINGING_ICE, TR_QUAKES,
     // the drifters' own (`TK_DARK`): never drawn, given to the bodies of a system with no sun by what they are (`darkTraitsOf`)
     TR_FROZEN_AIR, TR_EMBERS, TR_LIGHTS_LEFT_ON, TR_LIGHTS_IN_WATER,
+    // Z-03: a life trait given by a hash of its own (`BodyGen::make`), never drawn: red snow on the cold living worlds without a people
+    TR_SNOW_ALGAE,
     TR_COUNT
 };
 constexpr int TRAIT_SLOTS = 6;   // Q-01: a world's traits (`BodyGen::traits`): R-304's three, then three by kind of trait
@@ -234,6 +239,8 @@ enum KindShape : uint64_t {
     KS_SINGING_SAND = 1ull << 52,  // singing dunes: dunes of dry, sorted sand with slip faces, and an air to carry their hum
     KS_ICE_SONG    = 1ull << 53,   // singing ice: ice under an air that cracks and settles as the day warms and cools it
     KS_SEISMIC     = 1ull << 54,   // quakes: a crust that still moves (plates, a hot interior, a giant's tides) where the kind has no quakes of its own
+    // Z-03: red snow: the summer snow of a cold world whose life lives on its ground, where algae bloom in the melt (`TR_SNOW_ALGAE`, given)
+    KS_SNOW_ALGAE  = 1ull << 55,
 };
 
 // P-00: a star-class rule's effect on a kind's weight in `pickPlanetType`, w = w x mul + add ({1, 0} leaves it, {0, 0} rules it out),

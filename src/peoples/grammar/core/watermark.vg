@@ -1,0 +1,301 @@
+R"VG(
+# watermark.vg (Z-06): a made species' watermark, the words a futuristic or far-future people wrote into the genome of a life it made (as
+# JCVI-syn1.0's genome carried its makers' names and three sayings: Gibson et al. 2010). Written outside the catalogue at the year it was
+# made (`writeWatermark`, peoples/genres.cpp), its maker the writer cast where it was made, the species' facts beside the record's
+# (`madeway` light, chemical, dead, grazer or predator; `madeplace` water, soil, rock, ice, salt or spring; `madeglow`); read on the ship's
+# decoder in the people's tongue. Rules `wm.`; what it was made for and the far future's own in watermark_far.vg (`wm.for`, `wm.ff.`).
+# Every word apart, so no people's records move; every long sentence composed of parts (the records' measure: 5% at a hundred).
+@apart
+@root watermark
+
+watermark (words=22..150)
+  (age=futuristic has:writer 3) {@cast writer}{wm.head}\n{wm.what} {wm.made}\n{wm.for}\n{wm.say}\n{wm.end}
+  (age=futuristic has:writer 3) {@cast writer}{wm.head}\n{wm.made} {wm.for}\n{wm.what}\n{wm.reader}\n{wm.end}
+  (age=futuristic has:writer 2) {@cast writer}{wm.head}\n{wm.for} {wm.made}\n{wm.say} {wm.reader}
+  (age=futuristic !has:writer) {wm.head}\n{wm.what} {wm.for}\n{wm.say}\n{wm.reader}\n{wm.end}
+  (age=farfuture 2) {wm.ff.head}\n{wm.ff.what} {wm.for}\n{wm.ff.say}\n{wm.ff.end}
+  (age=farfuture 2) {wm.ff.head}\n{wm.for}\n{wm.ff.what} {wm.ff.reader}\n{wm.ff.end}
+  (age=farfuture has:writer 2) {@cast writer}{wm.ff.head}\n{wm.ff.what} {wm.ff.signed}\n{wm.for}\n{wm.ff.reader}
+  (age<=modern) {wm.head}\n{wm.what} {wm.for}\n{wm.end}
+
+# ---- the heading and the close (formulas) -------------------------------------------------------------------------------------------
+
+wm.head (formula)
+  Written into this life at {$home}, cycle {#year:digits}.
+  A mark in the letters, made at {$home} in cycle {#year:digits}.
+  For whoever reads living letters: {$home}, cycle {#year:digits}.
+  Made at {$home}, {season.now}, cycle {#year:digits}.
+  Cycle {#year:digits}. {$home}. This is our mark.
+  (has:$home.quarter) {$home.quarter}, {$home}, cycle {#year:digits}: our mark.
+  Our mark, set down at {$home} in the {nth} season of cycle {#year:digits}.
+
+wm.end (formula)
+  Here the mark ends; the life's own letters go on.
+  End of the mark.
+  That is all we wrote. The rest is its own.
+  The mark ends here and begins again further on.
+  Here our words stop and its work begins.
+
+# ---- what the mark is ----------------------------------------------------------------------------------------------------------------
+
+wm.what
+  (3) {wm.part} {wm.does}, {wm.like}. {wm.short}
+  (2) {wm.part} {wm.does}. {wm.sign}
+  (2) {wm.sign} {wm.short}
+wm.part
+  This stretch of its letters
+  This handful of words
+  What you are reading
+  This part of it
+  This run of letters
+  This short stretch of its code
+  The stretch you have found
+  This run of a few hundred letters
+  What we wrote here
+wm.does
+  does nothing for the cell
+  is copied each time it divides, and never read by it
+  was set here by hand, a few letters a day
+  is a letter, not a living thing
+  says who made it, and in what cycle
+  is the only part of it that talks
+  costs it nothing to carry
+  will be copied long after {wm.lab} is gone
+  was the last of it to be written
+  makes no {wm.thing}, and keeps no time
+  was worked out on the {wm.surface} of {wm.lab} first
+wm.thing
+  wall
+  food
+  light
+  poison
+  colour
+wm.surface
+  long tables
+  glass walls
+  oldest machine
+  night screens
+wm.like
+  like a name sewn into a coat
+  as a potter presses a thumb into the clay
+  the way a mason cuts a mark on the back of a stone
+  like the seal on a letter
+  like the maker's line under a song
+  as a weaver works a colour into the edge of a cloth
+  like a name scratched inside a ring
+  as the {craft} workshops of {wm.place} mark what they make
+  the way a keeper of the {herd} marks the young ones
+  like the sign on a jar of {drink}
+wm.short
+  It is a signature.
+  It repeats.
+  It is ours.
+  Read on: it comes again.
+  We were here.
+  (1)
+wm.sign
+  {wm.sign.it} {wm.sign.how}, {wm.sign.why}.
+  {wm.sign.it} {wm.sign.how}; {wm.sign.hope}.
+wm.sign.it
+  Our signature
+  The mark
+  This signature of ours
+  The mark we wrote
+wm.sign.how
+  comes round again every {wm.every} letters
+  is written three letters to a sign of our script
+  is spelt out in the old code our children learned
+  sits where the cell will never read it
+  repeats down the whole length of the life
+  was written into every copy we grew
+wm.sign.why
+  so that the life would be known for ours wherever it spread
+  so that nobody could say it had made itself
+  in case {wm.lab} burned
+  because the law of {wm.place} asked it of every made thing
+  as every made thing of ours carries one
+  for whoever comes after the {wm.harm}
+  so that we could tell it from the wild
+wm.sign.hope
+  if it ever changes, the life has changed
+  it will outlast {wm.lab}, and very likely us
+  we counted on it lasting {wm.gens} generations without a fault
+  somebody would read it one day, we thought
+  nobody will see it who does not first take the life apart
+wm.every
+  few thousand
+  ten thousand
+  hundred thousand
+  forty thousand
+  million
+wm.gens
+  a thousand
+  a hundred thousand
+  a million
+  ten million
+
+# ---- who made it ------------------------------------------------------------------------------------------------------------------
+
+wm.made
+  {wm.who} {wm.did} {wm.at}{wm.when}.
+  (2 has:writer) {wm.who} {wm.did} {wm.at}{wm.when}. {wm.mine}
+wm.who
+  {$me:name}
+  {$me:name} and {wm.many}
+  {$me:name}, with the help of {wm.many},
+  {wm.many}, with {$me:name} at their head,
+  {$me:name} and the rest of {wm.lab}
+  {$me:name}, who did not live to see it spread,
+wm.did
+  made it
+  wrote these words into it
+  grew the first of it
+  put it together, letter by letter,
+  finished it
+  set the mark
+  spent {n} cycles on it
+  tried it in the {fut.green} first and then made it
+wm.at
+  at {wm.lab} of {$home}
+  in {wm.lab}
+  under {mountain}
+  in the glass rooms of the {fut.green}
+  by {water}
+  at {$home}, in the {fut.block}
+  in the old rooms over {wm.place}
+  at {wm.lab}, beside the {fut.gate}
+wm.when
+  , over {n} cycles
+  , in the years of the {wm.harm}
+  , after {festival}
+  , in a single season
+  , working nights
+  , while {crop} was coming in
+  , the year the {herd} died
+  (1)
+wm.mine
+  We wrote the mark.
+  We chose the words together.
+  The mistakes are ours.
+  We were young then.
+  We hope it worked.
+wm.many
+  forty others
+  the night shift
+  {n} students
+  the old ones who taught us
+  a machine that did the counting
+  half the school
+  our families, who waited
+  the {craft} workers of {wm.place}
+wm.lab
+  the gene house
+  the long laboratory
+  the living works
+  the house of letters
+  the {river} laboratory
+  the school of the living
+  the growing works
+  the seed vault
+  the work rooms over {wm.place}
+  (has:mind) the halls of {mind}
+  the glass rooms of the {fut.green}
+wm.place
+  {city}
+  {city2}
+  {$home}
+  the {river} country
+wm.harm
+  dust
+  long drought
+  sickness
+  poisoned rain
+  great heat
+  empty seas
+  fevers
+  failing harvests
+
+# ---- a saying, and the reader -----------------------------------------------------------------------------------------------------
+
+wm.say
+  (3) {wm.say.lead} {proverb}.
+  {$me:name} {wm.say.chose}: {proverb}.
+  {wm.say.why}, so here is one of {wm.place}: {proverb}.
+wm.say.lead
+  As we say,
+  Our grandmothers used to say that
+  There is a saying at {$home}:
+  As they say at {city2},
+  At {festival} they still say that
+  An old saying, for whoever reads this:
+  The children of {wm.place} learn early that
+  The keepers of the {herd} say that
+  In the {craft} workshops they say that
+  There is a saying painted on the old {fut.sys.n}:
+  The {fut.block} have a saying of their own:
+  {$me:name} used to say that
+  A saying of the {river} country:
+  They write it over the {fut.gate}:
+  As the old songs of {festival} have it,
+wm.say.chose
+  asked for a saying to go in, and chose this one
+  wanted a saying written in, and the others let it be this one
+  argued for a long time over the saying, and chose this
+  put in the saying the {craft} workers say
+wm.say.why
+  A mark should hold something besides names
+  A cell will carry it for ever
+  We had room for a few more words
+  Every made thing should carry a saying
+
+wm.reader
+  (3) {wm.reader.who}: {wm.reader.short}
+  (3) {wm.reader.alone} {wm.reader.short2}
+  If you can read this, {wm.reader.then}{wm.reader.coda}. {wm.reader.short2}
+wm.reader.who
+  Reader
+  To the reader
+  To you
+  Finder
+  Whoever you are
+wm.reader.short
+  be kind to it.
+  it is yours now.
+  remember us.
+  look after it.
+  we were the {people}.
+  goodbye.
+  read it slowly.
+  it did us no harm.
+wm.reader.alone
+  Be kind to it.
+  It is yours now.
+  Remember us.
+  Look after it.
+  We were the {people}.
+  Goodbye.
+  Read it slowly.
+  It did us no harm.
+wm.reader.short2
+  We were here.
+  We meant well.
+  Thank you.
+  It is ours, and yours.
+  (1)
+wm.reader.then
+  you have learned our words
+  you know more of us than our neighbours did
+  you have taken our life apart, and we forgive you
+  you have come a long way
+  the {fut.green} must have done well
+  you have read the {nth} copy of it, or the millionth
+  you are one of very few
+  something of ours has reached you
+  the life has carried it farther than we hoped
+wm.reader.coda
+  , and we are glad
+  , reader
+  , and we thank you
+  , whoever you are
+  (2)
+)VG"

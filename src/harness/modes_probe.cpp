@@ -143,6 +143,7 @@ int runProbe(int argc, char** argv) {
             printf("  the chute opened: %s\n", game.testProbeInfo().c_str());
         }
         game.testProbeSkip(sh.c - 1.0 / 30);
+        game.testWaitMaps();   // KI-446: the giant's and its moons' maps made before the frame (drawn flat without them, by their threads' pace)
         bool up = sh.name == "above_sky" || sh.name == "cirrus";
         if (up) game.testProbeLook(0, sh.name == "cirrus" ? 34 * DEG : 48 * DEG);
         auto t0 = std::chrono::steady_clock::now();

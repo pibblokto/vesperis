@@ -271,6 +271,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
     out.clear();
     const bool microbial = kindHas(site.gen.type, KT_MICROBIAL), ventLife = kindHas(site.gen.type, KT_VENT_LIFE);
     const bool meteorites = site.gen.hasTrait(TR_METEORITES);
+    const bool grown = site.gen.made.grown();
     double cs = 16;
     int pcx = (int)std::floor(x / cs), pcz = (int)std::floor(z / cs);
     // a settlement's standing pieces as rows of discs along their walls (within 40 m)
@@ -285,6 +286,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
             // trunks and fallen logs from the same enumerators that draw them
             forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + (T.stump ? T.r * 0.14 : T.h * 0.02), 1, T.gy - 0.3, T.gy + T.h}); });   // a stone stump's girth
             if (microbial) forDomes(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.85, 0, R.gy - 0.2, R.gy + 0.55 * R.size + 0.2}); });
+            if (grown) forGrowths(cx, cz, [&](const GrowthInst& S) { growthColliders(S, out); });   // J-09: an overgrowth's structures
             if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) { out.push_back({R.x, R.z, R.size, 0, R.gy - 0.1, R.gy + chimneyHeight(R.h)}); });
             if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.9, 0, R.gy - 0.1, R.gy + 0.8 * R.size}); });
             forLogs(cx, cz, [&](const LogInst& L) {
@@ -567,6 +569,12 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
     rp.grain2 = mesoFor(flora ? MAT_FOREST : MAT_ROCK); rp.grain2Scale = 4.0;   // facets and lichen speckle
     RasterParams rpPlain; rpPlain.bank = rp.bank;
     RasterParams rp2; rp2.bank = 2;
+    // J-09: an overgrowth's structures (within 16 cells), the rocks under its cover wrapped in it (its bank and tile)
+    const MadeWorld& mw = site.gen.made;
+    const bool grown = mw.grown() && mw.growthLine >= 0 && mw.growthLine < MADE_LINES;
+    RasterParams rpG = rp;
+    if (grown) { rpG.bank = growthBank >= 0 ? growthBank : rp.bank; rpG.grain2 = mesoFor(mw.spread[mw.growthLine].growth.material); rpG.grain2Scale = 3.0; }
+    growthDraws.clear();
     double fogD = env.fogDistance;
     auto fogShade = [&](double shade, double dist) { double f = 1 - std::exp(-dist / fogD); return shade + (63 - shade) * f; };
     for (int cz = pcz - radius; cz <= pcz + radius; cz++)
@@ -586,6 +594,8 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     [&](const RockInst& R) {
                         const double rx = R.x, rz = R.z, size = R.size, gy = R.gy;
                         const uint64_t hr = R.h;
+                        RasterParams& rk = grown && madeGrowthMaterial(site.lod0.at(cx, cz).material) ? rpG : rp;   // (J-09: wrapped)
+                        if (&rk == &rpG) rpG.bank = growthBankOf(site.lod0.at(cx, cz).mline - 1) >= 0 ? growthBankOf(site.lod0.at(cx, cz).mline - 1) : rp.bank;   // (KI-473: its line's)
                         double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
                         double a0 = hash01(mix64(hr + 3)) * TAU;
                         Vec3 base(rx, gy - size * 0.15, rz);
@@ -595,7 +605,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                         Vec3 peak = base + Vec3(std::cos(a0 + 1.0) * size * 0.25, peakH, std::sin(a0 + 1.0) * size * 0.25);
                         lastRocksDrawn++;
                         if (size > 0.5) drawBlobShadow(fb, rx, rz, size * 0.9, peakH);
-                        rp.grainWeight = clampd(1.0 - (dist - 60.0) / 200.0, 0.2, 1.0);
+                        rk.grainWeight = clampd(1.0 - (dist - 60.0) / 200.0, 0.2, 1.0);
                         for (int k = 0; k < 3; k++) {
                             Vec3 p0 = pts[k], p1 = pts[(k + 1) % 3];
                             Vec3 n = normalize(cross(p1 - p0, peak - p0));
@@ -616,7 +626,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                                 tri[q].u = ws[q].x + ws[q].y * 0.7;
                                 tri[q].v = ws[q].z + ws[q].y * 0.4;   // world-mapped facets
                             }
-                            rasterTriangle(fb, tri, rp, proj);
+                            rasterTriangle(fb, tri, rk, proj);
                         }
                     });
             // a strewn field's iron meteorites: dark lumps pitted with thumbprints, their fusion crust black-brown in the chrome's ramp,
@@ -669,6 +679,14 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     rasterTriangle(fb, tri, rp2, proj);
                 }
             }
+            if (grown && cellDist < 12 * cs) forGrowths(cx, cz, [&](const GrowthInst& S) {   // J-09: the overgrowth's structures to draw, a near one's shadow
+                GrowthDraw D; D.S = S;
+                if (!growthVisible(S, D.px)) return;
+                if (S.r > 0.4 && D.px > 6 && S.shape != GS_BLADDER && S.shape != GS_VEINS && S.shape != GS_HAIR) drawBlobShadow(fb, S.x, S.z, growthReachOf(S) * 0.8, S.h);
+                D.sx = (site.groundHeight(S.x + 0.7, S.z) - site.groundHeight(S.x - 0.7, S.z)) / 1.4;
+                D.sz = (site.groundHeight(S.x, S.z + 0.7) - site.groundHeight(S.x, S.z - 0.7)) / 1.4;
+                growthDraws.push_back(D);
+            });
             // stromatolites, low lumpy domes dark with the mats that grow over them (the mats' bank, the kind's first accent: bank 10) on the
             // reef flat's pale carbonate (Shark Bay's), lit like the boulders
             if (microbial) forDomes(cx, cz, [&](const RockInst& R) {
@@ -744,6 +762,23 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 lastRocksDrawn++;
             });
         }
+    // J-09: the overgrowth's structures made on the pool into sixteen lists (each a fixed run of them, so the frame is the same on any
+    // number of threads), then filled in bands, the lists in order (as the animals are)
+    lastGrowthsDrawn = (int)growthDraws.size();
+    if (!growthDraws.empty()) {
+        const GrainTexture* tile = mesoFor(mw.spread[mw.growthLine].growth.material);
+        const int n = (int)growthDraws.size(), K = 16;
+        for (ShapeList& L : growthLists) L.begin(proj);
+        parallelFor(K, 1, [&](int k0, int k1) {
+            for (int k = k0; k < k1; k++)
+                for (int i = n * k / K; i < n * (k + 1) / K; i++) drawGrowth(growthLists[k], growthDraws[i], t, ambient, sunUp, lf, tile);
+        });
+        parallelFor(FBH, 32, [&](int yb, int ye) {
+            setRasterBand(yb, ye);
+            for (const ShapeList& L : growthLists) L.fill(fb);
+            setRasterBand(0, 1 << 30);
+        });
+    }
 }
 
 void SurfaceView::drawCapsule(Framebuffer& fb, double t) {

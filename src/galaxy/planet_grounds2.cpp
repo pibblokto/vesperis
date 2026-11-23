@@ -56,8 +56,9 @@ void groundChemotroph(GroundCtx& c) {
     // frost in fields of a hundred kilometres on the cold ground, ragged at their edges, more on the heights and toward the poles, none in a
     // basin (unfaded fields)
     const double basin = smoothstep(0.7, 0.9, field), patch = fbm3(p / 1.2, g.sG + 36, 3);
-    const double frost = fbm3(p / 120.0, g.sG + 35, 2) + (matVisible(3.0, detailM) ? 0.15 * fbm3(p / 3.0, g.sG + 37, 2) : 0.0) + 0.4 * smoothstep(400.0, 2000.0, hS) +
+    double frost = fbm3(p / 120.0, g.sG + 35, 2) + (matVisible(3.0, detailM) ? 0.15 * fbm3(p / 3.0, g.sG + 37, 2) : 0.0) + 0.4 * smoothstep(400.0, 2000.0, hS) +
             0.3 * smoothstep(30.0, 70.0, absLatDeg) - basin;   // the edges' raggedness where a ring draws it (the map's texels are wider)
+    if (g.made.warmC != 0) frost -= madeFrostLess(g);   // (KI-456: a made climate's)
     if (pool > 0.5) { s.material = MAT_BRINE; s.albedo = 0.30; }
     else if (sinter > 0.5 || (basin > 0.5 && patch > 0.12)) { s.material = MAT_SALT; s.albedo = 0.66; }
     else if (mats > 0.5 || fissure > 0.5 || (basin > 0.5 && patch > -0.2)) { s.material = MAT_MATS; s.albedo = 0.52; }
@@ -129,7 +130,8 @@ void groundNitrogen(GroundCtx& c) {
     s.height = h;
     // the uplands' colours: tholin by an unfaded field of the low latitudes, methane frost on the heights and toward the poles
     const double tholin = fbm3(p / (R * 0.22), g.sG + 46, 3) + (matVisible(12.0, detailM) ? 0.3 * fbm3(p / 25.0, g.sG + 47, 2) : 0.0) + 0.75 * smoothstep(32.0, 8.0, absLatDeg) - 0.45;
-    const double frost = (hRel - L - 700.0) / 500.0 + smoothstep(40.0, 70.0, absLatDeg) + 0.4 * fbm3(p / (R * 0.06), g.sG + 48, 2) - (tholin > 0 ? 0.6 : 0.0);
+    double frost = (hRel - L - 700.0) / 500.0 + smoothstep(40.0, 70.0, absLatDeg) + 0.4 * fbm3(p / (R * 0.06), g.sG + 48, 2) - (tholin > 0 ? 0.6 : 0.0);
+    if (g.made.warmC != 0) frost -= madeFrostLess(g);   // (KI-456)
     if (plain > 0.5) {
         if (block > 120.0) { s.material = MAT_ROCK; s.albedo = 0.62; }   // a block of water ice afloat
         else { s.material = MAT_ICE; s.albedo = 0.80 + 0.05 * dome - 0.28 * trough - 0.1 * pit; }   // the troughs dark with the tholin they gather
@@ -631,6 +633,10 @@ void groundDarkOcean(GroundCtx& c) {
     const double bench = smoothstep(-12.0, -2.0, h) * smoothstep(14.0, 3.0, h);   // the waves cut the shores to benches a few metres over the sea
     h += (0.6 + 0.25 * h - h) * bench * 0.75;
     s.height = h;
+    if (h < 0 && g.made.on() && g.made.deadCover() == DC_SCORCHED) {   // KI-458: its seas boiled off (a made hothouse): the floor's salt and dust
+        s.material = fbm3(p / 40.0, g.sG + 88, 2) - h / 3000.0 > 0.45 ? MAT_SALT : MAT_DUST; s.albedo = s.material == MAT_SALT ? 0.8 : 0.3;
+        s.biome = BIO_DESERT; s.oldSea = 1; s.relief = 0; return;
+    }
     if (h < 0) { s.material = MAT_WATER; s.water = 0; s.albedo = 0.05; s.biome = BIO_OCEAN; s.relief = 0; return; }
     // the summits' fumarole fields: pale crusts in patches round the calderas and the highest ground (unfaded fields)
     const double crustF = fbm3(p / 0.8, g.sG + 41, 3) + (caldera ? 0.5 : 0.0) + 0.6 * smoothstep(600.0, 1600.0, h) - 0.55;

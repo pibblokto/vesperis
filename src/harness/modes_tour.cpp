@@ -23,16 +23,9 @@ struct Stop {
     const char* how;
     bool (*open)(Tour&);
     void (*keys)(Tour&);
+    bool (*rowsOpen)(Tour&) = nullptr;   // R-432: the rows' pass's own way in where its commands would never reach a page (else `open`)
 };
 
-// where the explorer stands in the cabin to face a device, and the controller's name for it ("USE <label>")
-struct Device { const char* label; double x, z, yaw, pitch; };
-const Device DEVICES[] = {
-    {"THE GOES CONSOLE", -1.2, 0.0, -PI / 2, 0.0},   {"THE FLIGHT COMPUTER", 0.0, 1.3, 0.0, 0.0},    {"THE STAR MAP SCREEN", 1.6, -1.4, PI / 2, 0.0},
-    {"THE LANDING SCREEN", 1.6, 0.0, PI / 2, 0.0},   {"THE TARGET SCREEN", 1.6, 1.4, PI / 2, 0.0},   {"THE CAPSULE", 0.0, -1.4, 0.0, -0.3},
-    {"THE SHARD DECODER", 0.0, -0.8, PI, -0.65},     {"THE SIGNAL RADAR", -1.55, -1.2, PI, -0.3},    {"THE TELESCOPE", 1.55, -1.2, PI, -0.3},
-    {"THE INSTRUMENT CASE", -1.1, -1.38, -PI / 2, -0.55}, {"THE DRONE BAY", -0.3, 1.435, -PI / 2, -0.38},
-};
 
 struct Tour {
     std::unique_ptr<TestGame> g;
@@ -83,7 +76,7 @@ struct Tour {
     bool row(const std::string& label);             // the open menu's row of that label entered (Enter), then `back`
     void rows(const RowList<MenuRow>& m, const char* const* last);   // every row of a menu by label, those named in `last` (null-ended) last
     void type(const std::string& text);             // letters typed, a line for the whole, then Enter
-    bool device(const Device& d, bool printed = true);   // E at a cabin device, found by the controller's line for it
+    bool device(const CabinDevice& d, bool printed = true);   // E at a cabin device, found by the controller's line for it
     bool deviceNamed(const char* label);              // an opener's: E pressed, not printed
     bool stormGiant(Star& st, int& gi);             // the first gas giant with a great storm
     bool sendProbe();                               // parked at it, C: the probe's camera
@@ -255,21 +248,22 @@ void Tour::type(const std::string& text) {
     back();
 }
 
-bool Tour::device(const Device& d, bool printed) {
-    g->testCabinGoto(d.x, d.z, d.yaw, d.pitch);
+// I-01: a device faced from its row's stand (where the explorer stands to face it), by the controller's name for it ("USE <use>")
+bool Tour::device(const CabinDevice& d, bool printed) {
+    g->testCabinAtDevice(d.facing);
     frame();
-    if (g->testPadItems(0).find(std::string("USE ") + d.label + "|") == std::string::npos) {
-        printf("  E at %s: NOT FACED (%s)\n", d.label, where().c_str());
+    if (g->testPadItems(0).find(std::string("USE ") + d.use + "|") == std::string::npos) {
+        printf("  E at %s: NOT FACED (%s)\n", d.use, where().c_str());
         lost++;
         return false;
     }
-    if (printed) step(std::string("E at ") + d.label, KEY_E);
+    if (printed) step(std::string("E at ") + d.use, KEY_E);
     else press(KEY_E);
     return true;
 }
 
 bool Tour::deviceNamed(const char* label) {
-    for (const Device& d : DEVICES) if (strcmp(d.label, label) == 0) return device(d, false);
+    for (const CabinDevice& d : Game::cabinDevices()) if (d.facing != FACE_NOTHING && strcmp(d.use, label) == 0) return device(d, false);
     return false;
 }
 
@@ -414,19 +408,99 @@ bool openDrones(Tour& t) {
     return true;
 }
 bool openAuto(Tour& t) { return openMenuRow(t, "AUTO-EXPLORE"); }
+// Z-04: vials of the home system's first two worlds with something to show in the cold store, then E at the microscope
+bool openMicroscope(Tour& t) {
+    if (!t.start()) return false;
+    const StarSystem& sys = t.g->testSystem();
+    for (int b = 0; b < (int)sys.bodies.size() && t.g->testColdStore().size() < 2; b++) {   // the first two worlds with something to show
+        Vial v;
+        if (labVial(sys, b, v)) t.g->testColdStore().push_back(v);
+    }
+    return t.deviceNamed("THE MICROSCOPE");
+}
+// R-432: for the rows' pass, the microscope opened as above and its first world's first vial put on the stage (Enter, Enter): its commands
+// walk the slide's controller page, as they did when the vials' list was its first page
+bool openMicroscopeStaged(Tour& t) {
+    if (!openMicroscope(t)) return false;
+    t.press(KEY_ENTER); t.press(KEY_ENTER);
+    return true;
+}
+// Z-07: the home system's worlds' species seen under the microscope (the guide's sheets: the first world's first read), then the guide's row
+bool openCatalogue(Tour& t) {
+    if (!t.start()) return false;
+    const StarSystem& sys = t.g->testSystem();
+    int n = 0;
+    for (int b = 0; b < (int)sys.bodies.size() && n < 6; b++)
+        for (const Microbe& m : lifeOf(sys)->bodies[b].species) {
+            if (m.state == SS_PROTO || n >= 6) continue;
+            MicrobeSheet& s = t.g->guide.microbes[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, b) + "/M" + std::to_string(m.index)];
+            s.seen |= SEEN_FORM | SEEN_MOTION | (n == 0 ? SEEN_KIN | SEEN_WALL : 0); s.forms |= (1u << CF_CELL);
+            n++;
+        }
+    return n > 0 && openGuideRow(t, "THE CATALOGUE");
+}
+// Z-05: a vial of the home system's first world with something to show in the cold store, its species seen (the sheets the chooser lists), the
+// first of them in the second flask; then E at the incubator
+bool openIncubator(Tour& t) {
+    if (!t.start()) return false;
+    const StarSystem& sys = t.g->testSystem();
+    for (int b = 0; b < (int)sys.bodies.size() && t.g->testColdStore().empty(); b++) {
+        Vial v;
+        if (!labVial(sys, b, v)) continue;
+        t.g->testColdStore().push_back(v);
+        const Sample smp = sampleOf(lifeOf(sys)->bodies[b], v.hab);
+        int first = -1;
+        for (const Held& H : smp.held) {
+            if (H.state == SS_FOSSIL || H.state == SS_PROTO) continue;
+            t.g->guide.microbes[Guide::bodyKey(v.sx, v.sy, v.sz, b) + "/M" + std::to_string(H.species)].seen |= SEEN_FORM;
+            if (first < 0) first = H.species;
+        }
+        if (first >= 0) t.g->testFlaskPut(1, 0, first);
+    }
+    return t.deviceNamed("THE INCUBATOR");
+}
+
+// J-03: the seed page: a culture of the home world grown full in the first flask (its vial in the cold store, its best medium, a minute at a time till it is),
+// the ship parked at the home system's first landable world but home, then E at the drone bay and S
+bool openSeeding(Tour& t) {
+    if (!t.start()) return false;
+    const StarSystem& sys = t.g->testSystem();
+    int home = -1, seed = -1;
+    for (const Body& b : sys.bodies) if (b.type == PT_FELISIAN && b.parent < 0 && home < 0) home = b.index;
+    for (const Body& b : sys.bodies) if (KINDS[b.type].landable && b.index != home && seed < 0) seed = b.index;
+    Vial v;
+    if (home < 0 || seed < 0 || !labVial(sys, home, v)) return false;
+    t.g->testColdStore().push_back(v);
+    const Biota& B = lifeOf(sys)->bodies[home];
+    for (const Held& H : sampleOf(B, v.hab).held) {   // its first living species that can grow alone, in its best medium
+        const Microbe& m = B.species[H.species];
+        if (H.state != SS_LIVING || m.way == LW_NONE || m.way == LW_PREDATOR || !t.g->testFlaskPut(0, 0, H.species)) continue;
+        Medium md; md.cell = chemistryCell(B.chemistry); md.tempC = std::round(m.tOpt); md.salt = m.saltLo;
+        md.energy = m.way == LW_CHEMICAL ? m.substrate : (m.way == LW_LIGHT ? CE_NONE : CE_BROTH); md.light = m.way == LW_LIGHT ? CL_WHITE : CL_DARK;
+        t.g->testFlaskSet(0, md);
+        break;
+    }
+    for (int q = 0; q < 240 && t.g->testFlaskNow(0).n > 0 && t.g->testFlaskNow(0).one[0].stage != SG_CROWD; q++) t.g->testLabSkip(60);   // (at its crowd, before its decline)
+    t.g->testParkAt(sys.star, seed, false);
+    t.g->setState(GameState::SPACE);
+    t.frame();
+    if (!t.deviceNamed("THE DRONE BAY")) return false;
+    t.press(KEY_S);
+    return true;
+}
 
 // ---- the keys: its help's and its footer's, its menus' rows by label; what writes a save or leaves the start, last
 void keysTitle(Tour& t) { t.keys("H C N ENTER"); }
 void keysSpace(Tour& t) {
     t.keys("H G M J I TAB CTRL+T LEFT RIGHT UP DOWN R,N,N,ENTER R,1,0,BACKSPACE,R B,PGUP,PGDN,B Z,EQUAL,MINUS,PGUP,PGDN,ENTER,N Z F F X O O U U Y Y "
            "PGUP PGDN T,T,T,T,T L P CTRL+K CTRL+K CTRL+F C");
-    for (const Device& d : DEVICES) { if (t.device(d)) t.back(); }
+    for (const CabinDevice& d : Game::cabinDevices()) { if (d.facing != FACE_NOTHING && t.device(d)) t.back(); }   // the devices' rows, in their order
     t.keys("V ENTER SHIFT+LEFT CTRL+S CTRL+L");
 }
 void keysLanding(Tour& t) { t.keys("LEFT RIGHT UP DOWN SHIFT+LEFT C C J R Z Z V V CTRL+T ENTER"); }
 void keysDescent(Tour& t) { t.keys("T ESC H CTRL+S"); }
 void keysSurface(Tour& t) {
-    t.keys("W A S D SPACE C Z 1 0 TAB TAB V V V V V U U X M M R SHIFT+R G J I H N L B E E F K CTRL+S CTRL+L Q");
+    t.keys("W A S D SPACE C Z 1 0 TAB TAB V V V V V SHIFT+O SHIFT+O U U X M M R SHIFT+R G J I H N L B E E F K CTRL+S CTRL+L Q");   // R-434: the activity vision on, off
 }
 void keysAscent(Tour& t) { t.keys("T ESC H CTRL+S"); }
 void keysHelp(Tour& t) { t.keys("SPACE,SPACE,SPACE A"); }
@@ -521,7 +595,31 @@ void keysProbe(Tour& t) {
 void keysRecording(Tour& t) { t.keys("SPACE SPACE HOME END RIGHT LEFT DOWN UP PGDN PGUP X N ENTER"); }
 void keysInstruments(Tour& t) { t.keys("DOWN UP ENTER,DOWN,UP,LEFT,RIGHT,1,2,9,0,ENTER,SPACE,ESC"); }
 void keysDrones(Tour& t) { t.keys("DOWN UP ENTER"); }
-void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
+void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }
+// J-03: the next full flask, the place moved each way (ten degrees with Shift), Enter (drone 1 sent, the bay again)
+void keysSeeding(Tour& t) { t.keys("C LEFT RIGHT UP DOWN SHIFT+RIGHT ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
+// the flasks: down to the culture, the medium's fields and their changes (ten degrees with Shift), as its world, a fresh broth, its organism's
+// name begun and left (R-442: N, Esc); up to the empty flask, Enter (the chooser; R-432: its folders), Enter (the first folder) and Enter (put
+// in), Enter (a second: the chooser), Tab (R-441: the cultures) and Esc; R-435: its warmth typed (37, then 150 refused and Esc); R-440: a copy
+// kept in a new folder (K, N, its name, Enter); Backspace empties the second flask
+void keysIncubator(Tour& t) {
+    t.keys("DOWN RIGHT RIGHT EQUAL MINUS SHIFT+EQUAL LEFT EQUAL W F N,ESC UP ENTER ENTER ENTER ENTER TAB ESC 3 7 ENTER 1 5 0 ENTER ESC K,N,A,B,ENTER "
+           "DOWN BACKSPACE");
+}
+// Z-07: the catalogue: a species down, its sheet (Enter), the next species and back on it, the next way of seeing, back to the list; by kin and
+// by world again; a name typed (N) and the list again
+void keysCatalogue(Tour& t) { t.keys("DOWN UP PGDN PGUP ENTER,DOWN,UP,V,V,ESC TAB TAB N,A,B,ENTER"); }
+// R-432: the vials' worlds (two vials of two worlds), the first world's vials, its vial on the stage: each way of seeing (a drop's section
+// refused), the next and the one before, the zoom, the focus, the stage moved, a cell tracked, kept (R-440: K, Enter) and let go, the four
+// things done to the slide (the light on and off, the magnet's three presses, R-438's warmth typed and the vial's again, a drop and the slide
+// rinsed), the sheet, a name typed, a micrograph; back to the world's vials (the state stays the microscope's, its pages its own), the vial
+// emptied (its world's folder gone with it); Tab the cultures (R-433: a folder made, its name typed, renamed, removed; the flasks' folder
+// refused, empty), Tab back to the vials
+void keysMicroscope(Tour& t) {
+    t.keys("DOWN UP ENTER DOWN UP ENTER 1 2 3 4 5 6 V SHIFT+V EQUAL EQUAL MINUS LBRACKET RBRACKET LEFT RIGHT UP DOWN ENTER K ENTER ENTER L L M M M H 4 0 ENTER SHIFT+H F F TAB TAB "
+           "N,A,B,ENTER P ESC "
+           "BACKSPACE TAB N,A,B,ENTER R,C,ENTER BACKSPACE DOWN ENTER TAB");
+}
 
 // the stops, in the table's order: how the game opens each state of the first pass and its keys
 constexpr Stop STOPS[] = {
@@ -554,6 +652,10 @@ constexpr Stop STOPS[] = {
     {GameState::INSTRUMENTS, "two instruments in the guide, then E at the case", openInstruments, keysInstruments},
     {GameState::DRONES, "E at the drone bay", openDrones, keysDrones},
     {GameState::AUTO, "the Esc menu's AUTO-EXPLORE", openAuto, keysAuto},
+    {GameState::MICROSCOPE, "two vials in the cold store, then E at the microscope", openMicroscope, keysMicroscope, openMicroscopeStaged},
+    {GameState::INCUBATOR, "a seen vial in the cold store and a culture in the second flask, then E at the incubator", openIncubator, keysIncubator},
+    {GameState::CATALOGUE, "the home system's species seen (one read) in the guide, then the guide's THE CATALOGUE", openCatalogue, keysCatalogue},
+    {GameState::SEEDING, "a home culture grown full, the ship at another world of home's system, then E at the drone bay and S", openSeeding, keysSeeding},
 };
 constexpr int STOP_COUNT = (int)(sizeof(STOPS) / sizeof(STOPS[0]));
 constexpr bool stopsInOrder() {   // U-06: a state's stop once, in the table's order; a state with none is toured by its row
@@ -565,9 +667,12 @@ static_assert(stopsInOrder(), "the stops in the table's order, a state's once");
 const Stop* stopOf(GameState s) { for (const Stop& st : STOPS) if (st.state == s) return &st; return nullptr; }
 
 // U-06: the states the rows' pass opens as the first pass does, by name: the scenes (the title, the ship, the capsule's way down
-// and up, the ground), a map of the ground, a probe falling, a recording; every other state a fresh game opens by its row
+// and up, the ground), a map of the ground, a probe falling, a recording; Z-04: the microscope with vials in the cold store; Z-05: the
+// incubator with a culture; Z-07: the catalogue with species seen; J-03: the seed page with a culture grown full; every other
+// state a fresh game opens by its row
 constexpr GameState SETUPS[] = {GameState::TITLE, GameState::SPACE, GameState::DESCENT, GameState::SURFACE, GameState::ASCENT,
-                                GameState::SECTOR_MAP, GameState::PROBE, GameState::RECORDING};
+                                GameState::SECTOR_MAP, GameState::PROBE, GameState::RECORDING, GameState::MICROSCOPE, GameState::INCUBATOR,
+                                GameState::CATALOGUE, GameState::SEEDING};
 // a state by its row: the ship in its parking, the row's way in (`openScreen`), a frame
 bool openByRow(Tour& t) {
     if (!t.start()) return false;
@@ -641,7 +746,7 @@ int runTour(int argc, char** argv) {
         if (!only.empty() && std::find(only.begin(), only.end(), std::string(stateName(s))) == only.end()) continue;
         const bool setup = tourSetupNamed(s);
         if (setup && !r.padMenu) { printf("== %s: %s, toured above (no commands)\n", stateName(s), stopOf(s)->how); reached++; continue; }
-        t.home = s; t.opener = setup ? stopOf(s)->open : openByRow;
+        t.home = s; t.opener = setup ? (stopOf(s)->rowsOpen ? stopOf(s)->rowsOpen : stopOf(s)->open) : openByRow;
         t.steps = 0;
         t.pre = fmt("rows_%02d_%s", (int)s, lowerName(s).c_str());
         printf("== %s: %s\n", stateName(s), setup ? stopOf(s)->how : "its row");

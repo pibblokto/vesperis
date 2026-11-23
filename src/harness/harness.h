@@ -9,6 +9,8 @@
 #include "core/parallel.h"
 #include "core/fs.h"
 #include "galaxy/starfield.h"
+#include "life/morphs.h"
+#include "life/seeding.h"
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
 #include "galaxy/planet_features.h"
@@ -158,6 +160,12 @@ enum SceneCode : int {
     SCENE_ROGUE_EMBERS = -103,   // a drifter's embers
     SCENE_ROGUE_FROZEN_AIR = -104,   // a frozen air
     SCENE_DARK_OCEAN = -105,   // a dark ocean
+    SCENE_SPRING_BANDS = -106,   // Z-03: a terraced hot spring's banded pools
+    SCENE_RED_SNOW = -107,   // Z-03: red snow
+    SCENE_MATS = -108,   // Z-03: a microbial mat on a wet flat
+    SCENE_HUNT = -109,   // J-07: a hunter's chase
+    SCENE_FLOCK = -110,   // J-07: a flock overhead
+    SCENE_SWIMMERS = -111,   // J-07: a swimmer at the surface off a shore
 };
 
 // M7-03 unit tests: frame maths, the sun against analytic cases, noise statistics, name lengths, the Kepler solver
@@ -326,7 +334,7 @@ extern int g_testScale;
 // ---- frames.cpp
 double nowSec();
 void saveFB(Framebuffer& fb, const char* path, double gain = 1.0);
-void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only = -1);
+void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only, double t);   // the season at t set first (B-438)
 uint64_t fnv(uint64_t h, const void* p, size_t n);
 double effectiveSunAlt(const SurfaceSite& site, double t);
 double findTime(SurfaceSite& site, double targetAlt, double t0, double* errOut = nullptr);
@@ -397,6 +405,42 @@ void renderSurface(int onlyType);
 void runConsistency();
 int runDrive();
 int runBestiary();
+int runBestiaryPlates(int worlds);   // modes_bestiary.cpp (J-06)
+int runBestiaryWays();               // modes_bestiary.cpp (J-07)
+bool setupWaysScene(SurfaceView& sv, int wantMat, double& t);   // J-07: the hunt's, the flock's and the swimmers' scenes staged (modes_bestiary.cpp)
+// J-07 (shared with J-08's `seed fates`): a place for a way (0 open dry ground, 1 dry ground off the forest, 2 water 3 m deep, 3 a shallow shore)
+// at a time its sun stands 25 to 55 degrees up (or night's 12 under); a frame at 2x mushed to a file; a herd of a species put down round a point
+bool waysSite(StarSystem& sys, int bi, int need, bool night, double& lat, double& lon, double& t, int salt = 0);
+void waysShot(SurfaceView& sv, StarNeighborhood& nb, SpaceRenderer& sr, double t, const std::string& fn);
+void waysHerd(SurfaceView& sv, int spi, int count, double cx, double cz, uint64_t seed);
+int seedFates();   // J-08: `seed fates` (modes_seed_fates.cpp)
+bool sproutingWorld(int nth, StarSystem& sys, int& body, double& lat, double& lon, MadeWorld& m, int steps);   // B-490: one whose flyers sprout
+int seedKinds();   // J-11: `seed kinds` (modes_seed_kinds.cpp): the made kinds of forty worlds and six lines, the shares, each kind drawn
+int seedRecord();  // J-12: `seed record` (modes_seed_record.cpp): a seeded world's record in the catalogue and on the LIFE page, `record/`
+int seedCold();    // J-13: `seed cold` (modes_seed_cold.cpp): forty worlds' warmth on the ground and down, lines tuned for each on the ground and deep
+int seedClouds();  // J-14: `seed clouds` (modes_seed_clouds.cpp): the cloud decks' heights, a cloud line let go in them, its clouds dyed from orbit
+// J-14: a cloud line's species: the first venusian worlds' first cloud species that lives on what the clouds give (light, dead matter); and a
+// GLOW gene moved in from the first glowing species of the forty worlds (its donor read), as a player moves one
+bool seedCloudSource(StarSystem& cs, int& cb, int& csp);
+bool seedGlowDonor(GeneEdit& glow);
+// J-13: a line's edits as a player would make them for a place (its warmth's best nearest the place's, brine and its frost cut where only a brine
+// stays liquid, DRY where the ground is dry, a SHIELD where the dose asks): species `sp` of body `lb`
+std::vector<GeneEdit> seedTunedEdits(const StarSystem& ls, int lb, int sp, const SeedVerdict& place);
+// a sheet of frames side by side, each halved (the mean of four), `cols` to a row (J-09's plates too)
+void writeSheet(const std::vector<std::vector<uint32_t>>& cells, int w, int h, int cols, const std::string& fn);
+int overgrowthPlates();   // J-09: `overgrowth plates` (modes_overgrowth.cpp)
+// J-09: an overgrowth made by hand at its fullest (`overgrowth plates`, the unit, the bench), and a layer of one line it covers the whole world
+// from; the first of `seed climate`'s flora worlds with a place at a forest's edge (or, `shore`, a shore) by day, and a time at night there
+MadeGrowth growthOfType(int type, int texture, const RGB& colour, double grain, double wet, int hard, bool glow, bool hair);
+MadeWorld growthLayer(double radiusKm, const Vec3& place, const MadeGrowth& G);
+struct GrowthGround { StarSystem sys; int body = -1; double lat = 0, lon = 0, day = 0, night = 0; };
+bool growthGround(GrowthGround& P, bool shore);
+int overgrowthWorld();    // J-09: `overgrowth world`
+int overgrowthRuins();    // J-10: `overgrowth ruins`
+// J-10: an overgrowth's layer at its line's step (its steps, age and reach as the seeding makes them), let go at `place`; a layer put on a view's
+// ground and ruins (its tiles sampled again, its ruins' cover grown again)
+MadeWorld growthAtStep(double radiusKm, const Vec3& place, MadeGrowth G, int step);
+void growthLayerOn(SurfaceView& S, const MadeWorld& m);
 void runEncounters(int wanted);
 void renderLandingMaps();
 int runStability(const char* want, double walk);
@@ -460,9 +504,103 @@ int runSounds(int argc, char** argv);
 // ---- modes_rogues.cpp
 int runRogues(int argc, char** argv);
 
+// ---- modes_life.cpp, unit_life.cpp
+int runLife(int argc, char** argv);
+std::vector<Star> starsNearHome(int r);   // the stars within r sectors of home (a cube), nearest first
+bool coastSite(const BodyGen& g, double radiusKm, double& latDeg, double& lonDeg);   // Z-07: land 200 m inland of a sea's coast (`life auto`, the flow)
+// ---- modes_life_look.cpp
+int runLifeLook(int argc, char** argv);
+std::vector<Morph> everyForm();   // every plan's every variant, of home's genesis (the forms' sheets, the unit)
+void unitLife(const Check& check);
+// ---- modes_seed.cpp (J-02: the seeded worlds, `seed test`; J-03: `seed worlds`, `seed sea`); unit_seeding.cpp: the unit's `seeding` group
+int runSeed(int argc, char** argv);
+void unitSeeding(const Check& check);
+void unitAnimals(const Check& check);
+// J-03: a line of a world's species as the game reads one (its form, its genes, its world genes; its edits applied, their price), keyed as the
+// guide keys it; and a seeding of it at a place (its record's fields), worked out (`seedingRun`)
+SeedLine seedLineFor(const StarSystem& sys, int body, int species, const std::vector<GeneEdit>& edits);
+Seeding seedingFor(const StarSystem& sys, int body, const SeedLine& line, double lat, double lon, double clock, const std::vector<Seeding>* earlier = nullptr);
+// the six lines `seed worlds` sends (ITERATION-1.5.0.md J-03): a species wild; warm and cold (its warmth gene six weights heavier or
+// lighter); a dye (DYE red, its weight the heaviest); a methane-maker (GAS methane); STOP cut. Their edits on a species' genes
+enum SeedLineKind { SL_WILD = 0, SL_WARM, SL_COLD, SL_DYE, SL_METHANE, SL_STOP, SL_COUNT };
+extern const char* const SEED_LINE_NAMES[SL_COUNT];
+std::vector<GeneEdit> seedLineEdits(const MicrobeGenes& g, int kind);
+// the lines' species: the first felisian world's first sea light-feeder (else its first that lives on the dead), wild
+bool seedSource(StarSystem& ls, int& lb, int& sp, SeedLine& wild);
+// a world's place for a seeding: its sea nearest the equator where it has one (the world map's scale), else a lake's (true), else a hashed
+// place of its land (false); the forty worlds `seed worlds` and the unit send to (the first of each landable kind) and their places
+bool seedPlaceFor(const StarSystem& sys, int body, double& lat, double& lon);
+struct SeedCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; bool wet = false; };
+bool seedPlaceTaking(const StarSystem& sys, int body, const SeedLine& line, double& lat, double& lon);   // its sea's first place where a line takes
+std::vector<SeedCase> seedCases();
+// ---- modes_seed_air.cpp (J-04: `seed climate`): edits setting world genes (each {kind, value}: a table gene to the run reading the value, its
+// weight the heaviest; a weight gene, value -1, the heaviest); a world's own line (its sea's first light-feeder, else dead-eater, else chemical-
+// eater, wild); the worlds of the living and the wet kinds (the first of each, then the second, the third: n at most) with their own line and
+// its sea's place where it takes
+int seedClimate();
+int seedTraits();   // J-04: each made air's trait from orbit and on the ground, before and after (`made_<trait>_<orbit|ground>_<before|after>.png`)
+std::vector<GeneEdit> seedGeneEdits(const MicrobeGenes& g, const std::vector<std::pair<int, int>>& wants);   // (J-05: a value of -2 cuts the gene)
+// ---- modes_seed_looks.cpp (J-05: `seed looks`, each made waters', ground's and plants' trait from orbit and on the ground, before and after:
+// `look_<trait>_<map|orbit|ground>_<before|after>.png`)
+int seedLooks();
+bool seedNativeLine(const StarSystem& sys, int body, SeedLine& wild);
+struct SeedAirCase { StarSystem sys; int body = -1; double lat = 0, lon = 0; SeedLine wild; };
+// J-15: a greened desert's line: the first light-feeder of water with a green pigment living on the forty worlds (`seedCases`), tuned for the first
+// desert's place of them (`madeGreens`: its warmth, DRY) where it takes, with `wants` set on top (`seedGeneEdits`), let go there at 0 (`world`'s
+// wild its line); false where none takes. `seed kinds`' recipe and the unit's
+bool seedDesertLine(const std::vector<std::pair<int, int>>& wants, SeedAirCase& world, std::vector<GeneEdit>& edits, Seeding& sd);
+std::vector<SeedAirCase> seedAirCases(int n, int rounds = 3);
+// J-12: the world and line `seed record` and the unit's record checks send: of `seed climate`'s forty worlds with plants and animals, the first
+// where its own sea line given a nerve poison (its STOP cut and its cells bound: it overgrows too) takes and drives a native out by its 64th
+// step, else the poison alone; a game with it let go at the place (an edited strain of the explorer's, `<world>/M<i>/S1`), parked at the
+// world, the guide's clock at the line's 64th step
+struct SeedRecordCase { SeedAirCase c; std::vector<GeneEdit> edits; SeedLine line; double end = 0; };
+bool seedRecordCase(SeedRecordCase& out);
+void seedRecordGame(TestGame& g, const SeedRecordCase& rc, const std::string& name);
+// a game's flask filled with a line in a medium, the lab's clock stepped a minute at a time till it shows FULL (false: not within four hours);
+// a kind's best medium (its cell, its best warmth, its salt, its light and its energy)
+bool labFlaskFull(TestGame& g, int i, const FlaskSpecies& w, const Medium& m);
+Medium seedBestMedium(const CultureKind& k);
+// ---- modes_lab.cpp: the laboratory (Z-04: `lab microscope`, `lab time`); unit_lab.cpp: the unit's `lab` group
+int runLab(int argc, char** argv);
+bool labVial(const StarSystem& sys, int body, Vial& out);   // a vial of a world's ground as the kit takes it (its most abundant living species of a drop)
+bool labDenseVial(Vial& out);   // the densest slide the lab knows (`lab time`'s, the bench's microscope row)
+void unitLab(const Check& check);
+void unitLabAnswers(const Check& check);   // R-435 to R-438, B-441: the group `experiments`
+void unitLabIncubator(const Check& check);   // B-442, R-440 to R-442: the group `incubator`
+void unitLabGenes(const Check& check);   // the Y series (Y-01: the trees by world and by folder): the group `genes`
+// a gene's letters a weight `d` heavier (a letter at a time, the first that can), a table's run that reads `want` (its first `n` letters)
+std::string heavier(const GeneCode& c, std::string p, int d);
+std::string lighter(const GeneCode& c, std::string p, int d);   // (`heavier`'s other way: modes_seed.cpp)
+std::string runReading(const GeneCode& c, const std::vector<int>& t, int want, int n);
+void unitLabWorld(const Check& check);   // J-01: the world genes in the lab, the group `world`
+// ---- modes_cultures.cpp: the incubator's (Z-05: `lab cultures`)
+int labCultures();
+int labStock(TestGame& g);   // the lab stocked for the pictures and the bench: twelve flasks of a living world's species
+int labWorldLooks(TestGame& g, std::vector<std::string>& names);   // J-01: the twelve flasks with the world genes' looks
+// ---- modes_genes.cpp (Y-02: `lab genes`): the first living world of each alphabet and hand; the genes' laws (the unit's `genes` group)
+struct GeneWorld { int letters = 4; bool mirrored = false; StarSystem sys; int body = -1; std::vector<Morph> forms; };
+bool geneWorlds(GeneWorld (&out)[6]);
+struct GeneLaw { bool ok = false; std::string detail; };
+struct GeneLaws { GeneLaw worlds, deterministic, itself, asCode, vitalQuiet, fixed, moved, wild, cellAsBefore, worldCarried, worldPrice; };   // Y-04: wild; J-01: the last three
+GeneLaws geneLaws();
+int labGenes();
+// ---- modes_tree.cpp (Z-06; Z-07's `lab catalogue`)
+int treeKin(int r);
+int lifeMade(int want);
+int labTree();
+int labCatalogue();
+
 // ---- modes_drones.cpp
 void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 int runDrones(int argc, char** argv);
+
+// ---- modes_ship.cpp
+int runShip(int argc, char** argv);
+// I-03: a frame's banks whole: each dealt bank one home's (no bank two hues), none 0, the hull's or the light's, looking out never the
+// outside's (B-437: 7, read through the space view's own palette); `used` the banks the ship's palette takes (the dealt, 0, the two
+// fixed and the outside's one), at most 32
+bool shipBanksWhole(const CabinFrame& f, int& used, std::string& why);
 
 // ---- modes_game.cpp
 void runGameFlow();
@@ -485,6 +623,7 @@ bool tourSetupNamed(GameState s);   // U-06: the tour opens the state as the gam
 // ---- modes_bench.cpp
 void fillBenchGuide(Guide& G);
 int runBenchForest();
+int runBenchOvergrowth();   // J-09: `bench overgrowth`
 int runBench(bool check, double slack);
 int runPool();
 int runBenchNoise();
@@ -598,6 +737,12 @@ void unitNavigation(const Check& check);
 void unitSights(const Check& check);
 void unitAuto(const Check& check);
 void unitStates(const Check& check);
+
+// ---- unit_ship.cpp
+void unitShip(const Check& check);
+
+// ---- unit_search.cpp
+void unitSearch(const Check& check);
 
 // ---- unit_civ.cpp
 void unitCivilisations(const Check& check);

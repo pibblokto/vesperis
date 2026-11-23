@@ -9,7 +9,7 @@ Contents:
 - Surface controls
 - HUD
 - The almanac (W-01, 2026-10-06)
-- The cabin (M2)
+- The cabin (M2): the Stardrifter aboard (I-02)
 - The GUIDE (`guide.txt`, M3)
 - Settings (`vesperis_settings.txt`, M0-02)
 - Key map (M6-02)
@@ -27,13 +27,21 @@ Contents:
 TITLE -> where the game was (Enter, through the title's help and credits: the ground, the capsule's way down or up, the probe's screen, else SPACE; B-432) ; N starts a new expedition (G-02: parked at the first living world of the pinned home star, `HOME_SX/SY/SZ` in `galaxy/starfield.h`, Heilya at sector 195 0 46; the search of sectors 176..196 x 36..56 for a yellow or orange star with a living world is the fallback when a generation change takes it away)
 SPACE -> LANDING_MAP (C, parked at a landable body) -> DESCENT (Enter) -> SURFACE -> ASCENT (Q/E at the capsule) -> SPACE
 SPACE/SURFACE -> HELP (H, ?, F1), MENU (Esc), DATA (I, F2); SPACE -> SYSTEM_LIST (Tab); MENU -> SETTINGS, SLOTS (save/load pickers)
-SPACE -> SHARDS (C-06: the shard decoder, from the cabin's back wall, the flight computer's preferences page or the guide menu; the menu refuses it on the surface; C-04: a piece of music plays there and `N` names it through TEXT_ENTRY, which returns to the decoder; C-05: a text shard speaks there; C-11: `Tab` at its worlds turns to the ship's player)
-SPACE -> INSTRUMENTS (C-11: the instruments' case on the cabin's left wall, or the flight computer's devices page: the instruments taken from the ruins, played there; C-18: it opens on its worlds, a folder each people of each, Enter opens one, Esc back to the worlds, Esc again returns to SPACE)
-SPACE -> DRONES (C-18: the drone bay's screen, from its rack on the cabin's left wall by the front window or the flight computer's devices page; Enter sends the drones and returns to SPACE, Esc or E returns to SPACE)
+SPACE -> SHARDS (C-06: the shard decoder, from its desk in the library (I-02), the flight computer's preferences page or the guide menu; the menu refuses it on the surface; C-04: a piece of music plays there and `N` names it through TEXT_ENTRY, which returns to the decoder; C-05: a text shard speaks there; R-431: the ship's player is a screen of its own, PLAYER)
+SPACE -> PLAYER (R-431: the ship's player at its deck in the library: its worlds, a world's music; Esc back to the worlds, then to SPACE, the player playing on)
+SPACE -> WALL (R-428: the quarters' wall at it: its twelve frames, a frame's photographs; Esc back to the frames, then to SPACE)
+SPACE -> INSTRUMENTS (C-11: the instruments' case in the library (I-02), or the flight computer's devices page: the instruments taken from the ruins, played there; C-18: it opens on its worlds, a folder each people of each, Enter opens one, Esc back to the worlds, Esc again returns to SPACE)
+SPACE -> DRONES (C-18: the drone bay's screen, from its rack in the hangar (I-02) or the flight computer's devices page; Enter sends the drones and returns to SPACE, Esc or E returns to SPACE)
+DRONES -> SEEDING (J-03: S, the seed page; Enter sends drone 1 and Esc returns to DRONES)
 SPACE/SURFACE/LANDING_MAP -> ALMANAC (W-01: Ctrl+T; DATA -> ALMANAC with T; the flight computer's devices page); Esc returns where it came from, Enter starts a run to the row and returns to the scene
 SPACE -> PROBE (X-01: C parked at a giant launches a probe and shows its camera; C, E at the landing screen or the cage watch a probe that falls; Esc, E or C go back to the cabin, the probe falling on; at its end Enter or Esc let it go)
 GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's screen; Esc or Enter back to the gallery, whose Esc returns to SPACE, a storm named (`N`) or not (B-429); on the ground the gallery says the recordings play on the ship)
 MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's commands' general page too) -> SPACE or SURFACE playing on its own (Enter); Esc back; any key, click, mouse motion or button gives the controls back (R-420: but `M`, a controller's `SELECT`, starts and stops its tape)
+SPACE -> MICROSCOPE (Z-04: E at the laboratory's microscope; its first page its lists (R-432: Tab between the vials, a folder a world, and the cultures, R-433: the flasks, UNSORTED and the explorer's folders), Enter opens a folder and puts its row on the stage (the slide's page; a flask's a drop of its culture, a kept culture's a drop of it growing), Esc from the slide back to its folder, from a folder to the folders, Esc or E from the folders (E from anywhere) back to SPACE; N names the species under the crosshair through TEXT_ENTRY, which returns to it; R-433: on the cultures N makes a folder and R renames one, through TEXT_ENTRY too)
+SPACE -> INCUBATOR (Z-05: E at the laboratory's incubator, a screen over the room; its flasks; Enter opens its chooser (R-432: its folders, Enter one and Enter its row; Esc back a level and to the flasks), Esc or E back to SPACE; N names a flask's strain through TEXT_ENTRY, which returns to it)
+SPACE -> SEQUENCER (Z-06: E at the laboratory's sequencer, a screen over the room; Enter opens its chooser (Esc back), Tab the tree, Esc back to SPACE) -> TREE (Tab: back to the sequencer by Esc)
+SPACE -> TREE (Z-06: E at the tree of kin's screen; Tab the sequencer, Esc back to its opener: SPACE, or the sequencer it was opened from)
+GUIDE -> CATALOGUE (Z-07: the guide's THE CATALOGUE, in space or on the ground; Enter a species' sheet (Esc back to the list), Tab by world or by kin, N names a species through TEXT_ENTRY, which returns to it; Esc back to the scene); GUIDE -> STATS, L its LIFE page
 ```
 
 The ways in are lists of rows, their counts read from the lists (U-03): the Esc menu (`Game::escMenu`), the guide menu
@@ -44,14 +52,17 @@ it stays on the screen), the settings (`settingRows`: a value and its change, or
 A screen opens through `openScreen` (U-05): its row's `enter` (its fields; `state` still the screen it opens from), `openedFrom`
 recording its opener, then the state. Esc closes it through `closeScreen`, by its row's `back`: the scene it is drawn over
 (`returnState`: the title, space or the ground, the base it opened from, which `openScreen` takes; HELP, MENU, DATA, the guide and
-its log, statistics and gallery), its opener (KEYS, AUTO, the almanac, a text entry) or a screen of its own (SETTINGS and SLOTS
+its log, statistics, gallery and catalogue), its opener (KEYS, AUTO, the almanac, a text entry) or a screen of its own (SETTINGS and SLOTS
 to MENU, RECORDING to GALLERY, the sector map to SURFACE, the ship's screens, the landing map and the probe to SPACE). A screen
 that closes as it opens the next closes first: the guide before its text entries, the data sheet before the almanac, the flight
 computer before a row that leaves it. Where the game is, `placeNow` (B-432), is the state in play, else the scene under the
 screen, and at the title or over it the place the title was opened from (the start opens it from a load's place, or a new
 game's space), which Enter resumes: a save's `surface`, site and `phase` lines and a photo's caption read it. Only SPACE,
 SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's
-camera).
+camera; Z-04: the microscope, its slide on a clock of its own; Z-05: the incubator; Z-06: the sequencer and the tree). The lab's clock
+(Z-05,
+the flasks'; Z-06: the sequencer's reading) runs as the drones' bay's: real seconds in every state that advances game time,
+none in the menus.
 
 ## The frame (`Game::frame`, game.cpp)
 
@@ -65,16 +76,62 @@ platform pumps the synth (`platformAudioPump`), which reads the `AudioState` poi
 
 ## Ship (`ShipState`)
 
-Modes: `STANDBY` (free in a system or deep space), `VIMANA` (interstellar flight), `APPROACH` (fine approach), `PARKED` (following a body, optionally orbiting).
+Modes: `STANDBY` (free in a system or deep space), `VIMANA` (interstellar flight), `APPROACH` (fine approach), `PARKED` (following a
+body, optionally orbiting).
 
-* Remote target: `R` toggles crosshair mode; the star nearest to the crosshair within 14 px is named live; Enter/click locks it (`lockRemoteTarget`). The current star is refused. `N` turns the ship to the next nearest star and (G-04) faces the cabin view forward as `X` does, so the lock finds it: in the cabin the view kept its own yaw and `Enter` missed the star the ship pointed at. While aiming the star field is amplified x1.5, the six nearest stars carry diamond markers with their distance (`4.2 LY`; R-407: the name only where the star has one, so no row of `UNKNOWN`s, and `VISITED` in amber where the ship has been: `aimStarLabel`), and `N` cycles the crosshair through them (`cycleTargetStar`); the star under the crosshair, the remote target's line and the radar's lock say `VISITED` too, and a key line `N NEXT STAR  ENTER LOCKS  DIGITS JUMP  R CANCELS` holds the bottom (the local target's label is left out meanwhile). **The jump** (R-407, 2026-10-07): the digits typed in the aim are a jump's light years (`jumpDigits`, 1 to 100,000; Backspace takes one back); a panel shows `JUMP 400 LY COREWARD` (`galacticHeading`: COREWARD, RIMWARD, ALONG THE DISC, NORTH or SOUTH OUT OF THE DISC), where the line's end lies (`END: SPIRAL ARM - 13104 LY FROM THE CORE`) and `ENTER JUMPS  BACKSPACE  R CANCELS`; Enter (`startJump`) makes the star nearest the end of the line along the crosshair (`aimDirection`, the view's forward) the remote target (`jumpTarget` in `galaxy/starfield.h`, `04-galaxy-and-systems.md`) and flies at once (`VIMANA JUMP OF 400 LY: A STAR 402 LY AWAY`; where the end lies in the void, `NO STARS OUT THERE - THE JUMP ENDS 580 LY SHORT`), logging `JUMP 400 LY COREWARD FROM <star> TO PARSIS ..., SPIRAL ARM`. `F` toggles the field amplificator at any time (M1-10); arrival from a Vimana flight flashes the palette (`arrivalFlash`).
-* Vimana: `V` starts a flight (`flightFrom`, `flightTo`, real-time duration `vimanaSeconds`: `7 + 2 sqrt(LY)` to 100 LY, then 6 s more for every doubling since R-407: 400 LY in 39 s, 10,000 in 67, 100,000 in 87); the system is unloaded (`sys.valid = false`) during flight; arrival regenerates the target system and parks the ship in standby facing the star. `V` again aborts and reloads the nearest star's system. **The crossing** (G-07, 2026-10-08): the galaxy's band is drawn in the flight, from where the ship is along its line (the bulge swells ahead on a jump coreward until it fills the windows; on a jump north the disc drops away below the side windows), the streaks fading into it; the star-forming regions' patches fade with the flight's speed (half at 15 ly a second), so they show as the ship sets off and arrives and not as one-frame flashes on the way. A flight within 0.6 degrees of straight out of the disc has no heading, so the ship turns its right side to the galactic centre (the floor, the one side without a window, faced it by chance before). How the band is built ahead of the ship: `04-galaxy-and-systems.md` (G-07).
-* Local target: `L` picks the body under the crosshair (within 18 px of its disc) or cycles; click also picks; `Tab` opens the list (`Enter` approaches, `L` targets). `X` centres the view on it.
-* Approach: `startApproach(body)` chooses a parking direction on the lit side, offset sideways and slightly above the orbital plane; `updateShipMotion` moves with smoothstep easing and turns the view. R-419 (2026-10-18): the path is taken from the world (`ShipState::approachDir0/approachD0`, the start's direction and distance from it): the distance closed by equal ratios and the direction swung from the start's onto the parking's in the approach's first seven tenths (a slerp; straight across the world, round it by its spin axis's side), so the last stretch runs straight in and the world holds still in the window as the ship arrives; the straight line to a parking beside the world had swooped the view through 60 to 350 degrees a second in its last tenth of a second. The start, the end, the duration and the nose's aim are as before; the world's own motion is carried (a comet's). A belt's rock the same.
-* Parked: position = body position + `parkDir * parkDist`; `O` toggles orbiting (slow rotation of `parkDir` about the spin axis). R-405 (2026-10-06): with `Shift` held the arrows carry the parked ship round its world (`Game::orbitShip`: Left/Right east and west along its parallel, about the spin axis; Up/Down north and south along its meridian, within 85 degrees of the poles; twenty degrees a second, a lap in eighteen seconds), the ship's attitude turning with it so the world stays where it was in the window and its ground streams past, the status reading the ground under the ship (`OVER 12.3° N  134.5° E`); the lap of the orbit mode goes on meanwhile. While the eye is at the telescope the stabiliser holds the parking in the body's frame (the telescope bullet below). `parkDist` comes from `Game::parkDistanceFor`: 3.5 radii, outside the rings for ringed worlds, 12 nucleus radii for a comet (N0-01: the nucleus is 76 px across at 2x with its jets around it).
-* Belts (O3, R-302): `ShipState::targetBelt` is the local target when it is a belt (`localTarget` is then -1), `parkedBelt` the belt the ship is parked in, and `rockIr/rockIa/rockIy/rockM` + `rockDist` name the rock it parks beside (`04-galaxy-and-systems.md`). `L` cycles the bodies and then the belts, the analyzer lists the belts after the bodies (selectable), `Enter` calls `startApproachBelt`: `pickBeltRock` keeps the ship's angle round the star, clamps its radius into the belt and takes the biggest rock within two cells of that anchor; the parking point is six rock radii (at least 2 km) off on the sunlit side, a little above (`beltParkPos`), and the parked ship follows it (mode name `IN THE BELT`). `X` aims at the rock from this frame's parking point (a parked ship moves a hundred kilometres per frame at x10). Arrival logs a `BELT` entry. `C` in a belt says there is no world under the ship. `localTargetLabel()` names either kind of target; a body's approach (`startApproach`) leaves the belt, both its target and its parking (B-410: the belt's parking won at the approach's end and put the ship back beside its rock), and the flight computer's next body clears the belt target. Saved as `belt <target> <parked> <ir> <ia> <iy> <m> <rockDist>` (a save with a body's and a belt's parking loads at the body, B-410).
-* Signal radar (C-07, 2026-10-02, `game/radar.cpp`, `peoples/signals.h`, `civilisations/radar.md`): `B` in space (the radar set beside
-  the decoder on the cabin's back wall, `facing` 8, or the flight computer's devices page) enters the radar camera, the ship's own
+* Remote target: `R` toggles crosshair mode; the star nearest to the crosshair within 14 px is named live; Enter/click locks it
+  (`lockRemoteTarget`). The current star is refused. `N` turns the ship to the next nearest star and (G-04) faces the cabin view forward
+  as `X` does, so the lock finds it: in the cabin the view kept its own yaw and `Enter` missed the star the ship pointed at. While
+  aiming the star field is amplified x1.5, the six nearest stars carry diamond markers with their distance (`4.2 LY`; R-407: the name
+  only where the star has one, so no row of `UNKNOWN`s, and `VISITED` in amber where the ship has been: `aimStarLabel`), and `N` cycles
+  the crosshair through them (`cycleTargetStar`); the star under the crosshair, the remote target's line and the radar's lock say
+  `VISITED` too, and a key line `N NEXT STAR  ENTER LOCKS  DIGITS JUMP  R CANCELS` holds the bottom (the local target's label is left
+  out meanwhile). **The jump** (R-407, 2026-10-07): the digits typed in the aim are a jump's light years (`jumpDigits`, 1 to 100,000;
+  Backspace takes one back); a panel shows `JUMP 400 LY COREWARD` (`galacticHeading`: COREWARD, RIMWARD, ALONG THE DISC, NORTH or SOUTH
+  OUT OF THE DISC), where the line's end lies (`END: SPIRAL ARM - 13104 LY FROM THE CORE`) and `ENTER JUMPS  BACKSPACE  R CANCELS`;
+  Enter (`startJump`) makes the star nearest the end of the line along the crosshair (`aimDirection`, the view's forward) the remote
+  target (`jumpTarget` in `galaxy/starfield.h`, `04-galaxy-and-systems.md`) and flies at once
+  (`VIMANA JUMP OF 400 LY: A STAR 402 LY AWAY`; where the end lies in the void, `NO STARS OUT THERE - THE JUMP ENDS 580 LY SHORT`),
+  logging `JUMP 400 LY COREWARD FROM <star> TO PARSIS ..., SPIRAL ARM`. `F` toggles the field amplificator at any time (M1-10); arrival
+  from a Vimana flight flashes the palette (`arrivalFlash`).
+* Vimana: `V` starts a flight (`flightFrom`, `flightTo`, real-time duration `vimanaSeconds`: `7 + 2 sqrt(LY)` to 100 LY, then 6 s more
+  for every doubling since R-407: 400 LY in 39 s, 10,000 in 67, 100,000 in 87); the system is unloaded (`sys.valid = false`) during
+  flight; arrival regenerates the target system and parks the ship in standby facing the star. `V` again aborts and reloads the nearest
+  star's system. **The crossing** (G-07, 2026-10-08): the galaxy's band is drawn in the flight, from where the ship is along its line
+  (the bulge swells ahead on a jump coreward until it fills the windows; on a jump north the disc drops away below the side windows),
+  the streaks fading into it; the star-forming regions' patches fade with the flight's speed (half at 15 ly a second), so they show as
+  the ship sets off and arrives and not as one-frame flashes on the way. A flight within 0.6 degrees of straight out of the disc has no
+  heading, so the ship turns its right side to the galactic centre (the floor, the one side without a window, faced it by chance
+  before). How the band is built ahead of the ship: `04-galaxy-and-systems.md` (G-07).
+* Local target: `L` picks the body under the crosshair (within 18 px of its disc) or cycles; click also picks; `Tab` opens the list
+  (`Enter` approaches, `L` targets). `X` centres the view on it.
+* Approach: `startApproach(body)` chooses a parking direction on the lit side, offset sideways and slightly above the orbital plane;
+  `updateShipMotion` moves with smoothstep easing and turns the view. R-419 (2026-10-18): the path is taken from the world
+  (`ShipState::approachDir0/approachD0`, the start's direction and distance from it): the distance closed by equal ratios and the
+  direction swung from the start's onto the parking's in the approach's first seven tenths (a slerp; straight across the world, round it
+  by its spin axis's side), so the last stretch runs straight in and the world holds still in the window as the ship arrives; the
+  straight line to a parking beside the world had swooped the view through 60 to 350 degrees a second in its last tenth of a second. The
+  start, the end, the duration and the nose's aim are as before; the world's own motion is carried (a comet's). A belt's rock the same.
+* Parked: position = body position + `parkDir * parkDist`; `O` toggles orbiting (slow rotation of `parkDir` about the spin axis). R-405
+  (2026-10-06): with `Shift` held the arrows carry the parked ship round its world (`Game::orbitShip`: Left/Right east and west along
+  its parallel, about the spin axis; Up/Down north and south along its meridian, within 85 degrees of the poles; twenty degrees a
+  second, a lap in eighteen seconds), the ship's attitude turning with it so the world stays where it was in the window and its ground
+  streams past, the status reading the ground under the ship (`OVER 12.3° N  134.5° E`); the lap of the orbit mode goes on meanwhile.
+  While the eye is at the telescope the stabiliser holds the parking in the body's frame (the telescope bullet below). `parkDist` comes
+  from `Game::parkDistanceFor`: 3.5 radii, outside the rings for ringed worlds, 12 nucleus radii for a comet (N0-01: the nucleus is 76
+  px across at 2x with its jets around it).
+* Belts (O3, R-302): `ShipState::targetBelt` is the local target when it is a belt (`localTarget` is then -1), `parkedBelt` the belt the
+  ship is parked in, and `rockIr/rockIa/rockIy/rockM` + `rockDist` name the rock it parks beside (`04-galaxy-and-systems.md`). `L`
+  cycles the bodies and then the belts, the analyzer lists the belts after the bodies (selectable), `Enter` calls `startApproachBelt`:
+  `pickBeltRock` keeps the ship's angle round the star, clamps its radius into the belt and takes the biggest rock within two cells of
+  that anchor; the parking point is six rock radii (at least 2 km) off on the sunlit side, a little above (`beltParkPos`), and the
+  parked ship follows it (mode name `IN THE BELT`). `X` aims at the rock from this frame's parking point (a parked ship moves a hundred
+  kilometres per frame at x10). Arrival logs a `BELT` entry. `C` in a belt says there is no world under the ship. `localTargetLabel()`
+  names either kind of target; a body's approach (`startApproach`) leaves the belt, both its target and its parking (B-410: the belt's
+  parking won at the approach's end and put the ship back beside its rock), and the flight computer's next body clears the belt target.
+  Saved as `belt <target> <parked> <ir> <ia> <iy> <m> <rockDist>` (a save with a body's and a belt's parking loads at the body, B-410).
+* Signal radar (C-07, 2026-10-02, `game/radar.cpp`, `peoples/signals.h`, `civilisations/radar.md`): `B` in space (the radar's set in the
+  observatory, I-02, `facing` 8, or the flight computer's devices page) enters the radar camera, the ship's own
   instrument seen through like the vehicles' nose cameras: the cabin is left behind (the head faces forward, `drawCabin` is
   skipped), the mouse turns the ship (`updateCabin` is not run), the picture is the camera's (`radarCameraFeed`: a cold blue-green
   phosphor, scanlines, a rolling band, a vignette, static on every pixel and snow in flecks that thin with the clarity), and
@@ -160,9 +217,9 @@ Modes: `STANDBY` (free in a system or deep space), `VIMANA` (interstellar flight
   side held: `STABILISED ON <name>` on the frame and the status), Enter on the parked body brings its centre under the reticle and
   holds again; another body or the sun is tracked on its centre as before (`TRACKING <name>`: a moon moves by its own orbit,
   slowly); off a parking (standby, the approach) nothing is held. Stowing lets the lap go on from where the ship is. (It replaced
-  the rework's ground hold of a deep power the same day.) The telescope's own set stands on the cabin's back wall (`facing` 9, x
-  1.0..2.1, the radar's twin; `E` looks through it, `TELESCOPE - E STOWS IT` while it is out) and the fuel orb moved to the
-  front-left corner.
+  the rework's ground hold of a deep power the same day.) The telescope's own set stands in the observatory (I-02: beside its mount, the
+  radar's set across the
+  dome; `facing` 9, `E` looks through it, `TELESCOPE - E STOWS IT` while it is out).
 * The probe (X-01, 2026-10-07, `game/probe.cpp`, `galaxy/probe.h`, `space/probe_view.h`): parked at a gas giant or a brown dwarf,
   `C` (the landing screen on the right wall and the capsule cage, `PROBE SCREEN - E TO LAUNCH A PROBE` / `PROBE BAY - ...` there;
   the flight computer's `DEPLOY THE CAPSULE OR A PROBE`) sends a probe to the ground under the telescope's reticle when the
@@ -246,21 +303,25 @@ Modes: `STANDBY` (free in a system or deep space), `VIMANA` (interstellar flight
   neighbourhood (the aim, the star map, `N`, the console's `SL`), the jumps and the new game stay the stars' (`starInSector`), so a drifter
   is never seen, only reached. The remote's line reads `REMOTE TARGET: UNKNOWN - NO STAR - 416.40 LY - V TO FLY` (no class code). The
   Vimana flight ends, and the arrival puts the ship, 40-80 of the drifter's radii off its centre (`drifterStandOffKm`, by its seed: the
-  stars' rule, a first orbit or 25 radii, would put it at the centre), facing it; the arrival reads `ARRIVED AT UNKNOWN - NO STAR, ONE WORLD,
+  stars' rule, a first orbit or 25 radii, would put it at the centre), facing it; the arrival reads `ARRIVED AT UNKNOWN - NO STAR, ONE
+  WORLD,
   1 MOON` and logs `UNKNOWN, NO STAR, ONE WORLD 1 MOON, SECTOR ...`. The analyzer's head and the data sheet read `NO STAR`
   (`StarSystem::classString`), the sheet's star section `STAR NONE` and the class's sentence (`describeStar`: no star, the world adrifts
   alone, warmed by nothing but its own heat), the drifter's lines `OWN HEAT 36 K (-237 C)` for the equilibrium, `ORBIT NONE - ADRIFT
   BETWEEN THE STARS`, `PERIOD NONE`, its moons' orbits from their planet, and on its ground `SEASON NONE - NO SUN, NO DAY` (no season's
   name, there or on the landing map); the classes seen leave it out (`STAR CLASSES SEEN n/14`); no radiation warning (no class of its
-  own in the table). D-02 (2026-10-23, `civilisations/radar.md`, the drifters on the radar): the radar hears it above x1, by a law of its own;
+  own in the table). D-02 (2026-10-23, `civilisations/radar.md`, the drifters on the radar): the radar hears it above x1, by a law of
+  its own;
   a lock reads `NO STAR AT THE SOURCE`, its distance and `ENTER FLIES THERE` (no name, no class, no sector), the status `A SIGNAL LOCKED -
   NO STAR THERE - ENTER FLIES`, the log `A SIGNAL WITH NO STAR AT ITS SOURCE, 437 LY (437 YEARS OLD), SECTOR ...`, and the lock's key is the
   sector's, so the galaxy chart's red ring and its `A SIGNAL` stop stand at the place. On the chart `Enter` plots the jump to a drifter the
   explorer knows (a lock, a visit, a name, home) within four pixels of the cursor (`chartDrifterAt`: a jump's line ends at the star nearest
   its end and never sees a drifter); the flight's status reads `VIMANA JUMP OF 437 LY: NO STAR AT ITS END`, `N`'s stop for a visited one
   `VISITED - NO STAR`. The arrival makes the drifter the local target (the HUD's brackets on the black disc, `LOCAL: UNKNOWN 3.42 MKM`); the
-  HUD's remote line reads `NO STAR` for a class; the guide's second item there is `NAME THIS PLACE` (`THE PLACE IS NOW CALLED ...`, the log's
-  `NAMED THE PLACE WITH NO STAR ...`), so it is a place in the guide as a system is, the explorer's to name. D-03 (`civilisations/radar.md`, the
+  HUD's remote line reads `NO STAR` for a class; the guide's second item there is `NAME THIS PLACE` (`THE PLACE IS NOW CALLED ...`, the
+  log's
+  `NAMED THE PLACE WITH NO STAR ...`), so it is a place in the guide as a system is, the explorer's to name. D-03
+  (`civilisations/radar.md`, the
   drifters' voices): its voice on the radar, on the cabin's radio while the ship is at it and on the suit's on its ground (the audio below).
 * `choosePaletteBodies` assigns palette banks 2/3 to the two bodies with the largest apparent size.
 
@@ -288,7 +349,12 @@ N1-06); biome and season (M9-05/09) with the sun's altitude, azimuth and day/twi
 atmosphere; `SKY: ...`. The data sheet adds a generated description of the body and the star (M9-14) and, on the surface, the
 biome and season here (Q-01: `TRAITS` on up to two lines, the six slots' names, and `FACTS` on one, what the orbit and the spin
 say: `SIDEWAYS SPIN, RINGED`; a sheet longer than the screen goes on over pages, sections kept whole where they fit, the world's
-name and `2/2` over each, `RIGHT MORE`, then a giant's probes' profiles); the analyzer lists asteroid belts after the bodies; the
+name and `2/2` over each, `RIGHT MORE`, then a giant's probes' profiles; B-496: a line holds 50 characters: RADIUS with MASS, GRAVITY
+with TILT, EQUILIBRIUM (a drifter's world OWN HEAT) on its own, PERIOD with ROTATION; a part that does not fit is carried under its label
+(SEASON's equinox and solstice, a long SEEDED line), a long FORECAST, sky or made AIR wrapped; a belt's period at its two edges on two
+lines and its rocks in THOUSAND to TRILLION; B-498: a planet of the second sun is `<KIND> - PLANET OF THE 2ND SUN` (", circling the second
+sun" in its sentence), the second sun's sheet counts its `PLANETS`, and the telescope and N through it say WORLD); the analyzer lists
+asteroid belts after the bodies; the
 space HUD names the galaxy region. The readout uses a cached `SurfaceSite` probe at the cursor (F-02: `SurfaceSite::initFrame`,
 the site without its five terrain caches, which it never read and which were filled at every step of the cursor): exact terrain
 material and elevation at 64 m detail, sun altitude/azimuth, day/twilight/night, local time, day length (or "tidally locked"),
@@ -297,17 +363,46 @@ gravity, atmosphere. Sector numbers follow the original's 360 x 120 convention.
 The survey (D-02): a world with no sun has no light to map by (the map went black at a light of 0), so the landing map, its zoom, the
 sector map and the drone bay's map draw it as the ship's altimeter reads it (`mapColor`'s `survey`): the material's colour at the noon stop,
 two parts in three the radar camera's cold phosphor, its brightness by the height (from the map's 2nd percentile, dark, to its 98th, pale:
-`surveyRange`) times the hillshade, lava glowing; no night side, no clouds (`C` is not offered). The title reads `SURFACE CAPSULE - NO LIGHT:
+`surveyRange`) times the hillshade, lava glowing; no night side, no clouds (`C` is not offered). The title reads `SURFACE CAPSULE - NO
+LIGHT:
 THE ALTIMETER'S SURVEY`; the readout `NO SUN - THE DARK` for the sun's line, `TURNS IN 0.3 H` for the local time and the day, a sky body
 `UNLIT` for its phase, and the `GROUND` swatch the noon colour (what a lamp will show). D-04: an air fallen as snow reads `AIR FROZEN` for
 the atmosphere (the data sheet's `ATMOSPHERE  FROZEN`); the capsule comes down with its floodlights lit under 500 m by night (a wide cone
 down and ahead), and lands `LANDED IN THE DARK - U THE LAMP, Q AT THE CAPSULE TO RETURN` on a drifter's world while the lamp is off.
 
-`J` (M5-09) moves the cursor under the biggest body in this world's sky (the sub-body point, where it stands at the zenith); the fifth readout line says what hangs over the cursor now (`SKY: name, altitude, width, phase, +N PTS`); on a ringed world it starts with the ring's own arc (`RINGS 62 deg UP`, `RINGS EDGE-ON OVERHEAD` within 1.5 deg of the equator, `RINGS BELOW THE HORIZON`) and a ringed sky body reads `RINGED` in place of its phase (O0-01).
+`J` (M5-09) moves the cursor under the biggest body in this world's sky (the sub-body point, where it stands at the zenith); the fifth
+readout line says what hangs over the cursor now (`SKY: name, altitude, width, phase, +N PTS`); on a ringed world it starts with the
+ring's own arc (`RINGS 62 deg UP`, `RINGS EDGE-ON OVERHEAD` within 1.5 deg of the equator, `RINGS BELOW THE HORIZON`) and a ringed sky
+body reads `RINGED` in place of its phase (O0-01).
 
-Sector zoom (O2, R-301): `Z` zooms into the cursor's sector (`Game::buildLandingZoom`): a window one sector (one degree of latitude) tall and two sectors' worth of ground wide (`zoomHalfLon = zoomHalfLat x 2 / cos(lat)`, the frame being 2:1), 256 x 128 texels sampled from the planet function at `clamp(0.6 texel, 64, 512)` m of detail on all threads (`parallelFor`), coloured like the whole-world map (`mapRampsFor`, `mapColor`: the body's material ramps under the star's light, `exposureStop`, a north-west hillshade normalised over the window and capped at a 3% grade) and lit by the day side per frame; the one-degree grid is drawn over it with the sectors' names at their centres, a scale bar (50, 20, 5 or 1 km) sits at the bottom right, the cursor steps a hundredth of a degree (five with Shift) and the window re-centres when the cursor passes 75% of its half-size; `Z` again returns to the world; worlds under 100 km of radius have no zoom. The first readout line prints the sector as `SECTOR LON:LAT` (`sectorName`, `03-coordinates-and-units.md`); the title says `SECTOR 319:062 - PICK THE SITE` while zoomed. The landing map also prints a comet's gravity in four decimals. C-09: on a world that had a civilisation the window's old roads are drawn over it as hairlines in the ground's own colour under the texel's light (`Game::zoomRoads`: the villages' and the towns' roads of the network of `peoples/roads.*` that the ground carries, the lanes between hamlets left out, walked for the window on the worker pool at the build), whether or not any of it has been walked; R-415: with the peoples (`V`), as the plan's cores (`zoomCivImg`), not on the land alone.
+Sector zoom (O2, R-301): `Z` zooms into the cursor's sector (`Game::buildLandingZoom`): a window one sector (one degree of latitude)
+tall and two sectors' worth of ground wide (`zoomHalfLon = zoomHalfLat x 2 / cos(lat)`, the frame being 2:1), 256 x 128 texels sampled
+from the planet function at `clamp(0.6 texel, 64, 512)` m of detail on all threads (`parallelFor`), coloured like the whole-world map
+(`mapRampsFor`, `mapColor`: the body's material ramps under the star's light, `exposureStop`, a north-west hillshade normalised over the
+window and capped at a 3% grade) and lit by the day side per frame; the one-degree grid is drawn over it with the sectors' names at
+their centres, a scale bar (50, 20, 5 or 1 km) sits at the bottom right, the cursor steps a hundredth of a degree (five with Shift) and
+the window re-centres when the cursor passes 75% of its half-size; `Z` again returns to the world; worlds under 100 km of radius have no
+zoom. The first readout line prints the sector as `SECTOR LON:LAT` (`sectorName`, `03-coordinates-and-units.md`); the title says
+`SECTOR 319:062 - PICK THE SITE` while zoomed. The landing map also prints a comet's gravity in four decimals. C-09: on a world that had
+a civilisation the window's old roads are drawn over it as hairlines in the ground's own colour under the texel's light
+(`Game::zoomRoads`: the villages' and the towns' roads of the network of `peoples/roads.*` that the ground carries, the lanes between
+hamlets left out, walked for the window on the worker pool at the build), whether or not any of it has been walked; R-415: with the
+peoples (`V`), as the plan's cores (`zoomCivImg`), not on the land alone.
 
-The peoples (R-415, 2026-10-11, `V`, off each time the map opens; `drawLandPeoples`): without them the map is the land, the clouds and the explorer's marks of the natural sights. With them: the explorer's marks of ruins and works as small points (a frame pixel's square at 1x, three at 2x, a dark rim; the names of the three nearest the cursor, within ten pixels, listed beside it), in the zoom the old roads and the plan's cores; the places the records the ship holds were kept at (each record's home, T-04's `recordHomesOf`, read with the world's items as the drone bay reads them, `droneWorldAsk` from the map's opening; `landKnownOf`): a town a point in the people's colour (the first amber, the second cyan), a city paler and rimmed, the capital white and named `CAPITAL`, in the zoom a ring round each known place's core; a people whose records are all held, its whole map: its land tinted to its frontier (`landTerr`, from the plan's territory per grid cell), every place of its plan and every way between them coloured by kind (`NET_KIND_COLOURS`: a path brown, a road pale, rail red, a canal blue, a highway orange, maglev magenta), in the zoom every place of the window ringed. The legend at the map's top left: each people with its records held of its count (`THE JENGNE: 21 OF 147 SHARDS`; `A PEOPLE` and `ANOTHER PEOPLE` until a record of theirs is held, as the decoder names them; `THE JENGNE: ALL 147 SHARDS, THE WHOLE MAP`), `READING THE WORLD...`, `NO PEOPLE LIVED ON THIS WORLD`. The hints fit the 53 characters now (R-415: they ran off both edges): `Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER` (no `C CLOUDS` without an atmosphere: `... ENTER LAND`), zoomed `ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER` (Shift still steps five).
+The peoples (R-415, 2026-10-11, `V`, off each time the map opens; `drawLandPeoples`): without them the map is the land, the clouds and
+the explorer's marks of the natural sights. With them: the explorer's marks of ruins and works as small points (a frame pixel's square
+at 1x, three at 2x, a dark rim; the names of the three nearest the cursor, within ten pixels, listed beside it), in the zoom the old
+roads and the plan's cores; the places the records the ship holds were kept at (each record's home, T-04's `recordHomesOf`, read with
+the world's items as the drone bay reads them, `droneWorldAsk` from the map's opening; `landKnownOf`): a town a point in the people's
+colour (the first amber, the second cyan), a city paler and rimmed, the capital white and named `CAPITAL`, in the zoom a ring round each
+known place's core; a people whose records are all held, its whole map: its land tinted to its frontier (`landTerr`, from the plan's
+territory per grid cell), every place of its plan and every way between them coloured by kind (`NET_KIND_COLOURS`: a path brown, a road
+pale, rail red, a canal blue, a highway orange, maglev magenta), in the zoom every place of the window ringed. The legend at the map's
+top left: each people with its records held of its count (`THE JENGNE: 21 OF 147 SHARDS`; `A PEOPLE` and `ANOTHER PEOPLE` until a record
+of theirs is held, as the decoder names them; `THE JENGNE: ALL 147 SHARDS, THE WHOLE MAP`), `READING THE WORLD...`,
+`NO PEOPLE LIVED ON THIS WORLD`. The hints fit the 53 characters now (R-415: they ran off both edges):
+`Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER` (no `C CLOUDS` without an atmosphere: `... ENTER LAND`), zoomed
+`ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER` (Shift still steps five).
 
 ## Surface controls
 
@@ -326,7 +421,9 @@ and lands, `W`/`S` thrust fore and aft to 320 km/h, `A`/`D` turn, the mouse pans
 one, `WAYPOINT SET 8.4 KM AWAY`, else where you stand; `M` again clears), `Ctrl` in the air thrusts down on light worlds (O4),
 `Q`/`E` board the capsule within 7 m (otherwise the status says how far it is and where), `Tab` the readings (R-414: the place,
 the sky, the air, the ground and the vehicle, below under HUD), `K` recalls the capsule next to you (always; the status names a
-buggy left over 50 m away, B-205), `N` sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
+buggy left over 50 m away, B-205), `Shift+N` names the animal the crosshair rests on (J-07, R-452: within 40 m, 50 on the water, 80
+in the air; the HUD says it, `A STRIPED HOPPER - SHIFT+N`; a text entry, `NAME THE ANIMAL`, kept as a `name` line; with none there it
+opens the map), `N` the sector map (M4-02/O2/O1-04: `+`/`-` or the wheel zoom through 2, 8, 32, 128, 512 and 2048
 km wide (`Game::sectorMaxLevel`: a level is offered while its half-width stays within 1.2 radii, so a comet has two and a planet
 six; the image is 100 x 80 samples of the planet function at 16 m to 16 km of detail, always centred on you, so walking never
 leaves it and the neighbouring sectors are simply there), coloured like the landing map (`mapRampsFor`), the sector grid on the
@@ -373,23 +470,46 @@ the explorer's way builds them, `marksHere`: reading them built a tile of a degr
 scanner's or a shown mark's first look after a landing frozen for 8 s on a world of nineteen marks) (O6-06's `UNNAMED PEAK` went
 with the landmarks), crossing into another sector on foot or in the buggy shows `ENTERING SECTOR 226:113 - GRASS, GRASSLAND` and
 logs a `SECTOR` entry (`lastSecX/Y`, set silently at landing and after a load), `V` on foot cycles the vision modes (M4-10:
-radiation visor, supervision, infrared, plant vision), `U` on foot the explorer's helmet lamp (D-04, 2026-10-23:
+radiation visor, supervision, infrared, plant vision), `Shift+O` the activity vision on and off (R-434: on foot or from a vehicle's
+camera, `ACTIVITY VISION` in the status and the readings, `V` from it back to the eye's; the ground and the water within 40 m coloured by
+the activity a vial would read there, each square metre read at its middle, the nearest first, about a quarter of a second for all; none
+at work dark, faint red to orange, strong yellow to white, the rest of the view dimmed; the ultraviolet and it one at a time,
+`ACTIVITY VISION - THE ULTRAVIOLET OUT`, `ULTRAVIOLET ON - NORMAL VISION`; `13-life.md`), `U` on foot the explorer's helmet lamp (D-04,
+2026-10-23:
 `LAMP ON`/`LAMP OFF`; a cone of light along the view by night, on every night side as in a drifter's dark, nothing while the sun
-is up; the pad's commands `LIGHT THE LAMP`/`PUT THE LAMP OUT`; kept on or off for the session; `06-surface.md`), `X` highlights
-nearby creatures and flocks for four seconds with the species name and its state (M4-05, N3-06), `I`/`F2` data sheet, `T` time
+is up; the pad's commands `LIGHT THE LAMP`/`PUT THE LAMP OUT`; kept on or off for the session; `06-surface.md`), `Shift+U` its
+ultraviolet (Z-03: `ULTRAVIOLET ON`/`OFF`, `UV ON` in the readings; the living films glow within 18 m where nothing outshines them,
+`13-life.md`), `O` a sample (Z-03: a vial of the ground at the crosshair within 2 m of the feet, a swimmer's water at hand; its line
+`WET SILT AT A LAKE'S EDGE, 9 C - ACTIVITY FAINT`, the word ACTIVITY left out of a line over 52 characters; eight vials a descent,
+`VIALS 3 OF 8 FILLED` in the readings; refused from a vehicle, `THE EIGHT VIALS ARE FULL - THE REST ABOARD`, `LOOK AT THE GROUND
+WITHIN 2 M TO TAKE A SAMPLE`, `THE GROUND IS MOLTEN
+HERE` (R-432: the cold store aboard takes any number); the descent through a venusian or an acid world's living clouds takes one by the capsule's scoop, `THE
+SCOOP: CLOUD DROPLETS AT
+53 KM, 35 C - STRONG` in the capsule's caption; the climb aboard puts them in the cold store, `3 SAMPLES TO THE COLD STORE`), `X` highlights
+nearby creatures and flocks for four seconds with the species' name (J-07: the explorer's, a friend's, else its words) and its state
+(M4-05, N3-06), `I`/`F2` data sheet, `T` time
 warp (refused when the clock setting is real time; it stops an almanac run), `Ctrl+T` the almanac (W-01, 2026-10-06: the section
 below; M5-06's 25 s time-lapse at x600 went with it, the almanac's free row runs for any span), `Ctrl+S`/`F5` save, `Ctrl+L`/`F9`
 load, `H`/`F1` help, `Esc` menu, `P`/`F12` screenshot, `Ctrl+K`/`F10` scanlines, `Ctrl+F`/`Alt+Enter`/`F11` fullscreen. Movement
 keys are ignored while `Ctrl` is held.
 
-Key bindings (N5-05): the settings' last item, `CONTROLS` (`KEY BINDINGS` until R-418), opens the `KEYS` state on its keyboard's page (on the controller's while a controller is in use; `Tab` between them; the commands' `CONTROLLER SETUP` opens it from anywhere and `Esc` goes back there): 28 actions in two columns (R-403: `E` is `USE / VEHICLE`, `F` `FIELD AMP. / DRONE`; C-07: `B` `BUGGY / SIGNAL RADAR`; D-04: `U` `SHIP LIGHT / LAMP`) with the physical keys that act as them; arrows select, Enter captures the next raw key (`Game::rawKey`, handed by the platform layer before the key map is applied) and maps it to the action's logical key (`KeyMap::map[raw] = logical`; the action's own key keeps working), Backspace resets the action, Esc writes `vesperis_keys.txt` (`KeyMap::save`, only the pairs that differ) and returns; the file is still read at start-up as before. Global keys are ignored while capturing.
+Key bindings (N5-05): the settings' last item, `CONTROLS` (`KEY BINDINGS` until R-418), opens the `KEYS` state on its keyboard's page
+(on the controller's while a controller is in use; `Tab` between them; the commands' `CONTROLLER SETUP` opens it from anywhere and `Esc`
+goes back there): 28 actions in two columns (R-403: `E` is `USE / VEHICLE`, `F` `FIELD AMP. / DRONE`; C-07: `B` `BUGGY / SIGNAL RADAR`;
+D-04: `U` `SHIP LIGHT / LAMP`) with the physical keys that act as them; arrows select, Enter captures the next raw key (`Game::rawKey`,
+handed by the platform layer before the key map is applied) and maps it to the action's logical key (`KeyMap::map[raw] = logical`; the
+action's own key keeps working), Backspace resets the action, Esc writes `vesperis_keys.txt` (`KeyMap::save`, only the pairs that
+differ) and returns; the file is still read at start-up as before. Global keys are ignored while capturing.
 
-Key twins exist because Mac laptops route the top row to hardware functions unless `Fn` is held (B-002); `Game::macHints` (set by the platform layer on macOS) shows a one-time reminder after the title screen. The helpers `helpKey`, `dataKey`, `saveKey`, `loadKey`, `enterKey` in `game.cpp` define the pairs; `enterKey` excludes `Alt+Enter` (fullscreen).
+Key twins exist because Mac laptops route the top row to hardware functions unless `Fn` is held (B-002); `Game::macHints` (set by the
+platform layer on macOS) shows a one-time reminder after the title screen. The helpers `helpKey`, `dataKey`, `saveKey`, `loadKey`,
+`enterKey` in `game.cpp` define the pairs; `enterKey` excludes `Alt+Enter` (fullscreen).
 
 ## HUD
 
-Space: system name and class, sector coordinates, EPOC, mode (standby / vimana / approach / orbit / chase / in the belt), remote
-target line and marker box, local target line and bracket (label flips to the left near the edge), off-screen arrow, radiation
+Space: system name and class, sector coordinates, EPOC, mode (standby / vimana / approach / orbit / chase / in the belt), remote target
+line and marker box, local target line and bracket (label flips to the left near the edge; B-501: aboard, the box, the bracket and its
+name only where the glass shows the target), off-screen arrow, radiation
 warning, crosshair, status line, time warp indicator (W-01: during an almanac run it reads `TO SUNRISE  2 H 05 MIN  X600`, the
 event, what is left of the wait and the warp the run is at). With a belt as the local target (O3):
 `LOCAL: <belt> <distance to the rock>`, `ROCK 24.3 KM ACROSS` (`- NO GROUND FOR THE CAPSULE` when parked) and a bracket sized to
@@ -423,45 +543,45 @@ and snow on the picture grow with it); three readouts at the bottom left: in the
 `TEMP -63 C  WIND 290 KT W` (toward the west, as the surface's) / the chute's state; `MOUSE LOOKS  X CENTRES  P PHOTO  ESC CABIN`
 under them.
 
-Surface (R-414, 2026-10-11: pared down on the user's "it's overblown at times"): on foot the body's name and latitude/longitude,
-the scanner's two lines under it while it is on (R-408: `SCAN RUINS` and `1.6 KM NW`) with its diamond on the compass strip, EPOC,
-the compass strip with the heading, the mark the explorer shows over the view (B-412: one, chosen on the sector map, none by
-default; a diamond and `CITY OF ASH 1.7 KM`, and a hollow white diamond on the compass strip at its bearing beside the scanner's
-filled cyan one; R-408 drew the eight nearest within 25 km), the stamina bar with the pulse (M8-02), `JET HEAT 45%` while the
-jetpack flies (`CTRL DESCENDS` on a comet), and over the stamina what `E` or `Q` would do here, stacked from the bottom:
-`CAPSULE HERE - Q`, `BUGGY HERE - E` or `DRONE HERE - E` within 3.5 m, the record's object or the instrument within reach
-(`A CODEX - E`, `A PAINTED WALL - E`, `A LUTE - E`; C-03's `A SHARD HERE - E`), `A GRAVE: THAELU, 140-212` while a grave's stone
-is within 2.2 m on foot (C-12: the name and the years in the people's count; the first time at each stone a status line
-`A GRAVE: THAELU, YEARS 140 TO 212 OF AIYIN`, a `GRAVE` entry in the log and a `grave` line in the guide). The capsule's, the
-buggy's and the drone's distances are not shown (`K` calls the capsule, `B`/`F` at it unfold a new buggy or drone; `Q` or `E` far
-from the capsule says in the status how far it is; the sector map marks all three). The readings (R-414, `Tab` on the ground and
-in the vehicles, `drawReadings`): a panel at the right under the epoch's lines (rows of 23 characters at most, two readings to a
-row where they fit, so it stops short of the crosshair; twelve rows at most), `Tab` again puts it away (kept as left for the
-session): `SECTOR LON:LAT` (O2), the local time, the sun's altitude and azimuth (D-04: `NO SUN` on a drifter's ground), the
-elevation and the temperature (D-04: `LAMP ON` beside them while it is lit), the gravity and the pressure
-(`GRAV 0.91 G  0.65 ATM`; `GRAV 0.0005 G`, `ESCAPE 9.2 M/S` on a comet, O4), the wind and the weather (`RAIN 40%`, `SNOW`, `HAIL`,
-`DUST 30%`, `FOG`, `AURORA` or `AURORA STORM`, `RING SHADOW` O0-01, `VENTING 40%` O4; a second row when there are many), the life
-sensor (B-321: `LIFE 300 M NE (FLYERS)`, the nearest herd or flock within 1.5 km), the old road underfoot (C-09: `OLD ROAD NE-SW`,
-the way it runs; T-01: its kind, `OLD PATH`, `OLD RAILWAY`, `OLD CANAL`, `OLD HIGHWAY`; the first step onto each road of a landing
-is a status line, `AN OLD ROAD RUNS HERE, NE TO SW`, and a `ROAD` entry in the log), the rangefinder (O1: `AHEAD 8.4 KM 33 MIN`,
-the time at a walk, a drive or a flight at 80 m/s as the explorer goes; `WATER` when the crosshair rests on water; nothing on the
-sky) with the mark the crosshair rests on under it (R-408), `SWIMMING` or `DIVING`, the jetpack's height and climb, `AUTOWALK 3`
-and the vision mode. In the buggy (N4-06) and the drone (R-403) the picture is the nose camera's (`SurfaceView::cameraFeed`) and
-the HUD is its frame: the inner brackets, a blinking `REC`, the name and the coordinates, the scanner's lines under the REC, the
-compass, a pan gauge under it showing the +-70 deg range, a crosshair, the speed in double-size digits (`KM/H BACK` in reverse)
-and the turn bar under the picture (`STEER`, `TURN`: the marker moves right when turning right); no epoch, no stamina; R-414 took
-`CAM 01 NOSE`/`CAM 02 DRONE`, the pan and tilt numbers, the trip, the gear, the height and the climb, the heading, the state, the
-capsule and the local time off the view. Their readings add the heading and the trip, the buggy's gear (`REVERSE`) and state
-(`AIRBORNE`, `SKIDDING`, `BRAKING`, `LIGHTS ON`) and the old road under its wheels, the drone's height over the ground and its
-climb (amber at the 400 m ceiling) and state (`LANDED`, `LIFTING`, `AT ITS CEILING`, `CLIMBING`, `DESCENDING`, `HOVERING`,
-`LIGHTS ON`). The chase view (`V` in a vehicle) shows the walker's HUD without the stamina. N3: the data sheet on the surface
-lists the world's bestiary (`LIFE`, sighted species starred), a first sighting writes a `SIGHTING` entry to the expedition log and
-a status line and counts in `CREATURES SIGHTED` on the statistics screen (`Guide::creaturesSeen`, `stat creatures` in the guide
-file); N4-05 adds `LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with
-`LIFE: <species>`, the land species most likely met in that biome. W-03: the sector map (`N`) draws the nearest front's rain line
-across it (cyan; amber for a dust front) with its band hatched behind the line, and the legend reads `RAIN FRONT` /
-`IN 2 H 05 MIN` (or `ENDS 1 H 05 MIN` under one); the readings' own (`WIND`, `RAIN`, `DUST`, `TEMP`) are where the front shows on
-the ground.
+Surface (R-414, 2026-10-11: pared down on the user's "it's overblown at times"): on foot the body's name and latitude/longitude, the
+scanner's two lines under it while it is on (R-408: `SCAN RUINS` and `1.6 KM NW`) with its diamond on the compass strip, EPOC, the compass
+strip with the heading, the mark the explorer shows over the view (B-412: one, chosen on the sector map, none by default; a diamond and
+`CITY OF ASH 1.7 KM`, and a hollow white diamond on the compass strip at its bearing beside the scanner's filled cyan one; R-408 drew the
+eight nearest within 25 km), the stamina bar with the pulse (M8-02), `JET HEAT 45%` while the jetpack flies (`CTRL DESCENDS` on a comet),
+and over the stamina what `E` or `Q` would do here, stacked from the bottom: `CAPSULE HERE - Q`, `BUGGY HERE - E` or `DRONE HERE - E`
+within 3.5 m, the record's object or the instrument within reach (`A CODEX - E`, `A PAINTED WALL - E`, `A LUTE - E`; C-03's `A SHARD HERE
+- E`), `A GRAVE: THAELU, 140-212` while a grave's stone is within 2.2 m on foot (C-12: the name and the years in the people's count; the
+first time at each stone a status line `A GRAVE: THAELU, YEARS 140 TO 212 OF AIYIN`, a `GRAVE` entry in the log and a `grave` line in the
+guide). The capsule's, the buggy's and the drone's distances are not shown (`K` calls the capsule, `B`/`F` at it unfold a new buggy or
+drone; `Q` or `E` far from the capsule says in the status how far it is; the sector map marks all three). The readings (R-414, `Tab` on
+the ground and in the vehicles, `drawReadings`): a panel at the right under the epoch's lines (rows of 23 characters at most, two readings
+to a row where they fit, so it stops short of the crosshair; twelve rows at most), `Tab` again puts it away (kept as left for the
+session): `SECTOR LON:LAT` (O2), the local time, the sun's altitude and azimuth (D-04: `NO SUN` on a drifter's ground), the elevation and
+the temperature (D-04: `LAMP ON` beside them while it is lit), the gravity and the pressure (`GRAV 0.91 G  0.65 ATM`; `GRAV 0.0005 G`,
+`ESCAPE 9.2 M/S` on a comet, O4), the wind and the weather (`RAIN 40%`, `SNOW`, `HAIL`, `DUST 30%`, `FOG`, `AURORA` or `AURORA STORM`,
+`RING SHADOW` O0-01, `VENTING 40%` O4; a second row when there are many), the life sensor (B-321: `LIFE 300 M NE (FLYERS)`, the nearest
+herd or flock within 1.5 km), the old road underfoot (C-09: `OLD ROAD NE-SW`, the way it runs; T-01: its kind, `OLD PATH`, `OLD RAILWAY`,
+`OLD CANAL`, `OLD HIGHWAY`; the first step onto each road of a landing is a status line, `AN OLD ROAD RUNS HERE, NE TO SW`, and a `ROAD`
+entry in the log), the rangefinder (O1: `AHEAD 8.4 KM 33 MIN`, the time at a walk, a drive or a flight at 80 m/s as the explorer goes;
+`WATER` when the crosshair rests on water; nothing on the sky) with the mark the crosshair rests on under it (R-408), `SWIMMING` or
+`DIVING`, the jetpack's height and climb, `AUTOWALK 3` and the vision mode. In the buggy (N4-06) and the drone (R-403) the picture is the
+nose camera's (`SurfaceView::cameraFeed`) and the HUD is its frame: the inner brackets, a blinking `REC`, the name and the coordinates,
+the scanner's lines under the REC, the compass, a pan gauge under it showing the +-70 deg range, a crosshair, the speed in double-size
+digits (`KM/H BACK` in reverse) and the turn bar under the picture (`STEER`, `TURN`: the marker moves right when turning right); no epoch,
+no stamina; R-414 took `CAM 01 NOSE`/`CAM 02 DRONE`, the pan and tilt numbers, the trip, the gear, the height and the climb, the heading,
+the state, the capsule and the local time off the view. Their readings add the heading and the trip, the buggy's gear (`REVERSE`) and
+state (`AIRBORNE`, `SKIDDING`, `BRAKING`, `LIGHTS ON`) and the old road under its wheels, the drone's height over the ground and its climb
+(amber at the 400 m ceiling) and state (`LANDED`, `LIFTING`, `AT ITS CEILING`, `CLIMBING`, `DESCENDING`, `HOVERING`, `LIGHTS ON`). The
+chase view (`V` in a vehicle) shows the walker's HUD without the stamina. N3: the data sheet on the surface lists the species seen there
+(J-07: `LIFE`, the guide's record, named ones `NAME (WORDS)`, the rest by their words, `+3 MORE` where the rows run out; `NONE SEEN YET`;
+J-08: its marks after them, `STRIPED HOPPER (DYING)`, `GONE` over `DYING`, then `CHANGED`), a species new to the guide writes a `SIGHTING`
+entry to the expedition log (its words, what it was doing, how far, the world) and `NEW SPECIES: A STRIPED HOPPER` on the status (J-08:
+seen dead, `NEW SPECIES: REMAINS OF A STRIPED HOPPER`), and counts in `CREATURES SIGHTED` on the statistics screen
+(`Guide::creaturesSeen`, `stat creatures` in the guide file); one seen before is said on its first sight of the landing; N4-05 adds
+`LONGEST DRIVE` and `TOP SPEED` (`stat longestdrive`, `stat topspeed`); the landing map's biome line ends with `LIFE: <species>`, the land
+species most likely met in that biome (J-07: its name or words once seen, `A HERD` before). W-03: the sector map (`N`) draws the nearest
+front's rain line across it (cyan; amber for a dust front) with its band hatched behind the line, and the legend reads `RAIN FRONT` / `IN
+2 H 05 MIN` (or `ENDS 1 H 05 MIN` under one); the readings' own (`WIND`, `RAIN`, `DUST`, `TEMP`) are where the front shows on the ground.
 
 ## The almanac (W-01, 2026-10-06)
 
@@ -495,36 +615,129 @@ says so). A run in progress is not saved (the save's `warp` line reads 1), and a
 `vesperis_test almanac` (`08-testing-and-tools.md`), `testAlmanacInfo`, `testAlmanacSelect`, `testAlmanacRunning`,
 `testAlmanacTarget`, `testTimeWarp`.
 
-## The cabin (M2)
+## The cabin (M2): the Stardrifter aboard (I-02)
 
-With the SHIP VIEW setting on CABIN (default) the space state puts you inside the Stardrifter (`Cabin`, `game/cabin.cpp`): a 5 x 5
-x 2.4 m room in ship-local metres (+z forward) drawn over the space view with depth, so the outside shows through the window band
-(0.95-2.05 m) of every wall and the round roof window. Mouse looks (`cabin.yaw/pitch`), `W A S D` walk (walls, the capsule cage of
-radius 1 m, the GOES console on the left wall the front desk block and, since C-06, the decoder on the back wall), the arrow keys
-turn the ship itself; `viewBasis()` = head look x ship attitude is used for the space camera, the crosshair and the HUD markers.
-`E` uses what you face within reach (`cabin.facing`): the GOES console (left wall), the flight computer (front desk), the three
-right-wall screens (star map, landing map = deploy the capsule, target data), the capsule cage (deploy) and, since C-06, the shard
-decoder on the back wall (`facing` 7: a desk like the console's whose screen glows and breathes while a shard waits to be read)
-and, since C-07, the signal radar beside it on the same wall (`facing` 8, x -2.1..-1.0: a narrower set whose screen brightens and
-pulses while the receiver is on; `E` enters the radar camera) and, since W-06's rework, the telescope's set at the wall's other
-end (`facing` 9, x 1.0..2.1, its screen glowing while the eye is at the eyepiece; `E` looks through it). R-404 (2026-10-06): every
-computer's screen glows in a colour of its own (its row in `Game::cabinDevices`, `cabin.cpp`: the console amber, the flight
-computer green, the star map blue, the landing map pink, the target data cyan, the decoder violet, the radar red, the telescope
-ice-white, the case lime, the drone bay pale yellow; banks 9 and 21-29) and the `E` prompt is written in it, so the one wanted is
-found from across the room. U-03: each device is that row (its spot and reach, its prompt and what it says while the device
-works, the controller's "USE" line, its bank and colour, `E`'s act, its body against a wall) and its picture in
-`drawCabinBand`. `U` toggles the cabin light (the hull
-ramp follows `lightLevel`), `Y` depolarises the hull (B-411: the hull alone, its walls, floor and ceiling, as tinted glass that
-catches the cabin light as a faint sheen and clears with the light off; what stands in the room stays solid and lit; `U` with the
-hull glass says `Y POLARISES THE GLASS HULL`), `PgUp`/`PgDn` ride the lifter to the observation deck on the roof. Banks 8 (hull),
-9 (screens), 10 (light, the fuel orb and the capsule) are set by `cabinPalette`. The cabin state is saved (`cabin` line).
+With the SHIP VIEW setting on CABIN (default) the space state puts you inside the Stardrifter (`Cabin`, `game/cabin.cpp`), its rooms
+the ship's plan's rows (`game/ship_plan.h`; I-02, R-426: three decks and eight spaces in ship-local metres, +x starboard, +z the bow,
+drawn over the space view with depth): **the bridge** (10 m across, two steps up from the hall's arch, the great window's seven
+panes in an arc across the bow, the flight desk facing it, the console arc of the star map's, the landing's and the target's
+screens to starboard, the GOES console in its alcove to port), **the hall** in the middle (12 x 12 m, two decks high: the spiral
+stair from the hangar through its floor's well up through the oculus to the dome, the garden's four beds in its corners; every room
+of the main deck opens onto it by an arch), **the library** to port (the decoder's desk, the instruments' case, the shards' shelves,
+the player's deck, a sofa by its long window), **the laboratory** to starboard (its benches, the cold store's
+door by the arch (Z-04: its eight lamps lit by how full it is; R-432: by doublings, the first by a vial, the eighth by 128), the
+microscope on the stern bench
+with its camera's screen, its long window; Z-05: the incubator past it on the stern bench, its glass door on twelve flasks, its screen
+beside it; Z-06: the sequencer on the bow bench, its screen beside it, and the tree of
+kin's screen on the port wall to the bow of the arch, a tree of what was read glowing on it), **the quarters** aft (the bunk, the desk, the
+photographs, the window astern), and
+below, **the hangar** (16 x 14 m: the capsule in its cradle over the floor's hatch, the drone rack against the port wall by its
+ports, the probe's launcher, the kit's locker) with **the maintenance room** aft (R-427, the engine room before: the buggy and the
+drone the capsule carries on two platforms under their work lamps, a workbench at the stern wall), and on top **the
+observatory** under its glass dome (the telescope's set and its mount, the radar's set, a couch). Mouse looks (`cabin.yaw/pitch`),
+`W A S D` walk at 1.6 m/s and Shift runs at 3.2 (`shipWalk`: a room's floors and its arches' tunnels, crossing an arch's middle
+changes the room; then its colliders: the fixtures' footprints, the cradle's circle, the rails round the stair's well and the
+oculus), the stair is walked round (`cabin.stairA`, its height by the angle: flat on its three landings, a ramp between) and entered
+or left only at a landing's way through its rail; the arrow keys turn the ship itself; `viewBasis()` = head look x ship attitude is
+used for the space camera, the crosshair and the HUD markers. `E` uses what you face within reach (`cabin.facing`: of the devices
+in the room stood in, the spot most ahead): the GOES console, the flight computer, the three screens (star map, landing map = deploy
+the capsule, target data), the capsule's cradle (deploy), the shard decoder (`facing` 7: its screen breathes while a shard waits to
+be read), the signal radar (`facing` 8: its screen brightens and pulses while the receiver is on; `E` enters the radar camera), the
+telescope's set (`facing` 9: its screen glows while the eye is at the eyepiece; `E` looks through it), the case, the drone bay;
+I-04: the bunk (`facing` 12, `BUNK - E TO REST UNTIL ...`: the almanac, its run watched from the quarters), the desk (13: the log)
+and the player's deck in the library (14: R-431, the player's screen), none with a screen of its own; R-429: the garden's four beds
+(19 to 22, `GARDEN BED - E TO TRIM IT`); R-428: the quarters' wall (23, `PHOTOGRAPHS - E TO HANG THEM`); Z-04: the microscope (15,
+`MICROSCOPE - E TO LOOK AT THE VIALS`, `THE COLD STORE HOLDS NO VIALS` while it is empty; teal, its home key 31): a camera entered
+(`MICROSCOPE`, `13-life.md`), the slide drawn whole in the framebuffer (every bank the slide's way's), its HUD on the canvas
+(`CAM 06 MICROSCOPE`, the way and the magnification, the focus, the stage's warmth, the preparation, the field's arrow; the vial's
+world and line, the slide's clock; the crosshair, the species under it, the scale bar; the keys' two lines in turn). Its keys: 1-6
+the ways (`V` the next, Shift+V the one before; SECTION refused for a drop), `+`/`-`, the wheel or Page Up/Down the zoom, `[`/`]` the
+focus, the arrows and the mouse the stage (the electron's mouse turns and tilts; the mouse rests while a cell is tracked, the arrows let
+it go), Enter tracks the cell under the crosshair or lets it go, `L` a spot of light at the crosshair (again: away), `M` the magnet
+beside the stage, turned half round, taken away (R-436), `H` the stage's warmth typed (R-438: digits and the minus sign, Up and Down a
+degree, Enter sets it, Esc keeps it; Shift+H the vial's again), `F` a drop of broth (again: the slide rinsed); the HUD's panel (STAGE,
+LIGHT, FOOD, MAGNET) says what is on the slide, its lines what each is for and what the view's cells answered (R-437); Tab the sheet of the
+species under it, `N` names it, `K` keeps it in a folder (R-440: a copy picked out of the drop alone; UNSORTED, the explorer's folders, A
+NEW FOLDER), `P` a micrograph (the screenshot's key), Ctrl+S saves. Its lists (R-432): `CAM 06 MICROSCOPE` over two tabs, Tab
+between them; THE VIALS opens on its worlds, a folder each in the
+cold store's order (its name and where it is, `23 VIALS - 9 READ STRONG`), Enter opens a world's vials (each its line and the activity it
+read), Enter puts one on the stage, Backspace (or Delete) empties it (its world's folder going with its last), Page Up/Down ten; THE
+CULTURES (R-433) holds THE FLASKS (a drop of a culture as it is), UNSORTED (the collection's new) and the explorer's folders: `N` makes a
+folder (`NAME THE NEW FOLDER`), on one of the explorer's `R` renames it and Backspace removes it once empty (`ONLY AN EMPTY FOLDER IS
+REMOVED - M MOVES ITS CULTURES OUT`); in a folder Enter puts a kept culture's drop on the stage, `M` moves it (a chooser of the folders,
+`MOVE IT TO:`), `C` copies it (R-440, `COPY IT TO:`), Backspace discards it; Esc goes back a level, E reopens on what was last on the
+stage. The controller: A tracks, B the lists, X the
+next way, the bumpers zoom, the triggers focus, SELECT the sheet, the sticks the stage. Z-05: the incubator (16, `INCUBATOR - E TO OPEN
+IT`; amber, its home key 20), a screen over the room (`INCUBATOR`, `13-life.md`): its twelve flasks (each its species in its stage's
+colour), the chosen one's curve on a log scale and its lines, its medium; Up/Down the flask, Left/Right the medium's field (its cell,
+warmth, light, energy, salt), `+`/`-` change it (Shift ten degrees; R-435: a digit begins its warmth typed, Enter sets it, Esc keeps
+it), `W` as its world, `F` a fresh broth, Enter the chooser (R-432: its
+folders first, a world's, the flasks', the collection's; a species seen in a vial, a row a species and its state, a flask's culture, or
+R-433's kept culture in the medium it grew in; on a culture a second; R-441: Tab between THE VIALS and THE CULTURES, opening on the one last
+shown), Backspace (or Delete) empties it, `N` names its organism (R-442: of two, or a strain, the one chosen first), `K` keeps a copy in a
+folder (R-440: of two either alone or both), Ctrl+S saves. The controller: A puts in, B back, X as its world, Y a fresh broth, the
+bumpers lower and raise. Its flasks glow in the room by their cultures and lights. Z-06: the sequencer (17, `SEQUENCER - E TO READ A
+GENOME`; magenta, its home key 47), a screen over the room
+(`SEQUENCER`, `13-life.md`): Enter the chooser (a species seen in a vial or growing in a flask) and Enter again reads it, 10 seconds on the
+lab's clock (its letters as they are read, a chromatogram over them, its helix turning its own way; its screen in the room pulses while it
+reads), its result once read (its letters, its hand, its nearest kin read and their common ancestor, a made one's watermark); Backspace
+takes it off, Tab the tree. The tree of kin (18, `TREE OF KIN - E TO LOOK AT IT`; leaf green, its home key 46), a screen over the room
+(`TREE`): every species read and the ship's own by kinship, a genesis a clade, the geneses counted; Up/Down a leaf (its nearest kin below),
+Enter its world's star the remote target, Tab the sequencer. The controller: A reads (the tree: targets), B back, SELECT the other. A made
+species' watermark, once read, is the decoder's: its people's world listed, the watermark among their records by its year (`A WATERMARK`,
+read with the language their records taught). Boarded at the capsule (`E` at
+its cradle, then the landing map's `Enter`), a descent opens on the hatch's drop (`DROP_S`, 3.5 s: the frame's eye the hangar's
+view `THE HATCH'S DROP`, its two leaves sliding apart and the capsule falling through, the stars below) before the descent's own;
+`C` or the landing screen go straight to it. Nothing needs walking: every device keeps its key and its flight computer's row.
+R-404 (2026-10-06): every computer's screen glows in a colour of its own (its row in `Game::cabinDevices`: the console amber, the flight
+computer green, the star map blue, the landing map pink, the target data cyan, the decoder violet, the radar red, the telescope ice-white,
+the case lime, the drone bay pale yellow) and the `E` prompt is written in it. U-03: each device is that row (its room, its spot and reach,
+its stand where the explorer faces it from, its prompt and what it says while it works, the controller's "USE" line, its home bank and
+colour, `E`'s act, its screen's shade in the frame) and its fixtures in the ship's plan. `U` toggles the ship's lamps (I-03: their pools
+follow `lightLevel`, the sun's patches and the parked world's light stay; I-04: the night keeps the glows' share, `SHIP_NIGHT_GLOW`: the
+reading lamps, the bedside and the picture lamp, the dome's floor lights), `Y` depolarises the hull (B-411: the outer hull, its walls,
+floors and ceilings, as tinted glass that catches the lamps' light as a faint sheen and clears with the light off; the inner walls and what
+stands in the rooms stay solid and lit; I-03: the hull outside's skin glass too, the sun on every face turned to it; `U` with the hull glass
+says `Y POLARISES THE GLASS HULL`), `PgUp` rides the lift from any room up to the observatory and `PgDn` back down to the bridge (I-01's
+lifter). I-02: the frame's sight comes first (`cabinSight`: the rooms the eye sees through the arches, the well and the oculus, each in its
+box of the screen); with no window, oculus or dome in view and the hull polarised the space view is not drawn; the banks are dealt each
+frame by nearness once the outside is drawn (`cabinDeal`: 8 the hull and 10 the light fixed; a seen device's screen its home bank of 9
+and 21-30, the drones' paint and lamps while the rack or the drones are seen, I-03: the seen rooms' finishes and the hull outside; the
+pool every bank but those two, 0 and, looking out, 7, the outside sunk into it and read through its own palette (B-437); the pool's
+nearest dealt, past it a screen
+dims to the hull's grey) and `cabinPalette` sets their ramps (`02-rendering.md`, "The ship's light"). I-04, life aboard
+(`game/cabin_life.cpp`): the quarters' wall prints twelve photographs in one tone (made on a thread when the
+quarters are seen): the gallery's newest, the newest at the top left, until the explorer hangs one; R-428: `E` at the wall opens its
+screen (`WALL`, `game/wall_screen.cpp`: the twelve frames as their thumbnails in colour, the arrows a frame, `ENTER` the photographs,
+the newest first and one shown large, `ENTER` hangs it, `BACKSPACE` takes the frame's down), and from the first change the wall is the
+explorer's (the save's `wall` line), whatever is taken after. The hall's beds grow the home world's flora (the guide's home star's
+first world with flora: its two silhouettes, their looks and colours), swaying in the draught; R-429: each by the time played since it
+was trimmed (a third of its height then, as planted, full an hour of play on, no further; the time played counts every state but the
+title), `E` at a bed trimming it (the save's `garden` line). The drive's core glows under the floor glass between the bridge's arch and
+the stair, and with the drive's ring outside it brightens in a flight (`cabin.drive`, easing up in a flight and down after it); the
+library's shelves hold the shards, a world's on a board's place (up
+to five tablets) aglow in the decoder's violet by how many of its are held; the case shows its instruments against its lit glass; the deck's
+reels turn while the player plays; the capsule stands in its cradle as the surface draws it; R-427: the buggy and the drone stand
+in the maintenance room as the ground draws them, at rest (`game/vehicles_draw.cpp`, the shapes `surface/vehicle_shape.h`). R-430: every
+room sounds alike, the hum and the drive in a flight (1.4.0's). A new expedition starts on the bridge facing the window. The cabin
+state is saved (`cabin` line; I-02: `cabin_place`, the room and the stair's angle; a save of the 5 m room, without it, loads at the bridge's
+start).
 
-The flight computer (`SHIPSCREEN`) has three pages: Flight control (targeting, Vimana, local target, analyzer, approach, centre, orbit, deploy, home, previous; R-407: `VIMANA JUMP: LIGHT YEARS ALONG THE AIM` last, which opens the aim along the nose for the digits), Onboard devices (light, hull, lifter, field amplificator, time warp, scanlines, the signal radar: C-07, the almanac: W-01, `RUNNING` beside it during a run, the telescope: W-06, `X64` or `STOWED` beside it) and Preferences (settings, guide, log, the shards, save); Left/Right change the page, Up/Down and Enter act, `E`/Esc leave. Every action shares code with the key commands (`toggleVimana`, `deployCapsule`, `startApproach`, ...).
+The flight computer (`SHIPSCREEN`) has three pages: Flight control (targeting, Vimana, local target, analyzer, approach, centre, orbit,
+deploy, home, previous; R-407: `VIMANA JUMP: LIGHT YEARS ALONG THE AIM` last, which opens the aim along the nose for the digits),
+Onboard devices (light, hull, the observatory lift, field amplificator, time warp, scanlines, the signal radar: C-07, the almanac: W-01,
+`RUNNING` beside it during a run, the telescope: W-06, `X64` or `STOWED` beside it) and Preferences (settings, guide, log, the shards,
+save); Left/Right change the page, Up/Down and Enter act, `E`/Esc leave. Every action shares code with the key commands (`toggleVimana`,
+`deployCapsule`, `startApproach`, ...).
 
-The GOES console (`CONSOLE`): a text terminal with a 200-line scrollback and typed commands: `SL [LY]` lists stars within a range (name, class, distance, sector), `DL` lists the bodies and belts of the system, `PAR NAME` / `WHERE NAME` print a star's sector, class and distance (`WHERE` alone prints the ship's sector and region), `ST NAME` sets the remote target, `CAST TEXT` writes a note, `CAT` reads the last notes, `HOME` and `PREV` target the home or the previous star, `JUMP LY` jumps that far along the ship's nose (R-407), `HELP`. Esc leaves. Renamed stars are found by their new names.
+The GOES console (`CONSOLE`): a text terminal with a 200-line scrollback and typed commands: `SL [LY]` lists stars within a range (name,
+class, distance, sector), `DL` lists the bodies and belts of the system, `PAR NAME` / `WHERE NAME` print a star's sector, class and
+distance (`WHERE` alone prints the ship's sector and region), `ST NAME` sets the remote target, `CAST TEXT` writes a note, `CAT` reads
+the last notes, `HOME` and `PREV` target the home or the previous star, `JUMP LY` jumps that far along the ship's nose (R-407), `HELP`.
+Esc leaves. Renamed stars are found by their new names.
 
 The shard decoder (`SHARDS`, C-06, `game/shards_screen.cpp`): the shards taken from the ruins (C-03) are read on the ship, at the
-decoder on the cabin's back wall (`E` facing it), from the flight computer's preferences page or from the guide menu's
+decoder in the library (`E` facing it), from the flight computer's preferences page or from the guide menu's
 `THE SHARDS` (on the surface the menu says they are read on the ship). Three levels: the worlds the guide holds shards of (the
 name or UNKNOWN with the sector and the body, `N OF 50 SHARDS`, `THE LANGUAGE P% LEARNT`, how many are read; C-18: `LANGUAGE P%`
 where the row would run off the screen with three-figure counts; the world under the ship is selected first; C-18: the lists made
@@ -585,9 +798,35 @@ told in order under their eras, a person named only once a record wrote their na
 recording closing it; `UP`/`DOWN` along the events (`SHIFT` held: they run), `ENTER` opens the record that told the one under the
 cursor, `ESC` back to the page); `civilisations/records-and-grammar.md`, "The decoder reads a history (H-06)".
 
-A piece of music (C-04, `peoples/music.h`): twelve to eighteen of a world's fifty shards are music, not text. In the world's list a piece's row is its form and length (`A LULLABY, 52 S`) or, once named, `'THE RIVER AT NIGHT' - A LULLABY`; `*` marks one not heard yet. Opening it plays it through the synth (`AudioState::piece`): the screen names the piece (its form "OF THE <people>", or its name) and the tradition in three lines (`A SCALE OF 7 NOTES TO THE OCTAVE`, `A CYCLE OF 2+2+3 AT 112 BEATS A MINUTE`, the timbres: `A PLUCKED STRING, A PIPE AND A DRUM`), and draws the notes as a roll across the piece's length, a bar per note at its degree's height (the lead white and two rows thick, the second voice green, a third cyan, the drum amber ticks under them), the cycles marked, an amber playhead; what the playhead has passed is in colour, the rest dim. The footer is `PLAYING P%` with a bar, then `THE PIECE ENDED`. Keys: `SPACE` pauses and resumes, `N` names the piece (TEXT_ENTRY over the screen, the music going on; the name goes into the guide's `names` under the shard's key and the log gets a note), `ENTER` plays an ended piece again, `LEFT`/`RIGHT` move on (the music stops), `ESC` goes back. A piece is heard whole from the first (the language has no part in it); hearing it records it in the guide as read at the world's full count, so it never shows `*` again. The music stops the moment the decoder screen is left by any road (its row's `away`, `shardsAway`, clears `audio.piece` when the state is neither SHARDS nor a TEXT_ENTRY); nothing plays it elsewhere on the ship yet (C-11, the instruments, is where that belongs).
+A piece of music (C-04, `peoples/music.h`): twelve to eighteen of a world's fifty shards are music, not text. In the world's list a
+piece's row is its form and length (`A LULLABY, 52 S`) or, once named, `'THE RIVER AT NIGHT' - A LULLABY`; `*` marks one not heard yet.
+Opening it plays it through the synth (`AudioState::piece`): the screen names the piece (its form "OF THE <people>", or its name) and
+the tradition in three lines (`A SCALE OF 7 NOTES TO THE OCTAVE`, `A CYCLE OF 2+2+3 AT 112 BEATS A MINUTE`, the timbres:
+`A PLUCKED STRING, A PIPE AND A DRUM`), and draws the notes as a roll across the piece's length, a bar per note at its degree's height
+(the lead white and two rows thick, the second voice green, a third cyan, the drum amber ticks under them), the cycles marked, an amber
+playhead; what the playhead has passed is in colour, the rest dim. The footer is `PLAYING P%` with a bar, then `THE PIECE ENDED`. Keys:
+`SPACE` pauses and resumes, `N` names the piece (TEXT_ENTRY over the screen, the music going on; the name goes into the guide's `names`
+under the shard's key and the log gets a note), `ENTER` plays an ended piece again, `LEFT`/`RIGHT` move on (the music stops), `ESC` goes
+back. A piece is heard whole from the first (the language has no part in it); hearing it records it in the guide as read at the world's
+full count, so it never shows `*` again. The music stops the moment the decoder screen is left by any road (its row's `away`,
+`shardsAway`, clears `audio.piece` when the state is neither SHARDS nor a TEXT_ENTRY); nothing plays it elsewhere on the ship yet (C-11,
+the instruments, is where that belongs).
 
-A star chart (C-10, 2026-10-03, `peoples/charts.h`, `civilisations/records-and-grammar.md`): three to five of a world's fifty shards are charts of the people's sky round a star they marked (the world's list says `A CHART:` and the caption). Opening one draws it beside its caption: a disc of the hemisphere round the marked star with the stars as dots by their brightness, the people's figures joined by lines and named at their brightest star (dim in the people's words until every word is learnt), the marked star's amber diamond, and at the right the caption word by word (coloured as a text's) and `THEY MARKED`: the star as the explorer knows it (or UNKNOWN), its class, its distance from here and its sector (`- THE REMOTE TARGET` in cyan once it is). A first reading at the language's current share draws the chart over four seconds, the stars first, then the lines, then the names flickering into place (`DECODING P%`; `ENTER` skips the wait, `ESC` leaves it unread); on a chart read `ENTER` sets the remote target on the marked star (`REMOTE TARGET: ... - V TO FLY`, the chain's next link), `O` holds the chart up to the sky and puts it down again (`HELD UP TO THE SKY` under the star), `LEFT`/`RIGHT` move on, `ESC` goes back. Held up, the chart's figures are drawn on the space view (not during a Vimana flight or in the radar camera) and on the surface at night between the real stars from wherever the ship is, on the sky alone (a line's pixel is skipped where the frame has depth: the cabin's walls, a globe, the ground, a mountain), with the names at their brightest star, the marked star's diamond and `THEY MARKED THIS STAR` (an amber `+` at the edge when it is behind the view) and `A CHART OF THE <PEOPLE> HELD UP` at the top right; it stays up across screens and landings until put down, and is not saved. A chart read logs a `CHART` entry naming the marked star's sector and class only. No chart has a voice: a map, not a sound.
+A star chart (C-10, 2026-10-03, `peoples/charts.h`, `civilisations/records-and-grammar.md`): three to five of a world's fifty shards are
+charts of the people's sky round a star they marked (the world's list says `A CHART:` and the caption). Opening one draws it beside its
+caption: a disc of the hemisphere round the marked star with the stars as dots by their brightness, the people's figures joined by lines
+and named at their brightest star (dim in the people's words until every word is learnt), the marked star's amber diamond, and at the
+right the caption word by word (coloured as a text's) and `THEY MARKED`: the star as the explorer knows it (or UNKNOWN), its class, its
+distance from here and its sector (`- THE REMOTE TARGET` in cyan once it is). A first reading at the language's current share draws the
+chart over four seconds, the stars first, then the lines, then the names flickering into place (`DECODING P%`; `ENTER` skips the wait,
+`ESC` leaves it unread); on a chart read `ENTER` sets the remote target on the marked star (`REMOTE TARGET: ... - V TO FLY`, the chain's
+next link), `O` holds the chart up to the sky and puts it down again (`HELD UP TO THE SKY` under the star), `LEFT`/`RIGHT` move on,
+`ESC` goes back. Held up, the chart's figures are drawn on the space view (not during a Vimana flight or in the radar camera) and on the
+surface at night between the real stars from wherever the ship is, on the sky alone (a line's pixel is skipped where the frame has
+depth: the cabin's walls, a globe, the ground, a mountain), with the names at their brightest star, the marked star's diamond and
+`THEY MARKED THIS STAR` (an amber `+` at the edge when it is behind the view) and `A CHART OF THE <PEOPLE> HELD UP` at the top right; it
+stays up across screens and landings until put down, and is not saved. A chart read logs a `CHART` entry naming the marked star's sector
+and class only. No chart has a voice: a map, not a sound.
 
 ## The GUIDE (`guide.txt`, M3)
 
@@ -596,8 +835,23 @@ explorers (`inbox`, shown in cyan), the expedition log, visited stars, landed bo
 shards taken (`shard <body key>/S<index>`, C-03: `Game::shardKey`; `Guide::shardWorlds` counts the worlds they come from; T-04: a
 people's records at people x 1000 + index, the file's `records 2` line saying so: a guide without it had C-13's second people at
 50 + index and is moved when loaded, `Guide::migratedShards`), the shards read on the decoder (`decoded <body key>/S<index> <n>`,
-the count of that world's shards the language had then, C-06), the signals the radar locked (`signal <key> <kind>`: a world's key
-or a pulsar's star key, C-07) and the recordings heard on it (`heard <body key>/S<index>`, C-07), the explorer's marks on the
+the count of that world's shards the language had then, C-06), Z-04: what was seen of each species under the microscope
+(`microbe <body key>/M<index> <seen> <forms>`: the parts of its sheet seen, `SheetSeen`'s bits, its form 1, its motion 2, its
+flagella 4, its DNA 8, its wall 16, Z-06 its genome read 32; the forms of its life seen, `CycleForm`'s bits; after the file's
+`microbes 1` line, the species'
+keys of generation 17's lists; a species' name is a `name` line under its key; Z-05: after them, where it has any, the stages of its
+life its cultures' curves showed, `LifeCycle`'s bits, and its quickest doubling seen in a flask with that flask's medium; and the
+strains a flask gave, `strain <body key>/M<index>/S<n> <parent> <move> <value>`; Z-06: the made species sequenced,
+`watermark <body key>/M<index>`, their watermarks the decoder's; Z-07: the years a woken spore slept, after the growth's numbers; the
+samples taken, `stat samples`, and the worlds they came from, `sampled <body key>`; a friend's sheets lent by their inbox file,
+`lentmicrobe` lines as the `microbe` ones, in cyan and in no count, the explorer's own sheet winning; J-07: the animal species seen,
+`animal <body key>/A<index> <doings> <nearest m> <most at once>` after an `animals 1` line, both once there is one, the index its
+world's bestiary's, the doings `AnimalDoing`'s bits, its name a `name` line; J-08: ` <marks>` after them where it has any,
+`AnimalMark`'s bits, a line without them as J-07 wrote it; B-489: the animals seen to die,
+`dead <body key> <seed> <cell> <gLat> <gLon> <unit xyz> <species> <heading> <size> <died> <eaten> <stalks>`, the death on the guide's
+clock (written with the `clock` line), those older than 64 steps left out, a loan carrying none), the signals the radar
+locked (`signal <key> <kind>`: a world's key or a pulsar's star key, C-07) and the recordings heard on it (`heard <body key>/S<index>`,
+C-07), the explorer's marks on the
 worlds (`mark <body key> <lat> <lon> <kind> <lent> <when> <name>`: radians, the kind a `LandmarkKind` or 8 for a place (T-03: 9 a
 work's; in memory `LM_WORK` is 8 and a place 9, `markKindToFile`), the name last and possibly empty, R-408), the probes' records
 (`probe <id> <lent> <body key> <gen> <saved> <launchT> <aimLat> <aimLon> <seed> <start xyz> <headYaw> <descYaw> <chuteOpen> <chuteClose> <crushBar> <endClock> <endBar> <endKm> <endK> <endCause> <storm key|->`,
@@ -613,9 +867,23 @@ home star and the statistics. Text file, header `vesperis-guide 1`, saved whenev
 `Game::starNameOf`/`bodyNameOf` resolve display names everywhere (HUD, lists, sheets, landing map, statuses); a renamed star
 renames the generated names hanging off it ("HOME OF CATS II", "HOME OF CATS II-a").
 
-Keys: `G` opens the guide menu in space and on the surface (star map, rename this star / this world, write a note, log, gallery, statistics, the shards (C-06: the decoder, from the ship; C-04: `N` on a piece names it), target by name, target by coordinates, return to the previous star, target the home star, set home here, export, import); `M` in space opens the star map directly (G-05: in a Vimana flight too, on the galaxy page); `J` the log. Text entry (`TEXT_ENTRY`) takes letters, digits, space, `-` and `.`; Enter confirms, Esc cancels.
+Keys: `G` opens the guide menu in space and on the surface (star map, rename this star / this world, write a note, log, gallery,
+statistics, Z-07 the catalogue of the species seen (`13-life.md`, "The record"), the shards (C-06: the decoder, from the ship; C-04: `N`
+on a piece names it), target by name, target by coordinates, return to the previous star, target the home star, set home here, export,
+import); `M` in space opens the star map directly (G-05: in a Vimana flight too, on the galaxy page); `J` the log. Text entry
+(`TEXT_ENTRY`) takes letters, digits, space, `-` and `.`; Enter confirms, Esc cancels.
 
-Log entries are written on arrival (class, counts, sector), when parked in orbit, on landing (place, temperature, pressure, gravity, day or night), on launch (longest walk, distance driven), when a shard is taken (`SHARD`: the place, the settlement's class, the world and the count of the world's fifty, C-03) when the radar locks a source it had not (`SIGNAL`: the kind, what is heard, the source and its distance and age, the sector, C-07), at a jump (`JUMP`, R-407), at a mark placed (`MARK`: its name, what it marks, the world, the place, R-408) and for notes; the log screen pages newest first. Statistics: systems visited, worlds landed on, classes and types seen (S-02: the classes' codes on their own line, two past twelve classes), furthest from home (LY), longest walk from the capsule, highest point, distance on foot and driven (one line since C-03), shards taken and the worlds they come from (C-03) and how many are decoded (C-06), under it a dim line with the graves read and the records ended (C-12), names given, photographs, creatures sighted and (C-07) the signals heard on the same line.
+Log entries are written on arrival (class, counts, sector), when parked in orbit, on landing (place, temperature, pressure, gravity, day
+or night), on launch (longest walk, distance driven), when a shard is taken (`SHARD`: the place, the settlement's class, the world and
+the count of the world's fifty, C-03) when the radar locks a source it had not (`SIGNAL`: the kind, what is heard, the source and its
+distance and age, the sector, C-07), at a jump (`JUMP`, R-407), at a mark placed (`MARK`: its name, what it marks, the world, the place,
+R-408), Z-03 to Z-07 for the living small (`SAMPLE` a take, `FORM` a form's first sight, `WOKEN`, `STRAIN`, `KIN`) and for notes; the
+log screen pages newest first. Statistics: systems visited, worlds landed on, classes and types seen (S-02: the classes' codes on their
+own line, two past twelve classes), furthest from home (LY), longest walk from the capsule, highest point, distance on foot and driven
+(one line since C-03), shards taken and the worlds they come from (C-03) and how many are decoded (C-06), under it a dim line with the
+graves read and the records ended (C-12), names given, photographs, creatures sighted and (C-07) the signals heard on the same line.
+Z-07: `L` turns to its LIFE page (the samples, the species seen, the forms and stages seen, the woken, the strains, the sequenced, the
+geneses, kin across stars, a friend's lent on a cyan line; `13-life.md`).
 
 Star map (`STAR_MAP`), two pages turned with `Tab` (G-05; the map opens on the page it was left on, on the galaxy in a Vimana
 flight, where `Tab` is refused with `IN FLIGHT THE MAP SHOWS THE GALAXY`). **The neighbourhood** (titled
@@ -681,23 +949,68 @@ mark `RENAME THE PLACE`; `Delete` twice removes the mark under the cursor; logge
 the chart. Its images are built at the logical resolution when the view changes (2-7 ms on the worker pool), a frame without a
 change costs under a millisecond at 4x.
 
-Gallery: screenshots taken with `P`/`F12` get a sidecar `.txt` with the place and EPOC (`Game::screenshotCaption`); the gallery lists `shots/screenshot_*.png`, decodes them with `readPNG` (the game's own PNG format) and shows them with their captions. W-06: a photo through the telescope carries `THROUGH THE TELESCOPE X16: UNKNOWN  ROCKY MOON  64397 KM  6.4 DEG - IN ORBIT OF UNKNOWN  EPOC ...` (the glyph written as `DEG` in the text file). X-04: the probes' recordings are listed among them (their final images, `shots/probe_<n>.png`), merged by time; Enter plays one; a photo of a recording carries `THE RECORDING OF PROBE 3 INTO UNKNOWN AT T+04:31, 0.62 ATM - ...`.
+Gallery: screenshots taken with `P`/`F12` get a sidecar `.txt` with the place and EPOC (`Game::screenshotCaption`); the gallery lists
+`shots/screenshot_*.png`, decodes them with `readPNG` (the game's own PNG format) and shows them with their captions. W-06: a photo
+through the telescope carries `THROUGH THE TELESCOPE X16: UNKNOWN  ROCKY MOON  64397 KM  6.4 DEG - IN ORBIT OF UNKNOWN  EPOC ...` (the
+glyph written as `DEG` in the text file). X-04: the probes' recordings are listed among them (their final images,
+`shots/probe_<n>.png`), merged by time; Enter plays one; a photo of a recording carries
+`THE RECORDING OF PROBE 3 INTO UNKNOWN AT T+04:31, 0.62 ATM - ...`.
 
-Sharing: "export the guide" writes `guide_export.txt`; "import an inbox file" reads `guide_inbox.txt` (a friend's export placed next to the game) into the inbox; your own names always win. C-14: the import also lends the shards the friend found and read (their `shard` keys with a `decoded` line; what they were lent themselves does not travel on, like the inbox's names): a lent shard is listed and read on the decoder in cyan, counts in its world's language like one of your own, plays or speaks like one, and is never taken (the ruins still hold it: taking it there makes it your own). The status says `N NEW NAMES AND M LENT SHARDS FROM THE INBOX`, an `INBOX` log line counts the worlds, and the statistics count the lent (`Guide::lent`, `lent` lines). X-04: it lends the friend's own probe recordings too (not those lent to them; a seed already held is skipped): a lent recording is marked (`lent` in its `probe` line), framed and titled in cyan in the gallery and on the giant's profile pages (`LENT`), plays like one's own and counts in no statistic; an `INBOX` log line counts them. R-408: and the friend's own marks (not those lent to them; one standing within about 30 m of a mark already held is the same place): drawn in cyan on the maps and over the view, heard by the scanner like any sight (only the explorer's own marks leave a sight out), the explorer's own once renamed. The status reads `INBOX: N NAMES, M SHARDS, K RECORDINGS, J MARKS` (the parts there are).
+Sharing: "export the guide" writes `guide_export.txt`; "import an inbox file" reads `guide_inbox.txt` (a friend's export placed next to
+the game) into the inbox; your own names always win. C-14: the import also lends the shards the friend found and read (their `shard`
+keys with a `decoded` line; what they were lent themselves does not travel on, like the inbox's names): a lent shard is listed and read
+on the decoder in cyan, counts in its world's language like one of your own, plays or speaks like one, and is never taken (the ruins
+still hold it: taking it there makes it your own). The status says `N NEW NAMES AND M LENT SHARDS FROM THE INBOX`, an `INBOX` log line
+counts the worlds, and the statistics count the lent (`Guide::lent`, `lent` lines). X-04: it lends the friend's own probe recordings too
+(not those lent to them; a seed already held is skipped): a lent recording is marked (`lent` in its `probe` line), framed and titled in
+cyan in the gallery and on the giant's profile pages (`LENT`), plays like one's own and counts in no statistic; an `INBOX` log line
+counts them. R-408: and the friend's own marks (not those lent to them; one standing within about 30 m of a mark already held is the
+same place): drawn in cyan on the maps and over the view, heard by the scanner like any sight (only the explorer's own marks leave a
+sight out), the explorer's own once renamed. The status reads `INBOX: N NAMES, M SHARDS, K RECORDINGS, J MARKS` (the parts there are).
 
 ## Settings (`vesperis_settings.txt`, M0-02)
 
-`Settings` (`game/settings.h`): `mouse_sensitivity` 0.2-3.0, `invert_y`, `fov` 50-100 (horizontal degrees), `master_volume` 0-1, `scanlines`, `window_scale` 2-6 (window = 320*s x 200*s), `render_scale` 1-4 (framebuffer = 320*s x 200*s, default 4 since B-310, 2 before), `mush` 0 classic / 1 soft / 2 sharp / 3 fine (box size scale+1 / scale+2 / max(2, scale) / max(2, scale-1); fine is the default since B-310), `shading` 0 flat cells / 1 stepped gradient / 2 smooth (the default since B-311), `crt` and `bloom` (optional post shader in the platform layer, off), `sprint_toggle` (hold or toggle) and `sprint_speed` 2.5-4.0 (M8-10); R-418: `pad_look_speed` 0.2-3.0, `pad_invert_y`, `pad_dead_zone` 0.05-0.40 (set on the controller page). Text file with a `vesperis-settings 2` header; unknown keys ignored, values clamped on load; a version-1 file (from before B-310) keeps its other settings but takes the new look once (render scale 4, the fine mush, smooth shading) and is saved as version 2. `Game::applySettings` pushes them into the projections (`spaceR.proj`, `SurfaceView::setFov` rebuilds the direction table), the mouse factors, and `AudioState::master`. The Settings screen (menu item 4, state `SETTINGS`) edits them with up/down and left/right (Enter also advances); Esc or BACK saves the file. `Ctrl+K`/`F10` toggles scanlines directly and saves. A window-size change sets `Game::wantsWindowScale`, which the platform layer applies with `platformSetWindowSize` (ignored in fullscreen). The `Game` constructor touches no files: `loadFromDisk()` reads the settings and the save (the window build calls it; tests set `settingsPath`/`savePath` under `shots/`). R-419: `auto_profile` 0-5, the auto-explore profile chosen last. R-420: `auto_music` 0/1 (auto-explore's tape on), `auto_track` (the track in the deck), `auto_track_at` (the second it was left at; -1 no cassette in yet).
+`Settings` (`game/settings.h`): `mouse_sensitivity` 0.2-3.0, `invert_y`, `fov` 50-100 (horizontal degrees), `master_volume` 0-1,
+`scanlines`, `window_scale` 2-6 (window = 320*s x 200*s), `render_scale` 1-4 (framebuffer = 320*s x 200*s, default 4 since B-310, 2
+before), `mush` 0 classic / 1 soft / 2 sharp / 3 fine (box size scale+1 / scale+2 / max(2, scale) / max(2, scale-1); fine is the default
+since B-310), `shading` 0 flat cells / 1 stepped gradient / 2 smooth (the default since B-311), `crt` and `bloom` (optional post shader
+in the platform layer, off), `sprint_toggle` (hold or toggle) and `sprint_speed` 2.5-4.0 (M8-10); R-418: `pad_look_speed` 0.2-3.0,
+`pad_invert_y`, `pad_dead_zone` 0.05-0.40 (set on the controller page). Text file with a `vesperis-settings 2` header; unknown keys
+ignored, values clamped on load; a version-1 file (from before B-310) keeps its other settings but takes the new look once (render scale
+4, the fine mush, smooth shading) and is saved as version 2. `Game::applySettings` pushes them into the projections (`spaceR.proj`,
+`SurfaceView::setFov` rebuilds the direction table), the mouse factors, and `AudioState::master`. The Settings screen (menu item 4,
+state `SETTINGS`) edits them with up/down and left/right (Enter also advances); Esc or BACK saves the file. `Ctrl+K`/`F10` toggles
+scanlines directly and saves. A window-size change sets `Game::wantsWindowScale`, which the platform layer applies with
+`platformSetWindowSize` (ignored in fullscreen). The `Game` constructor touches no files: `loadFromDisk()` reads the settings and the
+save (the window build calls it; tests set `settingsPath`/`savePath` under `shots/`). R-419: `auto_profile` 0-5, the auto-explore
+profile chosen last. R-420: `auto_music` 0/1 (auto-explore's tape on), `auto_track` (the track in the deck), `auto_track_at` (the second
+it was left at; -1 no cassette in yet).
 
-`clock` (M5-05): 0 game time (warpable, saved), 1 real time: every simulated frame sets `t = 3.6e6 + (unix time - 2026-01-01 00:00 UTC)`, so the sky follows the wall clock as in the original and positions stay consistent when switching (`t` is the only state). The data sheet shows `EPOC:SINISTER.MEDIUS.DEXTER` (10^9, 10^6, 10^3, 1 s groups) top right and a `CLOCK REAL TIME` line in that mode.
+`clock` (M5-05): 0 game time (warpable, saved), 1 real time: every simulated frame sets
+`t = 3.6e6 + (unix time - 2026-01-01 00:00 UTC)`, so the sky follows the wall clock as in the original and positions stay consistent
+when switching (`t` is the only state). The data sheet shows `EPOC:SINISTER.MEDIUS.DEXTER` (10^9, 10^6, 10^3, 1 s groups) top right and
+a `CLOCK REAL TIME` line in that mode.
 
-The data sheet on the surface (M5-06/09; W-01: `T` on the sheet opens the almanac of the place, in space as on the surface) adds `SEASON` (declination, day length or polar day/night, hours or days to the next equinox and solstice, scanned over one orbit), W-03 `FORECAST` on worlds with fronts (`RAIN FROM THE SW IN 2 H 05 MIN`, `SNOW` below -1 C now, `DUST` on desert and thin-atmosphere worlds, `A FRONT` on a quartz world; `IN A FRONT, CLEARING IN 1 H 05 MIN` under one; `NO FRONT WITHIN 5 DAYS`; `Game::updateForecast` lists the next fronts at the feet every thirty seconds of game time, `forecastLine` reads them), `IN THE SKY` (the two largest bodies above the horizon with altitude and width) and `SECOND SUN` when the system is multiple. The HUD, the analyzer and the arrival log use `StarSystem::classString()` (`S00+S01 MULTIPLE`); the analyzer's class description wraps onto a second line when it needs one (S-02: the long rows were cut at 50 characters) and the list gives up a row.
+The data sheet on the surface (M5-06/09; W-01: `T` on the sheet opens the almanac of the place, in space as on the surface) adds
+`SEASON` (declination, day length or polar day/night, hours or days to the next equinox and solstice, scanned over one orbit), W-03
+`FORECAST` on worlds with fronts (`RAIN FROM THE SW IN 2 H 05 MIN`, `SNOW` below -1 C now, `DUST` on desert and thin-atmosphere worlds,
+`A FRONT` on a quartz world; `IN A FRONT, CLEARING IN 1 H 05 MIN` under one; `NO FRONT WITHIN 5 DAYS`; `Game::updateForecast` lists the
+next fronts at the feet every thirty seconds of game time, `forecastLine` reads them), `IN THE SKY` (the two largest bodies above the
+horizon with altitude and width) and `SECOND SUN` when the system is multiple. The HUD, the analyzer and the arrival log use
+`StarSystem::classString()` (`S00+S01 MULTIPLE`); the analyzer's class description wraps onto a second line when it needs one (S-02: the
+long rows were cut at 50 characters) and the list gives up a row.
 
-`aspect` (M6-01): 0 square pixels, 1 the original's 4:3 (the platform layer draws the picture 1.2 times taller); `dither` (ordered 2x2 dither over the 64 palette stops instead of the smooth 256-entry interpolation; the pattern is applied per logical pixel at every render scale); `hud_color` 0 green, 1 amber, 2 white (`setHudScheme` rewrites the `HUD_*` colours, so every screen follows).
+`aspect` (M6-01): 0 square pixels, 1 the original's 4:3 (the platform layer draws the picture 1.2 times taller); `dither` (ordered 2x2
+dither over the 64 palette stops instead of the smooth 256-entry interpolation; the pattern is applied per logical pixel at every render
+scale); `hud_color` 0 green, 1 amber, 2 white (`setHudScheme` rewrites the `HUD_*` colours, so every screen follows).
 
 ## Key map (M6-02)
 
-`vesperis_keys.txt` next to the game (see `vesperis_keys.example.txt`) holds `PHYSICAL LOGICAL` pairs: the front end applies `KeyMap::apply` after the platform filled the `Input`, so pressing the physical key acts as the logical one everywhere (swap both ways with two lines). Names: letters, digits, `SPACE ENTER ESC TAB BACKSPACE UP DOWN LEFT RIGHT PGUP PGDN HOME END INSERT DELETE LSHIFT RSHIFT LCTRL RCTRL LALT RALT F1..F12` and the punctuation names in the example file.
+`vesperis_keys.txt` next to the game (see `vesperis_keys.example.txt`) holds `PHYSICAL LOGICAL` pairs: the front end applies
+`KeyMap::apply` after the platform filled the `Input`, so pressing the physical key acts as the logical one everywhere (swap both ways
+with two lines). Names: letters, digits,
+`SPACE ENTER ESC TAB BACKSPACE UP DOWN LEFT RIGHT PGUP PGDN HOME END INSERT DELETE LSHIFT RSHIFT LCTRL RCTRL LALT RALT F1..F12` and the
+punctuation names in the example file.
 
 ## The controller (R-418, 2026-10-17; M6-02's fixed table replaced)
 
@@ -806,7 +1119,13 @@ controller's). Harness: `vesperis_test input` (08).
 
 ## Photo tools (M6-05)
 
-`Ctrl+P` toggles photo mode in space and on the surface: the HUD goes away and on the surface the camera detaches (`SurfaceView::freeCam`): W A S D fly along the view, Space and C rise and sink, Shift is five times faster, never below the ground and no higher than 400 m above it; the explorer stays where they were and normal play resumes on the second `Ctrl+P`. `Ctrl+Shift+P` writes a panorama, three views at yaw -fov, 0, +fov side by side (`Game::renderPanorama`, `shots/panorama_N.png`, 960x200 at 1x). `Ctrl+R` starts and stops the recorder: every presented frame goes to `movies/take_NNN/frame_NNNNN.png` (a blinking REC on the HUD) for a video tool to assemble. W-06: `P` in the telescope is the telescope's photo (its caption names the target), and `Ctrl+P` hides the reticle with the rest of the HUD.
+`Ctrl+P` toggles photo mode in space and on the surface: the HUD goes away and on the surface the camera detaches
+(`SurfaceView::freeCam`): W A S D fly along the view, Space and C rise and sink, Shift is five times faster, never below the ground and
+no higher than 400 m above it; the explorer stays where they were and normal play resumes on the second `Ctrl+P`. `Ctrl+Shift+P` writes
+a panorama, three views at yaw -fov, 0, +fov side by side (`Game::renderPanorama`, `shots/panorama_N.png`, 960x200 at 1x). `Ctrl+R`
+starts and stops the recorder: every presented frame goes to `movies/take_NNN/frame_NNNNN.png` (a blinking REC on the HUD) for a video
+tool to assemble. W-06: `P` in the telescope is the telescope's photo (its caption names the target), and `Ctrl+P` hides the reticle
+with the rest of the HUD.
 
 ## Auto-explore (R-419, 2026-10-18)
 
@@ -822,7 +1141,10 @@ landing map is never shown, its site chosen in its head; the cabin's own screens
 seconds (`AUTO-EXPLORE: SURVEYOR - ANY KEY ENDS IT`). Any key, click, wheel, a mouse's motion past a few pixels or a controller's button
 or stick gives the controls back (`autoTakeover`): that press is not acted on, the warp goes back to x1, the status says
 `AUTO-EXPLORE OFF - THE CONTROLS ARE YOURS`. What it does is the expedition's (the log, the guide, the records it takes, the game's
-autosaves); it names nothing, marks nothing and saves into no slot. `docs/iteration-3/plans/requests/R-419-auto-explore.md`.
+autosaves); it names nothing, marks nothing and saves into no slot. `docs/iteration-3/plans/requests/R-419-auto-explore.md`. Z-07: its
+water outing takes a sample (O at the last dry ground before the water, the crosshair eased a metre down; first a spring's pool within
+450 m where the world has springs, at its rim), none with the kit full; the vials go to the cold store at the climb
+aboard as the explorer's, the lab's work left to the explorer (`13-life.md`, "The record").
 
 R-420 (2026-10-19): auto-explore's tape. `M` while auto-explore plays (a controller's `SELECT`, whose own key would end it) starts and
 stops a tape: the `music` folder in the working directory when it holds a track (the checkout's for `./vesperis`, `~/Documents/vesperis`
@@ -830,10 +1152,12 @@ for the macOS app; `Game::musicDir`), else the game's own beside the executable 
 beside the binary, the app's `Contents/Resources/music`, a `Vesperis.app` beside a bare binary), four tracks: Jarrad Wright's *Forwards*,
 *It's time to wake up* and *BLUE-MEAN-EYES*, Black Sabbath's *Planet Caravan*. A folder's tape is its `playlist.txt`'s tracks (a line
 each, `file | author | title | gain in dB`, `#` for a comment; a file listed but missing is left out), then its other MP3, OGG, WAV and
-QOA files in the order of their names (`Author - Title.mp3` read as such). The tracks play round and round through a cassette deck's sounds (`game/audio_deck.cpp`): before
+QOA files in the order of their names (`Author - Title.mp3` read as such). The tracks play round and round through a cassette deck's
+sounds (`game/audio_deck.cpp`): before
 the first a cassette put in (the eject key, the door on its spring, the cassette slid in, the door shut on its latch) and the play key
 (its ka-chunk, the motor coming up, the tape's hiss), the music about 2 s after `M`; at a track's end the auto-stop, the cassette out
-and the next in, about 3.4 s between two tracks; the play key alone (0.55 s) when a cassette was left in; the stop key for `M` again, the music
+and the next in, about 3.4 s between two tracks; the play key alone (0.55 s) when a cassette was left in; the stop key for `M` again,
+the music
 cut at it. As a track begins its author (amber) and title (white) fade in at the top left over 0.4 s, stay five seconds and fade out
 over 1.5. Under the tape the game's own sounds keep 0.35 of their level (about 9 dB down; the deck itself is not ducked). The chooser
 and the first seconds' line say `M STARTS AND STOPS THE MUSIC` (`SELECT ...` with a controller) when there is music to play; with none,
@@ -843,11 +1167,19 @@ begins. `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
 
 ## Title, attract mode and credits (M6-06)
 
-`C` on the title opens the credits (help page 2). After 20 s without a key or mouse motion the title camera leaves the parked ship and tours the current system, fourteen seconds per body in order, circling at four radii (rings included), with the body in palette bank 2; any input returns to the parked view.
+`C` on the title opens the credits (help page 2). After 20 s without a key or mouse motion the title camera leaves the parked ship and
+tours the current system, fourteen seconds per body in order, circling at four radii (rings included), with the body in palette bank 2;
+any input returns to the parked view.
 
 ## Saves (M0-04)
 
-Three slots and an autosave, named from `Game::savePrefix` (default `vesperis_save`): `vesperis_save_1.txt` .. `_3.txt` and `vesperis_save_auto.txt`; a legacy `vesperis_save.txt` (version 1, no timestamp) is still read. `Ctrl+S`/`F5` saves to `currentSlot` (also allowed during descent and ascent), `Ctrl+L`/`F9` loads it; the menu's Save/Load open the slot picker (`SLOTS` state, `openSlots`/`updateSlots`/`renderSlots`) whose rows show `saveSummary`: star name, EPOC and where (in space, on the surface, descending, ascending). Autosave (`autosave()`) runs every 5 minutes of real time in a simulating state, on every landing (Enter on the landing map), on every launch (boarding the capsule) and on quit. Continue on the title screen (`loadFromDisk` -> `loadNewest`) takes the file with the newest `saved` stamp, slots first on a tie.
+Three slots and an autosave, named from `Game::savePrefix` (default `vesperis_save`): `vesperis_save_1.txt` .. `_3.txt` and
+`vesperis_save_auto.txt`; a legacy `vesperis_save.txt` (version 1, no timestamp) is still read. `Ctrl+S`/`F5` saves to `currentSlot`
+(also allowed during descent and ascent), `Ctrl+L`/`F9` loads it; the menu's Save/Load open the slot picker (`SLOTS` state,
+`openSlots`/`updateSlots`/`renderSlots`) whose rows show `saveSummary`: star name, EPOC and where (in space, on the surface, descending,
+ascending). Autosave (`autosave()`) runs every 5 minutes of real time in a simulating state, on every landing (Enter on the landing
+map), on every launch (boarding the capsule) and on quit. Continue on the title screen (`loadFromDisk` -> `loadNewest`) takes the file
+with the newest `saved` stamp, slots first on a tie.
 
 ```
 vesperis-save 2
@@ -873,32 +1205,92 @@ stamina <0..100>                   (surface only)
 probe <body> <starSeed> <aimLat> <aimLon> <clock> <launchT> <startRel xyz> <chuteOpen> <chuteClose> <crushBar> <seed> <headYaw> <descYaw> <camYaw> <camPitch> <torn> <watching>   (X-01: a falling probe; a last frame held is not saved; `watching` 1 loads onto its screen)
 ... <id> <notes> <stormKind> <stormKey|->     (X-04, at the probe line's end: its number, the crossings logged (bits), its storm; a save before X-04 lacks them)
 probetrack <n> <clock yaw pitch ...> <m> <clock t ...>   (X-04: the tracks so far, so the recording goes on after a load)
+vial <0 kit|1 cold store> <sx> <sy> <sz> <body> <unit xyz> <niche> <meanC> <salt> <flags> <oldRock> <place> <readC> <activity> <t> <name>   (Z-03: a vial a line, the kit's then the store's; Z-04: flags 1 shade, 2 a bloom)
+lab <clock>                         (Z-05, the incubator's row's own lines after the save's: the lab's clock, real seconds)
+flask <i> <n> <told> <medium> <asWorld>   (a flask with a culture: its species' count, the moments said (1 woken, 2 its glow; R-433: 4 and 8 its species kept); a medium is <cell> <tempC> <light> <energy> <salt>)
+flaskwho <i> <k> <sx> <sy> <sz> <body> <species> <strain> <strainIn>   (each of its species: its world, its index there, its strain now and as put in)
+flaskev <i> <kind> <t> <medium> <who> <what> <value>   (its events in order: 0 started, 1 the medium, 2 a fresh broth, 3 a second added, 4 a strain)
+jar ...                             (older saves only: skipped when loaded, since R-447 took the jars out)
+keptfolder <id> <name>              (R-433: a folder of the culture collection, the explorer's)
+kept <folder> <sx> <sy> <sz> <body> <species> <strain> <medium> <asWorld> <t>   (R-433: a kept culture: its folder (0 UNSORTED), its world's species and strain, the medium it grew in and its world's, when kept)
+seq <sx> <sy> <sz> <body> <species> <t0> <told>   (Z-06, the sequencer's row's line: what is on it, when its reading began on the lab's clock, whether it was told)
 ```
 
-Load regenerates the star (D-01: or the drifter, `placeInSector`; the `remote` line likewise) and the system from the sector, restores the ship, drops VIMANA/APPROACH back to STANDBY, and rebuilds the surface site if `surface 1`; a `phase` line resumes the descent or ascent at the same `transT` (the camera path is a function of it). Unknown keys are ignored; the header prefix must match (versions 1 and 2 are read).
+Load regenerates the star (D-01: or the drifter, `placeInSector`; the `remote` line likewise) and the system from the sector, restores
+the ship, drops VIMANA/APPROACH back to STANDBY, and rebuilds the surface site if `surface 1`; a `phase` line resumes the descent or
+ascent at the same `transT` (the camera path is a function of it). Unknown keys are ignored; the header prefix must match (versions 1
+and 2 are read).
 
-The ship's player (C-11, 2026-10-10, `game/player.cpp`): `Tab` at the decoder's worlds turns to THE PLAYER (and back), the page the decoder opens on next. It lists every piece held, every recording held (a text record made on something that sounds: a wax cylinder, a disc, a reel, a drive, a crystal, something that hums) and every recording the radar caught (`Guide::heard`, `AIR:` in cyan: the record's opening as it was on the air), by their worlds and years, a piece by its name or form with its length, a recording by what it was made on, the people at the right; the row under the cursor names its world, what it was made on (or `CAUGHT BY THE RADAR`) and its year. `ENTER` plays one and the list on from it, `SPACE` pauses, `BACKSPACE` stops, `TAB` back to the worlds, `ESC` closes the decoder and it plays on. It plays wherever the ship goes, the cabin, the window, the maps, a Vimana flight: a line under the system's two lines on the space HUD (a note or a page glyph, `A SONG - THE NULO  0:42/1:21`, dim while paused or held); the hum falls to 0.3 and the drive to 0.55 under it. A landing stops it (the descent, the surface, the title). It is held, its place kept, while the decoder plays a record of its own, the radar listens or the gramophone turns, and takes up where it was after (`AudioState::pieceFrom`, `speechFrom`); the synth's piece and speech point into the player's own copy of the world, so nothing the decoder opens moves them.
+The ship's player (C-11, 2026-10-10, `game/player.cpp`; R-431: its own screen, `PLAYER`, at the deck in the library, the decoder's page
+and its `Tab` no more): it opens on its worlds, a folder each (the world playing, else the one under the ship): its name and where it
+is, its pieces' count and its peoples. `ENTER` opens a world's music: every piece held and every piece the radar caught (`Guide::heard`,
+`AIR:` in cyan, as it was on the air), by their peoples and years, a piece by its name or form with its length, the people at the right;
+the row under the cursor names what it was made on (or `CAUGHT BY THE RADAR`) and its year. Music alone: the recordings and the texts
+stay the decoder's. `ENTER` plays one and the list on from it, `SPACE` pauses, `BACKSPACE` stops, `ESC` goes back to the worlds and from
+them closes the screen, and it plays on. It plays wherever the ship goes, the cabin, the window, the maps, a Vimana flight: a line under
+the system's two lines on the space HUD (a note's glyph, `A SONG - THE NULO  0:42/1:21`, dim while paused or held); the hum falls to 0.3
+and the drive to 0.55 under it. A landing stops it (the descent, the surface, the title). It is held, its place kept, while the decoder
+plays a record of its own, the radar listens or the gramophone turns, and takes up where it was after (`AudioState::pieceFrom`); the
+synth's piece points into the player's own copy of the world, so nothing the decoder opens moves it.
 
-The drone bay (`DRONES`, C-18, `game/drones.cpp`, `game/drone_draw.cpp`, `civilisations/records-and-grammar.md`): a rack of three shelves against
-the cabin's left wall by the front window (`facing` 11, `DRONE BAY - E TO SEND THE DRONES`, `E FOLLOWS THE DRONES` while they are
-out, `THE DRONES ARE CHARGING` after; pale yellow; walking stops 0.26 m before its front), the bay's screen in three cells across
-its head and a lamp at each shelf (green aboard and ready, amber charging, red blinking while its drone is out); also the flight
-computer's devices page (`THE DRONE BAY`, `READY`, `AWAY` or the cooldown's `3:40` beside it). The screen: each drone in lines
+The drone bay (`DRONES`, C-18, `game/drones.cpp`, `game/drone_draw.cpp`, `civilisations/records-and-grammar.md`): a rack of three
+shelves against
+the hangar's port wall by its ports (I-02; `facing` 11, `DRONE BAY - E TO SEND THE DRONES`, `E FOLLOWS THE DRONES` while they are
+out; pale yellow; walking stops 0.26 m before its front), the bay's screen in three cells across its head and a lamp at each shelf
+(green aboard and ready, amber aboard while the others are away, red blinking while its drone is out); also the flight computer's
+devices page (`THE DRONE BAY`, `READY` or `AWAY` beside it). The screen: each drone in lines
 with its number, its finds of what it wanted (or its height while it falls or climbs) and where it is; the world's map with the
 ground under the ship (a cross), the places searched, the ways flown and the drones; what the ship holds of the world's, in the
 decoder's words, `ABOARD: 58 OF ITS 262 SHARDS` and `AND 7 OF ITS 9 INSTRUMENTS` (its peoples together; `READING THE WORLD...`
 while it is read); the finds, the newest first, four rows (dim until aboard; `UP`/`DOWN` scroll, arrows when there are more;
 R-414: the screen closed once the drones are back aboard, the finds, the drones' counts and the places searched go from it, the
-decoder and the case holding them); the header `READY`, `BACK IN 1:52` or `CHARGING 3:40`. `ENTER` sends the drones (refused, in
-the status over the footer: `THE DRONES ARE CHARGING - READY IN 3:40`, `THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD`,
+decoder and the case holding them); the header `READY` or `BACK IN 1:52`. `ENTER` sends the drones (refused, in the status over the
+footer: `THE DRONES GO DOWN FROM AN ORBIT: PARK AT A WORLD`,
 `NO PEOPLE LIVED DOWN THERE: NOTHING TO BRING`, `THE SHIP HOLDS ALL THEY LEFT DOWN THERE`) and returns to the cabin to see them go
 (`THE DRONES ARE AWAY - E AT THEIR RACK FOLLOWS THEM`); `ESC` or `E` back. While they are out the space HUD has
 `DRONES BACK IN 1:52 - 5 FOUND` (and `, 2 ABOARD`) at the probe's line; at the end `THE DRONES ARE BACK WITH 14 FINDS` then their
 kinds, each on the decoder at once (an open decoder lists them as they dock); leaving the parking calls them back
-(`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), then five
-minutes charging from their return, on real time.
+(`THE DRONES CAME BACK AS THE SHIP LEFT: 5 FINDS`). Two minutes searching (about 2:35 from the launch to the last dock), on real
+time; they can be sent again the moment they dock (R-449: C-18's five minutes of charging are gone). The footer: `ENTER SENDS DRONES  S
+SEEDS  UP/DOWN FINDS  ESC BACK`.
 
-The instruments' case (`INSTRUMENTS`, C-11, `game/instruments_screen.cpp`): a cabinet on the cabin's left wall behind the GOES console (`facing` 10, `INSTRUMENT CASE - E TO PLAY`, lime, its three shelves brighter with what it holds), also the flight computer's devices page (`THE INSTRUMENTS`, the count beside it). C-18: it opens on its worlds, a folder each (`UNKNOWN (+189 +0 +45 / 2)`, `1 INSTRUMENT`; the world under the ship first; `UP`/`DOWN`, `ENTER` opens one, `ESC` closes the case), a world of two peoples a folder each people, named on its line as the decoder's rows name them (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`; the head `12 IN THE CASE FROM 2 WORLDS`; the open folder's `UNKNOWN - THE VASANTHUL`). A folder's instruments in a column, the one under the cursor drawn large from its parts as it lies, seen from above, with a ruler of its size (C-17, `game/instrument_draw.cpp`), `A NECKED GOURD` (its make's name; R-414: its name alone, C-11's `OF THE <PEOPLE>` and C-17's `FROM <world> (<sector> / <body>)` gone, the open folder's title naming the world and its people on a world of one too, `UNKNOWN - THE JENGNE`), its scale's line (the register's word at its right), and under it ten bars, one a key, as high as each degree's pitch over the register's first note. `1` to `9` and `0` play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is down; `LEFT`/`RIGHT` move the register a period down or up (`LOWER`/`HIGHER`); `UP`/`DOWN` take another of the folder's; `ESC` back to the worlds. A drum machine's keys are its pads. The machine that played the wax cylinders (C-11's gramophone; C-17: a talking machine, a cylinder box or a listening box, where the people made one) plays its cylinder instead: `ENTER` winds it (a piece of its people's age through its horn, `TURNING 0:12 OF 0:44`), again stops it. The ship's player plays on under an instrument (one may play along); only the machine holds it.
+The seed page (`SEEDING`, J-03, `game/seed_trip.cpp`, `14-seeded-worlds.md`): `S` on the drone bay, over any landable world
+but home (refused in the status: `HOME STAYS AS IT IS`, `NO GROUND DOWN THERE`, `NOT IN ORBIT - APPROACH A WORLD FIRST`, the drones
+away, `THREE LINES LIVE THERE - IT TAKES NO MORE`). It shows `SEED <WORLD>`, the world's map with the ground under the ship
+(a dot), the places of its lines (green where one lives) and the cursor (a blinking cross), `CULTURE  A FLAGELLATE, FLASK 1, FULL` (B-473:
+`C` the next culture alive in a flask, whatever its stage, `GROWING`, `FULL`, `STARVING`, `ASLEEP`, the page opening on the one last
+chosen, else the first `FULL`; `NO OTHER CULTURE IN THE FLASKS`;
+`NO CULTURE IN THE FLASKS` in red), R-451's `NEEDS  WATER, DEAD MATTER, FRESH, 7 TO 47 C, DRY OK` (what it lives in, eats and takes),
+`PLACE  12 N 72 E, REGOLITH` (the arrows move it two degrees, ten with Shift; J-13: `PAGE DOWN` takes it down a drill hole, `ROCK 5 KM DOWN`
+or `THE SEA 9 KM UNDER THE ICE`, `PAGE UP` back, refused `ON THE GROUND ALREADY` and `AS DEEP AS THE DRILL GOES`; J-14: on a world
+with a cloud deck life lives in, `PAGE UP` goes on up into the clouds, `THE CLOUDS 47 KM UP`, refused `AS HIGH AS THE CLOUDS GO`), R-451's
+`THERE  WATER, DEAD MATTER, LIT, FRESH, 50 C, DRY` (what the place gives; down there `WATER, HYDROGEN, DARK, SEA, -17 C`; up in the clouds
+`ACID, DEAD MATTER, LIT, FRESH, 29 C`), `LINES  1 OF 3 LIVE THERE, 2 SENT` on a seeded world; footer `C CULTURE  ARROWS  PGDN DEEPER
+ENTER SEND  ESC BACK` (`PGUP CLOUDS` in place of `PGDN DEEPER` on a world with a cloud deck).
+`ENTER` sends drone 1 alone (`DRONE AWAY - E AT DRONE BAY TO FOLLOW`) and goes back to the bay, whose list then shows the culture, its
+place and `ON ITS WAY DOWN`, `LET GO, WATCHED`, then the report in full over two lines (`TOO HOT: IT GROWS UP TO 47 C, THE PLACE IS 50 C`;
+`REPORT: CULTURE GROWS`); drone 1's line says `WATCHING IT` while it is there. The culture is let go as the drone arrives (SEEDED in the
+log); its report at the dock is the status `UNKNOWN: CULTURE GROWS` (or `CULTURE DIED, TOO HOT`, then the reason in full) and a DRONES line
+in the log with the reason; called back before it arrived, `CALLED BACK BEFORE IT LET THE CULTURE GO`. The bay is ready again at once.
+J-04: on a seeded world whose air a line moved, the data sheet's `AIR` line says how (`THICKER, 14 C WARMER THAN IT WAS`) and the HUD's
+TEMP and ATM on the ground read the world as it is now. J-05: the `MADE` line names its waters', ground's and plants' looks too (`MILK
+SEAS, CRUSTS, RED SNOW, BLIGHT`), wrapped at 38 letters, and the landing map's cursor reads a made cover (`CRUST +418M`).
+
+The instruments' case (`INSTRUMENTS`, C-11, `game/instruments_screen.cpp`): a cabinet on the library's stern wall (I-02; `facing` 10,
+`INSTRUMENT CASE - E TO PLAY`, lime, its three shelves brighter with what it holds), also the flight computer's devices page
+(`THE INSTRUMENTS`, the count beside it). C-18: it opens on its worlds, a folder each (`UNKNOWN (+189 +0 +45 / 2)`, `1 INSTRUMENT`; the
+world under the ship first; `UP`/`DOWN`, `ENTER` opens one, `ESC` closes the case), a world of two peoples a folder each people, named
+on its line as the decoder's rows name them (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`; the head `12 IN THE CASE FROM 2 WORLDS`; the
+open folder's `UNKNOWN - THE VASANTHUL`). A folder's instruments in a column, the one under the cursor drawn large from its parts as it
+lies, seen from above, with a ruler of its size (C-17, `game/instrument_draw.cpp`), `A NECKED GOURD` (its make's name; R-414: its name
+alone, C-11's `OF THE <PEOPLE>` and C-17's `FROM <world> (<sector> / <body>)` gone, the open folder's title naming the world and its
+people on a world of one too, `UNKNOWN - THE JENGNE`), its scale's line (the register's word at its right), and under it ten bars, one a
+key, as high as each degree's pitch over the register's first note. `1` to `9` and `0` play the scale's degrees from the register's
+first note up (past the scale's last, the next period's), held while the key is down; `LEFT`/`RIGHT` move the register a period down or
+up (`LOWER`/`HIGHER`); `UP`/`DOWN` take another of the folder's; `ESC` back to the worlds. A drum machine's keys are its pads. The
+machine that played the wax cylinders (C-11's gramophone; C-17: a talking machine, a cylinder box or a listening box, where the people
+made one) plays its cylinder instead: `ENTER` winds it (a piece of its people's age through its horn, `TURNING 0:12 OF 0:44`), again
+stops it. The ship's player plays on under an instrument (one may play along); only the machine holds it.
 
 ## Audio state
 
@@ -935,24 +1327,30 @@ landing screen): the link's hiss (more as `probeSignal` falls with the depth) an
 the deep's rumble and past half the depth the hull's groans (`probeDepth`), a thunderclap through the relay at a flash
 (`probeThunder`, one-shot) and at the end only the hiss of the lost signal (`probeLost`); `vesperis_test probe wav` writes each
 stage's sound to `shots/tests/probe_*.wav` (rms 0.06-0.10, the entry's peak 0.73). Q-03 (2026-10-22): the
-sounds of the ground the world's traits give (`groundSoundsTo` sets them from the surface's cues, `AudioSynth::groundSample` sings them), ground
-levels that `surfaceOff` clears: `dunes` at `duneHz`, the singing dunes' hum (the note and four harmonics, pure and wavering, buzzing with the
+sounds of the ground the world's traits give (`groundSoundsTo` sets them from the surface's cues, `AudioSynth::groundSample` sings
+them), ground
+levels that `surfaceOff` clears: `dunes` at `duneHz`, the singing dunes' hum (the note and four harmonics, pure and wavering, buzzing
+with the
 grains' collisions, over the sand's hiss: 70-100 Hz under an Earth's gravity, 30-50 on a Titan or a Mars; a slide's hold rms 0.10, twice the
-full wind's); `ice`, the singing ice (a near crack and its flexural wave's chirp falling as 1/t^2 from 4-7 kHz to under 1 kHz in a tenth to a
+full wind's); `ice`, the singing ice (a near crack and its flexural wave's chirp falling as 1/t^2 from 4-7 kHz to under 1 kHz in a tenth
+to a
 fifth of a second, a far crack's duller chirp over a second, the sheet's low whoop, the snow settling: a sound every 0.4-3.6 s, oftener with
 the level: 18 in twenty seconds at dusk, 8 at noon); `quake` and `quakeHit` (the P-wave's thump at the onset, then the rumble under a slow
-heave, the air's roar over it and the stones' rattle: peak 0.53; on an airless world the rumble alone, through the boots); `air`, how much of
+heave, the air's roar over it and the stones' rattle: peak 0.53; on an airless world the rumble alone, through the boots); `air`, how
+much of
 them the air carries (the wind's rule: whole at a third of a bar, 0.15 in the thinnest). `vesperis_test sounds` renders each to
 `shots/tests/sound_*.wav` with its levels; the scenes `singing_dunes`, `singing_ice` and `quakes` hear them on the ground.
 
-D-03 (2026-10-23): a drifter's voice (`civilisations/radar.md`, the drifters' voices; `game/audio_rogue.cpp`). `radarKind` `SIG_ROGUE` plays it
+D-03 (2026-10-23): a drifter's voice (`civilisations/radar.md`, the drifters' voices; `game/audio_rogue.cpp`). `radarKind` `SIG_ROGUE`
+plays it
 from `radarSeed` and `radarRogue` (`RogueVoice`: its class by the body, the period of its turning and of its innermost moon's orbit, its
 power; `rogueVoiceFor` reads them off its signal), the one under it from `radarRogue2`; `radarVoice` with a drifter is the beacon under its
 voice (D-05's slot: a programme of C-16's machines, slowed and darkened; -1 none). `radarSet` is where the receiver is heard: the radar
 camera (`RADIO_CAMERA`), the cabin's radio (`RADIO_CABIN`) or the suit's (`RADIO_SUIT`: the whole receiver through a small set's band of
 300 Hz to 3 kHz). `Game::darkRadio` runs each frame after the state's update: while the ship is at a drifter (its system, out of a flight)
 and the camera is off, the cabin's radio carries the drifter at `radar` 0.45 (`RADIO_CABIN_LEVEL`; 0.35 of it under the ship's player),
-clarity 0.9, x1; on its ground (the state the surface's, or a sheet or a menu opened there) the suit's at 0.4 (`RADIO_SUIT_LEVEL`); nothing on
+clarity 0.9, x1; on its ground (the state the surface's, or a sheet or a menu opened there) the suit's at 0.4 (`RADIO_SUIT_LEVEL`);
+nothing on
 the title, the landing map, the capsule's descent and climb, the decoder, the instruments, the probe's screen and its recordings, the drone
 bay. The voice costs the synth about 7 ms a second of sound (a magnetosphere's 2.8, the bed's 2.1). `vesperis_test rogues voices` writes
 twelve of them to `shots/tests/rogue_voice_*.wav`.

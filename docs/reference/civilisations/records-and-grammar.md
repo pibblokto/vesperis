@@ -17,6 +17,7 @@ Contents:
 - The decoder reads a history (H-06)
 - Each age its own vocabulary (B-415)
 - The drone bay (C-18)
+- The made organisms' watermarks (Z-06)
 <!-- /contents -->
 
 ## The shards (C-02): the story grammar
@@ -871,3 +872,34 @@ worlds and Esc again to the cabin. A world of two peoples is a folder each peopl
 "in instruments case split instruments by civilization as a decoder does"): the people named on the folder's line after the world
 (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`), the open folder headed `UNKNOWN - THE VASANTHUL` and holding that people's alone (an
 instrument's id carries its people: people x 1000 + age x 100 + slot).
+
+## The made organisms' watermarks (Z-06)
+
+On the worlds of the peoples of the futuristic and far-future ages, one species is theirs (`peoples/made.h`, the peoples' one file that
+reads `src/life`): `madeSpeciesOf` takes one of the world's own species alive or asleep by the world's hash (never a protocell, a fossil
+or a spore carried there), the people (one of two by the hash) and the year of their count it was made (in their last age, the first
+five sixths of its years: after the made genes, a modern invention). Its genome is too regular to have evolved, and in it a watermark (as
+JCVI-syn1.0's genome carried its makers' names and three sayings: Gibson et al. 2010): a record of the people of a genre of its own.
+
+*The text* is written outside the catalogue at its year, as a chart's caption is (`writeWatermark`, peoples/genres.cpp): the record model
+at that year (the world's facts, the people's history and culture, a maker cast where it was made: `@cast writer`, named by
+`{$me:name}`), no memory of the people's records and no event told, so no record of any people moves (the age and scene worlds' texts
+still hash to `13212ef73adea507`). Three facts are the species' (`madeway`: light, chemical, dead, grazer or predator; `madeplace`: water,
+soil, rock, ice, salt or a spring; `madeglow`). The grammar is `core/watermark.vg` and `core/watermark_far.vg` (the root `watermark`, rules
+`wm.`, the far future's `wm.ff.`), every word `@apart`. A futuristic watermark: a heading in their cycles (a formula), what the mark is (a
+stretch the cell copies and never reads, like a name sewn into a coat; spelt three letters to a sign of their script), who made it (the
+maker, the others of a gene house or a seed vault, over so many cycles, while their crop came in), what it was made for by how it lives
+(the air made again over their dry lands, a metal gathered out of their waters, their waste eaten, a sickness hunted, their streets lit; in
+the collapse's years made to outlast them), a saying of theirs and a word to whoever reads it. A far-future one is a signature left to
+itself: what the life is to them now, what it does, a thought, a word to the reader. Every long sentence is composed of three or four
+parts carrying the people's own words.
+
+*The measure* (`life made 100`, the battery's `life` item): the hundred made species nearest home (35 light-feeders, 22 on dead matter, 21
+chemical, 14 grazers, 8 predators; 7 asleep), 83 words a text (42-124), every check at zero, all 280 names the history's at the year;
+3.1% of their 360 sentences of six words or more on a frame another watermark wrote (the records' aim at a hundred texts: 5%; the first
+draft, sentences from fixed pools, 55%).
+
+*On the ship*: the sequencer reads it (its letters between the marker's rows, `watermarkLetters`), the guide keeps it (`watermark <key>`),
+and the decoder lists its world by its people: the watermark after their records by its year (`A WATERMARK`, `WRITTEN INTO A MADE LIFE'S
+GENOME`, its year alone), decoded with the language their records taught (`recordsHeld`: the watermark teaches no word, and the history
+page never reads it), spoken by the ship's reading voice.

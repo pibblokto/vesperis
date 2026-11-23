@@ -27,7 +27,7 @@ ifeq ($(UNAME_S),Darwin)
   endif
 endif
 
-CORE_SRC  := $(wildcard src/core/*.cpp) $(wildcard src/galaxy/*.cpp) $(wildcard src/peoples/*.cpp) $(wildcard src/space/*.cpp) $(wildcard src/surface/*.cpp) $(wildcard src/game/*.cpp)
+CORE_SRC  := $(wildcard src/core/*.cpp) $(wildcard src/galaxy/*.cpp) $(wildcard src/life/*.cpp) $(wildcard src/peoples/*.cpp) $(wildcard src/space/*.cpp) $(wildcard src/surface/*.cpp) $(wildcard src/game/*.cpp)
 CORE_OBJ  := $(patsubst src/%.cpp,build/%.o,$(CORE_SRC))
 HARNESS_SRC := $(wildcard src/harness/*.cpp)
 HARNESS_OBJ := $(patsubst src/%.cpp,build/%.o,$(HARNESS_SRC))
@@ -48,7 +48,7 @@ build/platform_raylib.o: src/platform_raylib.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(RAYLIB_CFLAGS) -c -o $@ $<
 
 # E-12: the strict directories build with warnings as errors, as CMake's (VESPERIS_WERROR); `make WERROR=` builds them without
-STRICT_DIRS := core galaxy peoples
+STRICT_DIRS := core galaxy life peoples
 WERROR := -Werror
 build/%.o: src/%.cpp
 	@mkdir -p $(dir $@)

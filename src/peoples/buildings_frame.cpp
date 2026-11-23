@@ -83,12 +83,14 @@ WallsOut walls4x(Gen& g, const Walls& W0, double hs[4]) {
             if (!openings || g.lod == 1 || (side != W.door && !window)) { Form& e = B(-Ls, Ls, ya, yb, W.part); e.glyphs = glyphs; e.pattern = W.pattern; rag(e, h); return; }
             if (side == W.door) {   // the doorway: a gap of 1.8 m, a lintel over it where the jambs stand over 2.4 m; A-04: its head 2.1 m over the
                 const double gap = 0.9, dt = 2.1 + std::max(0.0, -base);   // ground outside however deep the walls are sunk (a buried people's, a desert's sand)
+                g.opening(ox + ax * pos, oz + az * pos, dh, gap, base + ya, base + std::min(yb, dt), thick, true);
                 { Form& e = B(-Ls, pos - gap, ya, yb, W.part); e.glyphs = glyphs; e.pattern = W.pattern; rag(e, h); }
                 { Form& e = B(pos + gap, Ls, ya, yb, W.part); e.pattern = W.pattern; rag(e, h); }
                 if (yb > dt + 0.3) B(pos - gap - 0.3, pos + gap + 0.3, dt, std::min(yb, dt + 0.5), 4);
                 if (yb > dt + 1.1) { Form& e = B(pos - gap - 0.3, pos + gap + 0.3, dt + 0.5, yb, W.part); e.pattern = W.pattern; rag(e, h); }
             } else {   // C-01's window: a sill under it and the wall over it
                 const double gap = 0.55, wp = (L - 1.2) * (g.U(21) - 0.5);
+                if (yb > 1.0) g.opening(ox + ax * wp, oz + az * wp, dh, gap, base + std::max(ya, 1.0), base + std::min(yb, 1.9), thick, false);
                 B(-Ls, wp - gap, ya, yb, W.part); B(wp + gap, Ls, ya, yb, W.part);
                 B(wp - gap, wp + gap, ya, std::min(yb, 1.0), W.part);
                 if (yb > 1.9) B(wp - gap, wp + gap, 1.9, yb, W.part);
@@ -216,6 +218,14 @@ double ringWalls(Gen& g, const Ring& R0) {
     const int glyphAll = R.dress && (g.carved() || g.gv(GV_MOTIF) == MO_GLYPHS);
     double hmin = 1e9;
     const int N = R.segs;
+    if (g.openings && g.lod == 0 && !R.open) {   // J-10: the doorway's gap between its neighbours, to the lower one's top or a head of 2.2 m
+        auto hOf = [&](int k) { return R.whole ? R.h : std::max(0.35, R.h * wallShare(Dm, g.U(R.k0 + ((k % N) + N) % N))); };
+        const double a0 = R.door * TAU / N, a1 = (R.door + R.doorSegs) * TAU / N;
+        const double x0 = std::sin(a0) * R.rx, z0 = std::cos(a0) * R.rz, x1 = std::sin(a1) * R.rx, z1 = std::cos(a1) * R.rz;
+        const double dx = x1 - x0, dz = z1 - z0;
+        g.opening(R.cx + 0.5 * (x0 + x1), R.cz + 0.5 * (z0 + z1), std::atan2(-dz, dx), 0.5 * std::sqrt(dx * dx + dz * dz), base,
+                  base + std::min(2.2, std::min(hOf(R.door - 1), hOf(R.door + R.doorSegs))), thick, true);
+    }
     for (int k = 0; k < N; k++) {
         if (ringInDoor(R, k) && g.lod == 0) continue;
         const double a0 = k * TAU / N, a1 = (k + 1) * TAU / N;

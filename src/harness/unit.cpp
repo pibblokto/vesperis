@@ -1,6 +1,8 @@
 // E-03: the unit: `unit [list] [-q] [group ...]` (testUnit) runs UNIT_GROUPS, its groups in the unit's order (their bodies in
 // unit_*.cpp, the peoples' *Checks in the civ_ files), each from the scale and mush it starts at in the full run
 #include "harness/harness.h"
+#include <dirent.h>
+#include <map>
 #if defined(__APPLE__) || defined(__linux__)
 #include <fcntl.h>   // `unit -q`'s /dev/null
 #endif
@@ -39,6 +41,54 @@ void QuietStdout::restore() {
     saved = nullptr;
 }
 
+// B-440: the player's files in the working directory (the repo root's, when the harness runs there), each by its size and time: the
+// guide and the two files made beside it, the four saves, the settings, the keys and the controller's map (Game's names, game.h), and
+// every file in the photographs' and the films' folders (`shots/` but its `tests/`, `movies/`)
+static std::map<std::string, std::string> playerFiles() {
+    std::map<std::string, std::string> m;
+    auto note = [&](const std::string& p) {
+        struct stat s;
+        if (stat(p.c_str(), &s) == 0) m[p] = fmt("%lld bytes, %lld", (long long)s.st_size, (long long)s.st_mtime);
+    };
+    for (const char* f : {"guide.txt", "guide_export.txt", "guide_inbox.txt", "vesperis_save_auto.txt", "vesperis_save_1.txt", "vesperis_save_2.txt",
+                          "vesperis_save_3.txt", "vesperis_settings.txt", "vesperis_keys.txt", "vesperis_pad.txt"})
+        note(f);
+    for (const char* dir : {"shots", "movies"})
+        if (DIR* d = opendir(dir)) {
+            while (dirent* e = readdir(d)) {
+                const std::string n = e->d_name;
+                if (n != "." && n != ".." && !(n == "tests" && std::string(dir) == "shots")) note(std::string(dir) + "/" + n);
+            }
+            closedir(d);
+        }
+    return m;
+}
+static std::map<std::string, std::string>& playerFilesAtStart() { static std::map<std::string, std::string> m; return m; }   // before the first group
+
+// B-440: a test game's files are the harness's, and the run leaves the player's as it found them (a check's second game once saved
+// its guide over theirs)
+static void unitFiles(const Check& check) {
+    printf("\nfiles: a test game's files under shots/tests; the player's in the working directory as the unit found them\n");
+    {
+        TestGame g;
+        std::string out;
+        for (const std::string& p : {g.guidePath, g.savePrefix, g.settingsPath, g.keysPath, g.padPath, g.shotsDir, g.moviesDir, Game::musicDirDefault})
+            if (p.rfind("shots/tests/", 0) != 0) out += (out.empty() ? "" : ", ") + p;
+        check("files: a test game's under shots/tests (B-440)", out.empty(),
+              out.empty() ? "its guide, saves, settings, keys, controller map, photos, films and music" : "NOT: " + out);
+    }
+    const std::map<std::string, std::string> now = playerFiles(), &was = playerFilesAtStart();
+    std::string moved;
+    for (const auto& kv : was) {
+        const auto it = now.find(kv.first);
+        if (it == now.end()) moved += " " + kv.first + " removed;";
+        else if (it->second != kv.second) moved += " " + kv.first + " written (" + kv.second + " -> " + it->second + ");";
+    }
+    for (const auto& kv : now)
+        if (!was.count(kv.first)) moved += " " + kv.first + " made;";
+    check("files: the player's untouched (B-440)", moved.empty(), fmt("%zu of theirs here before the run,%s", was.size(), moved.empty() ? " none written" : moved.c_str()));
+}
+
 // E-03: the unit's groups in the unit's order: `unit` runs them all (its printout the one testUnit made in one function),
 // `unit <group> ...` those, `unit list` names them, `-q` prints only the failures and the count. A group starts at the render
 // scale and mush the groups before it leave in the full run (a scripted game leaves its own, 4x): set before it runs, so that a
@@ -52,6 +102,7 @@ const UnitGroup UNIT_GROUPS[] = {
     {"giants", "unit_kinds.cpp", 1, 2, unitGiants},
     {"traits", "unit_kinds.cpp", 1, 2, unitTraits},
     {"drifters", "unit_drifters.cpp", 1, 2, unitDrifters},
+    {"life", "unit_life.cpp", 1, 2, unitLife},
     {"basics", "unit_basics.cpp", 4, 3, unitBasics},
     {"signals", "unit_signals.cpp", 4, 3, unitSignals},
     {"forms", "civ_forms.cpp", 4, 3, [](const Check& c) { formsChecks(c); }},
@@ -86,6 +137,16 @@ const UnitGroup UNIT_GROUPS[] = {
     {"perf", "unit_proof.cpp", 4, 3, unitPerf},
     {"auto", "unit_navigation.cpp", 1, 2, unitAuto},
     {"states", "unit_navigation.cpp", 1, 2, unitStates},
+    {"ship", "unit_ship.cpp", 1, 2, unitShip},
+    {"search", "unit_search.cpp", 1, 2, unitSearch},
+    {"lab", "unit_lab.cpp", 1, 2, unitLab},
+    {"experiments", "unit_lab_answers.cpp", 1, 2, unitLabAnswers},   // R-435 to R-438, B-441
+    {"incubator", "unit_lab_incubator.cpp", 1, 2, unitLabIncubator},   // B-442, R-439 to R-442
+    {"genes", "unit_lab_genes.cpp", 1, 2, unitLabGenes},   // the Y series: Y-01's trees
+    {"world", "unit_lab_genes.cpp", 1, 2, unitLabWorld},   // J-01: the world genes in the lab
+    {"seeding", "unit_seeding.cpp", 1, 2, unitSeeding},    // J-02: the seeded worlds' layer, its record and its clock
+    {"animals", "unit_animals.cpp", 1, 2, unitAnimals},    // J-06: the animals' bodies, their poses and the herds' cells
+    {"files", "unit.cpp", 1, 2, unitFiles},   // B-440: last, after every group's games
 };
 
 int testUnit(int argc, char** argv) {
@@ -106,6 +167,7 @@ int testUnit(int argc, char** argv) {
     Check check{&checks, &fails};
     QuietStdout q(quiet);   // -q: stdout silenced, the failures written to the one saved
     check.failsTo = q.saved;
+    playerFilesAtStart() = playerFiles();   // B-440: the `files` group holds them to this
     for (const UnitGroup& g : UNIT_GROUPS)
         if (names.empty() || std::find(names.begin(), names.end(), g.name) != names.end()) {
             setFramebufferScale(g.scale);

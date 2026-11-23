@@ -88,7 +88,7 @@ std::string Game::saveSummary(const std::string& path) const {
     }
     int epoc = 6011 + (int)(st / 1e9);
     int sinister = (int)std::fmod(st / 1e6, 1000.0), medius = (int)std::fmod(st / 1e3, 1000.0);
-    const char* where = phase == (int)GameState::DESCENT ? "DESCENDING" : (phase == (int)GameState::ASCENT ? "ASCENDING" : (surface ? "ON THE SURFACE" : "IN SPACE"));
+    const char* where = phase == (int)GameState::DESCENT ? "DESCENDING" : (phase == (int)GameState::ASCENT ? "ASCENDING" : (surface ? "ON SURFACE" : "IN SPACE"));
     return fmt("%-12.12s %d:%03d.%03d  %s", upper(name).c_str(), epoc, sinister, medius, where);
 }
 
@@ -144,7 +144,14 @@ bool Game::save(const std::string& path) {
     f << "park " << ship.parkDir.x << " " << ship.parkDir.y << " " << ship.parkDir.z << " " << ship.parkDist << "\n";
     f << "belt " << ship.targetBelt << " " << ship.parkedBelt << " " << ship.rockIr << " " << ship.rockIa << " " << ship.rockIy << " " << ship.rockM << " " << ship.rockDist << "\n";
     f << "remote " << (ship.hasRemote ? 1 : 0) << " " << ship.remote.sx << " " << ship.remote.sy << " " << ship.remote.sz << "\n";
-    f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (cabin.onRoof ? 1 : 0) << "\n";
+    {   // the cabin line keeps its fields (its last: up in the observatory); I-02: the room and the stair's angle a line of their own, which
+        // a save of the 5 m room has not (it loads at the bridge's start)
+        const bool up = cabin.room == shipLifter().to;
+        f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (up ? 1 : 0) << "\n";
+        f << "cabin_place " << cabin.room << " " << cabin.stairA << "\n";
+    }
+    f << "garden " << played; for (double b : bedTrimmed) f << " " << b; f << "\n";   // R-429: the time played, each bed's last trim in it
+    if (wall.chosen) { f << "wall"; for (int n : wall.frame) f << " " << n; f << "\n"; }   // R-428: the frames as the explorer hung them
     if (probe.active && probe.endClock < 0 && probeHere())   // a falling probe (a last frame held is not kept)
         f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " "
           << probe.startRel.y << " " << probe.startRel.z << " " << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw
@@ -158,7 +165,14 @@ bool Game::save(const std::string& path) {
     if (bay.clock >= 0) {   // the drone bay: its clock (the cooldown), a trip on and what the last one found
         f << "bay " << bay.clock << " " << (bay.out ? 1 : 0) << " " << (bay.planned ? 1 : 0) << " " << (bay.recalled ? 1 : 0) << " " << bay.starSeed << " " << bay.body << " " << bay.seed << " "
           << bay.subLat << " " << bay.subLon << " " << (bay.worldKey.empty() ? "-" : bay.worldKey) << " " << bay.worldName << "\n";
-        f << "bayback " << bay.back << "\n";   // the user's five minutes of charging run from the trip's end
+        if (bay.seedTrip) {   // J-03: a seed trip's culture and place (its `seeded` line is the guide's once let go)
+            const Medium& m = bay.seedMedium;
+            f << "bayseed " << (bay.seedLet ? 1 : 0) << " " << bay.seedFate << " " << bay.seedLat << " " << bay.seedLon << " " << m.cell << " " << m.tempC << " " << m.light << " "
+              << m.energy << " " << m.salt << " " << bay.seedLine << " " << (bay.seedEdits.empty() ? "-" : bay.seedEdits) << "\n";
+            f << "bayseedname " << bay.seedName << "\n" << "bayseedplace " << bay.seedPlace << "\n";
+            if (!bay.seedWhy.empty()) f << "bayseedwhy " << bay.seedWhy << "\n";   // R-451
+            if (bay.seedDepth != 0) f << "bayseeddepth " << bay.seedDepth << "\n";   // J-13 (J-14: under 0, up in the clouds)
+        }
         for (int k = 0; k < DRONE_COUNT; k++) {
             const DroneRun& R = bay.run[k];
             f << "bayrun " << k << " " << R.out << " " << R.down << " " << R.up << " " << R.dock << " " << (R.docked ? 1 : 0) << " " << R.wanted << "\n";
@@ -186,6 +200,7 @@ bool Game::save(const std::string& path) {
         f << "waypoint " << (surf.hasWaypoint ? 1 : 0) << " " << surf.wpX << " " << surf.wpZ << "\n";
         f << "stamina " << surf.player.stamina << "\n";
     }
+    saveVials(f);   // Z-03: the kit's vials and the cold store's
     for (const StateRow& r : STATE_ROWS)   // U-05: a screen's own lines, after the save's
         if (r.save) { std::string lines; (this->*r.save)(lines); f << lines; }
     hasSave = true;
@@ -207,10 +222,12 @@ bool Game::load(const std::string& path) {
     int bugDep = 0, bugIn = 0, wpHas = 0; double bugX = 0, bugZ = 0, bugH = 0, bugOdo = 0, wpx = 0, wpz = 0, stam = 100;
     int drDep = 0, drIn = 0; double drX = 0, drZ = 0, drH = 0, drOdo = 0;
     int gen = 1;
-    Cabin cab; int cl = 1, cd = 0, cr = 0;
+    Cabin cab; int cl = 1, cd = 0, cr = 0, cabRoom = -1; double cabStair = 0;
+    double gPlayed = 0, gTrim[GARDEN_BEDS] = {};   // R-429: a save before it plays from 0, its beds as planted
+    ShipWall nwall;                                 // R-428: a save without the line shows the newest twelve
     ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;
     ShipState ns;
-    DroneBay nbay; bool nbayBack = false;
+    DroneBay nbay;
     double nt = t, warp = 1;
     while (std::getline(f, line)) {
         std::istringstream is(line);
@@ -233,7 +250,10 @@ bool Game::load(const std::string& path) {
         else if (key == "waypoint") is >> wpHas >> wpx >> wpz;
         else if (key == "stamina") is >> stam;
         else if (key == "gen") is >> gen;
-        else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; cab.onRoof = cr != 0; }
+        else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; }
+        else if (key == "cabin_place") { is >> cabRoom >> cabStair; if (is.fail()) cabRoom = -1; }
+        else if (key == "garden") { is >> gPlayed; for (double& b : gTrim) is >> b; if (is.fail()) { gPlayed = 0; for (double& b : gTrim) b = 0; } }
+        else if (key == "wall") { for (int& n : nwall.frame) is >> n; nwall.chosen = !is.fail(); if (!nwall.chosen) nwall = ShipWall(); }
         else if (key == "probe") {
             is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >>
                     np.flight.crushBar >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
@@ -246,8 +266,18 @@ bool Game::load(const std::string& path) {
             if (is.fail()) { nbay = DroneBay(); continue; }
             nbay.out = out != 0; nbay.planned = planned != 0; nbay.recalled = recalled != 0; nbay.worldKey = wk == "-" ? std::string() : wk;
             std::getline(is, nbay.worldName); if (!nbay.worldName.empty() && nbay.worldName[0] == ' ') nbay.worldName.erase(0, 1);
-        } else if (key == "bayback") {   // (a save of the first trips has none: their end read from the docks)
-            double v = 0; is >> v; if (!is.fail()) { nbay.back = v; nbayBack = true; }
+        } else if (key == "bayseed") {   // J-03
+            int let = 0; std::string ed;
+            is >> let >> nbay.seedFate >> nbay.seedLat >> nbay.seedLon >> nbay.seedMedium.cell >> nbay.seedMedium.tempC >> nbay.seedMedium.light >> nbay.seedMedium.energy >>
+                    nbay.seedMedium.salt >> nbay.seedLine >> ed;
+            if (!is.fail()) { nbay.seedTrip = true; nbay.seedLet = let != 0; nbay.seedEdits = ed == "-" ? std::string() : ed; }
+        } else if (key == "bayseedname" || key == "bayseedplace" || key == "bayseedwhy") {
+            std::string v; std::getline(is, v); if (!v.empty() && v[0] == ' ') v.erase(0, 1);
+            (key == "bayseedname" ? nbay.seedName : (key == "bayseedplace" ? nbay.seedPlace : nbay.seedWhy)) = v;
+        } else if (key == "bayseeddepth") {   // J-13
+            is >> nbay.seedDepth;
+            if (is.fail() || !std::isfinite(nbay.seedDepth) || std::fabs(nbay.seedDepth) >= 200) nbay.seedDepth = 0;
+        } else if (key == "bayback") {   // R-449: an older save's charge, dropped
         } else if (key == "bayrun") {
             int k = -1, docked = 1; DroneRun R;
             is >> k >> R.out >> R.down >> R.up >> R.dock >> docked >> R.wanted;
@@ -269,13 +299,19 @@ bool Game::load(const std::string& path) {
             is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.timeTrack.push_back(v); }
             if (np.camTrack.size() % 3) np.camTrack.clear();
             if (np.timeTrack.size() % 2) np.timeTrack.clear();
+        } else if (key == "vial") {   // Z-03
+            loadVial(line);
+        } else if (key == "vialclock") {   // J-03: the last vial's guide clock at its take
+            int where = -1; double c = -1; is >> where >> c;
+            std::vector<Vial>& to = where == 0 ? kit : coldStore;
+            if (!is.fail() && (where == 0 || where == 1) && !to.empty()) to.back().clock = c;
         } else {   // U-05: a line of a screen's own (its row's `load`)
             for (const StateRow& r : STATE_ROWS) if (r.load && (this->*r.load)(line)) break;
         }
     }
     Star s;
     if (!placeInSector(sx, sy, sz, s, true)) {   // the galaxy of generation 11 keeps about half of the old stars near home; D-01: a star, else a drifter
-        status(fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - ITS STAR IS GONE", gen, GEN_VERSION), 8);
+        status(fmt("GALAXY REBUILT (GEN %d, NOW %d) - SAVED STAR GONE", gen, GEN_VERSION), 8);
         return false;
     }
     t = nt; timeWarp = warp; almanacRunning = false;
@@ -283,6 +319,14 @@ bool Game::load(const std::string& path) {
     sys.valid = valid != 0;
     ship = ns;
     cabin = cab; cabin.lightLevel = cabin.light ? 1 : 0;
+    if (cabRoom >= 0 && cabRoom < SHIP_ROOMS) { cabin.room = cabRoom; cabin.stairA = cabStair; }   // I-02: the room and the place
+    else {   // a save of the 5 m room (no place line): the bridge's start, the light and the hull as they were
+        const Cabin start;
+        cabin.x = start.x; cabin.z = start.z; cabin.yaw = start.yaw; cabin.pitch = start.pitch; cabin.room = start.room; cabin.stairA = 0;
+    }
+    played = gPlayed; for (int b = 0; b < GARDEN_BEDS; b++) bedTrimmed[b] = gTrim[b];   // R-429
+    wall = nwall; prints.stale = true;   // R-428: its frames printed again
+    (void)cr;
     ship.mode = (ShipState::Mode)mode;
     if (ship.mode == ShipState::VIMANA || ship.mode == ShipState::APPROACH) ship.mode = ShipState::STANDBY;
     ship.parkedBody = parked < (int)sys.bodies.size() ? parked : -1;
@@ -298,8 +342,10 @@ bool Game::load(const std::string& path) {
     surf.valid = false;
     lastSecX = lastSecY = -1; landZoom = 0; sectorImgEpoch = -1;
     if (onSurface && siteBody >= 0 && siteBody < (int)sys.bodies.size()) {
+        surf.site.made = madeNow(siteBody);   // J-02
         surf.init(&sys, siteBody, slat, slon, t);
         syncShards(); roadsMet.clear();   // C-03; C-09
+        deadToLanding();   // B-489
         surf.player.x = px; surf.player.z = pz; surf.player.yaw = pyaw; surf.player.pitch = ppitch;
         surf.player.y = surf.site.surfaceHeight(px, pz);
         surf.relocateCapsule(capx, capz);
@@ -347,10 +393,10 @@ bool Game::load(const std::string& path) {
         if (npWatch) state = GameState::PROBE;
     }
     if (nbay.clock >= 0) {   // the bay as it was (a trip on goes on if the ship is still over its world; else it is called back at once)
-        if (!nbayBack && !nbay.out) for (const DroneRun& R : nbay.run) nbay.back = std::max(nbay.back, std::min(R.dock, nbay.clock));   // a save before the charge ran from the return
         bay = nbay;
         if (bay.out && !bay.planned) for (DroneRun& R : bay.run) R.docked = false;
-        if (bay.out && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() && worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body])))
+        if (bay.out && !bay.seedTrip && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() &&
+            worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body])))
             droneWorldAsk(bay.body);
     }
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
@@ -358,7 +404,7 @@ bool Game::load(const std::string& path) {
     autosaveTimer = 0;
     visitNoted = false;   // B-433: the system it puts the ship in is noted at the next frame out of the title, as an arrival's is
     migrateLandmarkNames();   // the sights named in this system before are marks now
-    if (gen < 11) { statusNext = fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - THIS STAR IS STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }
-    else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }
+    if (gen < 11) { statusNext = fmt("GALAXY REBUILT (GEN %d, NOW %d) - STAR STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }
+    else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS REGENERATED (GEN %d, NOW %d) - STARS UNCHANGED", gen, GEN_VERSION); statusNextSecs = 8; }
     return true;
 }
