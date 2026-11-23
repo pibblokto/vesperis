@@ -1,4 +1,4 @@
-// Z-05: the incubator (R-425; docs/ideas/ITERATION-1.5.0.md Z-05, IDEAS-small-and-spacious.md 1.9; lab_state.h, life/cultures.h), the
+// Z-05: the incubator (R-425; docs/archive/ideas/ITERATION-1.5.0.md Z-05, IDEAS-small-and-spacious.md 1.9; lab_state.h, life/cultures.h), the
 // laboratory's second device: a screen over the room, E at its cabinet. Twelve flasks: Up and Down choose one, Left and Right the medium's
 // field (its cell, its warmth, its light, its energy, its salt), + and - change it (Shift ten degrees), W sets it AS ITS WORLD again; Enter
 // on an empty flask puts in a species seen in a vial or a flask's culture, on a culture a second; F a fresh broth (a hundredth into new

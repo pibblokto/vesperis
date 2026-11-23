@@ -1,5 +1,5 @@
 #pragma once
-// Z-06 (2026-11-17): the made organisms (R-425; docs/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-06). On the worlds of the
+// Z-06 (2026-11-17): the made organisms (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-06). On the worlds of the
 // peoples of the futuristic and far-future ages one species is theirs: a genome too regular to have evolved, and in it a watermark (as
 // JCVI-syn1.0's genome held its makers' names: Gibson et al. 2010), a record of a genre of its own (the grammar's root `watermark`,
 // core/watermark.vg) in the people's tongue, keyed with the species and read on the ship's decoder with the language its shards taught.

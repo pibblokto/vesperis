@@ -1,5 +1,5 @@
 #pragma once
-// Z-01 (2026-11-16): where life is (R-425; docs/ideas/IDEAS-small-and-spacious.md section 1, docs/ideas/ITERATION-1.5.0.md). Every
+// Z-01 (2026-11-16): where life is (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md section 1, docs/archive/ideas/ITERATION-1.5.0.md). Every
 // landable world has a biota: the stage its life reached, the chemistry it is built on, the genesis it descends from (life/lineages.h)
 // and its species, each with a niche among the world's microhabitats, a way to live, its limits, a life cycle, a behaviour, a body plan
 // and the seed its form grows from (Z-02). A row of BIOTA a kind says what its worlds can hold; `biotaOf` draws a world's on salts of

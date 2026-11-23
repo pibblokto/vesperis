@@ -16,7 +16,8 @@ tons of variations you like from it) [...] 5. It's all 1.5.0, we are extending i
 
 ## Plan
 
-The design is `docs/ideas/IDEAS-genes.md` section 1; the milestones and their checks `docs/ideas/ITERATION-1.5.0.md`, Phase 5.
+The design is `docs/archive/ideas/IDEAS-genes.md` section 1; the milestones and their checks `docs/archive/ideas/ITERATION-1.5.0.md`,
+Phase 5.
 
 - **Y-02, the gene editor and a species' own genes:** genes read from what each species is (nothing generated moves), a genesis's map
   and code, the working parts changed by hand and genes cut on a machine of its own, the edited line written into a flask as a new

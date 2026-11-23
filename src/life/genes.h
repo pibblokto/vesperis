@@ -1,5 +1,5 @@
 #pragma once
-// Y-02 (2026-11-19): a species' genes (R-443; docs/ideas/IDEAS-genes.md section 1, ITERATION-1.5.0.md Y-02). A genesis has one map of its genes'
+// Y-02 (2026-11-19): a species' genes (R-443; docs/archive/ideas/IDEAS-genes.md section 1, ITERATION-1.5.0.md Y-02). A genesis has one map of its genes'
 // places (eighteen, each a gene's number: three vital, three quiet, a warmth, a salt, a size, a pigment, a food, a motion, three senses, a rest, a
 // glow, a shape) and one code (its letters' weights, its tables), the same for all its kin (R-450: the explorer learns a gene by its species,
 // game/editor.cpp). A species has the genes it uses, read from what it is (its `Microbe` and its form): nothing of generation 17

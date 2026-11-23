@@ -11,14 +11,14 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/archive/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0` to `1.4.0` shipped in that release, `1.5.0` is planned for it, `later` is for a release not planned yet.
+column: `1.1.0` to `1.5.0` shipped in that release, `later` is for a release not planned yet.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
 
 **Released as 1.3.0 (2026-10-11), generation 13:** the iteration `ITERATION-1.3.0.md`, planned 2026-10-08 as one release with
-everything in it, the far, the faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar turned up to hear
-farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
+everything in it, the far, the faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar
+turned up to hear farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
 G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
 generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first; C-18
 (the drone bay) on 2026-10-11, the twenty-second; with R-412 to R-417 and B-411 to B-422. The rows not done move to `1.4.0`.
@@ -40,11 +40,11 @@ E-13, the repo made cheaper to read and change, nothing generated or drawn movin
 screen in one row, done 2026-10-26 and 2026-10-27; with B-429 to B-433 (the last four the known issues KI-423, KI-432, KI-433
 and KI-434). The rows not done are marked `later`.
 
-**Planned for 1.5.0 (2026-11-16), generation 17:** the iteration `ITERATION-1.5.0.md` on the branch `release/v1.5.0` (from main
-bb0e58b), on the user's request of 2026-11-16 (R-425 microorganisms on every world, searched for and studied aboard; R-426 a
-Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-spacious.md`: eleven milestones, Z-01 and Z-02,
-I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03 done 2026-11-16, I-04,
-Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
+**Released as 1.5.0 (2026-11-23), generation 18:** the iteration `ITERATION-1.5.0.md` (planned 2026-11-16) on the branch
+`release/v1.5.0` (from main bb0e58b), on the user's request of 2026-11-16 (R-425 microorganisms on every world, searched for and
+studied aboard; R-426 a Stardrifter way more spacious, not utilitarian), the design in `IDEAS-small-and-spacious.md`: eleven
+milestones, Z-01 and Z-02, I-01 to I-04, then Z-03 to Z-07, in that order; generation 17 from Z-01. Z-01, Z-02, I-01, I-02 and I-03
+done 2026-11-16, I-04, Z-03, Z-04, Z-05, Z-06 and Z-07 2026-11-17: all eleven done.
 Added 2026-11-19 on R-443 and R-444: the Y series, Y-01 to Y-04 (the genes, the trees by world and by folder), no generation change.
 Added 2026-11-20 on R-448: the J series, J-01 to J-12 (seeded worlds: world genes, cultures sent down, made traits, the animals'
 fates, the overgrowth, the animals drawn again); generation 18 from J-06. J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10
@@ -52,9 +52,11 @@ to J-12 2026-11-22: all twelve done.
 Added 2026-11-22 on R-454 (a culture for any world): J-13 to J-15 (the cold worlds, the clouds, greening a desert), no generation change.
 J-13 done 2026-11-22. J-14 and J-15 done 2026-11-23: all three done.
 Added 2026-11-23 on the user's word: J-16, the known issues 1.5.0 found and left open, fixed or closed; done 2026-11-23 (33 bugs fixed,
-B-474 to B-507; KI-502's cap and KI-503 proposed closed, the user's word; the chemotroph's sources riding generation 18).
+B-474 to B-507; KI-502's cap and KI-503 proposed closed, the user's word; the chemotroph's sources riding generation 18). Before the
+release, the Windows builds' `<cstdlib>` in fourteen files. Every row is done.
 
-**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
+**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0,
+done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -158,7 +160,8 @@ grammar, C-03's shards, C-08's reading of the site, C-09's roads, C-12's graves)
 | V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | later |
 | V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | later |
 
-V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this series, or GPU rendering through raylib) is to be discussed before any of it starts.
+V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this
+series, or GPU rendering through raylib) is to be discussed before any of it starts.
 
 ## W: the world and the sky (`IDEAS-world-and-sky.md`)
 
@@ -256,7 +259,8 @@ Planned 2026-10-12 from a day of measurements and an audit of every subsystem; t
 targets and the method. Every item but F-10 is bit-identical (the 22 regress hashes stay); F-10 is one blessed batch.
 The audit's own measurement found B-423 (the forest's picture depends on the core count: the flora's coverage grid is
 per band), which is fixed before any band-boundary work (F-05, F-06); the plan's section 4 has the two ways. Progress (2026-10-15):
-F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 2026-10-13); F-02 done; F-03 done; F-04 done; F-05 done; F-06 done; F-07 done; F-08 done; F-09 done; F-10 done; F-11 done: the series is closed, released as 1.3.1 on 2026-10-15.
+F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 2026-10-13); F-02 done; F-03 done; F-04 done; F-05 done;
+F-06 done; F-07 done; F-08 done; F-09 done; F-10 done; F-11 done: the series is closed, released as 1.3.1 on 2026-10-15.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |

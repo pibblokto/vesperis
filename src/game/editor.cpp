@@ -1,4 +1,4 @@
-// Y-02: the gene editor (R-443; docs/ideas/IDEAS-genes.md 1.4 and 1.5, ITERATION-1.5.0.md Y-02; lab_state.h, life/genes.h), the laboratory's
+// Y-02: the gene editor (R-443; docs/archive/ideas/IDEAS-genes.md 1.4 and 1.5, ITERATION-1.5.0.md Y-02; lab_state.h, life/genes.h), the laboratory's
 // fourth device: a screen over the room, E at it on the bow bench past the sequencer. Enter (Tab once one is on) chooses a culture read on the
 // sequencer, a flask's or a kept one; its genes on its genesis's map in two columns of nine places, each NOT KNOWN till changed (then its kind,
 // or its name: N). The arrows choose a gene, Enter opens its working part (Left and Right a letter, Up and Down it through the alphabet), C cuts

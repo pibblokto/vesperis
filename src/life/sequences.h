@@ -1,5 +1,5 @@
 #pragma once
-// Z-06 (2026-11-17): the genomes and the tree of kin (R-425; docs/ideas/IDEAS-small-and-spacious.md 1.4 and 1.8, ITERATION-1.5.0.md Z-06). A
+// Z-06 (2026-11-17): the genomes and the tree of kin (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md 1.4 and 1.8, ITERATION-1.5.0.md Z-06). A
 // species' genome is a pure function of the species and its genesis: its alphabet the genesis's (four letters, six with Benner's Z and P, eight
 // with hachimoji's S and B: Hoshika et al. 2019), its helix's hand the genesis's, and a marker every species of a genesis keeps (as 16S rRNA is
 // ours: Woese and Fox 1977) changed down the branches of its lineage. The lineage is a tree in closed form, from the beginning down: the

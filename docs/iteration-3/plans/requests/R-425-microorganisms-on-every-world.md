@@ -1,8 +1,9 @@
 # R-425: microorganisms on every world, searched for and studied aboard
 
-status: done 2026-11-17 (planned 2026-11-16 as block Z of `docs/ideas/ITERATION-1.5.0.md`: Z-01 to Z-07; the design in
-`docs/ideas/IDEAS-small-and-spacious.md` section 1); Z-01 (where life is, generation 17) and Z-02 (what it looks like) done 2026-11-16;
-Z-03 (the search), Z-04 (the microscope), Z-05 (the cultures), Z-06 (the genome and the tree) and Z-07 (the record) done 2026-11-17
+status: done 2026-11-17 (planned 2026-11-16 as block Z of `docs/archive/ideas/ITERATION-1.5.0.md`: Z-01 to Z-07; the design
+in `docs/archive/ideas/IDEAS-small-and-spacious.md` section 1); Z-01 (where life is, generation 17) and Z-02 (what it looks
+like) done 2026-11-16; Z-03 (the search), Z-04 (the microscope), Z-05 (the cultures), Z-06 (the genome and the tree) and
+Z-07 (the record) done 2026-11-17
 milestone: 1.5.0
 
 ## Request
@@ -25,7 +26,7 @@ room for a laboratory.
 
 ## Plan
 
-`docs/ideas/IDEAS-small-and-spacious.md` section 1 holds the stages, the chemistries, the species, the geneses and kin, the form
+`docs/archive/ideas/IDEAS-small-and-spacious.md` section 1 holds the stages, the chemistries, the species, the geneses and kin, the form
 genome and its six ways of seeing, the animations, the search and the lab's mechanics, with their sources. The milestones are in
 the iteration file, after the ship's I-01 to I-04 (R-426), which give the lab its room:
 

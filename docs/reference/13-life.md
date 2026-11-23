@@ -1,6 +1,6 @@
 # The living small
 
-Microorganisms on every world (R-425, 1.5.0's Z series; the design `docs/ideas/IDEAS-small-and-spacious.md` section 1). `src/life/`
+Microorganisms on every world (R-425, 1.5.0's Z series; the design `docs/archive/ideas/IDEAS-small-and-spacious.md` section 1). `src/life/`
 reads `src/core` and `src/galaxy` alone. Z-01 made the biota (generation 17), Z-02 its forms and the slide they are seen on, Z-03 the
 search (the samples, the kit, the ultraviolet, red snow and the springs' bands), Z-04 the microscope (a vial's slide, what is done to it,
 what is seen of each species), Z-05 the incubator (cultures in twelve flasks, their stages, spores woken, two in a flask, strains), Z-06 the
@@ -505,11 +505,11 @@ hundred nearest home, 3.1% of its long sentences on a repeated frame (the record
 
 ## The genes (`life/genes.h`, `game/editor.cpp`)
 
-Y-02 to Y-04 (R-443; the design `docs/ideas/IDEAS-genes.md` section 1): a species' genes, read from what it already is, a machine that
-changes them, genes moved in from its kin and their switches. J-01 (R-448; `docs/ideas/IDEAS-seeded-worlds.md` section 4): the world
-genes. No generation change: nothing of generation 17 moves, and a line with no edit
-is its species bit for bit (its values, its culture's segments, its slide's kinds: the unit over forty worlds' 349 species), as is one with
-every gene switched to its own.
+Y-02 to Y-04 (R-443; the design `docs/archive/ideas/IDEAS-genes.md` section 1): a species' genes, read from what it already is, a
+machine that changes them, genes moved in from its kin and their switches. J-01 (R-448; `docs/archive/ideas/IDEAS-seeded-worlds.md`
+section 4): the world genes. No generation change: nothing of generation 17 moves, and a line with no edit is its species bit for bit
+(its values, its culture's segments, its slide's kinds: the unit over forty worlds' 349 species), as is one with every gene switched to
+its own.
 
 **A genesis's map and code** (`geneCodeOf`, salts of their own): eighteen places, a gene's number each, the same in all its kin (three
 vital: its copying, its membrane, its making; three quiet; a warmth, a salt, a size, a pigment, a food, a motion, three senses, a rest, a

@@ -1,7 +1,7 @@
 # R-448: seeded worlds
 
-status: planned 2026-11-20 (1.5.0: the J series, J-01 to J-12); J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10 to J-12 2026-11-22; done
-milestone: J-01 to J-12
+status: planned 2026-11-20 (1.5.0: the J series, J-01 to J-12); J-01 and J-02 done 2026-11-20, J-03 to J-09 2026-11-21, J-10 to J-12
+2026-11-22; done milestone: J-01 to J-12
 
 ## Request
 
@@ -40,8 +40,8 @@ Finally it's time to extend animals variation drastically. And still procedural"
 
 ## Plan
 
-The design is `docs/ideas/IDEAS-seeded-worlds.md`; the milestones and their checks are `docs/ideas/ITERATION-1.5.0.md`, Phase 6. It
-reverses 1.5.0's "the worlds stay as generated" for the worlds the explorer seeds; a world nobody seeds stays as generated.
+The design is `docs/archive/ideas/IDEAS-seeded-worlds.md`; the milestones and their checks are `docs/archive/ideas/ITERATION-1.5.0.md`,
+Phase 6. It reverses 1.5.0's "the worlds stay as generated" for the worlds the explorer seeds; a world nobody seeds stays as generated.
 
 - **J-01, world genes:** fourteen new genes on every species (gas, dye, lift, frost, slime, shell, stop, bind, rot, poison, carrier,
   host, dry, shield), seen in the lab first.

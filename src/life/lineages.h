@@ -1,5 +1,5 @@
 #pragma once
-// Z-01 (2026-11-16): the geneses, the origins of life (R-425; docs/ideas/IDEAS-small-and-spacious.md section 1.4). A genesis is one
+// Z-01 (2026-11-16): the geneses, the origins of life (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md section 1.4). A genesis is one
 // beginning of life: its descendants share a chemistry, a handedness (mirrored or ours: a mirrored genesis is as likely as home's), an
 // alphabet of their code (four letters, six or eight: hachimoji DNA, Hoshika et al. 2019) and a style of form (Z-02). Most systems'
 // life is a genesis of its own; impacts carry rock between a system's worlds (Melosh 1988, Mileikowsky et al. 2000), so its living

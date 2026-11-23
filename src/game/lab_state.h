@@ -1,4 +1,4 @@
-// Z-04: the laboratory's state (game/microscope.cpp, microscope_draw.cpp; R-425, docs/ideas/ITERATION-1.5.0.md Z-04): the microscope's page
+// Z-04: the laboratory's state (game/microscope.cpp, microscope_draw.cpp; R-425, docs/archive/ideas/ITERATION-1.5.0.md Z-04): the microscope's page
 // (the cold store's vials and the flasks, or the slide on its stage), the vial or the flask there and what it is made of (its worlds' systems
 // drawn once, their biotas and forms, its sample or its culture's drop and its mount: made again whenever it is put on the stage), what was
 // done to the slide and its clock, the view (its way of seeing, magnification, place, focus, the electron's turn and tilt, a copy tracked), the

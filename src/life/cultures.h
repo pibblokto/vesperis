@@ -1,5 +1,5 @@
 #pragma once
-// Z-05 (2026-11-17): a culture in the incubator's flasks (R-425; docs/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-05). A flask
+// Z-05 (2026-11-17): a culture in the incubator's flasks (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-05). A flask
 // holds a medium (its cell, a chemistry's solvent: water, the acid cell, the ammonia cell, the cryostat; its temperature, its light, its energy,
 // its salt) and one or two species put in it (a vial's cells or spores, or a flask's culture carried over). Its growth is Monod's (1949) as
 // predictive microbiology writes it: a lag (Baranyi and Roberts 1994), the rise at the medium's rate (its temperature on a cardinal curve of the

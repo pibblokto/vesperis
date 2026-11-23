@@ -1,4 +1,4 @@
-// Y-02: `lab genes` (R-443; docs/ideas/IDEAS-genes.md section 1, life/genes.h): the genes of a world's species for worlds of four, six and eight
+// Y-02: `lab genes` (R-443; docs/archive/ideas/IDEAS-genes.md section 1, life/genes.h): the genes of a world's species for worlds of four, six and eight
 // letters and both hands (each genesis's map and code; each species' genes, their working parts and what they give), every gene's edit and cut
 // on a species that has it (its values before and after); and the laws the unit's `genes` group holds (`geneLaws`): the genes deterministic,
 // every species of forty worlds unedited itself, its parent's letters again nothing, each gene's edit as its code says within its limits, how

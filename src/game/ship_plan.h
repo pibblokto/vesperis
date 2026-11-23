@@ -1,4 +1,4 @@
-// The Stardrifter as rows (R-426; docs/ideas/IDEAS-small-and-spacious.md section 2): its rooms on three decks, the ways between them
+// The Stardrifter as rows (R-426; docs/archive/ideas/IDEAS-small-and-spacious.md section 2): its rooms on three decks, the ways between them
 // (the arches, the spiral stair, the lifter), their windows, what stands in them, its lamps and the places the explorer stands; the
 // mesh drawn from them, built once in ship metres (+x starboard, +y up, +z the bow), the walk they keep, the routes through them and
 // what the eye sees of them. I-01 made the rows (the 1.4.0 cabin its first plan); I-02 the ship on them: the bridge, the hall, the

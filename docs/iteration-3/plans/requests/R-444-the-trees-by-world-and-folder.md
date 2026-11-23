@@ -13,10 +13,10 @@ sketch: "4. Only world and folder trees".
 
 ## Plan
 
-The design is `docs/ideas/IDEAS-genes.md` section 2; the milestone and its checks `docs/ideas/ITERATION-1.5.0.md`, Phase 5, Y-01: the
-tree's pages (the ship's own, each world with a species read or a line of one, each of the collection's folders), each page its own
-years; the lab's lines (strains now, Y-02's edited lines) as twigs under their parents, on their world's tree as they arise, Backspace
-taking one off and A putting it back; a folder's page what it holds; no tree of everything.
+The design is `docs/archive/ideas/IDEAS-genes.md` section 2; the milestone and its checks `docs/archive/ideas/ITERATION-1.5.0.md`, Phase
+5, Y-01: the tree's pages (the ship's own, each world with a species read or a line of one, each of the collection's folders), each page
+its own years; the lab's lines (strains now, Y-02's edited lines) as twigs under their parents, on their world's tree as they arise,
+Backspace taking one off and A putting it back; a folder's page what it holds; no tree of everything.
 
 ## Done
 

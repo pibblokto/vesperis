@@ -1,7 +1,7 @@
 # R-426: a Stardrifter with room, not utilitarian
 
-status: done 2026-11-17 (planned 2026-11-16 as block I of `docs/ideas/ITERATION-1.5.0.md`: I-01 to I-04; the design in
-`docs/ideas/IDEAS-small-and-spacious.md` section 2); I-01 done 2026-11-16 (the ship as rows, `game/ship_plan`); I-02 done
+status: done 2026-11-17 (planned 2026-11-16 as block I of `docs/archive/ideas/ITERATION-1.5.0.md`: I-01 to I-04; the design in
+`docs/archive/ideas/IDEAS-small-and-spacious.md` section 2); I-01 done 2026-11-16 (the ship as rows, `game/ship_plan`); I-02 done
 2026-11-16 (the new Stardrifter: three decks and eight spaces); I-03 done 2026-11-16 (light, materials and views); I-04 done
 2026-11-17 (life aboard)
 milestone: 1.5.0
@@ -19,8 +19,8 @@ hand.
 
 ## Plan
 
-`docs/ideas/IDEAS-small-and-spacious.md` section 2 holds the plan of the new ship (three decks, eight spaces, about 820 square metres),
-its walk, its light, its views, life aboard and how it is built. The milestones come after Z-01 and Z-02 (R-425):
+`docs/archive/ideas/IDEAS-small-and-spacious.md` section 2 holds the plan of the new ship (three decks, eight spaces, about 820 square
+metres), its walk, its light, its views, life aboard and how it is built. The milestones come after Z-01 and Z-02 (R-425):
 
 * **I-01, the ship as rows:** rooms, openings, fixtures and devices as rows, a mesh built once, each polygon projected once a frame,
   the banks dealt from the rows; the harness and auto-explore read the rows. Nothing drawn changes: the 1.4.0 cabin is the first

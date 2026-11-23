@@ -1,5 +1,5 @@
 #pragma once
-// Z-03 (2026-11-17): what a vial holds (R-425; docs/ideas/IDEAS-small-and-spacious.md section 1.7). The explorer chooses where life would
+// Z-03 (2026-11-17): what a vial holds (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md section 1.7). The explorer chooses where life would
 // be: the ground at the crosshair (`surface/sampling` reads its microhabitat) or the clouds' temperate height (the capsule's scoop). What a
 // sample holds is a pure function of its microhabitat and its world's biota, the microhabitat a function of its square metre: the same place
 // gives the same sample, whenever and from whichever landing it is taken. Its activity is read on the spot as the Viking landers' labelled

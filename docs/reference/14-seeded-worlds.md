@@ -1,8 +1,8 @@
 # Seeded worlds
 
 A culture grown aboard and sent down by a drone changes the world it lives on (R-448, 1.5.0's J series; the design
-`docs/ideas/IDEAS-seeded-worlds.md`). J-01 gave every species fourteen world genes (`13-life.md`, "The genes"). J-02 made the layer a
-seeded world is drawn through, J-03 sends a culture down and shows the first change, J-04 changes the air and the climate, J-05 the
+`docs/archive/ideas/IDEAS-seeded-worlds.md`). J-01 gave every species fourteen world genes (`13-life.md`, "The genes"). J-02 made the
+layer a seeded world is drawn through, J-03 sends a culture down and shows the first change, J-04 changes the air and the climate, J-05 the
 waters, ground and plants. J-06 and J-07 drew the animals and their ways (`06-surface.md`), J-08 their fates. J-09 grows the overgrowth,
 J-10 lets it take the ruins and gives it sounds, J-11 names the made kinds, J-12 keeps the record. R-454's J-13 to J-15 open the cold
 worlds, the clouds and the deserts to it. A world nobody seeded has no layer and

@@ -1,4 +1,4 @@
-// Z-06: the sequencer (R-425; docs/ideas/ITERATION-1.5.0.md Z-06, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h, life/sequences.h,
+// Z-06: the sequencer (R-425; docs/archive/ideas/ITERATION-1.5.0.md Z-06, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h, life/sequences.h,
 // peoples/made.h), the laboratory's third device: a screen over the room, E at it on the bow bench. Enter chooses a species seen in a cold
 // store's vial or growing in a flask (never a fossil's stone or a protocell's chemistry) and puts it on: its genome read in SEQUENCE_S on the
 // lab's clock, shown as it reads in its genesis's alphabet (a chromatogram's peaks over the letters, its helix turning its own way), the

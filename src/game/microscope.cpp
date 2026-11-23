@@ -1,4 +1,4 @@
-// Z-04: the microscope (R-425; docs/ideas/ITERATION-1.5.0.md Z-04, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h), the laboratory's first
+// Z-04: the microscope (R-425; docs/archive/ideas/ITERATION-1.5.0.md Z-04, IDEAS-small-and-spacious.md 1.8 and 1.9; lab_state.h), the laboratory's first
 // device: a camera entered from its bench (E). Its first page is its lists (R-432: the cold store's vials a folder a world, Enter putting one
 // on the stage, Backspace emptying it; the cultures, R-433's collection among them, by folder: lab_lists.cpp); the slide's page shows the vial's mount (life/slides.h) in six ways of seeing (1-6, V), zoomed (+ and -, the wheel), focused
 // through the drop ([ and ]), panned (the arrows, the mouse; the electron's cell turned by the mouse), a cell tracked (Enter), and the four things

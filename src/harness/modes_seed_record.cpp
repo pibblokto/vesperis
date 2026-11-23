@@ -1,4 +1,4 @@
-// J-12 (R-448): `seed record`, a seeded world's record (docs/ideas/ITERATION-1.5.0.md J-12). A world's own sea line given a nerve poison (its
+// J-12 (R-448): `seed record`, a seeded world's record (docs/archive/ideas/ITERATION-1.5.0.md J-12). A world's own sea line given a nerve poison (its
 // STOP cut and its cells bound, so it overgrows too) let go on one of `seed climate`'s worlds with plants and animals, its 64th step reached:
 // the explorer's sheets of the natives (those the line beat among them), the line found in the wild and read by the sequencer, four of its
 // animals seen with the marks the ground would show (gone; dying and changed; named; plain). Drawn: the catalogue by world (the made kind on

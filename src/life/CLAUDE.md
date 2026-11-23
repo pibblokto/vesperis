@@ -1,8 +1,8 @@
 # src/life: the living small (Z-01, Z-02, 1.5.0)
 
-Microorganisms on every world, drawn from the hashes (R-425; `docs/ideas/IDEAS-small-and-spacious.md` section 1), and the slide they are
-seen on, made from a vial (Z-04). It reads only `src/core` and `src/galaxy` (`tools/check.py`'s layering). The harness reads it, and
-since Z-03 the surface and the game do too.
+Microorganisms on every world, drawn from the hashes (R-425; `docs/archive/ideas/IDEAS-small-and-spacious.md` section 1), and the slide
+they are seen on, made from a vial (Z-04). It reads only `src/core` and `src/galaxy` (`tools/check.py`'s layering). The harness reads
+it, and since Z-03 the surface and the game do too.
 
 ## Files
 - `biota` (`BIOTA`, a row per kind: the stages its worlds reach, chemistry, microhabitats. `biotaOf`, `lifeOf`: a world's stage,

@@ -1,4 +1,4 @@
-// Z-03: the search (docs/ideas/ITERATION-1.5.0.md, Z-03; search_state.h): a vial of the ground at the crosshair (O on foot), the capsule's
+// Z-03: the search (docs/archive/ideas/ITERATION-1.5.0.md, Z-03; search_state.h): a vial of the ground at the crosshair (O on foot), the capsule's
 // scoop in a cloud world's descent, the kit's vials to the cold store at the climb aboard, their save lines
 #include "game.h"
 #include "ui.h"

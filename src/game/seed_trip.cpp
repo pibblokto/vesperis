@@ -1,4 +1,4 @@
-// J-03 (R-448): the drone bay's seed trip (docs/ideas/IDEAS-seeded-worlds.md section 1; the bay: game/drones.cpp). Parked in orbit of a
+// J-03 (R-448): the drone bay's seed trip (docs/archive/ideas/IDEAS-seeded-worlds.md section 1; the bay: game/drones.cpp). Parked in orbit of a
 // landable world, S on the bay opens the seed page: C chooses a culture alive in a flask (B-473: growing, full, starving or asleep as
 // spores), the arrows move the place on the world's map (Shift five times as far), Page Down and Page Up its depth down a drill hole (J-13:
 // the rock's, or a sea under the ice), Enter sends drone 1 alone. It falls to the place, lets

@@ -1,5 +1,5 @@
 #pragma once
-// Z-04 (2026-11-17): a slide made from a vial (R-425; docs/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-04). A vial's sample is
+// Z-04 (2026-11-17): a slide made from a vial (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md 1.8, ITERATION-1.5.0.md Z-04). A vial's sample is
 // put on the microscope's stage as a drop under its cover glass, prepared as a microbiologist would (concentrated or diluted by tens, so that its
 // most crowded species stands a few of its bodies apart), or a rock's as a thin section of it. Each species it holds is a few of its cells that
 // repeat across the slide at a period of their own (its tile: a few hundred cells in all, every species at its own density at every

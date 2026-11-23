@@ -1,4 +1,4 @@
-// Z-03: the search (docs/ideas/IDEAS-small-and-spacious.md section 1.7): what a vial takes at a place of the ground (`readSample`: its
+// Z-03: the search (docs/archive/ideas/IDEAS-small-and-spacious.md section 1.7): what a vial takes at a place of the ground (`readSample`: its
 // microhabitat, its name, the temperature read) and the living films under the lamp's ultraviolet (`drawFilmGlow`). A microhabitat is read
 // from what is fixed to the world (the planet function at the square metre, the springs' and vents' finders, the ruins' walls), never from
 // what the landing lays (the rocks, the domes, the trees are dealt on its own grid), so the same place gives the same sample from any landing

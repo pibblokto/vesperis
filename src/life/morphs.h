@@ -1,5 +1,5 @@
 #pragma once
-// Z-02 (2026-11-16): what it looks like (R-425; docs/ideas/IDEAS-small-and-spacious.md sections 1.5 and 1.6, ITERATION-1.5.0.md
+// Z-02 (2026-11-16): what it looks like (R-425; docs/archive/ideas/IDEAS-small-and-spacious.md sections 1.5 and 1.6, ITERATION-1.5.0.md
 // Z-02). A species' form is about forty values in groups (the outline by Gielis's superformula, the size, the arrangement, the wall,
 // the appendages, the inside, the pigment, the motion, the forms of its life cycle) drawn from its seed by its plan, its stage, its
 // chemistry and the style its genesis gives its kin (a wall's mineral, a symmetry, a flagellum's kind, its handedness): a clade looks like

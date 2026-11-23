@@ -1,4 +1,4 @@
-// Z-07: the catalogue (R-425; docs/ideas/ITERATION-1.5.0.md Z-07, IDEAS-small-and-spacious.md 1.9; lab_state.h), the guide's page of every
+// Z-07: the catalogue (R-425; docs/archive/ideas/ITERATION-1.5.0.md Z-07, IDEAS-small-and-spacious.md 1.9; lab_state.h), the guide's page of every
 // species seen under the microscope (the guide's sheets) and of a friend's lent by their inbox file (in cyan): by world (a world's head, then
 // its species) or, Tab, by kin (the sequenced in the tree's order, a genesis's head before its first; then those not read). Enter shows a
 // species' sheet beside its form drawn live in a way of seeing it was seen in (V the next), Up and Down the next species; N names it. Nothing

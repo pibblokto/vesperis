@@ -1,4 +1,4 @@
-// Z-06: the tree of kin's screen (R-425; docs/ideas/ITERATION-1.5.0.md Z-06, IDEAS-small-and-spacious.md 1.4 and 1.8; lab_state.h,
+// Z-06: the tree of kin's screen (R-425; docs/archive/ideas/ITERATION-1.5.0.md Z-06, IDEAS-small-and-spacious.md 1.4 and 1.8; lab_state.h,
 // life/sequences.h), over the room: E at its screen on the laboratory's port wall, or Tab from the sequencer (on the page of what it read). Y-01
 // (R-444; IDEAS-genes.md section 2): its pages, Left and Right, and no tree of everything: the ship's own (home's life), each world with a
 // species read, each of the collection's folders holding a culture. A page's species by kinship: a genesis a clade (headed by its letters, its
